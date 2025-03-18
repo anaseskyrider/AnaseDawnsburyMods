@@ -172,7 +172,7 @@ public class ArchetypeMauler
             ModManager.RegisterFeatName("MoreDedications.MaulerShovingSweep", "Shoving Sweep"),
             8,
             "You swing your weapon at a fleeing foe, rebuffing them back.",
-            "{b}Requirements{/b} You're wielding a melee weapon in two hands.\n\nWhen a creature within your reach leaves a square during a move action it's using, you can spend a {icon:Reaction} reaction to attempt to Shove the triggering creature, ignoring the requirement that you have a hand free. The creature continues its movement after the Shove.",
+            "{b}Requirements{/b} You're wielding a melee weapon in two hands.\n\nWhen a creature within your reach leaves a square during a move action it's using, you can spend a {icon:Reaction} reaction to attempt to Shove the triggering creature, ignoring the requirement that you have a hand free. {i}(NYI: The creature continues its movement after the Shove.){/i}",
             [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait]
         ).WithActionCost(-2
         ).WithPermanentQEffect("After a creature within your reach leaves a square during its move action, you can spend a reaction to Shove it.", delegate (QEffect qf)
