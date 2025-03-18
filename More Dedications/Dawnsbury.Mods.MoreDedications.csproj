@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Common">
+      <HintPath>Z:\Steam Library\steamapps\common\Dawnsbury Days\Data\Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Dawnsbury Days">
+      <HintPath>Z:\Steam Library\steamapps\common\Dawnsbury Days\Data\Dawnsbury Days.dll</HintPath>
+    </Reference>
+    <Reference Include="Dawnsbury.Mods.DawnniExpanded">
+      <HintPath>Z:\Steam Library\steamapps\workshop\content\2693730\3163146733\CustomMods\Dawnsbury.Mods.DawnniExpanded.dll</HintPath>
+    </Reference>
+    <Reference Include="MonoGame.Framework">
+      <HintPath>Z:\Steam Library\steamapps\common\Dawnsbury Days\Data\MonoGame.Framework.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <Target Name="CopyToGameModsFolder" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="Z:\Steam Library\steamapps\common\Dawnsbury Days\CustomMods" />
+  </Target>
+</Project>
