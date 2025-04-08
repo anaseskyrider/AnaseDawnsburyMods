@@ -186,19 +186,26 @@ public class RunesmithClassFeats
                     if (section.PossibilitySectionId != PossibilitySectionId.ItemActions)
                         return null;
                     
-                    Item shieldItem = qfThis.Owner.HeldItems.FirstOrDefault(
-                        item => item.HasTrait(Trait.Shield))!;
+                    Item? shieldItem = qfThis.Owner.HeldItems.FirstOrDefault(
+                        item => item.HasTrait(Trait.Shield));
+                    
+                    Illustration shieldIll = shieldItem?.Illustration ?? IllustrationName.SteelShield;
                     
                     // PUBLISH: mention free hand requirements interpretation of trace a rune subsidiaries.
-                    CombatAction fortifyingKnock = new CombatAction(
+                    CombatAction fortifyingKnockAction = new CombatAction(
                             qfThis.Owner,
-                            new SideBySideIllustration(shieldItem.Illustration, RunesmithPlaytest.TraceRuneIllustration),
+                            new SideBySideIllustration(shieldIll, RunesmithPlaytest.TraceRuneIllustration),
                             "Fortifying Knock",
                             [ModTraits.Runesmith, Trait.Basic],
                             "{b}Frequency{/b} once per round\n{b}Requirements{/b} {i}(Trace Rune){/i} You have a free hand\n\nIn one motion, you Raise a Shield and Trace a Rune on your shield.",
                             Target.Self()
-                                .WithAdditionalRestriction(self => self.HasFreeHand ? null : "You must have a free hand to trace a rune")
-                                .WithAdditionalRestriction(self => qfFeat.UsedThisTurn ? "Already used this round" : null))
+                                .WithAdditionalRestriction(self =>
+                                {
+                                    string hasShieldReason = "You must have a shield equipped";
+                                    string freeHandReason = "You must have a free hand to trace a rune";
+                                    string usedReason = "Already used this round";
+                                    return shieldItem != null ? (self.HasFreeHand ? (qfThis.UsedThisTurn ? usedReason : null) : freeHandReason) : hasShieldReason;
+                                }))
                         .WithActionCost(1)
                         .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
                         { 
@@ -225,11 +232,11 @@ public class RunesmithClassFeats
                                 caster,
                                 runeFilter: (rune) => rune.DrawTechnicalTraits.Contains(Trait.Shield));
                         });
-
-                    return new ActionPossibility(fortifyingKnock, PossibilitySize.Half);
+                    
+                    return new ActionPossibility(fortifyingKnockAction, PossibilitySize.Half);
                 };
             });
-        ModManager.AddFeat(FortifyingKnock);;
+        ModManager.AddFeat(FortifyingKnock);
         
         // Invisible Ink // Implementation Idea: tracing a rune doesn't break stealth
         // Runic Tattoo

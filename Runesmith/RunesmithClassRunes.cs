@@ -186,6 +186,7 @@ public class RunesmithClassRunes
                 
                 Item targetItem = validItems[chosenOption.Index];
 
+                // TODO: Bleed doesn't show up in combat log when applied.
                 DrawnRune esvadirPassive = new DrawnRune(
                     thisRune,
                     $"{thisRune.Name} ({targetItem.Name})",
@@ -538,7 +539,7 @@ public class RunesmithClassRunes
         RuneFeatMarssyl = CreateAndAddRuneFeat("RunesmithPlaytest.RuneMarssyl", runeMarssyl);
         Match pushEffectEnd = Regex.Match(RuneFeatMarssyl.RulesText, "or 20 feet on a critical failure"); // Quick adjustment for rules clarification, but only in the feat text.
         RuneFeatMarssyl.RulesText = RuneFeatMarssyl.RulesText.Insert((pushEffectEnd.Index + pushEffectEnd.Length),
-            " {i}(Dawnsbury: Pushing ignores diagonal cost)");
+            " {i}(Dawnsbury: Pushing ignores diagonal cost)"); // TODO: Remove very soon, this will be changed in an upcoming patch.
 
         // TODO: Oljinex
 

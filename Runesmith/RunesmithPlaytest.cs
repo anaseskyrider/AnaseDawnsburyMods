@@ -350,6 +350,7 @@ public class RunesmithPlaytest
         ModManager.AddFeat(RunesmithInvokeRune);
         
         // PUBLISH: A free action at the start of combat to etch runes up to your maximum.
+        // BUG: Action triggers before animal companions spawn.
         RunesmithEtchRune = new Feat(
             ModManager.RegisterFeatName("RunesmithPlaytest.EtchRune", "Etch Rune"),
             "An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.",
