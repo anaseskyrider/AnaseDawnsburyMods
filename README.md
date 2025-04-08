@@ -43,13 +43,13 @@ This mod adds the *Runesmith* class from the Impossible Playtest, a new warrior 
 ### Class Features
 Runesmith has 8 HP per level; is trained in Perception, Reflex, weapons up to martial, armor up to medium, Crafting, a tradition skill, and 2 additional skills (before Intelligence); is expert in Fortitude and Will; and uses Intelligence as its Key Attribute. Runesmith has the following features:
 
-Level 1: Runic Repertoire (4 runes), Trace Rune, Invoke Rune, Etch Rune (2 runes), Runesmith feat, Shield block.
-Level 2: Runesmith Feat, (NYI)Runic Crafter
-Level 3: General feat, skill increase, additional level 1 rune known
-Level 4: Runesmith feat
-Level 5: Attribute boosts, ancestry feat, skill increase, smith's weapon expertise (expert in simple weapons, martial weapons, and unarmed attacks), additional level 1 rune known, additional maximum etched rune).
-Level 6: Runesmith feat
-Level 7: General feat
+- Level 1: Runic Repertoire (4 runes), Trace Rune, Invoke Rune, Etch Rune (2 runes), Runesmith feat, Shield block.
+- Level 2: Runesmith Feat, (NYI)Runic Crafter
+- Level 3: General feat, skill increase, additional level 1 rune known
+- Level 4: Runesmith feat
+- Level 5: Attribute boosts, ancestry feat, skill increase, smith's weapon expertise (expert in simple weapons, martial weapons, and unarmed attacks), additional level 1 rune known, additional maximum etched rune).
+- Level 6: Runesmith feat
+- Level 7: General feat
 
 ### Class Feats
 - **(1st)** Backup Runic Enhancement, Engraving Strike
