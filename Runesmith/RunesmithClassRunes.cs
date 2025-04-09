@@ -1,7 +1,10 @@
+using System.Drawing;
 using System.Text.RegularExpressions;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
+using Dawnsbury.Core.Animations;
+using Dawnsbury.Core.Animations.AuraAnimations;
 using Dawnsbury.Core.Animations.Movement;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
@@ -543,7 +546,84 @@ public class RunesmithClassRunes
 
         // TODO: Oljinex
 
-        // TODO: Pluuna
+        // PUBLISH: DD doesn't do much with lighting. Here, the existence of the light (both passive and the invocation effect) translates into the bearer being unable to Undetected, though they can still be Hidden.
+        Rune runePluuna = new Rune(
+            "Pluuna, Rune of Illumination",
+            ModTraits.Pluuna,
+            IllustrationName.HolyRunestone,
+            1,
+            "drawn on a creature",
+            "While many runes are enchanted to glow, light is the focus of this simple rune.",
+            "This rune sheds a revealing light in a 20-foot emanation. Creatures inside it take a -1 item penalty to Stealth checks, and the rune-bearer can't be undetected.",
+            "Each creature in the emanation must succeed at a Fortitude save or be dazzled for 1 round. The light fades, but leaves behind a dim glow which prevents the target from being undetected for 1 round.",
+            null,
+            [Trait.Light])
+        {
+            NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
+            {
+                const float emanationSize = 4f; // 20 feet
+                
+                DrawnRune pluunaPassive = new DrawnRune(
+                    thisRune,
+                    thisRune.Name,
+                    "Can't become undetected, and all creatures in a 20-foot emanation takes a -1 item penalty to Stealth checks.",
+                    ExpirationCondition.Ephemeral,
+                    caster,
+                    thisRune.Illustration)
+                {
+                    SpawnsAura = qfThis =>
+                    {
+                        return new
+                            MagicCircleAuraAnimation(IllustrationName.AngelicHaloCircle, Microsoft.Xna.Framework.Color.Gold, emanationSize);
+                    },
+                    StateCheck = qfThis =>
+                    {
+                        qfThis.Owner.DetectionStatus.Undetected = false;
+                        qfThis.Owner.Battle.AllCreatures
+                            .Where(cr =>
+                                cr.DistanceTo(qfThis.Owner) <= emanationSize)
+                            .ForEach(cr =>
+                                cr.AddQEffect(new QEffect("Pluuna's Light", "You have a -1 item penalty to Stealth checks.", ExpirationCondition.Ephemeral, qfThis.Owner, IllustrationName.Light)
+                                {
+                                    BonusToSkills = skill =>
+                                    {
+                                        return skill == Skill.Stealth
+                                            ? new Bonus(-1, BonusType.Item, thisRune.Name)
+                                            : null;
+                                    }
+                                }));
+                    },
+                };
+
+                return pluunaPassive;
+            },
+            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target,
+                DrawnRune invokedRune) =>
+            {
+                const float emanationSize = 4f; // 20 feet
+                
+                // TODO: Animation
+                
+                foreach (Creature cr in caster.Battle.AllCreatures.Where(cr => cr.DistanceTo(target) <= emanationSize))
+                {
+                    if (thisRune.IsImmuneToThisInvocation(cr))
+                        continue;
+                    CheckResult result = CommonSpellEffects.RollSavingThrow(cr, sourceAction, Defense.Fortitude, caster.ClassOrSpellDC());
+                    if (result <= CheckResult.Failure)
+                    {
+                        cr.AddQEffect(QEffect.Dazzled().WithExpirationAtStartOfSourcesTurn(caster, 1));
+                    }
+
+                    thisRune.ApplyImmunity(cr);
+                }
+
+                QEffect invokedPluuna = invokedRune.NewInvocationEffect();
+                invokedPluuna.StateCheck = qfThis => { qfThis.Owner.DetectionStatus.Undetected = false; };
+
+                thisRune.RemoveDrawnRune(invokedRune);
+            },
+        };
+        RuneFeatPluuna = CreateAndAddRuneFeat("RunesmithPlaytest.RunePluuna", runePluuna);
 
         // TODO: Ranshu
 

@@ -509,12 +509,14 @@ public class Rune
     /// <param name="caster"></param>
     /// <param name="runeTarget"></param>
     /// <param name="range"></param>
+    /// <param name="withImmediatelyRemoveImmunity"></param>
     /// <returns></returns>
     public CombatAction? CreateInvokeAction(
         CombatAction sourceAction,
         Creature caster,
         DrawnRune runeTarget,
-        int range = 6)
+        int range = 6,
+        bool withImmediatelyRemoveImmunity = false)
     {
         if (this.InvocationBehavior == null)
             return null;
@@ -542,6 +544,11 @@ public class Rune
             {
                 await this.InvocationBehavior.Invoke(sourceAction, this, caster, target, runeTarget);
             });
+
+        if (withImmediatelyRemoveImmunity)
+        {
+            invokeThisRune = WithImmediatelyRemovesImmunity(invokeThisRune);
+        }
 
         return invokeThisRune;
     }
@@ -752,6 +759,24 @@ public class Rune
         runeTarget.Rune.RemoveDrawnRune(runeTarget);
         // Apply immunity to the creature it was invoked on
         runeTarget.Rune.ApplyImmunity(target); // THIS WILL NOT WORK. SOME RUNES HAVE SUBSIDIARY BEHAVIOR THAT INVOKES ON ANOTHER CREATURE.*/
+    }
+
+    /// <summary>
+    /// DOC: ImmediatelyRemovesImmunity. Note that it replaces the action's WithEffectOnChosenTargets.
+    /// </summary>
+    /// <param name="anyCombatAction"></param>
+    /// <returns></returns>
+    public static CombatAction WithImmediatelyRemovesImmunity(CombatAction anyCombatAction)
+    {
+        anyCombatAction.WithEffectOnChosenTargets(async (caster, targets) =>
+        {
+            foreach (Creature cr in caster.Battle.AllCreatures)
+            {
+                Rune.RemoveAllImmunities(cr);
+            }
+        });
+        
+        return anyCombatAction;
     }
 
     #endregion

@@ -118,7 +118,6 @@ public class RunesmithClassFeats
                     if (!item.HasTrait(Trait.Melee) || !item.HasTrait(Trait.Weapon))
                         return null;
                     
-                    // PUBLISH: Engraving Strike can Trace any Rune that could affect the target in some way, including its equipment, not just any Rune with a Usage that specifies a creature.
                     CombatAction engravingStrike = qfFeat.Owner.CreateStrike(item)
                         .WithActionCost(1)
                         .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
@@ -305,6 +304,8 @@ public class RunesmithClassFeats
                             caster.RemoveAllQEffects(qf => qf == tempGlare);
                             await Rune.PickARuneToInvokeOnTarget(thisAction, caster, target);
                         });
+
+                    scaryInvoke = Rune.WithImmediatelyRemovesImmunity(scaryInvoke);
                     
                     return new ActionPossibility(scaryInvoke, PossibilitySize.Full);
                 };
