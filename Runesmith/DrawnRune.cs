@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Dawnsbury.Auxiliary;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
@@ -276,5 +277,15 @@ public class DrawnRune : QEffect
         this.Disabled = false;
         if (showRuneOnCreature)
             this.HideFromPortrait = false;
+    }
+
+    public static List<DrawnRune> GetDrawnRunes(Creature? caster, Creature runeBearer)
+    {
+        List<DrawnRune> drawnRunes = runeBearer.QEffects.Where(
+            qf => (qf is DrawnRune && 
+                   ((caster != null && qf.Source == caster) || true) &&
+                   qf.Traits.Contains(ModTraits.Rune) &&
+                   !qf.Traits.Contains(ModTraits.Invocation))).Cast<DrawnRune>().ToList();
+        return drawnRunes;
     }
 }

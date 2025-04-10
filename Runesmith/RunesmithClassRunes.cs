@@ -546,13 +546,12 @@ public class RunesmithClassRunes
 
         // TODO: Oljinex
 
-        // PUBLISH: DD doesn't do much with lighting. Here, the existence of the light (both passive and the invocation effect) translates into the bearer being unable to Undetected, though they can still be Hidden.
         Rune runePluuna = new Rune(
             "Pluuna, Rune of Illumination",
             ModTraits.Pluuna,
             IllustrationName.HolyRunestone,
             1,
-            "drawn on a creature",
+            "drawn on a creature", // or armor
             "While many runes are enchanted to glow, light is the focus of this simple rune.",
             "This rune sheds a revealing light in a 20-foot emanation. Creatures inside it take a -1 item penalty to Stealth checks, and the rune-bearer can't be undetected.",
             "Each creature in the emanation must succeed at a Fortitude save or be dazzled for 1 round. The light fades, but leaves behind a dim glow which prevents the target from being undetected for 1 round.",
@@ -597,8 +596,7 @@ public class RunesmithClassRunes
 
                 return pluunaPassive;
             },
-            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target,
-                DrawnRune invokedRune) =>
+            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target, DrawnRune invokedRune) =>
             {
                 const float emanationSize = 4f; // 20 feet
                 
@@ -626,6 +624,81 @@ public class RunesmithClassRunes
         RuneFeatPluuna = CreateAndAddRuneFeat("RunesmithPlaytest.RunePluuna", runePluuna);
 
         // TODO: Ranshu
+        Rune runeRanshu = new Rune(
+            "Ranshu, Rune of Thunder",
+            ModTraits.Ranshu,
+            IllustrationName.ShockRunestone,
+            1,
+            "drawn on a creature", // or object
+            "This vertical rune is often carved on tall towers to draw lightning and shield the buildings below it.",
+            "If the bearer does not take a move action at least once on its turn, lightning finds it at the end of its turn, dealing 1d4 electricity damage.",
+            "The preliminary streaks of lightning braid together into a powerful bolt. The rune-bearer takes 2d6 electricity damage, with a basic Fortitude save.",
+            "The damage increases by 1, and the damage of the invocation increases by 2d6.",
+            [Trait.Electricity, Trait.Primal])
+        {
+            LevelFormat = "+2",
+            PassiveTextWithHeightening = (Rune thisRune, int charLevel) =>
+            {
+                int bonusDamage = (charLevel - thisRune.BaseLevel) / 2;
+                string damage = "1d4" + 
+                                (bonusDamage > 0 ?
+                                    S.HeightenedVariable(bonusDamage, 0) :
+                                    null);
+                return $"If the bearer does not take a move action at least once on its turn, lightning finds it at the end of its turn, dealing {damage} electricity damage.";
+            },
+            InvocationTextWithHeightening = (Rune thisRune, int charLevel) =>
+            {
+                int numDice = 2 + (int)Math.Floor((charLevel - thisRune.BaseLevel) / 2d)*2;
+                string heightenedVar = S.HeightenedVariable(numDice, 2);
+
+                return
+                    $"The preliminary streaks of lightning braid together into a powerful bolt. The rune-bearer takes {heightenedVar}d6 electricity damage, with a basic Fortitude save.";
+            },
+            InvokeTechnicalTraits = [Trait.IsHostile],
+            NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
+            {
+                int bonusDamage = ((caster?.Level ?? 1) - thisRune.BaseLevel) / 2;
+                DiceFormula immobilityDamage = DiceFormula.FromText($"1d4+{bonusDamage}");
+                DrawnRune ranshuPassive = new DrawnRune(thisRune, thisRune.Name, $"If you don't take a move action at least once during your turn, you take {immobilityDamage} electricity damage.")
+                {
+                    Illustration = thisRune.Illustration,
+                    Source = caster,
+                    //Value = immobilityDamage.ExpectedValue, // Value might be an unnecessary field, aesthetically. // TODO: use Key field?
+                    Traits = new List<Trait>(thisRune.Traits), //[..thisRune.Traits],
+                    AfterYouTakeAction = async (qfThis, action) =>
+                    {
+                        if (action.HasTrait(Trait.Move))
+                            qfThis.UsedThisTurn = true; // Has moved this turn
+                    },
+                    EndOfYourTurnDetrimentalEffect = async (qfThis, self) =>
+                    {
+                        if ((qfThis as DrawnRune)!.Disabled)
+                            return;
+                        if (qfThis.UsedThisTurn == true) // If you have moved this turn,
+                            return; // don't take any damage.
+                        await CommonSpellEffects.DealDirectDamage(null, immobilityDamage, self,  CheckResult.Failure, DamageKind.Electricity);
+                    },
+                };
+                return ranshuPassive;
+            },
+            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target,
+                DrawnRune invokedRune) =>
+            {
+                if (!thisRune.IsImmuneToThisInvocation(target))
+                {
+                    int numDice = 2 + (int)Math.Floor((caster.Level - thisRune.BaseLevel) / 2d)*2;
+                    DiceFormula invocationDamage = DiceFormula.FromText($"{numDice}d6");
+                    CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude,
+                        caster.ClassOrSpellDC());
+                    await CommonSpellEffects.DealBasicDamage(sourceAction, caster, target, result,
+                        invocationDamage, DamageKind.Electricity);
+                }
+                
+                thisRune.RemoveDrawnRune(invokedRune);
+                thisRune.ApplyImmunity(target);
+            },
+        };
+        RuneFeatRanshu = CreateAndAddRuneFeat("RunesmithPlaytest.RuneRanshu", runeRanshu);
 
         // TODO: Sun-
 

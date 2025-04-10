@@ -17,6 +17,7 @@ using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
@@ -450,14 +451,204 @@ public class RunesmithClassFeats
         
         /* 6th Level Feats */
         // Runic Reprisal
-        // Tracing Trance
+        
+        TracingTrance = new TrueFeat(
+            ModManager.RegisterFeatName("RunesmithPlaytest.FeatTracingTrance", "Tracing Trance"),
+            6,
+            "Your hands flow unbidden, tracing runes as if by purest instinct.",
+            "{b}Trigger{/b} Your turn begins.\n\nYou become quickened until the end of your turn and can use the extra action only to Trace Runes" /*+", including to supply 1 action if using the 2-action version of Trace Rune"*/ + ". Absorbed in the act of creation, you can't use any invocation actions this turn.",
+            [ModTraits.Runesmith])
+            .WithActionCost(0)
+            .WithPermanentQEffect("At the start of your turn, you can give up taking any invocation actions to become quickened 1 for that turn (only to Trace Runes).",
+            qfFeat =>
+            {
+                qfFeat.StartOfYourPrimaryTurn = async (qfThis, caster) =>
+                {
+                    if (await caster.Battle.AskForConfirmation(caster, IllustrationName.Haste, "{b}Tracing Trance {icon:FreeAction}{/b}\nBecome {Blue}quickened{/Blue} this turn? This extra action is only to Trace Runes. You can't use any invocation actions this turn.", "Yes", "No"))
+                    {
+                        QEffect tranceEffect = QEffect.Quickened(action =>
+                        {
+                            // Code not shortened in case I need to expand the logic.
+                            if (action.HasTrait(ModTraits.Traced))
+                                return true;
+                            return false;
+                        });
+                        tranceEffect.PreventTakingAction = action =>
+                        {
+                            // Code not shortened in case I need to expand the logic.
+                            if (action.HasTrait(ModTraits.Invocation))
+                                return "(tracing trance) can't take invocation actions";
+                            return null;
+                        };
+                        tranceEffect.Name = "Tracing Trance";
+                        tranceEffect.Description = "You have an extra action you can use to Trace Runes. You can't use invocation actions.";
+                        tranceEffect.ExpiresAt = ExpirationCondition.ExpiresAtEndOfYourTurn;
+                        caster.AddQEffect(tranceEffect);
+                        caster.Actions.ResetToFull();
+                    }
+                };
+            });
+        ModManager.AddFeat(TracingTrance);
+        
         // Vital Composite Invocation
+        /*VitalCompositeInvocation = new TrueFeat(
+            ModManager.RegisterFeatName("RunesmithPlaytest.FeatVitalCompositeInvocation", "Vital Composite Invocation"),
+            6,
+            "As you invoke runes from traditions that manipulate vital energy, you can release that energy to restore flesh.",
+            "You invoke two runes of your choice on a single creature; one must be a divine rune, and one must be a primal rune. In addition to the runes’ normal effects, the creature also regains Hit Points equal to your Intelligence modifier + double your level.\n\n{i}(Dawnsbury Days: For the purposes of rune traditions, any rune without a tradition is considered divine if you're trained in Religion, or primal if you're trained in Nature.){/i}",
+            [Trait.Healing, ModTraits.Invocation, ModTraits.Runesmith, Trait.Positive]) // PUBLISH: Wait for Petr legal response
+            .WithActionCost(2)
+            .WithPermanentQEffect("You can invoke a divine and primal rune on an ally to also heal them.", qfFeat =>
+            {
+                qfFeat.ProvideMainAction = qfThis =>
+                {
+                    CombatAction vci = new CombatAction(
+                        qfThis.Owner,
+                        new SideBySideIllustration(IllustrationName.Heal, IllustrationName.Bless),
+                        "Vital Composite Invocation",
+                        [Trait.Healing, ModTraits.Invocation, ModTraits.Runesmith, Trait.Positive],
+                        "{i}As you invoke runes from traditions that manipulate vital energy, you can release that energy to restore flesh.{/i}\n\n" + "You invoke two runes of your choice on a single creature; one must be a divine rune, and one must be a primal rune. In addition to the runes’ normal effects, the creature also regains Hit Points equal to your Intelligence modifier + double your level.\n\n{i}(Dawnsbury Days: For the purposes of rune traditions, any rune without a tradition is considered divine if you're trained in Religion, or primal if you're trained in Nature.){/i}",
+                        Target.RangedFriend(6)
+                            .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
+                            {
+                                List<DrawnRune> foundRunes = DrawnRune.GetDrawnRunes(attacker, defender);
+                                if (foundRunes.Count > 1)
+                                {
+                                    if (foundRunes.Any(dr => dr.Traits.Contains(Trait.Divine)) && foundRunes.Any(dr => dr.Traits.Contains(Trait.Primal)))
+                                        return Usability.Usable;
+                                    else
+                                        return Usability.NotUsableOnThisCreature("divine and primal runes not found");
+                                }
+                                else
+                                {
+                                    return Usability.NotUsableOnThisCreature("must have at least 2 runes");
+                                }
+                            }))
+                        .WithActionCost(2)
+                        .WithEffectOnEachTarget( async (thisAction, caster, target, result) =>
+                        {
+                            List<Option> GetRuneOptions(Trait traitToCompare)
+                            {
+                                List<Option> runeOptions = [];
+                                foreach (Creature cr in caster.Battle.AllCreatures)
+                                {
+                                    List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(caster, cr);
+                                    foreach (DrawnRune runeQf in drawnRunes)
+                                    {
+                                        if (runeQf.Traits.Contains(traitToCompare) ||
+                                            (!runeQf.Traits.Any(trt => trt is Trait.Arcane or Trait.Divine or Trait.Occultism or Trait.Primal) && Rune.GetSkillFromTraditionTrait(traitToCompare) != null && caster.Skills.IsTrained((Skill)Rune.GetSkillFromTraditionTrait(traitToCompare))))
+                                        {
+                                            CombatAction? invokeThisRune =
+                                                runeQf.Rune.CreateInvokeAction(thisAction, caster, runeQf);
+                                            if (invokeThisRune != null)
+                                                GameLoop.AddDirectUsageOnCreatureOptions(invokeThisRune, runeOptions,
+                                                    false);
+                                        }
+                                    }
+                                }
+
+                                return runeOptions;
+                            }
+                            
+                            // Get divine rune options
+                            List<Option> divineRunes = GetRuneOptions(Trait.Divine);
+                            
+                            // Get primal rune options
+                            List<Option> primalRunes = GetRuneOptions(Trait.Primal);
+                            
+                            // Combine them for the first invocation
+                            List<Option> bothRunes = new List<Option>();
+                            divineRunes.ForEach(opt => {bothRunes.Add(opt);});
+                            primalRunes.ForEach(opt => {bothRunes.Add(opt);});
+                            
+                            if (divineRunes.Count > 0 && primalRunes.Count > 0 && bothRunes.Count > 1) // Must have at least 1 divine rune and 1 primal rune.
+                                return;
+                            bothRunes.Add(new CancelOption(true));
+                            bothRunes.Add(new PassViaButtonOption(" Confirm no additional runes "));
+                            
+                            // Await the first invocation
+                            Option chosenOption = (await caster.Battle.SendRequest( // Send a request to pick an option
+                                new AdvancedRequest(caster, "Choose a divine or primal rune to invoke.", bothRunes)
+                                {
+                                    TopBarText = "Choose a divine or primal rune to invoke, or right-click to cancel (1/2)",
+                                    TopBarIcon = thisAction.Illustration,
+                                })).ChosenOption;
+
+                            switch (chosenOption)
+                            {
+                                case CancelOption:
+                                    thisAction.RevertRequested = true;
+                                    return;
+                                case PassViaButtonOption:
+                                    return;
+                            }
+
+                            await chosenOption.Action();
+                            
+                            // Find the opposite invocation to do next
+                            Rune? chosenRune = null;
+                            foreach (Rune rune in RunesmithClassRunes.AllRunes)
+                            {
+                                if (chosenOption.Text.Contains(rune.Name))
+                                {
+                                    chosenRune = rune;
+                                    break;
+                                }
+                            }
+
+                            List<Option> nextOptions = [];
+                            string chosenTrait = "";
+                            if (chosenRune != null && chosenRune.HasTrait(Trait.Divine))
+                            {
+                                nextOptions = GetRuneOptions(Trait.Divine);
+                                chosenTrait = "Divine";
+                            }
+                            else if (chosenRune != null && chosenRune.HasTrait(Trait.Primal))
+                            {
+                                
+                                nextOptions = GetRuneOptions(Trait.Primal);
+                                chosenTrait = "Primal";
+                            }
+                            
+                            // Await the second invocation
+                            if (nextOptions.Count <= 0)
+                                return;
+                            nextOptions.Add(new PassViaButtonOption(" Confirm incomplete action "));
+                            
+                            Option chosenOption2 = (await caster.Battle.SendRequest( // Send a request to pick an option
+                                new AdvancedRequest(caster, $"Choose a {chosenTrait} rune to invoke.", nextOptions)
+                                {
+                                    TopBarText = $"Choose a {chosenTrait} rune to invoke. (2/2)",
+                                    TopBarIcon = thisAction.Illustration,
+                                })).ChosenOption;
+
+                            switch (chosenOption2)
+                            {
+                                case CancelOption:
+                                    thisAction.RevertRequested = true;
+                                    return;
+                                case PassViaButtonOption:
+                                    return;
+                            }
+
+                            await chosenOption2.Action();
+
+							// Do healing
+							int healingAmount = caster.Abilities.Intelligence + (caster.Level * 2);
+                            await caster.HealAsync(healingAmount.ToString(), thisAction);
+                        });
+                    
+                    return new ActionPossibility(vci);
+                };
+            });
+        ModManager.AddFeat(VitalCompositeInvocation); // TODO: Implement diacritics before unlocking this feat.*/
+        
         // Words, Fly Free
         
         /* 8th Level Feats */
         // Drawn In Red
         // Elemental Revision
-        // Read The Bones
+        // Read The Bones // TODO: Cannot be implemented. Discard or homebrew.
         
         // TODO: If 2 feats per level, remove these
         bool isDebug = true;

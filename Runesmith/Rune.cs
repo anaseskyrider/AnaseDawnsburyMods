@@ -779,6 +779,23 @@ public class Rune
         return anyCombatAction;
     }
 
+    public static Skill? GetSkillFromTraditionTrait(Trait traditionTrait)
+    {
+        switch (traditionTrait)
+        {
+            case Trait.Arcane:
+                return Skill.Arcana;
+            case Trait.Divine:
+                return Skill.Religion;
+            case Trait.Occultism:
+                return Skill.Occultism;
+            case Trait.Primal:
+                return Skill.Nature;
+            default:
+                return null;
+        }
+    }
+
     #endregion
 
     #region Initializers
