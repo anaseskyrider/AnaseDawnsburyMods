@@ -38,18 +38,5 @@ public class MoreDedications
         ////////////////////
         ArchetypeMauler.LoadMod();
         ArchetypeArcher.LoadMod();
-        
-        //////////////////////////////
-        // Improved Dawnni Behavior //
-        //////////////////////////////
-        List<Trait> classTraits = new List<Trait>(); // List of every class trait from all updates and mods.
-        AllFeats.All.ForEach(ft => { // Loop through all feats.
-            if (ft is ClassSelectionFeat classFeat) { // If the feat is a classFeat,
-                classTraits.Add(classFeat.ClassTrait); // then add it to the list.
-            }
-        });
-        // Merge the lists so that any class EVER can access archetype feats.
-        DawnniExpanded.FeatArchetype.ArchetypeFeat.Traits.Concat(classTraits).ToArray();
-        DawnniExpanded.FeatArchetype.DedicationFeat.Traits.Concat(classTraits).ToArray();
     }
 }
