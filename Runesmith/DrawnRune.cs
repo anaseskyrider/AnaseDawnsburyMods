@@ -23,48 +23,6 @@ namespace Dawnsbury.Mods.RunesmithPlaytest;
 /// </summary>
 public class DrawnRune : QEffect
 {
-    
-    /* TODO: Consider altering the way runes apply Item effects based on these Item fields to look into:
-     * WithPermanentQEffectWhenWorn
-     * WithOnCreatureWhenWorn
-     * StateCheckWhenWielded
-     */
-    
-    /// <summary>
-    /// The <see cref="Rune"/> represented by this QEffect.
-    /// </summary>
-    public Rune Rune { get; }
-
-    public Trait? DrawTrait
-    {
-        get
-        {
-            bool isEtched = this.Traits.Contains(ModTraits.Etched);
-            bool isTraced = this.Traits.Contains(ModTraits.Traced);
-            if (isEtched && isTraced) // It's not supposed to be both, so return a null just in case.
-                return null;
-            else if (isEtched)
-                return ModTraits.Etched;
-            else if (isTraced)
-                return ModTraits.Traced;
-            else
-                return null;
-        }
-        set => DrawTrait = value;
-    }
-
-    /// <summary>
-    /// <para>Any object which could abstractly represent the "true" target of the QEffect, the thing that it is "actually" drawn on. The types are generally of: <see cref="Creature"/>, <see cref="DrawnRune"/> (used for diacritics), <see cref="Dawnsbury.Core.Mechanics.Treasure.Item"/> (used for weapons, unarmed strikes).</para>
-    /// <para>Used by other parts of the mod to assist with behavior such as disabling a QEffect (without automated C# garbage collection causing problems) when no creature is holding the item that the rune is drawn onto.</para>
-    /// </summary>
-    public object? DrawnOn { get; set; }
-    
-    /// <summary>
-    /// <para>A DrawnRune which is disabled doesn't execute its passive behavior. This allows the rune to exist (optionally visible), without executing behavior.</para>
-    /// <para>Use Case: Runic Reprisal, which draws a damaging rune onto the shield, whilst not conferring its passive effects, in order to invoke it onto an attacker as part of Shield Block.</para>
-    /// </summary>
-    public bool Disabled { get; set; }
-
     public DrawnRune(
         Rune rune)
         : base()
@@ -112,6 +70,67 @@ public class DrawnRune : QEffect
         this.Rune = rune;
         this.Traits = new List<Trait>(rune.Traits);
     }
+    
+    /* TODO: Consider altering the way runes apply Item effects based on these Item fields to look into:
+     * WithPermanentQEffectWhenWorn
+     * WithOnCreatureWhenWorn
+     * StateCheckWhenWielded
+     */
+    
+    /// <summary>
+    /// The <see cref="Rune"/> represented by this QEffect.
+    /// </summary>
+    public Rune Rune { get; }
+
+    public Trait? DrawTrait
+    {
+        get
+        {
+            bool isEtched = this.Traits.Contains(ModTraits.Etched);
+            bool isTraced = this.Traits.Contains(ModTraits.Traced);
+            if (isEtched && isTraced) // It's not supposed to be both, so return a null just in case.
+                return null;
+            else if (isEtched)
+                return ModTraits.Etched;
+            else if (isTraced)
+                return ModTraits.Traced;
+            else
+                return null;
+        }
+        set => DrawTrait = value;
+    }
+
+    /// <summary>
+    /// <para>Any object which could abstractly represent the "true" target of the QEffect, the thing that it is "actually" drawn on. The types are generally of: <see cref="Creature"/>, <see cref="DrawnRune"/> (used for diacritics), <see cref="Dawnsbury.Core.Mechanics.Treasure.Item"/> (used for weapons, unarmed strikes).</para>
+    /// <para>Used by other parts of the mod to assist with behavior such as disabling a QEffect (without automated C# garbage collection causing problems) when no creature is holding the item that the rune is drawn onto.</para>
+    /// </summary>
+    public object? DrawnOn { get; set; }
+    
+    /// <summary>
+    /// <para>A DrawnRune which is disabled doesn't execute its passive behavior. This allows the rune to exist (optionally visible), without executing behavior.</para>
+    /// <para>Use Case: Runic Reprisal, which draws a damaging rune onto the shield, whilst not conferring its passive effects, in order to invoke it onto an attacker as part of Shield Block.</para>
+    /// </summary>
+    public bool Disabled { get; set; }
+    
+    // I have no idea what I want these to do just yet.
+    
+    // public Func<????>? BeforeApplyingRune { get; set; }
+    
+    // public Func<????>? AfterApplyingRune { get; set; }
+
+    /// <summary>
+    /// Happens before any DrawnRune is invoked.
+    /// </summary>
+    /// <param name="DrawnRune">The DrawnRune this lambda is being called on.</param>
+    /// <param name="DrawnRune">The DrawnRune that is about to be invoked.</param>
+    public Func<DrawnRune, DrawnRune, Task>? BeforeInvokingRune { get; set; }
+    
+    /// <summary>
+    /// Happens after any DrawnRune is invoked.
+    /// </summary>
+    /// <param name="DrawnRune">The DrawnRune this lambda is being called on.</param>
+    /// <param name="DrawnRune">The DrawnRune that was just invoked.</param>
+    public Func<DrawnRune, DrawnRune, Task>? AfterInvokingRune { get; set; }
 
     /// <summary>
     /// Applies the supplied Etched or Traced trait, and modifies the duration of the QEffect according to Etched and Traced behavior.
@@ -128,7 +147,7 @@ public class DrawnRune : QEffect
         this.Traits.Remove(ModTraits.Traced);
         this.Traits.Add(ModTraits.Etched);
         this.ExpiresAt = ExpirationCondition.Never;
-        this.Description += "\n\n{i}Etched: lasts until the end of combat.{/i}";
+        this.Description += "\n\n{i}{Blue}Etched: lasts until the end of combat.{/Blue}{/i}";
         return this;
     }
 
@@ -138,7 +157,7 @@ public class DrawnRune : QEffect
         this.Traits.Add(ModTraits.Traced);
         this.ExpiresAt = ExpirationCondition.ExpiresAtEndOfSourcesTurn;
         this.CannotExpireThisTurn = true;
-        this.Description += "\n\n{i}Traced: lasts until the end of " + this.Source?.Name + "'s next turn.{/i}";
+        this.Description += "\n\n{i}{Blue}Traced: lasts until the end of " + this.Source?.Name + "'s next turn.{/Blue}{/i}";
         return this;
     }
 
@@ -245,12 +264,24 @@ public class DrawnRune : QEffect
         }
     }
     
-    public QEffect NewInvocationEffect()
+    /// <summary>
+    /// DOC: NewInvocationEffect
+    /// </summary>
+    /// <param name="description"></param>
+    /// <param name="expiresAt"></param>
+    /// <returns></returns>
+    public QEffect NewInvocationEffect(
+        string description,
+        ExpirationCondition expiresAt)
     {
         QEffect invokedEffect = new QEffect()
         {
             Name = $"Invoked {this.Rune.Name}",
+            Description = description,
+            Illustration = this.Illustration,
             Traits = [ModTraits.Invocation],
+            Source = this.Source,
+            ExpiresAt = expiresAt,
         };
         return invokedEffect;
     }
@@ -279,6 +310,60 @@ public class DrawnRune : QEffect
             this.HideFromPortrait = false;
     }
 
+    /// <summary>
+    /// TODO: Use GetTraditionTraits in GhostlyResonance and VitalCompositeInvocation
+    /// DOC: GetTraditionTraits
+    /// </summary>
+    /// <returns></returns>
+    public List<Trait> GetTraditionTraits()
+    {
+        List<Trait> traditionTraits = [];
+        foreach (Trait trait in (Trait[])[Trait.Arcana, Trait.Divine, Trait.Primal, Trait.Occult])
+        {
+            if (this.Traits.Contains(trait))
+                traditionTraits.Add(trait);
+        }
+        return traditionTraits;
+    }
+
+    /// <summary>
+    /// TODO: Use HasTraditionTraits in GhostlyResonance and VitalCompositeInvocation
+    /// DOC: HasTraditionTraits()
+    /// </summary>
+    /// <returns></returns>
+    public bool HasTraditionTraits()
+    {
+        return this.Traits.Any(trait => trait is Trait.Arcane or Trait.Divine or Trait.Primal or Trait.Occult);
+    }
+    
+    public bool IsArcaneRune()
+    {
+        return this.Traits.Any(trait => trait is Trait.Arcane) 
+               || (this.Source != null && this.Source.Skills.IsTrained(Skill.Arcana) 
+                   && this.GetTraditionTraits().Count == 0);
+    }
+    
+    public bool IsDivineRune()
+    {
+        return this.Traits.Any(trait => trait is Trait.Divine) 
+               || (this.Source != null && this.Source.Skills.IsTrained(Skill.Religion) 
+                   && this.GetTraditionTraits().Count == 0);
+    }
+
+    public bool IsPrimalRune()
+    {
+        return this.Traits.Any(trait => trait is Trait.Primal) 
+               || (this.Source != null && this.Source.Skills.IsTrained(Skill.Nature) 
+                   && this.GetTraditionTraits().Count == 0);
+    }
+    
+    public bool IsOccultRune()
+    {
+        return this.Traits.Any(trait => trait is Trait.Occult) 
+               || (this.Source != null && this.Source.Skills.IsTrained(Skill.Occultism) 
+                   && this.GetTraditionTraits().Count == 0);
+    }
+    
     public static List<DrawnRune> GetDrawnRunes(Creature? caster, Creature runeBearer)
     {
         List<DrawnRune> drawnRunes = runeBearer.QEffects.Where(

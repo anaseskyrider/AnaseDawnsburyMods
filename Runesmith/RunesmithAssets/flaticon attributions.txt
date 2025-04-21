@@ -4,3 +4,5 @@
 <a href="https://www.flaticon.com/free-icons/comment" title="comment icons">Comment icons created by Freepik - Flaticon</a>
 <a href="https://www.flaticon.com/free-icons/wow" title="wow icons">Wow icons created by Vitaly Gorbachev - Flaticon</a>
 <a href="https://www.flaticon.com/free-icons/handmade" title="handmade icons">Handmade icons created by GOWI - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/knife" title="knife icons">Knife icons created by kerismaker - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/musical-note" title="musical note icons">Musical note icons created by Freepik - Flaticon</a>

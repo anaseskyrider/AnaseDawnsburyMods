@@ -6,6 +6,7 @@ using Dawnsbury.Core;
 using Dawnsbury.Core.Animations.Movement;
 using Dawnsbury.Core.CharacterBuilder.AbilityScores;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Kineticist;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
@@ -31,22 +32,21 @@ namespace Dawnsbury.Mods.RunesmithPlaytest;
 
 public class RunesmithPlaytest
 {
-    public static Feat RunesmithClassFeat;
-    public static Feat RunesmithRunicRepertoireFeat;
-    public static Feat RunesmithTraceRune;
-    public static Feat RunesmithInvokeRune;
-    public static Feat RunesmithEtchRune;
-    
-    // PUBLISH: Don't forget these attributions on the workshop page.
-    public static Illustration TraceRuneIllustration = new ModdedIllustration("RunesmithAssets/trace rune.png");
-    public static Illustration InvokeRuneIllustration = new ModdedIllustration("RunesmithAssets/invoke rune.png");
-    public static Illustration EtchRuneIllustration = new ModdedIllustration("RunesmithAssets/handcraft.png");
-    public static Illustration NoSymbolIllustration = new ModdedIllustration("RunesmithAssets/no symbol.png");
-    public static Illustration TransposeEtchingIllustration = new ModdedIllustration("RunesmithAssets/hand.png");
+    public static Feat? RunesmithClassFeat;
+    public static Feat? RunesmithRunicRepertoireFeat;
+    public static Feat? RunesmithTraceRune;
+    public static Feat? RunesmithInvokeRune;
+    public static Feat? RunesmithEtchRune;
+    public static Feat? RunesmithRunicCrafter;
     
     [DawnsburyDaysModMainMethod]
     public static void LoadMod()
     {
+        ModManager.RegisterBooleanSettingsOption("RunesmithPlaytest.EsvadirOnEnemies",
+            "Runesmith: Allow Tracing Esvadir On Enemies",
+            "In Dawnsbury Days, the rune \"Esvadir, Rune of Whetstones\" is normally only traceable on allies because its passive effect increases the bearer's damage. Enabling this option allows you to trace Esvadir onto enemies anyway, for when you want to be able to immediately invoke the rune onto a second adjacent enemy before the end of your turn.",
+            false);
+        
         RunesmithRunicRepertoireFeat = new RunicRepertoireFeat(
             ModManager.RegisterFeatName("RunesmithPlaytest.RunesmithRepertoire", null),
             null,
@@ -62,78 +62,59 @@ public class RunesmithPlaytest
             "Your fingers dance, glowing light leaving behind the image of a rune.",
             "You apply one rune to an adjacent target matching the rune’s Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.",
             [Trait.Concentrate, Trait.Magical, Trait.Manipulate],
-            null
-            ).WithPermanentQEffect("You apply one rune to an adjacent target as an action, or to within 30 feet as two actions.", (QEffect qf) =>
+            null)
+            .WithPermanentQEffect("You apply one rune to an adjacent target as an action, or to within 30 feet as two actions.", (QEffect qfFeat) =>
             {
-                qf.Name += " {icon:Action}–{icon:TwoActions}";
+                qfFeat.Name += " {icon:Action}–{icon:TwoActions}"; // No WithActionCost method, so update the sheet name to have actions.
                 
-                qf.ProvideActionIntoPossibilitySection = (qf, section) =>
+                qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
                     if (section.PossibilitySectionId != PossibilitySectionId.MainActions)
                         return null;
                     
                     List<Possibility> traceActionSections = [];
-                    RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(qf.Owner);
+                    RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(qfThis.Owner);
                     if (repertoire == null)
                         return null;
-                    foreach (Rune rune in repertoire.RunesKnown)
+                    foreach (Rune rune in repertoire.GetRunesKnown(qfThis.Owner))
                     {
-                        Trait[] traits = rune.Traits.ToArray();
-                        foreach (Trait trt in (List<Trait>)[Trait.Concentrate, Trait.Magical, Trait.Manipulate, ModTraits.Traced])
+                        /*bool CanPayForCombatAction(CombatAction theAction, int actionCost)
                         {
-                            traits = traits.Append(trt).ToArray();
-                        }
+                            Actions ownerActions = theAction.Owner.Actions;
+                            if (ownerActions.ActionsLeft >= actionCost)
+                                return true;
+                            return !ownerActions.UsedQuickenedAction && ownerActions.QuickenedForActions != null && ownerActions.QuickenedForActions.Invoke(theAction) && ownerActions.ActionsLeft + 1 >= actionCost;
+                        }*/
                         
-                        // TODO: Change methods to allow for heightened text in combat actions
-                        // TODO: use helper trace action creation
-                        CombatAction drawRuneAction = new CombatAction(
-                            qf.Owner,
-                            rune.Illustration,
-                            "Trace " + rune.Name,
-                            traits,
-                            rune.GetFullyFormattedDescriptionWithInsertion(2, "{icon:Action} The range is touch.\n{icon:TwoActions} The range is 30 feet.\n\n"),
-                            Target.DependsOnActionsSpent(
-                                    Target.AdjacentCreatureOrSelf(),
-                                    Target.RangedCreature(6),
-                                    null!))
-                            {
-                                Tag = rune,
-                            }
-                            .WithActionCost(-3)
-                            .WithCreateVariantDescription((actions, spellVariant) =>
-                            { // Just having this gives the variant range information.
-                                return actions switch
-                                {
-                                    //1 => rune.GetFullyFormattedDescription(false),
-                                    //2 => rune.GetFullyFormattedDescription(false),
-                                    _ => rune.GetFullyFormattedDescription(false)
-                                };
-                            })
-                            .WithSoundEffect(SfxName.AncientDust) // TODO: Consider alternative SFX for Trace Rune.
-                            .WithEffectOnEachTarget(async (action, caster, target, result) =>
-                            {
-                                Rune actionRune = (action.Tag as Rune)!;
-                                if (!await actionRune.DrawRuneOnTarget(action, caster, target))
-                                    action.RevertRequested = true;
-                            });
+                        // BUG: Quickened action from Tracing Trance not usable on the basic Trace actions with insufficient regular actions.
                         
-                        // Extra requirements
-                        foreach (Target tar in (drawRuneAction.Target as DependsOnActionsSpentTarget)!.Targets)
-                        {
-                            if (tar is not CreatureTarget crTar)
-                                continue;
-                            crTar.WithAdditionalConditionOnTargetCreature( // Free hand
-                                (attacker, defender) =>
-                                    attacker.HasFreeHand ? Usability.Usable : Usability.NotUsable("You must have a free hand to trace a rune"));
-                            if (rune.UsageCondition != null)
-                                crTar.WithAdditionalConditionOnTargetCreature(rune.UsageCondition); // Usage condition
-                        }
+                        CombatAction drawRuneAction = rune.CreateTraceAction(qfThis.Owner, -3);
                         
                         List<Possibility> drawRuneActionPossibilities = 
                         [
-                            new ChooseActionCostThenActionPossibility(drawRuneAction, IllustrationName.Action, "One Action", 1, drawRuneAction.Owner.Actions.ActionsLeft < 1 ? Usability.CommonReasons.NoActions : (drawRuneAction.Target is DependsOnActionsSpentTarget target1 ? target1.TargetFromActionCount(1).CanBeginToUse(drawRuneAction.Owner) : drawRuneAction.Target.CanBeginToUse(drawRuneAction.Owner)), PossibilitySize.Full),
+                            new ChooseActionCostThenActionPossibility(
+                                drawRuneAction,
+                                IllustrationName.Action,
+                                "One Action",
+                                1,
+                                /*!CanPayForCombatAction(drawRuneAction, 1) ? Usability.CommonReasons.NoActions :*/ drawRuneAction.Owner.Actions.ActionsLeft < 1 ?
+                                    Usability.CommonReasons.NoActions :
+                                    (drawRuneAction.Target is DependsOnActionsSpentTarget target1 ?
+                                        target1.TargetFromActionCount(1).CanBeginToUse(drawRuneAction.Owner) :
+                                        drawRuneAction.Target.CanBeginToUse(drawRuneAction.Owner)),
+                                PossibilitySize.Full),
                                 
-                            new ChooseActionCostThenActionPossibility(drawRuneAction, IllustrationName.TwoActions, "Two Actions", 2, drawRuneAction.Owner.Actions.ActionsLeft < 2 ? Usability.CommonReasons.NoActions : (drawRuneAction.Target is DependsOnActionsSpentTarget target2 ? target2.TargetFromActionCount(2).CanBeginToUse(drawRuneAction.Owner) : drawRuneAction.Target.CanBeginToUse(drawRuneAction.Owner)), PossibilitySize.Full),
+                            new ChooseActionCostThenActionPossibility(
+                                drawRuneAction,
+                                IllustrationName.TwoActions,
+                                "Two Actions",
+                                2,
+                                /*!CanPayForCombatAction(drawRuneAction, 2) ? Usability.CommonReasons.NoActions :*/ drawRuneAction.Owner.Actions.ActionsLeft < 2 ?
+                                    Usability.CommonReasons.NoActions : 
+                                    (drawRuneAction.Target is DependsOnActionsSpentTarget target2 ?
+                                        target2.TargetFromActionCount(2).CanBeginToUse(drawRuneAction.Owner) :
+                                        drawRuneAction.Target.CanBeginToUse(drawRuneAction.Owner)),
+                                PossibilitySize.Full),
                         ];
                         
                         SubmenuPossibility runeSubmenu = new SubmenuPossibility(rune.Illustration, rune.Name, PossibilitySize.Half)
@@ -141,7 +122,7 @@ public class RunesmithPlaytest
                             SpellIfAny = drawRuneAction,
                             Subsections =
                             {
-                                new PossibilitySection(rune.Name)
+                                new PossibilitySection(rune.Name) // rune.Name is how features like Drawn In Red find these sections.
                                 {
                                     Possibilities = drawRuneActionPossibilities
                                 }
@@ -151,12 +132,11 @@ public class RunesmithPlaytest
                         traceActionSections.Add(runeSubmenu);
                     }
 
-                    Illustration traceRune = TraceRuneIllustration;
                     SubmenuPossibility traceMenu = new SubmenuPossibility(
-                        traceRune,
+                        ModIllustrations.TraceRune,
                         "Trace Rune")
                     {
-                        SpellIfAny = new CombatAction(qf.Owner, traceRune, "Trace Rune", [Trait.Concentrate, Trait.Magical, Trait.Manipulate, ModTraits.Runesmith], "{b}Requirements{b} You have a hand free.\n\nYour fingers dance, glowing light leaving behind the image of a rune. You apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.", Target.Self()).WithActionCost(-3), // This doesn't DO anything, it's just to provide description to the menu.
+                        SpellIfAny = new CombatAction(qfThis.Owner, ModIllustrations.TraceRune, "Trace Rune", [Trait.Concentrate, Trait.Magical, Trait.Manipulate, ModTraits.Runesmith], "{b}Requirements{b} You have a hand free.\n\nYour fingers dance, glowing light leaving behind the image of a rune. You apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.", Target.Self()).WithActionCost(-3), // This doesn't DO anything, it's just to provide description to the menu.
                         Subsections = { new PossibilitySection("Trace Rune")
                         {
                             Possibilities = traceActionSections,
@@ -167,6 +147,7 @@ public class RunesmithPlaytest
             });
         ModManager.AddFeat(RunesmithTraceRune);
 
+        // BUG: Invoking a rune on a concealed target can be repeated until it works.
         RunesmithInvokeRune = new Feat(
             ModManager.RegisterFeatName("RunesmithPlaytest.InvokeRune", "Invoke Rune"),
             "",
@@ -177,11 +158,13 @@ public class RunesmithPlaytest
             {
                 qf.Name += " {icon:Action}";
                 
-                CombatAction invokeRuneAction = new CombatAction(
+                qf.ProvideMainAction = (qf) =>
+                {
+                    CombatAction invokeRuneAction = new CombatAction(
                     qf.Owner, 
-                    InvokeRuneIllustration,
+                    ModIllustrations.InvokeRune,
                     "Invoke Rune", 
-                    [ModTraits.Invocation, Trait.Magical, ModTraits.Runesmith, Trait.Basic], 
+                    [ModTraits.Invocation, Trait.Magical, ModTraits.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName],
                     "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed. You can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are affected only once, as normal for duplicate effects.",
                     Target.Self().WithAdditionalRestriction(caster =>
                     {
@@ -284,19 +267,9 @@ public class RunesmithPlaytest
                                     Rune thisRune = runeQf.Rune;
                                     CombatAction? invokeThisRune = thisRune.CreateInvokeAction(flurryOfInvokes, self, runeQf);
                                     if (invokeThisRune != null)
-                                        GameLoop.AddDirectUsageOnCreatureOptions(invokeThisRune, options, false); // pass false so it still prompts with 1 option
-                                    // Kept just in case.
-                                    /*Option runeOption = Option.ChooseCreature( // Add an option with this creature for its rune.
-                                            thisRune.Name,
-                                            crWithRune.Key,
-                                            async () =>
-                                            {
-                                                await thisRune.InvocationBehavior.Invoke(action, thisRune, self,
-                                                    crWithRune.Key, runeQf);
-                                                Sfxs.Play(SfxName.DazzlingFlash);
-                                            })
-                                            .WithIllustration(thisRune.Illustration);
-                                        options.Add(runeOption);*/
+                                    {
+                                        GameLoop.AddDirectUsageOnCreatureOptions(invokeThisRune, options, false);
+                                    }
                                 }
                             }
                             
@@ -345,11 +318,12 @@ public class RunesmithPlaytest
                             Rune.RemoveAllImmunities(cr);
                         }
                     });
-                qf.ProvideMainAction = (qf) => new ActionPossibility(invokeRuneAction);
+                    
+                    return new ActionPossibility(invokeRuneAction);
+                };
             });
         ModManager.AddFeat(RunesmithInvokeRune);
         
-        // PUBLISH: A free action at the start of combat to etch runes up to your maximum.
         // BUG: Action triggers before animal companions spawn.
         RunesmithEtchRune = new Feat(
             ModManager.RegisterFeatName("RunesmithPlaytest.EtchRune", "Etch Rune"),
@@ -365,7 +339,7 @@ public class RunesmithPlaytest
                     if (repertoire == null)
                         return;
                     
-                    List<Rune> runesKnown = repertoire.RunesKnown;
+                    List<Rune> runesKnown = repertoire.GetRunesKnown(qfFeat.Owner);
                     int etchLimit = repertoire.EtchLimit;
 
                     for (int i = 0; i < etchLimit; i++)
@@ -393,7 +367,7 @@ public class RunesmithPlaytest
                             new AdvancedRequest(qfThis.Owner, "Etch a rune on yourself or an ally.", options)
                             {
                                 TopBarText = $"Etch a rune on yourself or an ally. ({i+1}/{etchLimit})",
-                                TopBarIcon = EtchRuneIllustration,
+                                TopBarIcon = ModIllustrations.EtchRune,
                             })).ChosenOption;
                         
                         switch (chosenOption)
@@ -413,6 +387,92 @@ public class RunesmithPlaytest
                 };
             });
         ModManager.AddFeat(RunesmithEtchRune);
+
+        RunesmithRunicCrafter = new Feat(
+            ModManager.RegisterFeatName("RunesmithPlaytest.RunicCrafter", "Runic Crafter"),
+            "Your study of secret runes leaves you well practiced in crafting their more common cousins.",
+            "Your equipment gains the effects of the highest level fundamental armor and weapon runes for your level. This does not count as having runes for the purposes of other rules (you must still have potency runes to apply property runes).",
+            [],
+            null)
+            .WithPermanentQEffect("INCOMPLETE TEXT", qfFeat =>
+            {
+                int lvl = qfFeat.Owner.Level;
+                
+                // Uses code from ABP //
+                // Will need to fix Striking if Dawnsbury increases to levels beyond 8th.
+                int attackPotency = lvl switch
+                {
+                    <= 1 => 0,
+                    <= 9 => 1,
+                    <= 15 => 2,
+                    _ => 3
+                };
+                
+                int defensePotency = lvl switch
+                {
+                    <= 4 => 0,
+                    <= 10 => 1,
+                    <= 17 => 2,
+                    _ => 3
+                };
+                
+                int savingThrowPotency = lvl switch
+                {
+                    <= 7 => 0,
+                    <= 13 => 1,
+                    <= 19 => 2,
+                    _ => 3
+                };
+                
+                // Attack Potency
+                qfFeat.BonusToAttackRolls = (qfSelf, combatAction, defender) =>
+                {
+                    if (combatAction.HasTrait(Trait.Attack) && combatAction.Item != null &&
+                        (combatAction.Item.HasTrait(Trait.Weapon) || combatAction.Item.HasTrait(Trait.Unarmed)) &&
+                        attackPotency > 0)
+                    {
+                        return new Bonus(attackPotency, BonusType.Item, "Runic Crafter");
+                    }
+
+                    return null;
+                };
+                
+                // Striking
+                qfFeat.IncreaseItemDamageDieCount = (qfSelf, item) =>
+                {
+                    if (lvl < 4) // At 4 or higher, add striking.
+                        return false;
+                    
+                    return item.WeaponProperties?.DamageDieCount == 1;
+                };
+                
+                qfFeat.BonusToDefenses = (effect, action, defense) =>
+                {
+                    // AC Potency
+                    if (defense == Defense.AC && defensePotency > 0)
+                    {
+                        var itemBonus = effect.Owner.Armor.Item?.ArmorProperties?.ItemBonus ?? 0;
+                        if (defensePotency > itemBonus)
+                        {
+                            return new Bonus(defensePotency - itemBonus, BonusType.Untyped, "Runic Crafter");
+                        }
+                    } // Saving Throw Potency
+                    else if (defense.IsSavingThrow() && savingThrowPotency > 0)
+                    {
+                        return new Bonus(savingThrowPotency, BonusType.Item, "Runic Crafter");
+                    }
+
+                    return null;
+                };
+
+                qfFeat.Description = "" +
+                                     (attackPotency > 0 ? $"You have a +{attackPotency} item bonus to weapon attack rolls" : null) +
+                                     (lvl >= 4 ? ", your Strikes deal two damage dice instead of one" : null) +
+                                     (defensePotency > 0 ? $", a +{defensePotency} item bonus to AC" : null) +
+                                     (savingThrowPotency > 0 ? $", and a +{savingThrowPotency} item bonus to all saving throws" : null) +
+                                     ".";
+            });
+        ModManager.AddFeat(RunesmithRunicCrafter);
         
         RunesmithClassFeat = new ClassSelectionFeat(
             ModManager.RegisterFeatName("RunesmithPlaytest.RunesmithClass", "Runesmith"),
@@ -430,7 +490,7 @@ public class RunesmithPlaytest
             "\r\n\r\n{b}5. Runesmith feat.{/b}" +
             "\r\n\r\n{b}6. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks." +
             "\r\n\r\n{b}At higher levels:{/b}" +
-            "\r\n{b}Level 2:{/b} Runesmith Feat, (NYI)Runic Crafter." + // TODO: find something for Runic Crafter to do
+            "\r\n{b}Level 2:{/b} Runesmith Feat, Runic Crafter {i}(Your equipment gains the effects of the highest level fundamental armor and weapon runes for your level){/i}." +
             "\r\n{b}Level 3:{/b} General feat, skill increase, additional level 1 rune known" +
             "\r\n{b}Level 4:{/b} Runesmith feat" +
             "\r\n{b}Level 5:{/b} Attribute boosts, ancestry feat, skill increase, smith's weapon expertise {i}(expert in simple weapons, martial weapons, and unarmed attacks){/i}, additional level 1 rune known, additional maximum etched rune" +
@@ -440,7 +500,7 @@ public class RunesmithPlaytest
             null
             ).WithOnSheet( sheet =>
             {
-                // skills
+                // extra skill
                 sheet.AddSelectionOption(new SingleFeatSelectionOption("runesmithSkills", "Runesmith Skill", 1, (ft) => ft.FeatName is FeatName.Arcana or FeatName.Nature or FeatName.Occultism or FeatName.Religion).WithIsOptional());
                 
                 // class feat
@@ -449,37 +509,38 @@ public class RunesmithPlaytest
                 // other feats
                 sheet.GrantFeat(FeatName.ShieldBlock);
                 
+                // runic repertoire
+                sheet.GrantFeat(RunesmithRunicRepertoireFeat.FeatName);
+                sheet.AddSelectionOption(new MultipleFeatSelectionOption("initialRunes", "Initial level 1 runes", 1, ft => ft is RuneFeat, 4).WithIsOptional());
+                for (int i=3; i<=7; i=i+2) // Gain a new Rune every other level.
+                {
+                    sheet.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 1 rune", i, ft => ft is RuneFeat).WithIsOptional());
+                }
+                for (int i=9; i<=15; i=i+2) // Gain a new Rune every other level.
+                {
+                    sheet.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 9 rune", i, ft => ft is RuneFeat).WithIsOptional());
+                }
+                for (int i=17; i<=19; i=i+2) // Gain a new Rune every other level.
+                {
+                    sheet.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 17 rune", i, ft => ft is RuneFeat).WithIsOptional());
+                }
+                
                 // class features
                 sheet.GrantFeat(RunesmithTraceRune.FeatName);
                 sheet.GrantFeat(RunesmithInvokeRune.FeatName);
                 sheet.GrantFeat(RunesmithEtchRune.FeatName);
                 
-                // PUBLISH: No ability to assign tradition traits
-                
-                // runic repertoire
-                // TODO: Remove WithIsOptional when enough runes are added.
-                sheet.GrantFeat(RunesmithRunicRepertoireFeat.FeatName);
-                sheet.AddSelectionOption((SelectionOption) new MultipleFeatSelectionOption("initialRunes", "Initial level 1 runes", 1, ft => ft is RuneFeat, 4).WithIsOptional());
-                for (int i=3; i<=7; i=i+2) // Gain a new Rune every other level.
-                {
-                    sheet.AddSelectionOption((SelectionOption) new SingleFeatSelectionOption("rune"+i, "Level 1 rune", i, ft => ft is RuneFeat).WithIsOptional());
-                }
-                for (int i=9; i<=15; i=i+2) // Gain a new Rune every other level.
-                {
-                    sheet.AddSelectionOption((SelectionOption) new SingleFeatSelectionOption("rune"+i, "Level 9 rune", i, ft => ft is RuneFeat).WithIsOptional());
-                }
-                for (int i=17; i<=19; i=i+2) // Gain a new Rune every other level.
-                {
-                    sheet.AddSelectionOption((SelectionOption) new SingleFeatSelectionOption("rune"+i, "Level 17 rune", i, ft => ft is RuneFeat).WithIsOptional());
-                }
-                
                 // higher levels
+                sheet.AddAtLevel(2, values =>
+                {
+                    sheet.GrantFeat(RunesmithRunicCrafter.FeatName);
+                });
                 sheet.AddAtLevel(5, values =>
                 {
                     values.SetProficiency(Trait.Unarmed, Proficiency.Expert);
                     values.SetProficiency(Trait.Simple, Proficiency.Expert);
                     values.SetProficiency(Trait.Martial, Proficiency.Expert);
-                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values.Sheet)!;
+                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
                     repertoire.EtchLimit = 3;
                 });
                 sheet.AddAtLevel(7, values =>
@@ -487,9 +548,10 @@ public class RunesmithPlaytest
                     values.SetProficiency(Trait.Reflex, Proficiency.Expert);
                     values.SetProficiency(ModTraits.Runesmith, Proficiency.Expert);
                 });
+                // Future content
                 sheet.AddAtLevel(9, values =>
                 {
-                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values.Sheet)!;
+                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
                     repertoire.EtchLimit = 4;
                 });
                 sheet.AddAtLevel(11, values =>
@@ -509,7 +571,7 @@ public class RunesmithPlaytest
                     values.SetProficiency(Trait.Simple, Proficiency.Master);
                     values.SetProficiency(Trait.Martial, Proficiency.Master);
                     
-                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values.Sheet)!;
+                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
                     repertoire.EtchLimit = 5;
                 });
                 sheet.AddAtLevel(15, values =>
@@ -518,7 +580,7 @@ public class RunesmithPlaytest
                 });
                 sheet.AddAtLevel(17, values =>
                 {
-                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values.Sheet)!;
+                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
                     repertoire.EtchLimit = 6;
                 });
                 sheet.AddAtLevel(19, values =>
@@ -534,10 +596,10 @@ public class RunesmithPlaytest
                 if (cr.Level >= 7)
                 {
                     // TODO: Runic Optimization, which is slightly different from weapon spec.
-                    // PUBLISH: just regular weapon spec
                     cr.AddQEffect(QEffect.WeaponSpecialization());
                 }
                 
+                // Higher level content
                 if (cr.Level >= 11)
                 {
                     cr.AddQEffect(new QEffect("Smith's Endurance", "When you roll a success on a Fortitude save, you get a critical success instead.")
@@ -554,7 +616,7 @@ public class RunesmithPlaytest
             });
         // Regex Text Fixes
         // Skill fixes
-        var skillProfText = Regex.Match(RunesmithClassFeat.RulesText, "{b}Skill proficiencies\\.{\\/b} You're trained in Crafting");
+        var skillProfText = Regex.Match(RunesmithClassFeat.RulesText, @"{b}Skill proficiencies\.{\/b} You're trained in Crafting");
         RunesmithClassFeat.RulesText = RunesmithClassFeat.RulesText
             .Insert(skillProfText.Index + skillProfText.Length, "; as well as your choice of Arcana, Nature, Occultism, or Religion;");
         // ORC fixes
@@ -565,8 +627,8 @@ public class RunesmithPlaytest
         RunesmithClassFeat.RulesText = legalORCText;
         ModManager.AddFeat(RunesmithClassFeat);
         
-        RunesmithClassFeats.CreateFeats();
         RunesmithClassRunes.LoadRunes();
+        ClassFeats.CreateFeats();
     }
     
     /// <summary>
@@ -700,3 +762,22 @@ label_34:
         return false;
     }
 }
+
+/*
+Added the ability for mods to add settings options with  ModManager.RegisterBooleanSettingsOption(string technicalName, string caption, string longDescription, bool default) for registration API and PlayerProfile.Instance.IsBooleanOptionEnabled(string technicalName) for reading API.
+
+You can now use the many new methods in the CommonQuestions class to add dialogue and other player interactivity choices.
+*/
+
+// Kept just in case.
+/*Option runeOption = Option.ChooseCreature( // Add an option with this creature for its rune.
+    thisRune.Name,
+    crWithRune.Key,
+    async () =>
+    {
+        await thisRune.InvocationBehavior.Invoke(action, thisRune, self,
+            crWithRune.Key, runeQf);
+        Sfxs.Play(SfxName.DazzlingFlash);
+    })
+    .WithIllustration(thisRune.Illustration);
+options.Add(runeOption);*/

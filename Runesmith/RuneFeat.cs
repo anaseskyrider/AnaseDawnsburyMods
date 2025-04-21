@@ -7,6 +7,8 @@ namespace Dawnsbury.Mods.RunesmithPlaytest;
 public class RuneFeat : Feat
 {
     public Rune Rune { get; }
+    
+    public int LevelLearnedAt { get; set; }
 
     public RuneFeat(
         FeatName featName,
@@ -14,7 +16,7 @@ public class RuneFeat : Feat
         : base(
             featName,
             rune.FlavorText,
-            rune.GetFullyFormattedDescription(false),
+            rune.GetFormattedFeatDescription(false),
             new List<Trait>(rune.Traits),
             null)
     {
@@ -25,12 +27,13 @@ public class RuneFeat : Feat
             "You must have a runic repertoire.");
         this.WithOnSheet(values =>
         {
-            RunicRepertoireFeat? foundRepertoire =
+            // OBSOLETE
+            /*RunicRepertoireFeat? foundRepertoire =
                 values.AllFeats.FirstOrDefault(feat => feat is RunicRepertoireFeat) as RunicRepertoireFeat;
-            foundRepertoire?.AddRune(this.Rune);
+            foundRepertoire?.LearnRuneFeat(this, values.CurrentLevel);*/
+            this.LevelLearnedAt = values.CurrentLevel;
         });
-        if (rune.Illustration != null)
-            this.WithIllustration(rune.Illustration);
+        this.WithIllustration(rune.Illustration);
     }
 }
 

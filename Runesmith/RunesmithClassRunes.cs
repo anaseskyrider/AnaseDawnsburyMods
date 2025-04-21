@@ -27,6 +27,7 @@ using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
+using Dawnsbury.IO;
 using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
@@ -34,7 +35,7 @@ namespace Dawnsbury.Mods.RunesmithPlaytest;
 public class RunesmithClassRunes
 {
     public static List<Rune> AllRunes { get; } = new List<Rune>();
-    public static List<Feat> AllRuneFeats { get; } = new List<Feat>();
+    public static List<RuneFeat> AllRuneFeats { get; } = new List<RuneFeat>();
     
     // Rune Feats
     public static Feat? RuneFeatAtryl;
@@ -80,7 +81,13 @@ public class RunesmithClassRunes
                 return
                     $"The bearer takes {heightenedVar}d6 fire damage, with a basic Fortitude save; on a critical failure, they are dazzled for 1 round.";
             },
-            InvokeTechnicalTraits = [Trait.IsHostile],
+            DrawTechnicalTraits = [
+                Trait.IsHostile, // Indicates a detrimental passive effect
+            ],
+            InvokeTechnicalTraits = [
+                Trait.IsHostile, // Indicates a damaging invocation
+                Trait.Fortitude, // Indicates a fortitude saving throw
+            ],
             UsageCondition = ((attacker, defender) =>
             {
                 return defender.EnemyOf(attacker) ? Usability.Usable : Usability.NotUsableOnThisCreature("not an enemy");
@@ -118,8 +125,7 @@ public class RunesmithClassRunes
                 {
                     int roundHalfLevel = ((caster.Level - 1) / 2);
                     int damageAmount = 2 + roundHalfLevel * 2;
-                    CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude,
-                        caster.ClassOrSpellDC());
+                    CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude, caster.ClassOrSpellDC());
                     await CommonSpellEffects.DealBasicDamage(sourceAction, caster, target, result,
                         damageAmount + "d6", DamageKind.Fire);
                     if (result == CheckResult.CriticalFailure)
@@ -158,22 +164,95 @@ public class RunesmithClassRunes
             LevelFormat = "+2",
             UsageCondition = (attacker, defender) =>
             {
+                if (PlayerProfile.Instance.IsBooleanOptionEnabled("RunesmithPlaytest.EsvadirOnEnemies"))
+                    return Usability.Usable;
                 bool isAlly = defender.FriendOf(attacker);
                 Usability allyNotUsable = Usability.NotUsableOnThisCreature("enemy creature");
                 return isAlly ? Usability.Usable : allyNotUsable; // Can always do Unarmed Strikes, so always drawable.
                 
             },
-            InvokeTechnicalTraits = [Trait.IsHostile],
+            InvokeTechnicalTraits = [
+                Trait.IsHostile,  // Indicates a damaging invocation
+                Trait.Fortitude, // Indicates a fortitude saving throw
+                Trait.DoesNotRequireAttackRollOrSavingThrow, // Indicates the initial invocation doesn't have a saving throw.
+            ],
             NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
             {
-                // TODO: Check if sourceAction has like, `sourceAction.Target is AreaTarget` or something, so as to potentially apply to all items instead of making a prompt at all.
+                DrawnRune? MakeEsvadirPassive(Item targetItem)
+                {
+                    // BUG: Bleed doesn't show up in combat log when applied.
+                    DrawnRune esvadirPassive = new DrawnRune(
+                        thisRune,
+                        $"{thisRune.Name} ({targetItem.Name})",
+                        $"The target item or piercing and slashing unarmed strikes deal 2 persistent bleed damage per weapon damage die.",
+                        ExpirationCondition.Ephemeral,
+                        caster,
+                        thisRune.Illustration)
+                    {
+                        Source = caster,
+                        Traits = new List<Trait>(thisRune.Traits), //[..thisRune.Traits],
+                        AfterYouTakeAction = async (QEffect qfSelf, CombatAction action) => // Add bleed
+                        {
+                            if ((qfSelf as DrawnRune)!.Disabled)
+                                return;
+                            
+                            Item? qfItem = (qfSelf as DrawnRune)?.DrawnOn as Item;
+                            Item? actionItem = action.Item;
+                            
+                            // This many complex conditionals is really hard to work out so I did it the long way.
+                            // Fail to bleed if,
+                            if (actionItem == null || qfItem == null || // either item is blank
+                                !action.HasTrait(Trait.Strike) || // or the action isn't a strike
+                                action.ChosenTargets == null || action.ChosenTargets.ChosenCreature == null || // or null targets
+                                action.ChosenTargets.ChosenCreature == qfSelf.Owner || // or I'm my target for any reason
+                                !(actionItem.DetermineDamageKinds().Contains(DamageKind.Piercing) || actionItem.DetermineDamageKinds().Contains(DamageKind.Slashing))) // or it's not piercing or slashing damage
+                                return;
+                            // Fail to bleed if,
+                            if (actionItem.HasTrait(Trait.Unarmed)) // attacking with an unarmed,
+                            {
+                                if (!qfItem.HasTrait(Trait.Unarmed)) // that is unbuffed.
+                                    return;
+                            }
+                            else // attacking with a regular weapon,
+                            {
+                                if (actionItem != qfItem) // that is unbuffed.
+                                    return;
+                            }
+
+                            
+                            // Determine weapon damage dice count
+                            string weaponDamageDiceCount = actionItem.WeaponProperties!.DamageDieCount.ToString();;
+                            if (action.TrueDamageFormula is { } trueDamage)
+                            {
+                                Capture diceCountCapture = Regex.Match(trueDamage.ToString(), @"(\d+)d\d+").Groups[1];
+                                if (diceCountCapture.Value != "")
+                                    weaponDamageDiceCount = diceCountCapture.Value;
+                            }
+                            DiceFormula bleedAmount = DiceFormula.FromText(
+                                (2 * int.Parse(weaponDamageDiceCount) * (action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1)).ToString(),
+                                thisRune.Name);
+                            
+                            //DiceFormula bleedAmount = DiceFormula.FromText(
+                                //((action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1) * 2 * actionItem.WeaponProperties!.DamageDieCount).ToString(),
+                                //thisRune.Name);
+                            
+                            if (action.CheckResult >= CheckResult.Success)
+                            {
+                                action.ChosenTargets.ChosenCreature.AddQEffect(QEffect.PersistentDamage(bleedAmount, DamageKind.Bleed));
+                            }
+                        },
+                    }
+                        .WithItemOrUnarmedRegulator(targetItem);
+                    
+                    return esvadirPassive;
+                }
                 
                 // Target a specific item
                 List<string> validItemsString = new List<string>();
                 List<Item> validItems = new List<Item>();
                 foreach (Item item in target.HeldItems.Where(item =>
-                     item.WeaponProperties != null && item.WeaponProperties.DamageKind != null &&
-                     (item.DetermineDamageKinds().Contains(DamageKind.Piercing) || item.DetermineDamageKinds().Contains(DamageKind.Slashing))))
+                             item.WeaponProperties != null && item.WeaponProperties.DamageKind != null &&
+                             (item.DetermineDamageKinds().Contains(DamageKind.Piercing) || item.DetermineDamageKinds().Contains(DamageKind.Slashing))))
                 {
                     validItemsString.Add(item.Name);
                     validItems.Add(item);
@@ -181,66 +260,34 @@ public class RunesmithClassRunes
                 validItems.Add(caster.UnarmedStrike);
                 validItemsString.Add("unarmed strikes");
                 
-                ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
-                    thisRune.Illustration,
-                    "Which item, or unarmed strikes, would you like to apply this rune to?",
-                    validItemsString.ToArray()
-                );
-                
-                Item targetItem = validItems[chosenOption.Index];
-
-                // TODO: Bleed doesn't show up in combat log when applied.
-                DrawnRune esvadirPassive = new DrawnRune(
-                    thisRune,
-                    $"{thisRune.Name} ({targetItem.Name})",
-                    $"The target item or piercing and slashing unarmed strikes deal 2 persistent bleed damage per weapon damage die.",
-                    ExpirationCondition.Ephemeral,
-                    caster,
-                    thisRune.Illustration)
+                if (sourceAction?.Target is AreaTarget)
                 {
-                    Source = caster,
-                    Traits = new List<Trait>(thisRune.Traits), //[..thisRune.Traits],
-                    AfterYouTakeAction = async (QEffect qfSelf, CombatAction action) => // Add bleed
+                    foreach (Item validItem in validItems)
                     {
-                        if ((qfSelf as DrawnRune)!.Disabled)
-                            return;
-                        
-                        Item? qfItem = (qfSelf as DrawnRune)?.DrawnOn as Item;
-                        Item? actionItem = action.Item;
-                        
-                        // This many complex conditionals is really hard to work out so I did it the long way.
-                        // Fail to bleed if,
-                        if (actionItem == null || qfItem == null || // either item is blank
-                            !action.HasTrait(Trait.Strike) || // or the action isn't a strike
-                            action.ChosenTargets == null || action.ChosenTargets.ChosenCreature == null || // or null targets
-                            action.ChosenTargets.ChosenCreature == qfSelf.Owner || // or I'm my target for any reason
-                            !(actionItem.DetermineDamageKinds().Contains(DamageKind.Piercing) || actionItem.DetermineDamageKinds().Contains(DamageKind.Slashing))) // or it's not piercing or slashing damage
-                            return;
-                        // Fail to bleed if,
-                        if (actionItem.HasTrait(Trait.Unarmed)) // attacking with an unarmed,
-                        {
-                            if (!qfItem.HasTrait(Trait.Unarmed)) // that is unbuffed.
-                                return;
-                        }
-                        else // attacking with a regular weapon,
-                        {
-                            if (actionItem != qfItem) // that is unbuffed.
-                                return;
-                        }
+                        DrawnRune? esvadirPassive = MakeEsvadirPassive(validItem);
+                        // Determine the way the rune is being applied.
+                        if (sourceAction.HasTrait(ModTraits.Etched))
+                            esvadirPassive = esvadirPassive.WithIsEtched();
+                        else if (sourceAction.HasTrait(ModTraits.Traced))
+                            esvadirPassive = esvadirPassive.WithIsTraced();
+        
+                        target.AddQEffect(esvadirPassive);
+                    }
 
-                        DiceFormula bleedAmount = DiceFormula.FromText(
-                            ((action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1) * 2 * actionItem.WeaponProperties!.DamageDieCount).ToString(),
-                            thisRune.Name);
-                        
-                        if (action.CheckResult >= CheckResult.Success)
-                        {
-                            action.ChosenTargets.ChosenCreature.AddQEffect(QEffect.PersistentDamage(bleedAmount, DamageKind.Bleed));
-                        }
-                    },
+                    return new DrawnRune(thisRune); // Return an ephemeral DrawnRune since we just applied this to a whole batch of items.
                 }
-                    .WithItemOrUnarmedRegulator(targetItem);
+                else
+                {
+                    ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
+                        thisRune.Illustration,
+                        $"{{b}}{sourceAction.Name}{{/b}}\nWhich item, or unarmed strikes, would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                        validItemsString.ToArray()
+                    );
                 
-                return esvadirPassive;
+                    Item targetItem = validItems[chosenOption.Index];
+
+                    return MakeEsvadirPassive(targetItem);
+                }
             },
             InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target, DrawnRune invokedRune) =>
             {
@@ -288,7 +335,6 @@ public class RunesmithClassRunes
                 
                 await caster.Battle.GameLoop.FullCast(invokeEsvadirOnToAdjacentCreature);
             },
-            
         };
         RuneFeatEsvadir = CreateAndAddRuneFeat("RunesmithPlaytest.RuneEsvadir", runeEsvadir);
 
@@ -315,35 +361,101 @@ public class RunesmithClassRunes
             },
             NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
             {
-                // TODO: Check if sourceAction has like, `sourceAction.Target is AreaTarget` or something, so as to potentially apply to all items instead of making a prompt at all.
+                DrawnRune? MakeHoltrikPassive(Item targetItem)
+                {                
+                    DrawnRune drawnHoltrik = new DrawnRune(
+                        thisRune,
+                        $"{thisRune.Name} ({targetItem.Name})",
+                        "The circumstance bonus from Raising a Shield is increased by 1.",
+                        ExpirationCondition.Ephemeral,
+                        caster,
+                        thisRune.Illustration)
+                    {
+                        Traits = new List<Trait>(thisRune.Traits), //[..thisRune.Traits],
+                        BonusToDefenses = (qfSelf, attackAction, targetDefense) =>
+                        {
+                            if ((qfSelf as DrawnRune)!.Disabled)
+                                return null;
+                            // Copied from Raise a Shield
+                            if (targetDefense != Defense.AC &&
+                                (!qfSelf.Owner.HasEffect(QEffectId.SparklingTarge) ||
+                                 !qfSelf.Owner.HasEffect(QEffectId.ArcaneCascade) ||
+                                 !targetDefense.IsSavingThrow() || attackAction == null ||
+                                 !attackAction.HasTrait(Trait.Spell)))
+                                return null;
+
+                            if (!qfSelf.Owner.HasEffect(QEffectId.RaisingAShield) || // If they aren't raising a shield,
+                                target.QEffects.FirstOrDefault( // or already have a Holtrik,
+                                    qfSearch => qfSearch.Name == qfSelf.Name && qfSearch != qfSelf) != null)
+                                return null; // No bonus.
+
+                            return new Bonus(1, BonusType.Untyped, "Holtrik (raised shield)");
+                        },
+                    }.WithItemRegulator(targetItem);
+                
+                    return drawnHoltrik;
+                }
                 
                 // Target a specific item
-                Item targetItem;
                 switch (target.HeldItems.Count(item => item.HasTrait(Trait.Shield)))
                 {
                     case 0:
                         return null;
-                    case 1: 
-                        targetItem = target.HeldItems.First(item => item.HasTrait(Trait.Shield));
+                    case 1:
+                        return MakeHoltrikPassive(target.HeldItems.First(item => item.HasTrait(Trait.Shield)));
                         break;
                     default:
-                        targetItem = await target.Battle.AskForConfirmation(caster, (Illustration) IllustrationName.MagicWeapon, "Which shield would you like to apply this rune to?", target.HeldItems[0].Name, target.HeldItems[1].Name) ? target.HeldItems[0] : target.HeldItems[1];
+                        if (sourceAction?.Target is AreaTarget)
+                        {
+                            foreach (Item validItem in target.HeldItems)
+                            {
+                                DrawnRune? holtrikPassive = MakeHoltrikPassive(validItem);
+                                // Determine the way the rune is being applied.
+                                if (sourceAction.HasTrait(ModTraits.Etched))
+                                    holtrikPassive = holtrikPassive.WithIsEtched();
+                                else if (sourceAction.HasTrait(ModTraits.Traced))
+                                    holtrikPassive = holtrikPassive.WithIsTraced();
+        
+                                target.AddQEffect(holtrikPassive);
+                            }
+
+                            return new DrawnRune(thisRune); // Return an ephemeral DrawnRune since we just applied this to a whole batch of items.
+                        }
+                        else
+                        {
+                            Item targetItem = await target.Battle.AskForConfirmation(caster, (Illustration) IllustrationName.MagicWeapon, $"{{b}}{sourceAction.Name}{{/b}}\nWhich shield would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?", target.HeldItems[0].Name, target.HeldItems[1].Name) ? target.HeldItems[0] : target.HeldItems[1];
+
+                            return MakeHoltrikPassive(targetItem);
+                        }
                         break;
                 }
-                
-                DrawnRune drawnHoltrik = new DrawnRune(
-                    thisRune,
-                    $"{thisRune.Name} ({targetItem.Name})",
-                    "The circumstance bonus from Raising a Shield is increased by 1.",
-                    ExpirationCondition.Ephemeral,
-                    caster,
-                    thisRune.Illustration)
+            },
+            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target, DrawnRune invokedRune) =>
+            {
+                if (!thisRune.IsImmuneToThisInvocation(target))
                 {
-                    Traits = new List<Trait>(thisRune.Traits), //[..thisRune.Traits],
-                    BonusToDefenses = (qfSelf, attackAction, targetDefense) =>
+                    // Raise their Shield
+                    Possibilities shieldActions = Possibilities.Create(target)
+                        .Filter( ap =>
+                        {
+                            if (ap.CombatAction.ActionId != ActionId.RaiseShield)
+                                return false;
+                            ap.CombatAction.ActionCost = 0;
+                            ap.RecalculateUsability();
+                            return true;
+                        });
+                    List<Option> actions = await target.Battle.GameLoop.CreateActions(target, shieldActions, null);
+                    await target.Battle.GameLoop.OfferOptions(target, actions, true);
+                    
+                    //bool hasShieldBlock = target.HasEffect(QEffectId.ShieldBlock) || target.WieldsItem(Trait.AlwaysOfferShieldBlock);
+                    //target.AddQEffect(QEffect.RaisingAShield(hasShieldBlock));
+                
+                    // The rune-bearer retains the bonus
+                    QEffect retainedBonus = invokedRune.NewInvocationEffect(
+                        "The circumstance bonus from Raising a Shield is increased by 1.",
+                        ExpirationCondition.ExpiresAtStartOfYourTurn);
+                    retainedBonus.BonusToDefenses = (qfSelf, attackAction, targetDefense) =>
                     {
-                        if ((qfSelf as DrawnRune)!.Disabled)
-                            return null;
                         // Copied from Raise a Shield
                         if (targetDefense != Defense.AC &&
                             (!qfSelf.Owner.HasEffect(QEffectId.SparklingTarge) ||
@@ -358,31 +470,8 @@ public class RunesmithClassRunes
                             return null; // No bonus.
 
                         return new Bonus(1, BonusType.Untyped, "Holtrik (raised shield)");
-                    },
-                }.WithItemRegulator(targetItem);
-                
-                return drawnHoltrik;
-            },
-            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target, DrawnRune invokedRune) =>
-            {
-                if (!thisRune.IsImmuneToThisInvocation(target))
-                {
-                    // Raise their Shield
-                    bool hasShieldBlock = target.HasEffect(QEffectId.ShieldBlock) || target.WieldsItem(Trait.AlwaysOfferShieldBlock);
-                    target.AddQEffect(QEffect.RaisingAShield(hasShieldBlock));
-                
-                    // Since the rune-bearer retains the bonus, we remake the rune QF,
-                    QEffect? modifiedPassive = await thisRune.NewDrawnRune!.Invoke(sourceAction, caster, target, thisRune);
-                    modifiedPassive!.Name = "Invoked " + modifiedPassive.Name;
-                    // modify its duration,
-                    modifiedPassive.ExpiresAt = ExpirationCondition.ExpiresAtStartOfYourTurn;
-                    modifiedPassive.CannotExpireThisTurn = false;
-                    // modify its traits so that it cannot be invoked again,
-                    modifiedPassive.Traits.Remove(ModTraits.Etched);
-                    modifiedPassive.Traits.Remove(ModTraits.Traced);
-                    modifiedPassive.Traits.Add(ModTraits.Invocation);
-                    // and finally add it.
-                    target.AddQEffect(modifiedPassive);
+                    };
+                    target.AddQEffect(retainedBonus);
                 }
                 
                 thisRune.RemoveDrawnRune(invokedRune);
@@ -402,7 +491,7 @@ public class RunesmithClassRunes
             "The weapon vibrates as power concentrates within it. The next successful Strike made with the weapon before the end of its wielder's next turn deals an additional die of damage and the target must succeed at a Fortitude save against your class DC or be pushed 10 feet in a straight line backwards, or 20 feet on a critical failure.",
             null,
             null /*No special extra traits*/)
-        { 
+        {
             UsageCondition = (attacker, defender) =>
             {
                 bool isAlly = defender.FriendOf(attacker);
@@ -411,7 +500,78 @@ public class RunesmithClassRunes
             },
             NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
             {
-                // TODO: Check if sourceAction has like, `sourceAction.Target is AreaTarget` or something, so as to potentially apply to all items instead of making a prompt at all.
+                DrawnRune? MakeMarssylPassive(Item targetItem)
+                {
+                    DrawnRune marssylPassive = new DrawnRune(
+                    thisRune,
+                    $"{thisRune.Name} ({targetItem.Name})",
+                    $"The target item or bludgeoning unarmed strikes deal 1 bludgeoning splash damage per weapon damage die." +
+                        (targetItem.HasTrait(Trait.Melee)
+                            ? "\n\nMelee weapon: The rune-bearer is immune to this splash damage."
+                            : null),
+                    ExpirationCondition.Ephemeral,
+                    caster,
+                    thisRune.Illustration)
+                    {
+                        Source = caster,
+                        Traits = new List<Trait>(thisRune.Traits), //[..thisRune.Traits],
+                        AfterYouTakeAction = async (QEffect qfSelf, CombatAction action) => // Add splash
+                        {
+                            if ((qfSelf as DrawnRune)!.Disabled)
+                                return;
+                            Item? qfItem = (qfSelf as DrawnRune)?.DrawnOn as Item;
+                            Item? actionItem = action.Item;
+                            
+                            // This many complex conditionals is really hard to work out so I did it the long way.
+                            // Fail to bleed if,
+                            if (actionItem == null || qfItem == null || // either item is blank
+                                !action.HasTrait(Trait.Strike) || // or the action isn't a strike
+                                action.ChosenTargets == null || action.ChosenTargets.ChosenCreature == null || // or null targets
+                                action.ChosenTargets.ChosenCreature == qfSelf.Owner || // or I'm my target for any reason
+                                !actionItem.DetermineDamageKinds().Contains(DamageKind.Bludgeoning)) // or it's not bludgeoning damage
+                                return;
+                            // Fail to bleed if,
+                            if (actionItem.HasTrait(Trait.Unarmed)) // attacking with an unarmed,
+                            {
+                                if (!qfItem.HasTrait(Trait.Unarmed)) // that is unbuffed.
+                                    return;
+                            }
+                            else // attacking with a regular weapon,
+                            {
+                                if (actionItem != qfItem) // that is unbuffed.
+                                    return;
+                            }
+                            
+                            // Determine weapon damage dice count
+                            string weaponDamageDiceCount = actionItem.WeaponProperties!.DamageDieCount.ToString();;
+                            if (action.TrueDamageFormula is { } trueDamage)
+                            {
+                                Capture diceCountCapture = Regex.Match(trueDamage.ToString(), @"(\d+)d\d+").Groups[1];
+                                if (diceCountCapture.Value != "")
+                                    weaponDamageDiceCount = diceCountCapture.Value;
+                            }
+                            DiceFormula splashAmount = DiceFormula.FromText(weaponDamageDiceCount, thisRune.Name);
+                            
+                            // If the strike at least failed,
+                            if (action.CheckResult > CheckResult.CriticalFailure)
+                            {
+                                await CommonSpellEffects.DealDirectSplashDamage(action /*CombatAction.CreateSimple(qfSelf.Owner, "Marssyl")*/, splashAmount, action.ChosenTargets.ChosenCreature, DamageKind.Bludgeoning); // deal damage to the target.
+                                
+                                if (action.CheckResult > CheckResult.Failure) // If the strike also at least succeeded,
+                                {
+                                    foreach (Creature target in qfSelf.Owner.Battle.AllCreatures.Where(cr =>
+                                                 action.ChosenTargets.ChosenCreature.IsAdjacentTo(cr))) // Loop through all adjacent creatures,
+                                    {
+                                        if (target != qfSelf.Owner || !actionItem.HasTrait(Trait.Melee)) // And if it's a melee attack, skip me, otherwise include me when I,
+                                            await CommonSpellEffects.DealDirectSplashDamage(CombatAction.CreateSimple(qfSelf.Owner, "Marssyl"), splashAmount, target, DamageKind.Bludgeoning); // splash them too.
+                                    }
+                                }
+                            }
+                        },
+                    }.WithItemOrUnarmedRegulator(targetItem);
+                    
+                    return marssylPassive;
+                }
                 
                 // Target a specific item
                 List<string> validItemsString = new List<string>();
@@ -426,77 +586,34 @@ public class RunesmithClassRunes
                 validItems.Add(caster.UnarmedStrike);
                 validItemsString.Add("unarmed strikes");
                 
-                ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
-                    thisRune.Illustration,
-                    "Which item, or unarmed strikes, would you like to apply this rune to?",
-                    validItemsString.ToArray()
-                );
-                
-                Item targetItem = validItems[chosenOption.Index];
-
-                DrawnRune marssylPassive = new DrawnRune(
-                    thisRune,
-                    $"{thisRune.Name} ({targetItem.Name})",
-                    $"The target item or bludgeoning unarmed strikes deal 1 bludgeoning splash damage per weapon damage die." +
-                        (targetItem.HasTrait(Trait.Melee)
-                            ? "\n\nMelee weapon: The rune-bearer is immune to this splash damage."
-                            : null),
-                    ExpirationCondition.Ephemeral,
-                    caster,
-                    thisRune.Illustration)
+                if (sourceAction?.Target is AreaTarget)
                 {
-                    Source = caster,
-                    Traits = new List<Trait>(thisRune.Traits), //[..thisRune.Traits],
-                    AfterYouTakeAction = async (QEffect qfSelf, CombatAction action) => // Add splash
+                    foreach (Item validItem in validItems)
                     {
-                        if ((qfSelf as DrawnRune)!.Disabled)
-                            return;
-                        Item? qfItem = (qfSelf as DrawnRune)?.DrawnOn as Item;
-                        Item? actionItem = action.Item;
-                        
-                        // This many complex conditionals is really hard to work out so I did it the long way.
-                        // Fail to bleed if,
-                        if (actionItem == null || qfItem == null || // either item is blank
-                            !action.HasTrait(Trait.Strike) || // or the action isn't a strike
-                            action.ChosenTargets == null || action.ChosenTargets.ChosenCreature == null || // or null targets
-                            action.ChosenTargets.ChosenCreature == qfSelf.Owner || // or I'm my target for any reason
-                            !actionItem.DetermineDamageKinds().Contains(DamageKind.Bludgeoning)) // or it's not bludgeoning damage
-                            return;
-                        // Fail to bleed if,
-                        if (actionItem.HasTrait(Trait.Unarmed)) // attacking with an unarmed,
-                        {
-                            if (!qfItem.HasTrait(Trait.Unarmed)) // that is unbuffed.
-                                return;
-                        }
-                        else // attacking with a regular weapon,
-                        {
-                            if (actionItem != qfItem) // that is unbuffed.
-                                return;
-                        }
-                        
-                        Item buffedItem = action.Item; // Use the action item in case it's any unarmed strike.
-                        
-                        DiceFormula splashAmount = DiceFormula.FromText(buffedItem.WeaponProperties!.DamageDieCount.ToString(), thisRune.Name);
-                        
-                        // If the strike at least failed,
-                        if (action.CheckResult > CheckResult.CriticalFailure)
-                        {
-                            await CommonSpellEffects.DealDirectSplashDamage(CombatAction.CreateSimple(qfSelf.Owner, "Marssyl"), splashAmount, action.ChosenTargets.ChosenCreature, DamageKind.Bludgeoning); // deal damage to the target.
-                            
-                            if (action.CheckResult > CheckResult.Failure) // If the strike also at least succeeded,
-                            {
-                                foreach (Creature target in qfSelf.Owner.Battle.AllCreatures.Where(cr =>
-                                             action.ChosenTargets.ChosenCreature.IsAdjacentTo(cr))) // Loop through all adjacent creatures,
-                                {
-                                    if (target != qfSelf.Owner || !buffedItem.HasTrait(Trait.Melee)) // And if it's a melee attack, skip me, otherwise include me when I,
-                                        await CommonSpellEffects.DealDirectSplashDamage(CombatAction.CreateSimple(qfSelf.Owner, "Marssyl"), splashAmount, target, DamageKind.Bludgeoning); // splash them too.
-                                }
-                            }
-                        }
-                    },
-                }.WithItemOrUnarmedRegulator(targetItem);
+                        DrawnRune? marssylPassive = MakeMarssylPassive(validItem);
+                        // Determine the way the rune is being applied.
+                        if (sourceAction.HasTrait(ModTraits.Etched))
+                            marssylPassive = marssylPassive.WithIsEtched();
+                        else if (sourceAction.HasTrait(ModTraits.Traced))
+                            marssylPassive = marssylPassive.WithIsTraced();
+        
+                        target.AddQEffect(marssylPassive);
+                    }
+
+                    return new DrawnRune(thisRune); // Return an ephemeral DrawnRune since we just applied this to a whole batch of items.
+                }
+                else
+                {
+                    ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
+                        thisRune.Illustration,
+                        $"{{b}}{sourceAction.Name}{{/b}}\nWhich item, or unarmed strikes, would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                        validItemsString.ToArray()
+                    );
                 
-                return marssylPassive;
+                    Item targetItem = validItems[chosenOption.Index];
+
+                    return MakeMarssylPassive(targetItem);
+                }
             },
             InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target, DrawnRune invokedRune) =>
             {
@@ -540,9 +657,6 @@ public class RunesmithClassRunes
             },
         };
         RuneFeatMarssyl = CreateAndAddRuneFeat("RunesmithPlaytest.RuneMarssyl", runeMarssyl);
-        Match pushEffectEnd = Regex.Match(RuneFeatMarssyl.RulesText, "or 20 feet on a critical failure"); // Quick adjustment for rules clarification, but only in the feat text.
-        RuneFeatMarssyl.RulesText = RuneFeatMarssyl.RulesText.Insert((pushEffectEnd.Index + pushEffectEnd.Length),
-            " {i}(Dawnsbury: Pushing ignores diagonal cost)"); // TODO: Remove very soon, this will be changed in an upcoming patch.
 
         // TODO: Oljinex
 
@@ -558,6 +672,10 @@ public class RunesmithClassRunes
             null,
             [Trait.Light])
         {
+            InvokeTechnicalTraits = [
+                Trait.Fortitude,
+                //Trait.DoesNotRequireAttackRollOrSavingThrow, // Debatable. The target does save, but so does everyone else.
+            ],
             NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
             {
                 const float emanationSize = 4f; // 20 feet
@@ -606,6 +724,7 @@ public class RunesmithClassRunes
                 {
                     if (thisRune.IsImmuneToThisInvocation(cr))
                         continue;
+                    
                     CheckResult result = CommonSpellEffects.RollSavingThrow(cr, sourceAction, Defense.Fortitude, caster.ClassOrSpellDC());
                     if (result <= CheckResult.Failure)
                     {
@@ -615,15 +734,15 @@ public class RunesmithClassRunes
                     thisRune.ApplyImmunity(cr);
                 }
 
-                QEffect invokedPluuna = invokedRune.NewInvocationEffect();
+                QEffect invokedPluuna = invokedRune.NewInvocationEffect("This dim light prevents you from being undetected.", ExpirationCondition.ExpiresAtStartOfSourcesTurn);
                 invokedPluuna.StateCheck = qfThis => { qfThis.Owner.DetectionStatus.Undetected = false; };
 
                 thisRune.RemoveDrawnRune(invokedRune);
+                target.AddQEffect(invokedPluuna);
             },
         };
         RuneFeatPluuna = CreateAndAddRuneFeat("RunesmithPlaytest.RunePluuna", runePluuna);
 
-        // TODO: Ranshu
         Rune runeRanshu = new Rune(
             "Ranshu, Rune of Thunder",
             ModTraits.Ranshu,
@@ -642,7 +761,7 @@ public class RunesmithClassRunes
                 int bonusDamage = (charLevel - thisRune.BaseLevel) / 2;
                 string damage = "1d4" + 
                                 (bonusDamage > 0 ?
-                                    S.HeightenedVariable(bonusDamage, 0) :
+                                    $"+{S.HeightenedVariable(bonusDamage, 0)}" :
                                     null);
                 return $"If the bearer does not take a move action at least once on its turn, lightning finds it at the end of its turn, dealing {damage} electricity damage.";
             },
@@ -654,7 +773,17 @@ public class RunesmithClassRunes
                 return
                     $"The preliminary streaks of lightning braid together into a powerful bolt. The rune-bearer takes {heightenedVar}d6 electricity damage, with a basic Fortitude save.";
             },
-            InvokeTechnicalTraits = [Trait.IsHostile],
+            DrawTechnicalTraits = [
+                Trait.IsHostile,  // Indicates a detrimental passive effect
+            ],
+            InvokeTechnicalTraits = [
+                Trait.IsHostile,
+                Trait.Fortitude, // Indicates a fortitude saving throw
+            ],
+            UsageCondition = ((attacker, defender) =>
+            {
+                return defender.EnemyOf(attacker) ? Usability.Usable : Usability.NotUsableOnThisCreature("not an enemy");
+            }),
             NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
             {
                 int bonusDamage = ((caster?.Level ?? 1) - thisRune.BaseLevel) / 2;
@@ -681,8 +810,7 @@ public class RunesmithClassRunes
                 };
                 return ranshuPassive;
             },
-            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target,
-                DrawnRune invokedRune) =>
+            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target, DrawnRune invokedRune) =>
             {
                 if (!thisRune.IsImmuneToThisInvocation(target))
                 {
@@ -704,12 +832,11 @@ public class RunesmithClassRunes
 
         // TODO: Ur-
 
-        // PUBLISH: Zohk's restrictions are applied for each Stride, rather than across multiple actions.
-            // Last possible minute, I thought of a somewhat-accurate implementation, MAYBE for a future update?
-            // At the start of the bearer's turn, get the distance to the caster.
-            // For the rest of the bearer's turn, any time they take the new stride action, it filters out tiles that
-            // aren't closer than that distance. THAT would be a bonus which only requires the turn's movement be closer.
-            // The exact nature of how you're supposed to apply Zohk's bonus is a little unclear to me from the original wording anyway.
+        // Last possible minute, I thought of a somewhat-accurate implementation, MAYBE for a future update?
+        // At the start of the bearer's turn, get the distance to the caster.
+        // For the rest of the bearer's turn, any time they take the new stride action, it filters out tiles that
+        // aren't closer than that distance. THAT would be a bonus which only requires the turn's movement be closer.
+        // The exact nature of how you're supposed to apply Zohk's bonus is a little unclear to me from the original wording anyway.
         Rune runeZohk = new Rune(
             "Zohk, Rune of Homecoming",
             ModTraits.Zohk,
@@ -722,6 +849,9 @@ public class RunesmithClassRunes
             null,
             [Trait.Arcane])
         {
+            InvokeTechnicalTraits = [
+                Trait.Will, // Indicates a will saving throw
+            ],
             NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
             {
                 DrawnRune drawnZohk = new DrawnRune(
