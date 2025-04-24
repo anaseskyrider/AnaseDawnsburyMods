@@ -315,6 +315,74 @@ public class Rune
         this.InvocationBehavior = newInvocationBehavior;
         return this;
     }
+
+    /// <summary>
+    /// Adds Trait.Shield to DrawTechnicalTraits, which indicates to other parts of the mod that the rune is drawn onto a shield.
+    /// </summary>
+    /// <returns></returns>
+    public Rune WithDrawnOnShieldTechnical()
+    {
+        this.DrawTechnicalTraits = this.DrawTechnicalTraits.Concat([Trait.Shield]).ToList();
+        return this;
+    }
+    
+    /// <summary>
+    /// Adds ModTraits.Rune to DrawTechnicalTraits, which indicates to other parts of the mod that the rune is drawn onto a rune.
+    /// </summary>
+    /// <returns></returns>
+    public Rune WithDrawnOnRuneTechnical()
+    {
+        this.DrawTechnicalTraits = this.DrawTechnicalTraits.Concat([ModTraits.Rune]).ToList();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds Trait.IsHostile to DrawTechnicalTraits, which indicates to other parts of the mod that the passive is detrimental to the bearer.
+    /// </summary>
+    public Rune WithDetrimentalPassiveTechnical()
+    {
+        this.DrawTechnicalTraits = this.DrawTechnicalTraits.Concat([Trait.IsHostile]).ToList();
+        return this;
+    }
+    
+    /// <summary>
+    /// Adds Trait.IsHostile to InvokeTechnicalTraits, which indicates to other parts of the mod that the invocation deals damage when invoked.
+    /// </summary>
+    public Rune WithDamagingInvocationTechnical()
+    {
+        this.InvokeTechnicalTraits = this.InvokeTechnicalTraits.Concat([Trait.IsHostile]).ToList();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds Trait.Fortitude to InvokeTechnicalTraits, which indicates a fortitude save roll breakdown before invoking the rune.
+    /// </summary>
+    /// <returns></returns>
+    public Rune WithFortitudeSaveInvocationTechnical()
+    {
+        this.InvokeTechnicalTraits = this.InvokeTechnicalTraits.Concat([Trait.Fortitude]).ToList();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds Trait.Reflex to InvokeTechnicalTraits, which indicates a reflex save roll breakdown before invoking the rune.
+    /// </summary>
+    /// <returns></returns>
+    public Rune WithReflexSaveInvocationTechnical()
+    {
+        this.InvokeTechnicalTraits = this.InvokeTechnicalTraits.Concat([Trait.Reflex]).ToList();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds Trait.Will to InvokeTechnicalTraits, which indicates a will save roll breakdown before invoking the rune.
+    /// </summary>
+    /// <returns></returns>
+    public Rune WithWillSaveInvocationTechnical()
+    {
+        this.InvokeTechnicalTraits = this.InvokeTechnicalTraits.Concat([Trait.Will]).ToList();
+        return this;
+    }
     
     #endregion
     
@@ -594,6 +662,7 @@ public class Rune
         Trait[] traits = this.Traits.ToArray().Concat(
             [
                 ModTraits.Invocation,
+                Trait.UnaffectedByConcealment,
                 Trait.Spell, // <- Should apply magic immunity.
             ])
             .ToArray();
@@ -616,6 +685,9 @@ public class Rune
             traits,
             this.InvocationTextWithHeightening(this, caster.Level) ?? "",
             invokeTarget)
+            {
+                Tag = this,
+            }
             .WithActionCost(0)
             .WithProjectileCone(VfxStyle.BasicProjectileCone(this.Illustration))
             .WithSoundEffect(SfxName.DazzlingFlash) // TODO: Consider better SFX for Invoke Rune.
@@ -678,16 +750,17 @@ public class Rune
     {
         Rune thisRune = runeToInvoke.Rune;
         
-        if (thisRune.InvocationBehavior == null)
+        if (thisRune.InvocationBehavior == null || runeToInvoke.Disabled)
             return;
         
         foreach (Creature cr in caster.Battle.AllCreatures)
         {
-            foreach (QEffect qf in cr.QEffects)
+            List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(null, cr);
+            foreach (DrawnRune dr in drawnRunes)
             {
-                if (qf is DrawnRune drawnRune && drawnRune.BeforeInvokingRune != null)
+                if (dr.BeforeInvokingRune != null)
                 {
-                    await drawnRune.BeforeInvokingRune(drawnRune, runeToInvoke);
+                    await dr.BeforeInvokingRune.Invoke(dr, runeToInvoke);
                 }
             }
         }
@@ -696,11 +769,12 @@ public class Rune
         
         foreach (Creature cr in caster.Battle.AllCreatures)
         {
-            foreach (QEffect qf in cr.QEffects)
+            List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(null, cr);
+            foreach (DrawnRune dr in drawnRunes)
             {
-                if (qf is DrawnRune drawnRune && drawnRune.AfterInvokingRune != null)
+                if (dr.AfterInvokingRune != null)
                 {
-                    await drawnRune.AfterInvokingRune(drawnRune, runeToInvoke);
+                    await dr.AfterInvokingRune.Invoke(dr, runeToInvoke);
                 }
             }
         }
@@ -1041,9 +1115,9 @@ public class Rune
         string usageText,
         string flavorText,
         string passiveText,
-        string? invocationText,
-        string? levelText,
-        List<Trait>? additionalTraits)
+        string? invocationText = null,
+        string? levelText = null,
+        List<Trait>? additionalTraits = null)
     {
         this.Name = name;
         this.RuneId = runeId;

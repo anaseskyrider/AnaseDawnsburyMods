@@ -7,13 +7,7 @@ namespace Dawnsbury.Mods.RunesmithPlaytest;
 
 public class RunicRepertoireFeat : Feat
 {
-    public int EtchLimit { get; set; }
-    
-    /// <summary>
-    /// A trait representing the source of the runic repertoire, such as a class trait, or a trait unique to an archetype. No enforcement mechanisms exist to stop a character from having multiple runic repertoires from the same source, so use with prudence. This mod uses <see cref="ModTraits.Runesmith"/> as its source.
-    /// </summary>
-    public Trait Source { get; set; }
-
+    #region Initializer
     public RunicRepertoireFeat(
         FeatName featName,
         string? flavorText,
@@ -32,19 +26,35 @@ public class RunicRepertoireFeat : Feat
         this.Source = source;
         this.EtchLimit = 2;
     }
+    #endregion
     
-    // TODO: All the documentation on this page. Refactoring these bugs is a nightmare.
+    #region Properties
+    /// <summary>
+    /// The number of runes which can be Etched at once.
+    /// </summary>
+    public int EtchLimit { get; set; }
     
     /// <summary>
-    /// Gets the list of runes known up to the given character level.
+    /// A trait representing the source of the runic repertoire, such as a class trait, or a trait unique to an archetype. No enforcement mechanisms exist to stop a character from having multiple runic repertoires from the same source, so use with prudence. This mod uses <see cref="ModTraits.Runesmith"/> as its source.
     /// </summary>
+    public Trait Source { get; set; }
+    #endregion
+
+    #region Instance Methods    
+    /// <summary>
+    /// Gets the list of runes known up to the given creature's current level. To get runes at higher levels, use <see cref="CharacterSheet.ToCreature"/>.
+    /// </summary>
+    /// <returns></returns>
     public List<Rune> GetRunesKnown(Creature cr)
     {
-        return this.GetRunesKnown(cr.PersistentCharacterSheet.Calculated);
+        if (cr.PersistentCharacterSheet != null)
+            return this.GetRunesKnown(cr.PersistentCharacterSheet.Calculated);
+        else
+            return new List<Rune>();
     }
     
     /// <summary>
-    /// Gets the list of runes known on the sheet. To get runes at higher levels, use <see cref="CharacterSheet.ToCreature"/>.
+    /// Gets the list of runes known on the character sheet. To get runes at higher levels, use <see cref="CharacterSheet.ToCreature"/>.
     /// </summary>
     public List<Rune> GetRunesKnown(CalculatedCharacterSheetValues values)
     {
@@ -58,10 +68,8 @@ public class RunicRepertoireFeat : Feat
     }
 
     /// <summary>
-    /// Checks whether a given rune is known at any point by the given level.
+    /// Checks whether a CREATURE knows a given RUNE. To check for runes at higher levels, use <see cref="CharacterSheet.ToCreature"/>.
     /// </summary>
-    /// <param name="rune">The <see cref="Rune"/> to look for.</param>
-    /// <param name="level">The maximum character level to look through.</param>
     /// <returns>(bool) True if the rune was found, or false if not.</returns>
     public bool KnowsRune(Creature cr, Rune rune)
     {
@@ -69,10 +77,8 @@ public class RunicRepertoireFeat : Feat
     }
     
     /// <summary>
-    /// Checks whether a given rune is known at any point by the given level.
+    /// Checks whether a CHARACTER SHEET knows a given RUNE. To check for runes at higher levels, use <see cref="CharacterSheet.ToCreature"/>.
     /// </summary>
-    /// <param name="rune">The <see cref="Rune"/> to look for.</param>
-    /// <param name="level">The maximum character level to look through.</param>
     /// <returns>(bool) True if the rune was found, or false if not.</returns>
     public bool KnowsRune(CalculatedCharacterSheetValues values, Rune rune)
     {
@@ -81,10 +87,8 @@ public class RunicRepertoireFeat : Feat
     }
 
     /// <summary>
-    /// Acts as <see cref="KnowsRune"/> for a list of runes.
+    /// Acts as <see cref="KnowsRune(Creature, Rune)"/> for a list of runes. To check for runes at higher levels, use <see cref="CharacterSheet.ToCreature"/>.
     /// </summary>
-    /// <param name="runes">The List of <see cref="Rune"/>s to look for.</param>
-    /// <param name="level">The maximum character level to look through.</param>
     /// <returns>(bool) True if all the runes were found, or false if not.</returns>
     public bool KnowsRunes(Creature cr, List<Rune> runes)
     {
@@ -92,9 +96,8 @@ public class RunicRepertoireFeat : Feat
     }
 
     /// <summary>
-    /// Acts as <see cref="KnowsRune"/> for a list of runes.
+    /// Acts as <see cref="KnowsRune(CalculatedCharacterSheetValues, Rune"/> for a list of runes. To check for runes at higher levels, use <see cref="CharacterSheet.ToCreature"/>.
     /// </summary>
-    /// <param name="runes">The List of <see cref="Rune"/>s to look for.</param>
     /// <returns>(bool) True if all the runes were found, or false if not.</returns>
     public bool KnowsRunes(CalculatedCharacterSheetValues values, List<Rune> runes)
     {
@@ -107,18 +110,27 @@ public class RunicRepertoireFeat : Feat
         
         return true;
     }
+    #endregion
 
+    #region Static Methods
+    /// <summary>
+    /// Gets the RunicRepertoireFeat known by the CREATURE.
+    /// </summary>
     public static RunicRepertoireFeat? GetRepertoireOnCreature(Creature cr)
     {
         RunicRepertoireFeat? repertoire = cr.PersistentCharacterSheet?.Calculated.AllFeats.FirstOrDefault(ft => ft is RunicRepertoireFeat ) as RunicRepertoireFeat;
         return repertoire;
     }
     
+    /// <summary>
+    /// Gets the RunicRepertoireFeat known by the CHARACTER SHEET.
+    /// </summary>
     public static RunicRepertoireFeat? GetRepertoireOnSheet(CalculatedCharacterSheetValues values)
     {
         RunicRepertoireFeat? repertoire = values.AllFeats.FirstOrDefault(ft => ft is RunicRepertoireFeat ) as RunicRepertoireFeat;
         return repertoire;
     }
+    #endregion
 
     #region Obsolete Runes Known Code
     

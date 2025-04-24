@@ -55,6 +55,11 @@ public class ClassFeats
     public static Feat? ElementalRevision;
     public static Feat? ReadTheBones;
     
+    // TODO: More enums for stuff, per Sudo's recommendations.
+    /* public static readonly QEffectId HitTheDirt = ModManager.RegisterEnumMember<QEffectId>("Hit the Dirt QEID");
+    caster.AddQEffect(new QEffect() { Id = HitTheDirt; }
+    caster.RemoveAllQEffects(qe => qe.Id == HitTheDirt);*/
+    
     public static void CreateFeats()
     {
         /////////////////////
@@ -77,7 +82,7 @@ public class ClassFeats
                     SpellcastingKind.Innate,
                     classOfOrigin,
                     Ability.Charisma,
-                    Trait.Arcane) // PUBLISH: The tradition is always arcane
+                    Trait.Arcane) // Ease of implementation, the tradition is always arcane
                     .WithSpells(
                         [SpellId.MagicWeapon, SpellId.MagicFang],
                         creature.MaximumSpellRank);
@@ -857,7 +862,7 @@ public class ClassFeats
                                                         // Call NewDrawnRune in case it prompts for a selection, such as if the rune applies to an item, so we can move this rune to that creature AND its item.
                                                         DrawnRune pretendNewRune = (await thisRune.NewDrawnRune!.Invoke(thisTransposeAction, caster, transposeTo, thisRune))!;
                                                         await runeQf.MoveRuneToTarget(transposeTo, pretendNewRune.DrawnOn);
-                                                        Sfxs.Play(SfxName.AncientDust); // TODO: Consider better SFX for Transpose Etching. Uses the same sound as drawing a rune.
+                                                        Sfxs.Play(SfxName.GaleBlast);
 
                                                     })
                                                     .WithIllustration(thisRune.Illustration!);

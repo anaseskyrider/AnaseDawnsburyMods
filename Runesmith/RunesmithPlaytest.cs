@@ -42,11 +42,21 @@ public class RunesmithPlaytest
     [DawnsburyDaysModMainMethod]
     public static void LoadMod()
     {
+        /////////////////
+        // Mod Options //
+        /////////////////
         ModManager.RegisterBooleanSettingsOption("RunesmithPlaytest.EsvadirOnEnemies",
             "Runesmith: Allow Tracing Esvadir On Enemies",
             "In Dawnsbury Days, the rune \"Esvadir, Rune of Whetstones\" is normally only traceable on allies because its passive effect increases the bearer's damage. Enabling this option allows you to trace Esvadir onto enemies anyway, for when you want to be able to immediately invoke the rune onto a second adjacent enemy before the end of your turn.",
             false);
+        ModManager.RegisterBooleanSettingsOption("RunesmithPlaytest.OljinexOnEnemies",
+            "Runesmith: Allow Tracing Oljinex On Enemies",
+            "In Dawnsbury Days, the rune \"Oljinex, Rune of Cowards' Bane\" is normally only traceable on allies because its passive effect increases the bearer's defenses. Enabling this option allows you to trace Oljinex onto enemies anyway, for when you want to penalize the movemenet of the creatures around a shield-using enemy.",
+            false);
         
+        ////////////////////
+        // Class Features //
+        ////////////////////
         RunesmithRunicRepertoireFeat = new RunicRepertoireFeat(
             ModManager.RegisterFeatName("RunesmithPlaytest.RunesmithRepertoire", null),
             null,
@@ -147,7 +157,6 @@ public class RunesmithPlaytest
             });
         ModManager.AddFeat(RunesmithTraceRune);
 
-        // BUG: Invoking a rune on a concealed target can be repeated until it works.
         RunesmithInvokeRune = new Feat(
             ModManager.RegisterFeatName("RunesmithPlaytest.InvokeRune", "Invoke Rune"),
             "",
@@ -164,7 +173,7 @@ public class RunesmithPlaytest
                     qf.Owner, 
                     ModIllustrations.InvokeRune,
                     "Invoke Rune", 
-                    [ModTraits.Invocation, Trait.Magical, ModTraits.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName],
+                    [ModTraits.Invocation, Trait.Magical, ModTraits.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment],
                     "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed. You can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are affected only once, as normal for duplicate effects.",
                     Target.Self().WithAdditionalRestriction(caster =>
                     {
@@ -474,6 +483,9 @@ public class RunesmithPlaytest
             });
         ModManager.AddFeat(RunesmithRunicCrafter);
         
+        /////////////////////
+        // Runesmith Class //
+        /////////////////////
         RunesmithClassFeat = new ClassSelectionFeat(
             ModManager.RegisterFeatName("RunesmithPlaytest.RunesmithClass", "Runesmith"),
             "At the heart of all communication is the word, and at the heart of all magic is the rune. Equal parts scholar and artist, you devote yourself to the study of these mystic symbols, learning to carve, etch, brand, and paint the building blocks of magic to channel powers greater than yourself.",
@@ -627,6 +639,13 @@ public class RunesmithPlaytest
         RunesmithClassFeat.RulesText = legalORCText;
         ModManager.AddFeat(RunesmithClassFeat);
         
+        ////////////////
+        // Dedication //
+        ////////////////
+        
+        ////////////////
+        // Load Calls //
+        ////////////////
         RunesmithClassRunes.LoadRunes();
         ClassFeats.CreateFeats();
     }
