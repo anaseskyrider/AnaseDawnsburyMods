@@ -54,52 +54,56 @@ public class ArchetypeArcher
             2,
             "You specialize in certain ranged weapons.",
             "You use your class's best weapon proficiency for the purposes of determining your proficiency with all simple and martial bows.\n\nIf you are at least an expert with the bow, you gain access to the critical specialization effect with that bow.",
-            [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait, FeatArchetype.DedicationTrait]
-        ).WithOnSheet((CalculatedCharacterSheetValues sheet) =>
-        {
-            sheet.Proficiencies.AddProficiencyAdjustment(Traits =>
-                    Traits.Contains(Trait.Bow) && (Traits.Contains(Trait.Simple) || Traits.Contains(Trait.Martial)), Trait.Unarmed
-            );
-                
-            // Fighter compatibility
-            // If refactored: apply the refactor to Mauler Dedication, and Advanced Bow Training
-            sheet.AtEndOfRecalculation += (sheet =>
-                    {
-                        Feat? fighterWeaponMastery = sheet.AllFeats
-                            .Where((Feat f) => f.HasTrait(Trait.FighterWeaponMasteryWeaponGroup))
-                            .FirstOrDefault((Feat?)null);
-                        
-                        if (fighterWeaponMastery != null)
-                        {
-                            Trait fighterWeaponTrait = ((FighterWeaponMasteryWeaponGroupFeat)fighterWeaponMastery).WeaponGroup;
-                            sheet.Proficiencies.AddProficiencyAdjustment(Traits =>
-                                    Traits.Contains(Trait.Bow) && (Traits.Contains(Trait.Simple) || Traits.Contains(Trait.Martial)), fighterWeaponTrait
-                            );
-                        }
-                    }
-                );
-        }).WithOnCreature((Creature cr) =>
-        {
-            cr.AddQEffect(new QEffect()
+            [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait, FeatArchetype.DedicationTrait])
+            .WithOnSheet(values =>
             {
-                YouHaveCriticalSpecialization = (QEffect self, Item weapon, CombatAction _, Creature _) => weapon.HasTrait(Trait.Melee) && weapon.HasTrait(Trait.TwoHanded) && cr.Proficiencies.Get(weapon.Traits) >= Proficiency.Expert
+                values.Proficiencies.AddProficiencyAdjustment(traits =>
+                        traits.Contains(Trait.Bow) && (traits.Contains(Trait.Simple) || traits.Contains(Trait.Martial)), Trait.Unarmed);
+                    
+                // Fighter compatibility
+                // If refactored: apply the refactor to Mauler Dedication, and Advanced Bow Training
+                values.AtEndOfRecalculation += sheet =>
+                {
+                    Feat? fighterWeaponMastery = sheet.AllFeats
+                        .Where((Feat f) => f.HasTrait(Trait.FighterWeaponMasteryWeaponGroup))
+                        .FirstOrDefault((Feat?)null);
+
+                    if (fighterWeaponMastery == null)
+                        return;
+                    Trait fighterWeaponTrait = ((FighterWeaponMasteryWeaponGroupFeat)fighterWeaponMastery).WeaponGroup;
+                    sheet.Proficiencies.AddProficiencyAdjustment(Traits =>
+                            Traits.Contains(Trait.Bow) && (Traits.Contains(Trait.Simple) || Traits.Contains(Trait.Martial)), fighterWeaponTrait
+                    );
+                };
+            })
+            .WithOnCreature(cr =>
+            {
+                cr.AddQEffect(new QEffect()
+                {
+                    YouHaveCriticalSpecialization = (qfSelf, weapon, _, _) =>
+                        weapon.HasTrait(Trait.Melee) && weapon.HasTrait(Trait.TwoHanded) && cr.Proficiencies.Get(weapon.Traits) >= Proficiency.Expert
+                });
             });
-        });
         ModManager.AddFeat(ArcherDedicationFeat);
 
         Feat? assistingShotFeat = AllFeats.All.FirstOrDefault((Feat f) => f.FeatName == FeatName.AssistingShot);
         if (assistingShotFeat != null)
         {
             ArcherAssistingShotFeat = new TrueFeat(
-                ModManager.RegisterFeatName("MoreDedications.ArcherAssistingShot", (assistingShotFeat.Name + " (Archer)")),
+                ModManager.RegisterFeatName("MoreDedications.ArcherAssistingShot", $"{assistingShotFeat.Name} (Archer)"),
                 4,
                 assistingShotFeat.FlavorText,
                 assistingShotFeat.RulesText,
-                [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait, Trait.Press]
-            ).WithOnSheet((CalculatedCharacterSheetValues sheet) =>
-            {
-                sheet.GrantFeat(FeatName.AssistingShot);
-            }).WithPrerequisite((CalculatedCharacterSheetValues sheet) => Enumerable.Contains(sheet.AllFeats, ArcherDedicationFeat), "You must have the Archer Dedication feat.").WithEquivalent((CalculatedCharacterSheetValues values) => values.AllFeats.Contains(assistingShotFeat));
+                [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait, Trait.Press])
+                .WithOnSheet(values =>
+                {
+                    values.GrantFeat(FeatName.AssistingShot);
+                })
+                .WithPrerequisite(values =>
+                    Enumerable.Contains(values.AllFeats, ArcherDedicationFeat),
+                    "You must have the Archer Dedication feat.")
+                .WithEquivalent(values =>
+                    values.AllFeats.Contains(assistingShotFeat));
             ModManager.AddFeat(ArcherAssistingShotFeat);
         }
         
@@ -109,87 +113,88 @@ public class ArchetypeArcher
             1,
             "You take aim to pick off nearby enemies quickly.",
             "{b}Requirements{/b} You are wielding a ranged weapon.\n\nWhen using a ranged volley weapon while you are in this stance, you don't take the penalty to your attack rolls from the volley trait. When using a ranged weapon that doesn't have the volley trait, you gain a +2 circumstance bonus to damage rolls on attacks against targets within the weapon's first range increment.",
-            [MoreDedications.ModNameTrait, Trait.Fighter, Trait.Open, Trait.Stance]
-        ).WithActionCost(1
-        ).WithPermanentQEffect((QEffect qf) =>
-        {
-            Illustration icon = new ScrollIllustration(IllustrationName.HuntPrey, IllustrationName.Crossbow);
-            //Illustration icon = new ScrollIllustration(IllustrationName.Shove, IllustrationName.Crossbow);
-            string stanceName = "Point-Blank Shot";
-            string fullDescription =
-                "{b}Requirements{/b} You are wielding a ranged weapon.\n\nWhen using a ranged volley weapon while you are in this stance, you don't take the penalty to your attack rolls from the volley trait. When using a ranged weapon that doesn't have the volley trait, you gain a +2 circumstance bonus to damage rolls on attacks against targets within the weapon's first range increment.";
-            string effectDescription =
-                "Ranged volley weapons don't take volley's penalty, and ranged weapons without volley gain a +2 circumstance bonus to damage within its first range increment.";
-            string actionDescription = "Enter a stance where " + effectDescription.Uncapitalize();
-            
-            qf.ProvideActionIntoPossibilitySection = (qfSelf, section) =>
+            [MoreDedications.ModNameTrait, Trait.Fighter, Trait.Open, Trait.Stance])
+            .WithActionCost(1)
+            .WithPermanentQEffect(qfFeat =>
             {
-                if (section.PossibilitySectionId != PossibilitySectionId.MainActions)
-                    return null;
-                CombatAction stanceAction = new CombatAction(
-                    qfSelf.Owner, icon, stanceName,
-                    [Trait.Fighter, Trait.Open, Trait.Stance],
-                    fullDescription,
-                    Target.Self().WithAdditionalRestriction((Func<Creature, string>)(self =>
-                    {
-                        foreach (QEffect qfInLoop in self.QEffects)
-                        {
-                            if (qfInLoop.Tag is string && qfInLoop.Tag.ToString() == "Point-Blank Shot")
-                            {
-                                return "You're already in this stance.";
-                            }
-                        }
-                            
-                        foreach (Item heldItem in self.HeldItems)
-                        {
-                            if (heldItem != null && heldItem.HasTrait(Trait.Weapon) &&
-                                heldItem.HasTrait(Trait.Ranged))
-                            {
-                                return null;
-                            }
-                        }
-
-                        return "You must be wielding a ranged weapon.";
-                    }))
-                ).WithActionCost(1
-                ).WithEffectOnSelf((Func<Creature, Task>) (async self =>
+                Illustration icon = new ScrollIllustration(IllustrationName.HuntPrey, IllustrationName.Crossbow);
+                //Illustration icon = new ScrollIllustration(IllustrationName.Shove, IllustrationName.Crossbow);
+                string stanceName = "Point-Blank Shot";
+                string fullDescription =
+                    "{b}Requirements{/b} You are wielding a ranged weapon.\n\nWhen using a ranged volley weapon while you are in this stance, you don't take the penalty to your attack rolls from the volley trait. When using a ranged weapon that doesn't have the volley trait, you gain a +2 circumstance bonus to damage rolls on attacks against targets within the weapon's first range increment.";
+                string effectDescription =
+                    "Ranged volley weapons don't take volley's penalty, and ranged weapons without volley gain a +2 circumstance bonus to damage within its first range increment.";
+                string actionDescription = "Enter a stance where " + effectDescription.Uncapitalize();
+                
+                qfFeat.ProvideActionIntoPossibilitySection = (qfSelf, section) =>
                 {
-                    QEffect stanceQEffect = KineticistCommonEffects.EnterStance(self, icon, stanceName, effectDescription);
-                    stanceQEffect.StateCheck += (thisQf =>
-                    {
-                        foreach (Item heldItem in self.HeldItems)
-                        {
-                            if (heldItem != null && heldItem.HasTrait(Trait.Weapon) &&
-                                heldItem.HasTrait(Trait.Ranged))
+                    if (section.PossibilitySectionId != PossibilitySectionId.MainActions)
+                        return null;
+                    CombatAction stanceAction = new CombatAction(
+                        qfSelf.Owner, icon, stanceName,
+                        [Trait.Fighter, Trait.Open, Trait.Stance],
+                        fullDescription,
+                        Target.Self()
+                            .WithAdditionalRestriction(self =>
                             {
-                                return;
-                            }
-                        }
-                        thisQf.ExpiresAt = ExpirationCondition.Immediately;
-                    });
-                    stanceQEffect.Tag = "Point-Blank Shot";
-                    stanceQEffect.BonusToDamage = (QEffect stanceQf, CombatAction combatAction, Creature defender) =>
-                    {
-                        Item? primaryWeapon = stanceQf.Owner.PrimaryWeaponIncludingRanged;
-                        return primaryWeapon != null && !primaryWeapon.HasTrait(Trait.Volley30Feet) && stanceQf.Owner.DistanceTo(defender) <= primaryWeapon.WeaponProperties.RangeIncrement
-                            ? new Bonus(2, BonusType.Circumstance, "Point-Blank Shot")
-                            : null;
-                    };
-                    stanceQEffect.BonusToAttackRolls = (QEffect stanceQf, CombatAction combatAction, Creature? defender) =>
-                    {
-                        Item? primaryWeapon = stanceQf.Owner.PrimaryWeaponIncludingRanged;
-                        return primaryWeapon != null && combatAction.HasTrait(Trait.Attack) && primaryWeapon.HasTrait(Trait.Volley30Feet) && defender != null && stanceQf.Owner.DistanceTo(defender) <= 6  
-                            ? new Bonus(2, BonusType.Untyped, "Point-Blank Shot")
-                            : null;
-                    };
-                }));
-                stanceAction.ShortDescription = actionDescription;
-                    
-                ActionPossibility stancePossibility = new ActionPossibility(stanceAction);
-                stancePossibility.PossibilityGroup = "Enter a stance";
-                return stancePossibility;
-            };
-        }); //.WithIllustration(IllustrationName.Longbow);
+                                foreach (QEffect qfInLoop in self.QEffects)
+                                {
+                                    if (qfInLoop.Tag is string && qfInLoop.Tag.ToString() == "Point-Blank Shot")
+                                    {
+                                        return "You're already in this stance.";
+                                    }
+                                }
+                                
+                                foreach (Item heldItem in self.HeldItems)
+                                {
+                                    if (heldItem != null && heldItem.HasTrait(Trait.Weapon) &&
+                                        heldItem.HasTrait(Trait.Ranged))
+                                    {
+                                        return null;
+                                    }
+                                }
+
+                                return "You must be wielding a ranged weapon.";
+                            }))
+                        .WithActionCost(1)
+                        .WithEffectOnSelf(async self =>
+                        {
+                            QEffect stanceQEffect = KineticistCommonEffects.EnterStance(self, icon, stanceName, effectDescription);
+                            stanceQEffect.StateCheck += (thisQf =>
+                            {
+                                foreach (Item heldItem in self.HeldItems)
+                                {
+                                    if (heldItem.HasTrait(Trait.Weapon) &&
+                                        heldItem.HasTrait(Trait.Ranged))
+                                    {
+                                        return;
+                                    }
+                                }
+                                thisQf.ExpiresAt = ExpirationCondition.Immediately;
+                            });
+                            stanceQEffect.Tag = "Point-Blank Shot";
+                            stanceQEffect.BonusToDamage = (QEffect stanceQf, CombatAction combatAction, Creature defender) =>
+                            {
+                                Item? primaryWeapon = stanceQf.Owner.PrimaryWeaponIncludingRanged;
+                                return primaryWeapon != null && !primaryWeapon.HasTrait(Trait.Volley30Feet) && stanceQf.Owner.DistanceTo(defender) <= primaryWeapon.WeaponProperties.RangeIncrement
+                                    ? new Bonus(2, BonusType.Circumstance, "Point-Blank Shot")
+                                    : null;
+                            };
+                            stanceQEffect.BonusToAttackRolls = (QEffect stanceQf, CombatAction combatAction, Creature? defender) =>
+                            {
+                                Item? primaryWeapon = stanceQf.Owner.PrimaryWeaponIncludingRanged;
+                                return primaryWeapon != null && combatAction.HasTrait(Trait.Attack) && primaryWeapon.HasTrait(Trait.Volley30Feet) && defender != null && stanceQf.Owner.DistanceTo(defender) <= 6  
+                                    ? new Bonus(2, BonusType.Untyped, "Point-Blank Shot")
+                                    : null;
+                            };
+                        });
+                    stanceAction.ShortDescription = actionDescription;
+                        
+                    ActionPossibility stancePossibility = new ActionPossibility(stanceAction);
+                    stancePossibility.PossibilityGroup = "Enter a stance";
+                    return stancePossibility;
+                };
+            }); //.WithIllustration(IllustrationName.Longbow);
         ModManager.AddFeat(FighterPointBlankShotFeat);
 
         ArcherPointBlankShotFeat = new TrueFeat(
@@ -197,11 +202,16 @@ public class ArchetypeArcher
             4,
             FighterPointBlankShotFeat.FlavorText,
             FighterPointBlankShotFeat.RulesText,
-            [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait, Trait.Open, Trait.Stance]
-        ).WithOnSheet((CalculatedCharacterSheetValues sheet) =>
-        {
-            sheet.GrantFeat(FighterPointBlankShotFeat.FeatName);
-        }).WithPrerequisite((CalculatedCharacterSheetValues sheet) => Enumerable.Contains(sheet.AllFeats, ArcherDedicationFeat), "You must have the Archer Dedication feat.").WithEquivalent((CalculatedCharacterSheetValues values) => values.AllFeats.Contains(FighterPointBlankShotFeat));
+            [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait, Trait.Open, Trait.Stance])
+            .WithOnSheet(values =>
+            {
+                values.GrantFeat(FighterPointBlankShotFeat.FeatName);
+            })
+            .WithPrerequisite(values =>
+                Enumerable.Contains(values.AllFeats, ArcherDedicationFeat),
+                "You must have the Archer Dedication feat.")
+            .WithEquivalent(values =>
+                values.AllFeats.Contains(FighterPointBlankShotFeat));
         ModManager.AddFeat(ArcherPointBlankShotFeat);
         
         // Quick Shot -> Quick Draw
@@ -209,15 +219,20 @@ public class ArchetypeArcher
         if (quickDrawFeat != null)
         {
             ArcherQuickDrawFeat = new TrueFeat(
-                ModManager.RegisterFeatName("MoreDedications.ArcherQuickDraw", (quickDrawFeat.Name + " (Archer)")),
+                ModManager.RegisterFeatName("MoreDedications.ArcherQuickDraw", $"{quickDrawFeat.Name} (Archer)"),
                 4,
                 quickDrawFeat.FlavorText,
                 quickDrawFeat.RulesText,
-                [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait]
-            ).WithOnSheet((CalculatedCharacterSheetValues sheet) =>
-            {
-                sheet.GrantFeat(FeatName.QuickDraw);
-            }).WithPrerequisite((CalculatedCharacterSheetValues sheet) => Enumerable.Contains(sheet.AllFeats, ArcherDedicationFeat), "You must have the Archer Dedication feat.").WithEquivalent((CalculatedCharacterSheetValues values) => values.AllFeats.Contains(quickDrawFeat));
+                [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait])
+                .WithOnSheet(sheet =>
+                {
+                    sheet.GrantFeat(FeatName.QuickDraw);
+                })
+                .WithPrerequisite(sheet =>
+                    Enumerable.Contains(sheet.AllFeats, ArcherDedicationFeat),
+                    "You must have the Archer Dedication feat.")
+                .WithEquivalent(values =>
+                    values.AllFeats.Contains(quickDrawFeat));
             ModManager.AddFeat(ArcherQuickDrawFeat);
         }
         
@@ -227,36 +242,39 @@ public class ArchetypeArcher
             6,
             "Through constant practice and the crucible of experience, you increase your skill with advanced bows.",
             "You gain proficiency with all advanced bows as if they were martial weapons in the bow weapon group.",
-            [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait]
-        ).WithOnSheet((CalculatedCharacterSheetValues sheet) =>
-        {
-            sheet.Proficiencies.AddProficiencyAdjustment(Traits =>
-                    Traits.Contains(Trait.Bow) && Traits.Contains(Trait.Advanced), Trait.Martial
-            );
-                
-            // Fighter compatibility
-            sheet.AtEndOfRecalculation += (sheet =>
-                    {
-                        Feat? fighterWeaponMastery = sheet.AllFeats
-                            .Where((Feat f) => f.HasTrait(Trait.FighterWeaponMasteryWeaponGroup))
-                            .FirstOrDefault((Feat?)null);
-                        
-                        if (fighterWeaponMastery != null)
-                        {
-                            Trait fighterWeaponTrait = ((FighterWeaponMasteryWeaponGroupFeat)fighterWeaponMastery).WeaponGroup;
-                            sheet.Proficiencies.AddProficiencyAdjustment(Traits =>
-                                    Traits.Contains(Trait.Bow) && Traits.Contains(Trait.Advanced), fighterWeaponTrait
-                            );
-                        }
-                    }
-                );
-        }).WithOnCreature((Creature cr) =>
-        {
-            cr.AddQEffect(new QEffect()
+            [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait])
+            .WithPrerequisite(values =>
+                Enumerable.Contains(values.AllFeats, ArcherDedicationFeat),
+                "You must have the Archer Dedication feat.")
+            .WithOnSheet(values =>
             {
-                YouHaveCriticalSpecialization = (QEffect self, Item weapon, CombatAction _, Creature _) => weapon.HasTrait(Trait.Melee) && weapon.HasTrait(Trait.TwoHanded) && cr.Proficiencies.Get(weapon.Traits) >= Proficiency.Expert
+                values.Proficiencies.AddProficiencyAdjustment(Traits =>
+                        Traits.Contains(Trait.Bow) && Traits.Contains(Trait.Advanced), Trait.Martial
+                );
+                    
+                // Fighter compatibility
+                values.AtEndOfRecalculation += sheet =>
+                {
+                    Feat? fighterWeaponMastery = sheet.AllFeats
+                        .Where((Feat f) => f.HasTrait(Trait.FighterWeaponMasteryWeaponGroup))
+                        .FirstOrDefault((Feat?)null);
+                    
+                    if (fighterWeaponMastery != null)
+                    {
+                        Trait fighterWeaponTrait = ((FighterWeaponMasteryWeaponGroupFeat)fighterWeaponMastery).WeaponGroup;
+                        sheet.Proficiencies.AddProficiencyAdjustment(Traits =>
+                                Traits.Contains(Trait.Bow) && Traits.Contains(Trait.Advanced), fighterWeaponTrait
+                        );
+                    }
+                };
+            })
+            .WithOnCreature(cr =>
+            {
+                cr.AddQEffect(new QEffect()
+                {
+                    YouHaveCriticalSpecialization = (QEffect self, Item weapon, CombatAction _, Creature _) => weapon.HasTrait(Trait.Melee) && weapon.HasTrait(Trait.TwoHanded) && cr.Proficiencies.Get(weapon.Traits) >= Proficiency.Expert
+                });
             });
-        });
         ModManager.AddFeat(ArcherAdvancedBowTrainingFeat);
         
         // Crossbow Terror
@@ -265,48 +283,54 @@ public class ArchetypeArcher
             6,
             "You are a dynamo with the crossbow.",
             "You gain a +2 circumstance bonus to damage with crossbows. If the crossbow is a simple weapon, also increase the damage die size for your attacks made with that crossbow by one step. As normal, this damage die increase can't be combined with other abilities that alter the weapon damage die (such as the ranger feat Crossbow Ace).",
-            [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait]
-        ).WithPermanentQEffect("+2 circumstance bonus to Crossbow damage, increment Simple Crossbow die.", delegate(QEffect qf)
-        {
-            qf.IncreaseItemDamageDie = ((qfTemporary, item) =>
-            {
-                if (item.HasTrait(Trait.Crossbow) && item.HasTrait(Trait.Simple))
+            [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait])
+            .WithPermanentQEffect(
+                "+2 circumstance bonus to Crossbow damage, increment Simple Crossbow die.",
+                qfFeat =>
                 {
-                    foreach (QEffect qfInLoop in qf.Owner.QEffects)
+                    qfFeat.IncreaseItemDamageDie = (qfThis, item) =>
                     {
-                        if (qfInLoop != qf && qfInLoop.IncreaseItemDamageDie != null) return false;
-                    }
-                    return true;
-                }
+                        if (!item.HasTrait(Trait.Crossbow) || !item.HasTrait(Trait.Simple))
+                            return false;
+                        
+                        foreach (QEffect qfInLoop in qfFeat.Owner.QEffects)
+                        {
+                            if (qfInLoop != qfFeat && qfInLoop.IncreaseItemDamageDie != null)
+                                return false;
+                        }
+                        return true;
 
-                return false;
-            });
-            qf.BonusToDamage = (QEffect self, CombatAction action, Creature defender) =>
-            {
-                if (action.HasTrait(Trait.Crossbow))
-                {
-                    return new Bonus(2, BonusType.Circumstance, "Crossbow Terror");
-                }
-
-                return null;
-            };
-        }).WithPrerequisite((CalculatedCharacterSheetValues sheet) => Enumerable.Contains(sheet.AllFeats, ArcherDedicationFeat), "You must have the Archer Dedication feat.");
+                    };
+                    qfFeat.BonusToDamage = (qfThis, action, defender) =>
+                        action.HasTrait(Trait.Crossbow) ?
+                        new Bonus(2, BonusType.Circumstance, "Crossbow Terror") :
+                        null;
+                })
+            .WithPrerequisite(values =>
+                Enumerable.Contains(values.AllFeats, ArcherDedicationFeat),
+                "You must have the Archer Dedication feat.");
         ModManager.AddFeat(ArcherCrossbowTerrorFeat);
         
         // Double Shot
-        Feat? doubleShotFeat = AllFeats.All.FirstOrDefault((Feat f) => f.FeatName == FeatName.DoubleShot);
+        Feat? doubleShotFeat = AllFeats.All.FirstOrDefault(feat =>
+            feat.FeatName == FeatName.DoubleShot);
         if (doubleShotFeat != null)
         {
             ArcherDoubleShotFeat = new TrueFeat(
-                ModManager.RegisterFeatName("MoreDedications.ArcherDoubleShot", (doubleShotFeat.Name + " (Archer)")),
+                ModManager.RegisterFeatName("MoreDedications.ArcherDoubleShot", $"{doubleShotFeat.Name} (Archer)"),
                 4,
                 doubleShotFeat.FlavorText,
                 doubleShotFeat.RulesText,
-                [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait, Trait.Flourish]
-            ).WithOnSheet((CalculatedCharacterSheetValues sheet) =>
-            {
-                sheet.GrantFeat(FeatName.DoubleShot);
-            }).WithPrerequisite((CalculatedCharacterSheetValues sheet) => Enumerable.Contains(sheet.AllFeats, ArcherDedicationFeat), "You must have the Archer Dedication feat.").WithEquivalent((CalculatedCharacterSheetValues values) => values.AllFeats.Contains(doubleShotFeat));
+                [MoreDedications.ModNameTrait, FeatArchetype.ArchetypeTrait, Trait.Flourish])
+                .WithOnSheet(sheet =>
+                {
+                    sheet.GrantFeat(FeatName.DoubleShot);
+                })
+                .WithPrerequisite(values =>
+                    Enumerable.Contains(values.AllFeats, ArcherDedicationFeat),
+                    "You must have the Archer Dedication feat.")
+                .WithEquivalent(values =>
+                    values.AllFeats.Contains(doubleShotFeat));
             ModManager.AddFeat(ArcherDoubleShotFeat);
         }
         
@@ -316,26 +340,26 @@ public class ArchetypeArcher
             4,
             "You jump back and fire a quick shot that catches your opponent off guard.",
             "{b}Requirements{/b} You are wielding a loaded ranged weapon or a ranged weapon without reload 1 or reload 2.\n\nYou Step and then make a ranged Strike with the required weapon. Your target is flat-footed against the attack.",
-            [MoreDedications.ModNameTrait, Trait.Fighter]
-        ).WithActionCost(2
-        ).WithPermanentQEffect("You jump back and fire a quick shot that catches your opponent off guard.",
-            async delegate(QEffect qf)
+            [MoreDedications.ModNameTrait, Trait.Fighter])
+            .WithActionCost(2)
+            .WithPermanentQEffect("You jump back and fire a quick shot that catches your opponent off guard.",
+            async qfFeat =>
             {
-                qf.ProvideStrikeModifier = (item =>
+                qfFeat.ProvideStrikeModifier = item =>
                 {
                     if (!item.HasTrait(Trait.Ranged) || ((item.HasTrait(Trait.Reload1) || item.HasTrait(Trait.Reload2)) && item.EphemeralItemProperties.NeedsReload))
                         return null;
-                    CombatAction basicStrike = qf.Owner.CreateStrike(item).WithActionCost(0);
+                    CombatAction basicStrike = qfFeat.Owner.CreateStrike(item).WithActionCost(0);
                     CombatAction partingShot = new CombatAction(
-                        qf.Owner,
-                        new SideBySideIllustration(IllustrationName.Walk, item.Illustration),
-                        "Parting Shot",
-                        [Trait.Fighter, Trait.Basic],
-                        StrikeRules.CreateBasicStrikeDescription3(basicStrike.StrikeModifiers, additionalAttackRollText: "You Step before you Strike. Your target is flat-footed against the attack."),
-                        Target.Self())
+                            qfFeat.Owner,
+                            new SideBySideIllustration(IllustrationName.Walk, item.Illustration),
+                            "Parting Shot",
+                            [Trait.Fighter, Trait.Basic],
+                            StrikeRules.CreateBasicStrikeDescription3(basicStrike.StrikeModifiers, additionalAttackRollText: "You Step before you Strike. Your target is flat-footed against the attack."),
+                            Target.Self())
                         .WithActionCost(2)
                         .WithSoundEffect(SfxName.Footsteps)
-                        .WithPrologueEffectOnChosenTargetsBeforeRolls( async (CombatAction action, Creature caster, ChosenTargets targets) =>
+                        .WithPrologueEffectOnChosenTargetsBeforeRolls(async (action, caster, targets) =>
                         {
                             if (!await caster.StepAsync("Choose where to Step with Parting Shot.", allowCancel: true, allowPass: true))
                             {
@@ -345,17 +369,19 @@ public class ArchetypeArcher
                             {
                                 QEffect temporarilyFlatFooted = new QEffect()
                                 {
-                                    IsFlatFootedTo = (qfSelf, attacker, action) => attacker != caster ? null : "Parting Shot" 
+                                    IsFlatFootedTo = (qfSelf, attacker, action) =>
+                                        attacker != caster ? null : "Parting Shot" 
                                 }.WithExpirationNever();
                                 caster.Battle.AllCreatures.ForEach(cr => cr.AddQEffect(temporarilyFlatFooted));
                                 await caster.Battle.GameLoop.FullCast(basicStrike);
                                 caster.Battle.AllCreatures.ForEach(cr => cr.RemoveAllQEffects(qfToRemove => qfToRemove == temporarilyFlatFooted));
                             }
                         })
-                        .WithTargetingTooltip(((power, target, index) => power.Description));
+                        .WithTargetingTooltip((power, target, index) =>
+                            power.Description);
                     
                     return partingShot;
-                });
+                };
             });
         ModManager.AddFeat(FighterPartingShotFeat);
 

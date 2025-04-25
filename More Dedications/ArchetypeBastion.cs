@@ -1,0 +1,280 @@
+using System.Text;
+using Dawnsbury.Core;
+using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
+using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Creatures;
+using Dawnsbury.Core.Mechanics;
+using Dawnsbury.Core.Mechanics.Core;
+using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Treasure;
+using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.StatBlocks.Monsters.L5;
+using Dawnsbury.Modding;
+using Dawnsbury.Mods.DawnniExpanded;
+
+namespace Dawnsbury.Mods.MoreDedications;
+
+public class ArchetypeBastion
+{
+    public static Feat BastionDedicationFeat;
+    public static Feat BastionAgileShieldGripFeat; // Knights of Lastwall content
+    public static Feat BastionDisarmingBlockFeat;
+    //public static Feat BastionEverstandStanceFeat; // Character Guide content. https://2e.aonprd.com/Feats.aspx?ID=1087&ArchLevel=4
+    //public static Feat BastionEverstandStrikeFeat; // Character Guide content. https://2e.aonprd.com/Feats.aspx?ID=1088&ArchLevel=6
+    public static Feat BastionNimbleShieldHandFeat;
+    public static Feat FighterShieldedStrideFeat;
+    public static Feat BastionShieldedStrideFeat;
+    //public static Feat BastionDriveBackFeat; // Knights of Lastwall content. https://2e.aonprd.com/Feats.aspx?ID=3617
+    public static Feat FighterReflexiveShieldFeat;
+    public static Feat BastionReflexiveShieldFeat;
+    public static Feat BastionShieldWardenFeat;
+
+    public static void LoadMod()
+    {
+        BastionDedicationFeat = MoreDedications.NewDedicationFeat(
+            ModManager.RegisterFeatName("MoreDedications.BastionDedication", "Bastion Dedication"),
+            2,
+            "You are particularly skilled at using a shield in combat.",
+            "You gain the Reactive Shield {icon:Reaction} fighter feat.")
+            .WithPrerequisite(FeatName.ShieldBlock, "Shield Block")
+            .WithOnSheet(values =>
+            {
+                values.GrantFeat(FeatName.ReactiveShield);
+            });
+        ModManager.AddFeat(BastionDedicationFeat);
+
+        Feat fighterGripFeat = AllFeats.All.First(ft => ft.FeatName == Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion.Champion.AgileShieldGripFeatName);
+        BastionAgileShieldGripFeat = MoreDedications.FeatAsArchetypeFeat(
+            (BastionDedicationFeat as TrueFeat)!,
+            (fighterGripFeat as TrueFeat)!,
+            "MoreDedications.BastionAgileShieldGrip",
+            "Bastion",
+            4);
+        ModManager.AddFeat(BastionAgileShieldGripFeat);
+
+        BastionDisarmingBlockFeat = MoreDedications.NewArchetypeFeat(
+            BastionDedicationFeat,
+            ModManager.RegisterFeatName("MoreDedications.BastionDisarmingBlock", "Disarming Block"),
+            4,
+            null,
+            "{b}Trigger{/b} You Shield Block a melee Strike made with a held weapon.\n\nYou attempt to Disarm the creature whose attack you blocked of the weapon they attacked you with. You can do so even if you don't have a hand free.")
+            .WithActionCost(0)
+            .WithPrerequisite(FeatName.Athletics, "Trained in Athletics")
+            .WithPermanentQEffect("You attempt to Disarm melee attackers when you Shield Block.", qfFeat =>
+            {
+                // This captures the RaisedShield qf to allow it to call its internal behavior, with
+                // the stipulation of executing the disarm functionality after shield blocking.
+                qfFeat.AfterYouAcquireEffect = async (qfThis, qfAcquired) =>
+                {
+                    if (qfAcquired.Id == QEffectId.RaisingAShield && qfThis.Owner.HasFeat(FeatName.ShieldBlock))
+                    {
+                        var oldDamageDealt = qfAcquired.YouAreDealtDamage;
+                        qfAcquired.YouAreDealtDamage = async (qfRaisedShield, attacker, dealt, defender) =>
+                        {
+                            if (oldDamageDealt == null)
+                                return null;
+                            
+                            // Get normal shield block stuff
+                            DamageModification? result = await oldDamageDealt.Invoke(qfRaisedShield, attacker, dealt, defender);
+
+                            if (result == null) // Didn't shield block
+                                return result;
+                            
+                            // Has to be a melee strike
+                            if (dealt.Power == null || !dealt.Power.HasTrait(Trait.Melee) || !dealt.Power.HasTrait(Trait.Strike))
+                                return result;
+                            
+                            // Do disarm stuff
+                            int oldMAP = defender.Actions.AttackedThisManyTimesThisTurn;
+                            defender.Actions.AttackedThisManyTimesThisTurn = 0;
+                            if (defender.HeldItems.FirstOrDefault(item => item.HasTrait(Trait.Disarm)) != null)
+                            {
+                                Item disarmWeapon =
+                                    defender.HeldItems.FirstOrDefault(item => item.HasTrait(Trait.Disarm))!;
+                                CombatAction specialDisarm = CombatManeuverPossibilities.CreateDisarmAction(defender, disarmWeapon);
+                                await defender.Battle.GameLoop.FullCast(specialDisarm,
+                                    ChosenTargets.CreateSingleTarget(attacker));
+                            }
+                            else
+                            {
+                                CheckResult disarmResult = CommonSpellEffects.RollCheck(
+                                    "Aggressive Block",
+                                    new ActiveRollSpecification(TaggedChecks.SkillCheck(Skill.Athletics),
+                                        TaggedChecks.DefenseDC(Defense.Reflex)),
+                                    defender,
+                                    attacker);
+                                
+                                await CommonAbilityEffects.Disarm(
+                                    CombatAction.CreateSimple(
+                                        defender,
+                                        "Aggressive Block"), // Don't assign an item, it'll try to drop it if you crit fail.
+                                    defender,
+                                    attacker,
+                                    disarmResult);
+                            }
+                            defender.Actions.AttackedThisManyTimesThisTurn = oldMAP;
+                            
+                            // Return normal shield block stuff
+                            return result;
+                        };
+                    }
+                };
+            });
+        ModManager.AddFeat(BastionDisarmingBlockFeat);
+
+        FighterShieldedStrideFeat = new TrueFeat(
+            ModManager.RegisterFeatName("MoreDedications.FighterShieldedStride", "Shielded Stride"),
+            4,
+            "When your shield is up, your enemies' blows can't touch you.",
+            "When you have your shield raised, you can Stride to move half your Speed without triggering reactions that are triggered by your movement.",
+            [MoreDedications.ModNameTrait, Trait.Fighter])
+            .WithPermanentQEffect("While your shield is raised, Striding half your speed doesn't provoke reactions.",
+                qfFeat =>
+                {
+                    qfFeat.StateCheck = async qfThis =>
+                    {
+                        if (qfThis.Owner.FindQEffect(QEffectId.RaisingAShield) != null)
+                        {
+                            qfThis.Owner.AddQEffect(new QEffect(ExpirationCondition.Ephemeral){ Id = QEffectId.Mobility });
+                        }
+                    };
+                });
+        ModManager.AddFeat(FighterShieldedStrideFeat);
+        
+        BastionShieldedStrideFeat = MoreDedications.FeatAsArchetypeFeat(
+            (BastionDedicationFeat as TrueFeat)!,
+            (FighterShieldedStrideFeat as TrueFeat)!,
+            "MoreDedications.BastionShieldedStride",
+            "Bastion",
+            6);
+        ModManager.AddFeat(BastionShieldedStrideFeat);
+
+        FighterReflexiveShieldFeat = new TrueFeat(
+            ModManager.RegisterFeatName("MoreDedications.FighterReflexiveShield", "Reflexive Shield"),
+            6,
+            "You can use your shield to fend off the worst of area effects and other damage.",
+            "When you Raise your Shield, you gain your shield's circumstance bonus to Reflex saves. If you have the Shield Block reaction, damage you take as a result of a Reflex save can trigger that reaction, even if the damage isn't physical damage.",
+            [MoreDedications.ModNameTrait, Trait.Fighter])
+            .WithPermanentQEffect("Raise a Shield benefits your Reflex saves. If you have Shield Block, you can block any damage from a Reflex save.",
+                qfFeat =>
+                {
+                    // This captures the RaisedShield qf to allow it to call its internal behavior,
+                    // with the addition of executing the reflexive functionality for shield blocking.
+                    qfFeat.AfterYouAcquireEffect = async (qfThis, qfAcquired) =>
+                    {
+                        if (qfAcquired.Id == QEffectId.RaisingAShield)
+                        {
+                            // Reflex Save Bonus
+                            var oldDefensiveBonus = qfAcquired.BonusToDefenses;
+                            qfAcquired.BonusToDefenses = (qfThis2, action, defense) =>
+                            {
+                                if (oldDefensiveBonus == null)
+                                    return null;
+                                
+                                // Get normal raised shield stuff
+                                Bonus? oldResult = oldDefensiveBonus.Invoke(qfThis2, action, defense);
+                                if (defense != Defense.Reflex)
+                                    return oldResult;
+                                
+                                // Get reflexive bonus
+                                Bonus newResult = qfThis2.Owner.HeldItems.Any(itm =>
+                                    itm.HasTrait(Trait.TowerShield) && qfThis2.Owner.HasEffect(QEffectId.TakingCover)) ? 
+                                    new Bonus(4, BonusType.Circumstance, "raised tower shield in cover") :
+                                    new Bonus(2, BonusType.Circumstance, "raised shield");
+                                return newResult;
+                            };
+                            
+                            // Shield Block Update
+                            if (qfThis.Owner.HasFeat(FeatName.ShieldBlock))
+                            {
+                                var oldDamageDealt = qfAcquired.YouAreDealtDamage;
+                                qfAcquired.YouAreDealtDamage = async (qfRaisedShield, attacker, dealt, defender) =>
+                                {
+                                    if (oldDamageDealt == null)
+                                        return null;
+                                    
+                                    // Get normal shield block stuff
+                                    DamageModification? result = await oldDamageDealt.Invoke(qfRaisedShield, attacker, dealt, defender);
+
+                                    if (result != null) // Shield blocked normally
+                                        return result;
+                                    
+                                    // Check Reflexive Shield Block
+                                    Item? shield = defender.HeldItems.FirstOrDefault(itm => itm.HasTrait(Trait.Shield));
+                                    return await ReflexiveShieldBlockYouAreDealtDamage(attacker, dealt, defender, defender);
+                                    
+                                    // Copied from decompiled code.
+                                    // Not very modular, doesn't play nice with other things that want to interact with this.
+                                    async Task<DamageModification?> ReflexiveShieldBlockYouAreDealtDamage(
+                                      Creature attacker2,
+                                      DamageStuff damageStuff,
+                                      Creature targetedCreature,
+                                      Creature blockingCreature)
+                                    {
+                                        if (shield == null || damageStuff.Power is not { } action ||
+                                            ((action.SavingThrow is not { } save || save.Defense != Defense.Reflex)
+                                             && (action.ActiveRollSpecification is not { } rollSpec ||
+                                                 rollSpec.TaggedDetermineDC.InvolvedDefense !=
+                                                 Defense.Reflex)))
+                                            return null;
+                                        int preventHowMuch = Math.Min(shield.Hardness + (blockingCreature.HasEffect(QEffectId.ShieldAlly) ? 2 : 0) + (Magus.DoesSparklingTargeShieldBlockApply(damageStuff, blockingCreature) ? (blockingCreature.Level >= 7 ? 2 : 1) : 0), damageStuff.Amount);
+                                         string promptText = (targetedCreature == blockingCreature ? "You are" : targetedCreature?.ToString() + " is") +
+                                                          $" about to be dealt {damageStuff.Amount} damage by {damageStuff.Power?.Name}.\nUse Shield Block to prevent "
+                                                          + (preventHowMuch == damageStuff.Amount ? "all" : preventHowMuch.ToString())
+                                                          + " of that damage?";
+                                        bool flag1;
+                                        bool flag2;
+                                        if (blockingCreature.HasEffect(QEffectId.QuickShieldBlock) && !blockingCreature.HasEffect(QEffectId.QuickShieldBlockUsedUp))
+                                        {
+                                            flag1 = await blockingCreature.Battle.AskForConfirmation(blockingCreature, IllustrationName.FreeAction, promptText, "{icon:FreeAction} Take free action");
+                                            if (flag1)
+                                              blockingCreature.AddQEffect(new QEffect()
+                                              {
+                                                  Id = QEffectId.QuickShieldBlockUsedUp
+                                              }.WithExpirationAtStartOfSourcesTurn(blockingCreature, 1));
+                                            flag2 = true;
+                                        }
+                                        else
+                                        {
+                                            flag1 = await blockingCreature.Battle.AskToUseReaction(blockingCreature, promptText);
+                                            flag2 = false;
+                                        }
+                                        if (flag1)
+                                        {
+                                            if (!flag2)
+                                                qfRaisedShield.YouAreDealtDamage = null;
+                                            if (blockingCreature.HasEffect(QEffectId.AggressiveBlock) && blockingCreature.IsAdjacentTo(attacker2))
+                                                attacker2.AddQEffect(Doorwarden.CreateAggressiveBlockTemporaryQEffect(attacker2, blockingCreature));
+                                            return new ReduceDamageModification(preventHowMuch, "Shield block");
+                                        }
+                                        return null;
+                                    }
+                                };
+                            }
+                        }
+                    };
+                });
+        ModManager.AddFeat(FighterReflexiveShieldFeat);
+
+        BastionReflexiveShieldFeat = MoreDedications.FeatAsArchetypeFeat(
+            (BastionDedicationFeat as TrueFeat)!,
+            (FighterReflexiveShieldFeat as TrueFeat)!,
+            "MoreDedications.BastionReflexiveShield",
+            "Bastion",
+            8);
+        ModManager.AddFeat(BastionReflexiveShieldFeat);
+
+        Feat shieldWardenFeat = AllFeats.All.First(ft => ft.FeatName == FeatName.ShieldWarden);
+        BastionShieldWardenFeat = MoreDedications.FeatAsArchetypeFeat(
+            (BastionDedicationFeat as TrueFeat)!,
+            (shieldWardenFeat as TrueFeat)!,
+            "MoreDedications.BastionShieldWarden",
+            "Bastion",
+            8);
+        ModManager.AddFeat(BastionShieldWardenFeat);
+    }
+}
