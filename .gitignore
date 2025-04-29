@@ -32,8 +32,8 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
-[Ee]xport/
-[Ee]xports/
+\[[Ee]xport\]/
+\[[Ee]xports\]/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
