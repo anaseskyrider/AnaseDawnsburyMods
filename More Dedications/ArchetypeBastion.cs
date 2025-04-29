@@ -84,8 +84,8 @@ public class ArchetypeBastion
                             if (result == null) // Didn't shield block
                                 return result;
                             
-                            // Has to be a melee strike
-                            if (dealt.Power == null || !dealt.Power.HasTrait(Trait.Melee) || !dealt.Power.HasTrait(Trait.Strike))
+                            // Has to be a melee strike with a disarmable item
+                            if (dealt.Power == null || !dealt.Power.HasTrait(Trait.Melee) || !dealt.Power.HasTrait(Trait.Strike) || attacker.HeldItems.Count == 0)
                                 return result;
                             
                             // Do disarm stuff
