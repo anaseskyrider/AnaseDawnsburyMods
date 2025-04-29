@@ -13,6 +13,7 @@ using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
+using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
@@ -659,6 +660,12 @@ public class Rune
         if (this.InvocationBehavior == null)
             return null;
 
+        Trait drawTrait = runeTarget.DrawTrait ?? Trait.None;
+        string initialDescription = $"{{b}}{runeTarget.Name}{{/b}}\n"
+                                    + (runeTarget.Description!.Contains("Tattoo") 
+                                        ? "{i}Tattooed{/i}\n" 
+                                        : $"{{i}}{drawTrait.ToStringOrTechnical()}{{/i}}\n");
+
         Trait[] traits = this.Traits.ToArray().Concat(
             [
                 ModTraits.Invocation,
@@ -683,7 +690,7 @@ public class Rune
             this.Illustration,
             "Invoke " + this.Name,
             traits,
-            this.InvocationTextWithHeightening(this, caster.Level) ?? "",
+            initialDescription + (this.InvocationTextWithHeightening(this, caster.Level) ?? "[No invocation entry]"),
             invokeTarget)
             {
                 Tag = this,
@@ -701,17 +708,19 @@ public class Rune
             this.InvokeTechnicalTraits.FirstOrDefault(trait => trait is Trait.Reflex or Trait.Fortitude or Trait.Will);
         if (!this.InvokeTechnicalTraits.Contains(Trait.DoesNotRequireAttackRollOrSavingThrow) && saveTrait != Trait.None)
         {
-            Defense def = (saveTrait switch
+            Defense def = saveTrait switch
             {
                 Trait.Reflex => Defense.Reflex,
                 Trait.Fortitude => Defense.Fortitude,
                 Trait.Will => Defense.Will
-            });
+            };
             invokeThisRune.WithTargetingTooltip((thisInvokeAction, target, index) =>
             {
                 string tooltip = CombatActionExecution.BreakdownSavingThrowForTooltip(thisInvokeAction, target,
                     new SavingThrow(def, caster.ClassOrSpellDC())).TooltipDescription;
-                return this.WithInvocationTextFormatting(this.InvocationTextWithHeightening(this, caster.Level)) + "\n" + tooltip;
+                return initialDescription
+                       + this.WithInvocationTextFormatting(this.InvocationTextWithHeightening(this, caster.Level))
+                       + "\n" + tooltip;
             });
         }
 

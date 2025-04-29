@@ -142,6 +142,7 @@ public class RunesmithClassRunes
         .WithFortitudeSaveInvocationTechnical();
         RuneFeatAtryl = CreateAndAddRuneFeat("RunesmithPlaytest.RuneAtryl", runeAtryl);
         
+        // BUG: Add ignores concealment to the invocation... or should I?
         Rune runeEsvadir = new Rune(
             "Esvadir, Rune of Whetstones",
             ModTraits.Esvadir,

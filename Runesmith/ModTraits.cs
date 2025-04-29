@@ -18,7 +18,7 @@ public class ModTraits
     public static Trait Rune = ModManager.RegisterTrait(
         "Rune",
         new TraitProperties("Rune", true,
-            "A runesmith doesn't cast spells, but they can apply various magical effects through runes. Runes can be applied via etching or tracing. Etched runes are applied outside of combat and last indefinitely, while traced runes last only until the end of your next turn. Their effects, however, are the same. Several abilities refer to creatures bearing one of your runes, known as rune-bearers: this is any creature who has one of your runes applied to its body or to any gear it is holding.",
+            "Various magical effects can be applied through runes, and they're affected by things which also affect spells. Runes can be applied via etching or tracing. Etched runes are applied outside of combat and last indefinitely, while traced runes last only until the end of your next turn. Their effects, however, are the same. Several abilities refer to creatures bearing one of your runes, known as rune-bearers: this is any creature who has one of your runes applied to its body or to any gear it is holding.",
             relevantForShortBlock: true)
         {
             RelevantOnlyForClass = Runesmith

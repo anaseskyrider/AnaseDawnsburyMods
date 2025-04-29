@@ -73,7 +73,7 @@ public class RunesmithPlaytest
             "You apply one rune to an adjacent target matching the rune’s Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.",
             [Trait.Concentrate, Trait.Magical, Trait.Manipulate],
             null)
-            .WithPermanentQEffect("You apply one rune to an adjacent target as an action, or to within 30 feet as two actions.", (QEffect qfFeat) =>
+            .WithPermanentQEffect("You apply one rune to an adjacent target as an action, or to within 30 feet as two actions.", qfFeat =>
             {
                 qfFeat.Name += " {icon:Action}–{icon:TwoActions}"; // No WithActionCost method, so update the sheet name to have actions.
                 
@@ -163,14 +163,14 @@ public class RunesmithPlaytest
             "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed. You can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are affected only once, as normal for duplicate effects.",
             [ModTraits.Invocation, Trait.Magical],
             null
-            ).WithPermanentQEffect("You invoke any number of runes within 30 feet.", (QEffect qf) =>
+            ).WithPermanentQEffect("You invoke any number of runes within 30 feet.", qfFeat =>
             {
-                qf.Name += " {icon:Action}";
+                qfFeat.Name += " {icon:Action}";
                 
-                qf.ProvideMainAction = (qf) =>
+                qfFeat.ProvideMainAction = qfThis =>
                 {
                     CombatAction invokeRuneAction = new CombatAction(
-                    qf.Owner, 
+                    qfThis.Owner, 
                     ModIllustrations.InvokeRune,
                     "Invoke Rune", 
                     [ModTraits.Invocation, Trait.Magical, ModTraits.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment],
@@ -348,6 +348,15 @@ public class RunesmithPlaytest
                     if (repertoire == null)
                         return;
                     
+                    // Runic Tattoo first
+                    if (qfThis.Owner.HasFeat(ClassFeats.RunicTattoo!.FeatName))
+                    {
+                        QEffect? runicTattooFeat = qfFeat.Owner.QEffects.FirstOrDefault(qf =>
+                            qf.Name is { } name && name.Contains("Runic Tattoo"));
+                        if (runicTattooFeat != null)
+                            await runicTattooFeat.StartOfCombat!.Invoke(runicTattooFeat);
+                    }
+                    
                     List<Rune> runesKnown = repertoire.GetRunesKnown(qfFeat.Owner);
                     int etchLimit = repertoire.EtchLimit;
 
@@ -393,6 +402,8 @@ public class RunesmithPlaytest
 
                         await chosenOption.Action();
                     }
+
+                    qfThis.Tag = true; // True means the runes have been etched.
                 };
             });
         ModManager.AddFeat(RunesmithEtchRune);
@@ -495,25 +506,24 @@ public class RunesmithPlaytest
             [Trait.Perception, Trait.Reflex, Trait.Unarmed, Trait.Simple, Trait.Martial, Trait.UnarmoredDefense, Trait.LightArmor, Trait.MediumArmor, Trait.Crafting],
             [Trait.Fortitude, Trait.Will],
             2,
-            "{b}1. Runic Repertoire.{/b} You learn 4 runes of your choice from the list of 1st-level runes, which you can use any number of times per day with the Trace Rune {icon:Action}–{icon:TwoActions} and Invoke Rune {icon:Action} actions. You gain additional runes at higher levels. Any rune you use is the same level you are, regardless of the level you acquire them, sometimes increasing in power as you level-up. Runes use your class DC, which is based on Intelligence." +
-            "\r\n\r\n{b}2. Trace Rune {icon:Action}–{icon:TwoActions}{/b} If you have a free hand, you apply one rune to an adjacent creature, or a creature within 30 feet for {icon:TwoActions} 2 actions. The rune remains until the end of your next turn." + 
-            "\r\n\r\n{b}3. Invoke Rune {icon:Action}{/b} You utter the name of one or more of your runes within 30 feet. This applies the effects of its Invocation entry, and then the rune fades away. You can invoke multiple runes as part of this action, but a creature is immune to additional instances of the same invocation until the action completes." + 
-            "\r\n\r\n{b}4. Etch Rune{/b} At the start of combat, you can etch up to 2 of your runes on yourself or your allies. These last until the end of combat, or until you invoke them. You can etch additional runes at higher levels." + 
-            "\r\n\r\n{b}5. Runesmith feat.{/b}" +
-            "\r\n\r\n{b}6. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks." +
+            "{b}1. Runic Repertoire.{/b} A runesmith doesn't cast spells, but they can use {tooltip:Runesmith.Trait.Rune}runesmith runes{/}. You learn 4 runes of 1st-level. You learn additional runes at higher levels. Your runes are the same level you are, regardless when you learn them {i}(some runes increase in power at higher levels, as listed in their Level entry){/i}. Runes use your class DC, which is based on Intelligence." +
+            "\r\n\r\n{b}2. Applying Runes.{/b} You can apply runes in one of two ways: {i}tracing{/i} the rune with the {tooltip:Runesmith.Action.TraceRune}Trace Rune{/} action, or by {i}etching{/i} the rune at the start of combat with the {tooltip:Runesmith.Action.EtchRune}Etch Rune{/} activity." +
+            "\r\n\r\n{b}3. Invoking Runes.{/b} You can also invoke a rune with the {tooltip:Runesmith.Action.InvokeRune}Invoke Rune{/} action." +
+            "\r\n\r\n{b}4. Runesmith feat.{/b}" +
+            "\r\n\r\n{b}5. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks" +
             "\r\n\r\n{b}At higher levels:{/b}" +
-            "\r\n{b}Level 2:{/b} Runesmith Feat, Runic Crafter {i}(Your equipment gains the effects of the highest level fundamental armor and weapon runes for your level){/i}." +
+            "\r\n{b}Level 2:{/b} Runesmith feat, {tooltip:Runesmith.Features.RunicCrafter}runic crafter{/}" +
             "\r\n{b}Level 3:{/b} General feat, skill increase, additional level 1 rune known" +
             "\r\n{b}Level 4:{/b} Runesmith feat" +
-            "\r\n{b}Level 5:{/b} Attribute boosts, ancestry feat, skill increase, smith's weapon expertise {i}(expert in simple weapons, martial weapons, and unarmed attacks){/i}, additional level 1 rune known, additional maximum etched rune" +
+            "\r\n{b}Level 5:{/b} Attribute boosts, ancestry feat, skill increase, {tooltip:Runesmith.Features.SmithsWeaponExpertise}smith's weapon expertise{/}, additional level 1 rune known, additional maximum etched rune" +
             "\r\n{b}Level 6:{/b} Runesmith feat" +
-            "\r\n{b}Level 7:{/b} General feat, skill increase, expert class DC, expert in Reflex saves, runic optimization (NYI, uses regular Weapon Specialization) {i}(you deal 2 additional damage with weapons bearing a striking rune, or 3 damage with greater striking runes, or 4 damage with major striking runes){/i}, additional level 1 rune known" + // TODO: adjust text with Runic Optimization implementation
+            "\r\n{b}Level 7:{/b} General feat, skill increase, expert class DC, expert in Reflex saves, {tooltip:Runesmith.Features.RunicOptimization}runic optimization{/} ({Red}NYI{/Red}, uses Weapon Specialization), additional level 1 rune known" + // TODO: adjust text with Runic Optimization implementation
             "\r\n{b}Level 8:{/b} Runesmith feat",
             null
             ).WithOnSheet( sheet =>
             {
                 // extra skill
-                sheet.AddSelectionOption(new SingleFeatSelectionOption("runesmithSkills", "Runesmith Skill", 1, (ft) => ft.FeatName is FeatName.Arcana or FeatName.Nature or FeatName.Occultism or FeatName.Religion).WithIsOptional());
+                sheet.AddSelectionOption(new SingleFeatSelectionOption("runesmithSkills", "Runesmith skill", 1, (ft) => ft.FeatName is FeatName.Arcana or FeatName.Nature or FeatName.Occultism or FeatName.Religion).WithIsOptional());
                 
                 // class feat
                 sheet.AddSelectionOption((SelectionOption) new SingleFeatSelectionOption("RunesmithFeat1", "Runesmith feat", 1, (Func<Feat, bool>) (ft => ft.HasTrait(ModTraits.Runesmith))));
@@ -646,6 +656,7 @@ public class RunesmithPlaytest
         ////////////////
         // Load Calls //
         ////////////////
+        ModTooltips.RegisterTooltips();
         RunesmithClassRunes.LoadRunes();
         ClassFeats.CreateFeats();
     }
