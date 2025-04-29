@@ -1,7 +1,7 @@
 # AnaseDawnsburyMods
 A compilation of all of my mods for Dawnsbury Days.
 
-NOTICE: This repository is Unlicensed, but the content there-in observes the licensing requirements for OGL or ORC content. I am not a lawyer. Follow the terms and conditions of those licenses before attempting to use the content of this project.
+STATEMENT OF INTENT: This repository, other than the licensed content it contains, is public domain (see Unlicense). Follow the terms and conditions of those other licenses located in the associated mod folders before attempting to use the content of this project, which I do not possess the rights to commit to public domain.
 
 ### Links
 - [Steam Workshop: More Dedications](https://steamcommunity.com/sharedfiles/filedetails/?id=3447019566)
