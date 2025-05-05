@@ -9,6 +9,8 @@ using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Kineticist;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes.Multiclass;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
@@ -62,8 +64,7 @@ public class RunesmithPlaytest
             null,
             "",
             [],
-            ModTraits.Runesmith
-        );
+            ModTraits.Runesmith);
         ModManager.AddFeat(RunesmithRunicRepertoireFeat);
         
         // TODO: Populate target dropdowns with trace rune actions
@@ -519,45 +520,62 @@ public class RunesmithPlaytest
             "\r\n{b}Level 6:{/b} Runesmith feat" +
             "\r\n{b}Level 7:{/b} General feat, skill increase, expert class DC, expert in Reflex saves, {tooltip:Runesmith.Features.RunicOptimization}runic optimization{/} ({Red}NYI{/Red}, uses Weapon Specialization), additional level 1 rune known" + // TODO: adjust text with Runic Optimization implementation
             "\r\n{b}Level 8:{/b} Runesmith feat",
-            null
-            ).WithOnSheet( sheet =>
+            null)
+            .WithOnSheet( values =>
             {
                 // extra skill
-                sheet.AddSelectionOption(new SingleFeatSelectionOption("runesmithSkills", "Runesmith skill", 1, (ft) => ft.FeatName is FeatName.Arcana or FeatName.Nature or FeatName.Occultism or FeatName.Religion).WithIsOptional());
+                values.AddSelectionOption(new SingleFeatSelectionOption(
+                    "runesmithSkills",
+                    "Runesmith skill",
+                    1,
+                    ft =>
+                        ft.FeatName is FeatName.Arcana or FeatName.Nature or FeatName.Occultism or FeatName.Religion)
+                    .WithIsOptional());
                 
-                // class feat
-                sheet.AddSelectionOption((SelectionOption) new SingleFeatSelectionOption("RunesmithFeat1", "Runesmith feat", 1, (Func<Feat, bool>) (ft => ft.HasTrait(ModTraits.Runesmith))));
+                // level 1 class feat
+                values.AddSelectionOption(new SingleFeatSelectionOption(
+                    "RunesmithFeat1",
+                    "Runesmith feat",
+                    1,
+                    ft =>
+                        ft.HasTrait(ModTraits.Runesmith)));
                 
                 // other feats
-                sheet.GrantFeat(FeatName.ShieldBlock);
+                values.GrantFeat(FeatName.ShieldBlock);
                 
                 // runic repertoire
-                sheet.GrantFeat(RunesmithRunicRepertoireFeat.FeatName);
-                sheet.AddSelectionOption(new MultipleFeatSelectionOption("initialRunes", "Initial level 1 runes", 1, ft => ft is RuneFeat, 4).WithIsOptional());
+                values.GrantFeat(RunesmithRunicRepertoireFeat.FeatName);
+                values.AddSelectionOption(new MultipleFeatSelectionOption(
+                    "initialRunes",
+                    "Initial level 1 runes",
+                    1,
+                    ft =>
+                        ft is RuneFeat, 4)
+                    .WithIsOptional());
                 for (int i=3; i<=7; i=i+2) // Gain a new Rune every other level.
                 {
-                    sheet.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 1 rune", i, ft => ft is RuneFeat).WithIsOptional());
+                    values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 1 rune", i, ft => ft is RuneFeat).WithIsOptional());
                 }
                 for (int i=9; i<=15; i=i+2) // Gain a new Rune every other level.
                 {
-                    sheet.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 9 rune", i, ft => ft is RuneFeat).WithIsOptional());
+                    values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 9 rune", i, ft => ft is RuneFeat).WithIsOptional());
                 }
                 for (int i=17; i<=19; i=i+2) // Gain a new Rune every other level.
                 {
-                    sheet.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 17 rune", i, ft => ft is RuneFeat).WithIsOptional());
+                    values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 17 rune", i, ft => ft is RuneFeat).WithIsOptional());
                 }
                 
                 // class features
-                sheet.GrantFeat(RunesmithTraceRune.FeatName);
-                sheet.GrantFeat(RunesmithInvokeRune.FeatName);
-                sheet.GrantFeat(RunesmithEtchRune.FeatName);
+                values.GrantFeat(RunesmithTraceRune.FeatName);
+                values.GrantFeat(RunesmithInvokeRune.FeatName);
+                values.GrantFeat(RunesmithEtchRune.FeatName);
                 
                 // higher levels
-                sheet.AddAtLevel(2, values =>
+                values.AddAtLevel(2, values =>
                 {
-                    sheet.GrantFeat(RunesmithRunicCrafter.FeatName);
+                    values.GrantFeat(RunesmithRunicCrafter.FeatName);
                 });
-                sheet.AddAtLevel(5, values =>
+                values.AddAtLevel(5, values =>
                 {
                     values.SetProficiency(Trait.Unarmed, Proficiency.Expert);
                     values.SetProficiency(Trait.Simple, Proficiency.Expert);
@@ -565,23 +583,23 @@ public class RunesmithPlaytest
                     RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
                     repertoire.EtchLimit = 3;
                 });
-                sheet.AddAtLevel(7, values =>
+                values.AddAtLevel(7, values =>
                 {
                     values.SetProficiency(Trait.Reflex, Proficiency.Expert);
                     values.SetProficiency(ModTraits.Runesmith, Proficiency.Expert);
                 });
                 // Future content
-                sheet.AddAtLevel(9, values =>
+                values.AddAtLevel(9, values =>
                 {
                     RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
                     repertoire.EtchLimit = 4;
                 });
-                sheet.AddAtLevel(11, values =>
+                values.AddAtLevel(11, values =>
                 {
                     values.SetProficiency(Trait.Fortitude, Proficiency.Master);
                     // See WithOnCreature for the success->critical effect.
                 });
-                sheet.AddAtLevel(13, values =>
+                values.AddAtLevel(13, values =>
                 {
                     values.SetProficiency(Trait.UnarmoredDefense, Proficiency.Expert);
                     values.SetProficiency(Trait.LightArmor, Proficiency.Expert);
@@ -596,16 +614,16 @@ public class RunesmithPlaytest
                     RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
                     repertoire.EtchLimit = 5;
                 });
-                sheet.AddAtLevel(15, values =>
+                values.AddAtLevel(15, values =>
                 {
                     values.SetProficiency(ModTraits.Runesmith, Proficiency.Master);
                 });
-                sheet.AddAtLevel(17, values =>
+                values.AddAtLevel(17, values =>
                 {
                     RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
                     repertoire.EtchLimit = 6;
                 });
-                sheet.AddAtLevel(19, values =>
+                values.AddAtLevel(19, values =>
                 {
                     values.SetProficiency(ModTraits.Runesmith, Proficiency.Legendary);
                     
@@ -613,7 +631,8 @@ public class RunesmithPlaytest
                     values.SetProficiency(Trait.LightArmor, Proficiency.Master);
                     values.SetProficiency(Trait.MediumArmor, Proficiency.Master);
                 });
-            }).WithOnCreature( (Creature cr) =>
+            })
+            .WithOnCreature(cr =>
             {
                 if (cr.Level >= 7)
                 {
@@ -626,7 +645,10 @@ public class RunesmithPlaytest
                 {
                     cr.AddQEffect(new QEffect("Smith's Endurance", "When you roll a success on a Fortitude save, you get a critical success instead.")
                     {
-                        AdjustSavingThrowCheckResult = (Func<QEffect, Defense, CombatAction, CheckResult, CheckResult>) ((effect, defense, action, checkResult) => defense != Defense.Fortitude || checkResult != CheckResult.Success ? checkResult : CheckResult.CriticalSuccess)
+                        AdjustSavingThrowCheckResult = (effect, defense, action, checkResult) =>
+                            defense != Defense.Fortitude || checkResult != CheckResult.Success
+                                ? checkResult
+                                : CheckResult.CriticalSuccess
                     });
                     // See WithOnSheet for the Master proficiency increase.
                 }
@@ -636,22 +658,65 @@ public class RunesmithPlaytest
                     // Lv15: greater weapon spec "greater runic optimization"
                 }
             });
-        // Regex Text Fixes
-        // Skill fixes
-        var skillProfText = Regex.Match(RunesmithClassFeat.RulesText, @"{b}Skill proficiencies\.{\/b} You're trained in Crafting");
         RunesmithClassFeat.RulesText = RunesmithClassFeat.RulesText
-            .Insert(skillProfText.Index + skillProfText.Length, "; as well as your choice of Arcana, Nature, Occultism, or Religion;");
-        // ORC fixes
-        var illegalNotORCText = Regex.Match(RunesmithClassFeat.RulesText, "Key ability:");
-        var legalORCText = RunesmithClassFeat.RulesText
-            .Remove(illegalNotORCText.Index, illegalNotORCText.Length)
-            .Insert(illegalNotORCText.Index, "Key attribute:");
-        RunesmithClassFeat.RulesText = legalORCText;
+            .Replace("Key ability", "Key attribute")
+            .Replace("trained in Crafting", "trained in Crafting; as well as your choice of Arcana, Nature, Occultism, or Religion;");
         ModManager.AddFeat(RunesmithClassFeat);
         
-        ////////////////
-        // Dedication //
-        ////////////////
+        /////////////////////////
+        // Runesmith Archetype //
+        /////////////////////////
+        Feat runesmithDedication = ArchetypeFeats.CreateMulticlassDedication(
+            ModTraits.Runesmith,
+            "You have dabbled in the scholarly art at the heart of all magic, the rune.",
+            "You become trained in Crafting; if you were already trained in Crafting, you instead become trained in a skill of your choice.\n\nYou can use {tooltip:Runesmith.Trait.Rune}runes{/} like a runesmith. You gain a runic repertoire with two 1st-level runes from the runesmith's rune list. The DCs for these runes is based on your class DC and your Intelligence.\n\nYou can use the {tooltip:Runesmith.Action.TraceRune}Trace Rune{/} {icon:Action}–{icon:TwoActions} and {tooltip:Runesmith.Action.InvokeRune}Invoke Rune{/} {icon:Action} actions.")
+            .WithOnSheet(values =>
+            {
+                values.TrainInThisOrSubstitute(Skill.Crafting);
+                /*values.AddSelectionOptionRightNow(new SingleFeatSelectionOption(
+                        "runesmithSkills",
+                        "Runesmith skill",
+                        values.CurrentLevel,
+                        ft =>
+                            ft.FeatName is FeatName.Arcana or FeatName.Nature or FeatName.Occultism or FeatName.Religion)
+                    .WithIsOptional());*/
+                values.GrantFeat(RunesmithRunicRepertoireFeat.FeatName);
+                values.AddSelectionOptionRightNow(new MultipleFeatSelectionOption(
+                        "initialRunes",
+                        "Initial level 1 runes",
+                        values.CurrentLevel,
+                        ft =>
+                            ft is RuneFeat, 2)
+                    .WithIsOptional());
+                values.GrantFeat(RunesmithTraceRune.FeatName);
+                values.GrantFeat(RunesmithInvokeRune.FeatName);
+                values.SetProficiency(ModTraits.Runesmith, Proficiency.Trained); // Might be redundant, but just in case...
+                values.Proficiencies.AddProficiencyAdjustment(traits => traits.Contains(ModTraits.Runesmith), values.Class!.ClassTrait);
+            })
+            .WithPrerequisite(values => // Can't use the built-in WithDemandsAbility, so as to avoid non-ORC text.
+                values.FinalAbilityScores.TotalScore(Ability.Intelligence) >= 14,
+                "You must have Intelligence +2 or more.");
+        runesmithDedication.Traits.Add(Trait.Homebrew);
+        ModManager.AddFeat(runesmithDedication);
+
+        foreach (Feat feat in ArchetypeFeats.CreateBasicAndAdvancedMulticlassFeatGrantingArchetypeFeats(ModTraits.Runesmith, "Runic Technique"))
+        {
+            ModManager.AddFeat(feat);
+        }
+
+        TrueFeat runesmithLearnRune = (new TrueFeat(
+                ModManager.RegisterFeatName("RunesmithPlaytest.Archetype.ExpandKnowledge", "Expand Knowledge"),
+                2,
+                null,
+                "You add a 1st-level runesmith rune of your choice to your runic repertoire.",
+                [])
+            .WithMultipleSelection()
+            .WithAvailableAsArchetypeFeat(ModTraits.Runesmith)
+            .WithOnSheet(values =>
+            {
+                values.AddSelectionOption(new SingleFeatSelectionOption("rune"+values.CurrentLevel, "Level 1 rune", values.CurrentLevel, ft => ft is RuneFeat rf && rf.Rune.BaseLevel == 1).WithIsOptional());
+            }) as TrueFeat)!;
+        ModManager.AddFeat(runesmithLearnRune);
         
         ////////////////
         // Load Calls //
@@ -659,6 +724,13 @@ public class RunesmithPlaytest
         ModTooltips.RegisterTooltips();
         RunesmithClassRunes.LoadRunes();
         ClassFeats.CreateFeats();
+    }
+    
+    public static int RunesmithDC(Creature runesmith)
+    {
+        return runesmith.PersistentCharacterSheet?.Class != null
+            ? runesmith.Proficiencies.Get([ModTraits.Runesmith]).ToNumber(runesmith.Level) + runesmith.Abilities.Intelligence + 10
+            : Checks.DetermineClassProficiencyFromMonsterLevel(runesmith.Level).ToNumber(runesmith.Level) + runesmith.Abilities.GetTop() + 10;
     }
     
     /// <summary>

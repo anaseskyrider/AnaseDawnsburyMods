@@ -124,7 +124,7 @@ public class RunesmithClassRunes
                 {
                     int roundHalfLevel = ((caster.Level - 1) / 2);
                     int damageAmount = 2 + roundHalfLevel * 2;
-                    CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude, caster.ClassOrSpellDC());
+                    CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude, RunesmithPlaytest.RunesmithDC(caster));
                     await CommonSpellEffects.DealBasicDamage(sourceAction, caster, target, result,
                         damageAmount + "d6", DamageKind.Fire);
                     if (result == CheckResult.CriticalFailure)
@@ -307,7 +307,7 @@ public class RunesmithClassRunes
                         .WithActionCost(0)
                         .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
                         .WithSoundEffect(SfxName.RayOfFrost)
-                        .WithSavingThrow(new SavingThrow(Defense.Fortitude, caster.ClassDC()))
+                        .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithPlaytest.RunesmithDC(caster)))
                         .WithEffectOnEachTarget(async (selfAction, caster, target, result) =>
                         {
                             if (!thisRune.IsImmuneToThisInvocation(target))
@@ -496,7 +496,7 @@ public class RunesmithClassRunes
                 Usability allyNotUsable = Usability.NotUsableOnThisCreature("enemy creature");
                 return isAlly ? Usability.Usable : allyNotUsable; // Can always do Unarmed Strikes, so always drawable.
             },
-            NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
+            NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
             {
                 DrawnRune? MakeMarssylPassive(Item targetItem)
                 {
@@ -513,7 +513,7 @@ public class RunesmithClassRunes
                     {
                         Source = caster,
                         Traits = new List<Trait>(thisRune.Traits), //[..thisRune.Traits],
-                        AfterYouTakeAction = async (QEffect qfSelf, CombatAction action) => // Add splash
+                        AfterYouTakeAction = async (qfSelf, action) => // Add splash
                         {
                             if ((qfSelf as DrawnRune)!.Disabled)
                                 return;
@@ -521,14 +521,14 @@ public class RunesmithClassRunes
                             Item? actionItem = action.Item;
                             
                             // This many complex conditionals is really hard to work out so I did it the long way.
-                            // Fail to bleed if,
+                            // Fail to splash if,
                             if (actionItem == null || qfItem == null || // either item is blank
                                 !action.HasTrait(Trait.Strike) || // or the action isn't a strike
                                 action.ChosenTargets == null || action.ChosenTargets.ChosenCreature == null || // or null targets
                                 action.ChosenTargets.ChosenCreature == qfSelf.Owner || // or I'm my target for any reason
                                 !actionItem.DetermineDamageKinds().Contains(DamageKind.Bludgeoning)) // or it's not bludgeoning damage
                                 return;
-                            // Fail to bleed if,
+                            // Fail to splash if,
                             if (actionItem.HasTrait(Trait.Unarmed)) // attacking with an unarmed,
                             {
                                 if (!qfItem.HasTrait(Trait.Unarmed)) // that is unbuffed.
@@ -539,6 +539,11 @@ public class RunesmithClassRunes
                                 if (actionItem != qfItem) // that is unbuffed.
                                     return;
                             }
+                            
+                            // Fail to splash if duplicate effect
+                            if (qfSelf.Owner.QEffects.FirstOrDefault(qf =>
+                                    qf is DrawnRune dr && dr.Rune.RuneId == ModTraits.Marssyl && dr != qfSelf) != null)
+                                return;
                             
                             // Determine weapon damage dice count
                             string weaponDamageDiceCount = actionItem.WeaponProperties!.DamageDieCount.ToString();;
@@ -613,7 +618,7 @@ public class RunesmithClassRunes
                     return MakeMarssylPassive(targetItem);
                 }
             },
-            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target, DrawnRune invokedRune) =>
+            InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
             {
                 if (!thisRune.IsImmuneToThisInvocation(target))
                 {
@@ -641,7 +646,7 @@ public class RunesmithClassRunes
                             action.Owner.RemoveAllQEffects(qfToRemove => qfToRemove == qfSelf);
                             CheckResult result = CommonSpellEffects.RollSavingThrow(action.ChosenTargets.ChosenCreature,
                                 CombatAction.CreateSimple(action.Owner, $"Invoked {thisRune.Name}"), Defense.Fortitude,
-                                action.Owner.ClassOrSpellDC());
+                                RunesmithPlaytest.RunesmithDC(action.Owner));
                             int tilePush = result <= CheckResult.Failure
                                 ? (result == CheckResult.CriticalFailure ? 4 : 2)
                                 : 0;
@@ -949,7 +954,7 @@ public class RunesmithClassRunes
                                     (cr, ai) => int.MinValue)) // TODO: encourage the action?
                             .WithActiveRollSpecification(new ActiveRollSpecification(
                                 Checks.Perception(),
-                                (action, attacker, defender) => new CalculatedNumber(defender!.ClassDC(), "Class DC", [])))
+                                (action, attacker, defender) => new CalculatedNumber(RunesmithPlaytest.RunesmithDC(defender!), "Class DC", [])))
                             .WithActionId(ActionId.Seek)
                             .WithActionCost(1)
                             .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
@@ -967,7 +972,7 @@ public class RunesmithClassRunes
                 thisRune.RemoveDrawnRune(invokedRune);
             },
         }
-        .WithDrawnOnShieldTechnical();;
+        .WithDrawnOnShieldTechnical();
         RuneFeatOljinex = CreateAndAddRuneFeat("RunesmithPlaytest.RuneOljinex", runeOljinex);
 
         Rune runePluuna = new Rune(
@@ -984,7 +989,7 @@ public class RunesmithClassRunes
             InvokeTechnicalTraits = [
                 //Trait.DoesNotRequireAttackRollOrSavingThrow, // Debatable. The target does save, but so does everyone else.
             ],
-            NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
+            NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
             {
                 const float emanationSize = 4f; // 20 feet
                 
@@ -1037,7 +1042,7 @@ public class RunesmithClassRunes
                         .WithActionCost(0)
                         .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
                         .WithSoundEffect(SfxName.MinorAbjuration)
-                        .WithSavingThrow(new SavingThrow(Defense.Fortitude, caster.ClassDC()))
+                        .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithPlaytest.RunesmithDC(caster)))
                         .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
                         {
                             // foreach (Creature cr in caster.Battle.AllCreatures.Where(cr => cr.DistanceTo(target) <= emanationSize))
@@ -1150,7 +1155,7 @@ public class RunesmithClassRunes
                     int numDice = 2 + (int)Math.Floor((caster.Level - thisRune.BaseLevel) / 2d)*2;
                     DiceFormula invocationDamage = DiceFormula.FromText($"{numDice}d6");
                     CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude,
-                        caster.ClassOrSpellDC());
+                        RunesmithPlaytest.RunesmithDC(caster));
                     await CommonSpellEffects.DealBasicDamage(sourceAction, caster, target, result,
                         invocationDamage, DamageKind.Electricity);
                 }
@@ -1460,7 +1465,7 @@ public class RunesmithClassRunes
                     CheckResult result = CheckResult.Failure;
                     if (!target.FriendOf(caster))
                     {
-                        result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Will, caster.ClassOrSpellDC());
+                        result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Will, RunesmithPlaytest.RunesmithDC(caster));
                     }
 
                     if (result <= CheckResult.Failure)

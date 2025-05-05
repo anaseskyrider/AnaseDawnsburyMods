@@ -717,7 +717,7 @@ public class Rune
             invokeThisRune.WithTargetingTooltip((thisInvokeAction, target, index) =>
             {
                 string tooltip = CombatActionExecution.BreakdownSavingThrowForTooltip(thisInvokeAction, target,
-                    new SavingThrow(def, caster.ClassOrSpellDC())).TooltipDescription;
+                    new SavingThrow(def, RunesmithPlaytest.RunesmithDC(caster))).TooltipDescription;
                 return initialDescription
                        + this.WithInvocationTextFormatting(this.InvocationTextWithHeightening(this, caster.Level))
                        + "\n" + tooltip;
