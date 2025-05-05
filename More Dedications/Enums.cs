@@ -1,0 +1,83 @@
+using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Mechanics;
+using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Display.Illustrations;
+using Dawnsbury.Modding;
+
+namespace Dawnsbury.Mods.MoreDedications;
+
+public static class Enums
+{
+    public static class Traits
+    {
+        public static Trait MoreDedications = ModManager.RegisterTrait("MoreDedications", new TraitProperties("More Dedications", true));
+            
+        // Archetype Traits
+        public static Trait MaulerArchetype = ModManager.RegisterTrait("MoreDedications.Mauler", new TraitProperties("Mauler", true));
+        public static Trait BastionArchetype = ModManager.RegisterTrait("MoreDedications.Bastion", new TraitProperties("Bastion", true));
+        public static Trait MartialArtistArchetype = ModManager.RegisterTrait(
+            "MoreDedications.MartialArtist",
+            new TraitProperties("Martial Artist", true));
+    }
+    
+    public static class FeatNames
+    {
+        // Mauler
+        public static readonly FeatName ClearTheWay = ModManager.RegisterFeatName("MoreDedications.Archetype.Mauler.ClearTheWay", "Clear the Way");
+        public static readonly FeatName ShovingSweep = ModManager.RegisterFeatName("MoreDedications.Archetype.Mauler.ShovingSweep", "Shoving Sweep");
+        
+        // Archer
+        public static readonly FeatName AdvancedBowTraining = ModManager.RegisterFeatName("MoreDedications.Archetype.Archer.AdvancedBowTraining", "Advanced Bow Training");
+        public static readonly FeatName CrossbowTerror = ModManager.RegisterFeatName("MoreDedications.Archetype.Archer.CrossbowTerror", "Crossbow Terror");
+        public static readonly FeatName FighterPartingShot = ModManager.RegisterFeatName("MoreDedications.Class.Fighter.PartingShot", "Parting Shot");
+        public static readonly FeatName RangerRunningReload = ModManager.RegisterFeatName("MoreDedications.Class.Ranger.RunningReload", "Running Reload");
+        public static readonly FeatName ArchersAim = ModManager.RegisterFeatName("MoreDedications.Archetype.Archer.ArchersAim", "Archer's Aim");
+        
+        // Bastion
+        public static readonly FeatName DisarmingBlock = ModManager.RegisterFeatName("MoreDedications.Archetype.Bastion.DisarmingBlock", "Disarming Block");
+        public static readonly FeatName FighterShieldedStride = ModManager.RegisterFeatName("MoreDedications.Class.Fighter.ShieldedStride", "Shielded Stride");
+        public static readonly FeatName FighterReflexiveShield = ModManager.RegisterFeatName("MoreDedications.Class.Fighter.ReflexiveShield", "Reflexive Shield");
+        
+        // Martial Artist
+        public static readonly FeatName PowderPunchStance = ModManager.RegisterFeatName("MoreDedications.Archetype.MartialArtist.PowderPunchStance", "Powder Punch Stance");
+        public static readonly FeatName StumblingStance = ModManager.RegisterFeatName("StumblingStance", "Stumbling Stance");
+        public static readonly FeatName TigerStance = ModManager.RegisterFeatName("TigerStance", "Tiger Stance");
+        public static readonly FeatName FollowUpStrike = ModManager.RegisterFeatName("MoreDedications.Archetype.MartialArtist.FollowUpStrike", "Follow-Up Strike");
+        public static readonly FeatName ThunderClap = ModManager.RegisterFeatName("MoreDedications.Archetype.MartialArtist.ThunderClap", "Thunder Clap");
+        public static readonly FeatName CraneFlutter = ModManager.RegisterFeatName("CraneFlutter", "Crane Flutter");
+        public static readonly FeatName DragonRoar = ModManager.RegisterFeatName("DragonRoar", "Dragon Roar");
+        public static readonly FeatName GorillaPound = ModManager.RegisterFeatName("GorillaPound", "Gorilla Pound");
+        public static readonly FeatName GrievousBlow = ModManager.RegisterFeatName("GrievousBlow", "Grievous Blow");
+        public static readonly FeatName MountainStronghold = ModManager.RegisterFeatName("MountainStronghold", "Mountain Stronghold");
+        public static readonly FeatName StumblingFeint = ModManager.RegisterFeatName("StumblingFeint", "Stumbling Feint");
+        public static readonly FeatName TigerSlash = ModManager.RegisterFeatName("TigerSlash", "Tiger Slash");
+        public static readonly FeatName WolfDrag = ModManager.RegisterFeatName("WolfDrag", "Wolf Drag");
+        
+        // Bonus stance feats
+        public static readonly FeatName StokedFlameStance = ModManager.RegisterFeatName("StokedFlameStance", "Stoked Flame Stance");
+    }
+    
+    public static class QEffectIds
+    {
+        public static readonly QEffectId PowderPunchStance = ModManager.RegisterEnumMember<QEffectId>("Powder Punch Stance");
+        public static readonly QEffectId StumblingStance = ModManager.RegisterEnumMember<QEffectId>("Stumbling Stance");
+        public static readonly QEffectId TigerStance = ModManager.RegisterEnumMember<QEffectId>("Tiger Stance");
+        public static readonly QEffectId DragonRoarImmunity = ModManager.RegisterEnumMember<QEffectId>("Dragon Roar Immunity");
+        public static readonly QEffectId MountainStronghold = ModManager.RegisterEnumMember<QEffectId>("Mountain Stronghold");
+        public static readonly QEffectId FlatFootedToStumblingFeint = ModManager.RegisterEnumMember<QEffectId>("FlatFootedToStumblingFeint");
+        public static readonly QEffectId StokedFlameStance = ModManager.RegisterEnumMember<QEffectId>("Stoked Flame Stance");
+    }
+
+    public static class ActionIds
+    {
+        public static readonly ActionId CraneFlutter = ModManager.RegisterEnumMember<ActionId>("CraneFlutter");
+        public static readonly ActionId DragonRoar = ModManager.RegisterEnumMember<ActionId>("DragonRoar");
+        public static readonly ActionId TigerSlash = ModManager.RegisterEnumMember<ActionId>("TigerSlash");
+    };
+
+    public static class Illustrations
+    {
+        public static readonly Illustration StumblingStance = new ModdedIllustration("MoreDedicationsAssets/new.png");
+    };
+}

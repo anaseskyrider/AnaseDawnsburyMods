@@ -1,9 +1,9 @@
 using System.Text;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
-using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
@@ -14,55 +14,47 @@ using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.StatBlocks.Monsters.L5;
 using Dawnsbury.Modding;
-using Dawnsbury.Mods.DawnniExpanded;
+//using Dawnsbury.Mods.DawnniExpanded;
 
 namespace Dawnsbury.Mods.MoreDedications;
 
 public class ArchetypeBastion
 {
-    public static Feat BastionDedicationFeat;
-    public static Feat BastionAgileShieldGripFeat; // Knights of Lastwall content
-    public static Feat BastionDisarmingBlockFeat;
-    //public static Feat BastionEverstandStanceFeat; // Character Guide content. https://2e.aonprd.com/Feats.aspx?ID=1087&ArchLevel=4
-    //public static Feat BastionEverstandStrikeFeat; // Character Guide content. https://2e.aonprd.com/Feats.aspx?ID=1088&ArchLevel=6
-    public static Feat BastionNimbleShieldHandFeat;
-    public static Feat FighterShieldedStrideFeat;
-    public static Feat BastionShieldedStrideFeat;
-    //public static Feat BastionDriveBackFeat; // Knights of Lastwall content. https://2e.aonprd.com/Feats.aspx?ID=3617
-    public static Feat FighterReflexiveShieldFeat;
-    public static Feat BastionReflexiveShieldFeat;
-    public static Feat BastionShieldWardenFeat;
+    
+    //public static readonly FeatName DedicationFeat = ModManager.RegisterFeatName("MoreDedications.Archetype.Bastion.Dedication", "Bastion Dedication");
+    //public static readonly FeatName EverstandStanceFeat; // Character Guide content. https://2e.aonprd.com/Feats.aspx?ID=1087&ArchLevel=4
+    //public static readonly FeatName EverstandStrikeFeat; // Character Guide content. https://2e.aonprd.com/Feats.aspx?ID=1088&ArchLevel=6
+    //public static readonly FeatName NimbleShieldHand; // TODO?
+    //public static readonly FeatName DriveBack; // Knights of Lastwall content. https://2e.aonprd.com/Feats.aspx?ID=3617
 
     public static void LoadMod()
     {
-        BastionDedicationFeat = MoreDedications.NewDedicationFeat(
-            ModManager.RegisterFeatName("MoreDedications.BastionDedication", "Bastion Dedication"),
-            2,
-            "You are particularly skilled at using a shield in combat.",
-            "You gain the Reactive Shield {icon:Reaction} fighter feat.")
+        // Dedication Feat
+        TrueFeat bastionDedication = (ArchetypeFeats.CreateAgnosticArchetypeDedication(
+                Enums.Traits.BastionArchetype,
+                "Some say that a good offense is the best defense, but you find such boasting smacks of overconfidence. In your experience, the best defense is a good, solid shield between you and your enemies.",
+                "You gain the Reactive Shield {icon:Reaction} fighter feat.")
             .WithPrerequisite(FeatName.ShieldBlock, "Shield Block")
             .WithOnSheet(values =>
             {
                 values.GrantFeat(FeatName.ReactiveShield);
-            });
-        ModManager.AddFeat(BastionDedicationFeat);
+            }) as TrueFeat)!;
+        ModManager.AddFeat(bastionDedication);
 
-        Feat fighterGripFeat = AllFeats.All.First(ft => ft.FeatName == Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion.Champion.AgileShieldGripFeatName);
-        BastionAgileShieldGripFeat = MoreDedications.FeatAsArchetypeFeat(
-            (BastionDedicationFeat as TrueFeat)!,
-            (fighterGripFeat as TrueFeat)!,
-            "MoreDedications.BastionAgileShieldGrip",
-            "Bastion",
-            4);
-        ModManager.AddFeat(BastionAgileShieldGripFeat);
+        // Add Agile Shield Grip to Bastion
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion.Champion.AgileShieldGripFeatName,
+            Enums.Traits.BastionArchetype, 4));
 
-        BastionDisarmingBlockFeat = MoreDedications.NewArchetypeFeat(
-            BastionDedicationFeat,
-            ModManager.RegisterFeatName("MoreDedications.BastionDisarmingBlock", "Disarming Block"),
+        // Disarming Block
+        TrueFeat disarmingBlockFeat = (new TrueFeat(
+            Enums.FeatNames.DisarmingBlock,
             4,
             null,
-            "{b}Trigger{/b} You Shield Block a melee Strike made with a held weapon.\n\nYou attempt to Disarm the creature whose attack you blocked of the weapon they attacked you with. You can do so even if you don't have a hand free.")
+            "{b}Trigger{/b} You Shield Block a melee Strike made with a held weapon.\n\nYou attempt to Disarm the creature whose attack you blocked of the weapon they attacked you with. You can do so even if you don't have a hand free.",
+            [Enums.Traits.MoreDedications])
             .WithActionCost(0)
+            .WithAvailableAsArchetypeFeat(Enums.Traits.BastionArchetype)
             .WithPrerequisite(FeatName.Athletics, "Trained in Athletics")
             .WithPermanentQEffect("You attempt to Disarm melee attackers when you Shield Block.", qfFeat =>
             {
@@ -123,15 +115,16 @@ public class ArchetypeBastion
                         };
                     }
                 };
-            });
-        ModManager.AddFeat(BastionDisarmingBlockFeat);
+            }) as TrueFeat)!;
+        ModManager.AddFeat(disarmingBlockFeat);
 
-        FighterShieldedStrideFeat = new TrueFeat(
-            ModManager.RegisterFeatName("MoreDedications.FighterShieldedStride", "Shielded Stride"),
+        // Shielded Stride
+        TrueFeat fighterShieldedStrideFeat = new TrueFeat(
+            Enums.FeatNames.FighterShieldedStride,
             4,
             "When your shield is up, your enemies' blows can't touch you.",
             "When you have your shield raised, you can Stride to move half your Speed without triggering reactions that are triggered by your movement.",
-            [MoreDedications.ModNameTrait, Trait.Fighter])
+            [Trait.Fighter, Enums.Traits.MoreDedications])
             .WithPermanentQEffect("While your shield is raised, Striding half your speed doesn't provoke reactions.",
                 qfFeat =>
                 {
@@ -143,22 +136,16 @@ public class ArchetypeBastion
                         }
                     };
                 });
-        ModManager.AddFeat(FighterShieldedStrideFeat);
-        
-        BastionShieldedStrideFeat = MoreDedications.FeatAsArchetypeFeat(
-            (BastionDedicationFeat as TrueFeat)!,
-            (FighterShieldedStrideFeat as TrueFeat)!,
-            "MoreDedications.BastionShieldedStride",
-            "Bastion",
-            6);
-        ModManager.AddFeat(BastionShieldedStrideFeat);
+        ModManager.AddFeat(fighterShieldedStrideFeat);
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.FighterShieldedStride, Enums.Traits.BastionArchetype, 6));
 
-        FighterReflexiveShieldFeat = new TrueFeat(
-            ModManager.RegisterFeatName("MoreDedications.FighterReflexiveShield", "Reflexive Shield"),
+        // Reflexive Shield
+        TrueFeat fighterReflexiveShieldFeat = new TrueFeat(
+            Enums.FeatNames.FighterReflexiveShield,
             6,
             "You can use your shield to fend off the worst of area effects and other damage.",
             "When you Raise your Shield, you gain your shield's circumstance bonus to Reflex saves. If you have the Shield Block reaction, damage you take as a result of a Reflex save can trigger that reaction, even if the damage isn't physical damage.",
-            [MoreDedications.ModNameTrait, Trait.Fighter])
+            [Trait.Fighter, Enums.Traits.MoreDedications])
             .WithPermanentQEffect("Raise a Shield benefits your Reflex saves. If you have Shield Block, you can block any damage from a Reflex save.",
                 qfFeat =>
                 {
@@ -258,23 +245,10 @@ public class ArchetypeBastion
                         }
                     };
                 });
-        ModManager.AddFeat(FighterReflexiveShieldFeat);
+        ModManager.AddFeat(fighterReflexiveShieldFeat);
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.FighterReflexiveShield, Enums.Traits.BastionArchetype, 8));
 
-        BastionReflexiveShieldFeat = MoreDedications.FeatAsArchetypeFeat(
-            (BastionDedicationFeat as TrueFeat)!,
-            (FighterReflexiveShieldFeat as TrueFeat)!,
-            "MoreDedications.BastionReflexiveShield",
-            "Bastion",
-            8);
-        ModManager.AddFeat(BastionReflexiveShieldFeat);
-
-        Feat shieldWardenFeat = AllFeats.All.First(ft => ft.FeatName == FeatName.ShieldWarden);
-        BastionShieldWardenFeat = MoreDedications.FeatAsArchetypeFeat(
-            (BastionDedicationFeat as TrueFeat)!,
-            (shieldWardenFeat as TrueFeat)!,
-            "MoreDedications.BastionShieldWarden",
-            "Bastion",
-            8);
-        ModManager.AddFeat(BastionShieldWardenFeat);
+        // Add Shield Warden to Bastion
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.ShieldWarden, Enums.Traits.BastionArchetype, 8));
     }
 }

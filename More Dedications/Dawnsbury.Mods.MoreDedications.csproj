@@ -19,18 +19,26 @@
     <Reference Include="Dawnsbury Days">
       <HintPath>Z:\Steam Library\steamapps\common\Dawnsbury Days\Data\Dawnsbury Days.dll</HintPath>
     </Reference>
-    <Reference Include="Dawnsbury.Mods.DawnniExpanded">
+    <!--<Reference Include="Dawnsbury.Mods.DawnniExpanded">
       <HintPath>Z:\Steam Library\steamapps\workshop\content\2693730\3163146733\CustomMods\Dawnsbury.Mods.DawnniExpanded.dll</HintPath>
-    </Reference>
+    </Reference>-->
     <Reference Include="MonoGame.Framework">
       <HintPath>Z:\Steam Library\steamapps\common\Dawnsbury Days\Data\MonoGame.Framework.dll</HintPath>
     </Reference>
   </ItemGroup>
   <Target Name="CopyToGameModsFolder" AfterTargets="Build">
+    <ItemGroup>
+      <MoreDedicationsAssets Include="MoreDedicationsAssets\**\*.*"/>
+    </ItemGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods"/>
+    <Copy SourceFiles="@(MoreDedicationsAssets)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods\MoreDedicationsAssets\%(RecursiveDir)"/>
   </Target>
   <Target Name="CopyToWorkshopUploadable" AfterTargets="Build">
+    <ItemGroup>
+      <MoreDedicationsAssets Include="MoreDedicationsAssets\**\*.*"/>
+    </ItemGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopExport)\CustomModsV3"/>
     <Copy SourceFiles="OGL copyright notice.html" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
+    <Copy SourceFiles="@(MoreDedicationsAssets)" DestinationFolder="$(WorkshopExport)\CustomModsV3\MoreDedicationsAssets\%(RecursiveDir)"/>
   </Target>
 </Project>
