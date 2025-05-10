@@ -1242,9 +1242,9 @@ public class RunesmithClassRunes
                         {
                             DrawnRune? sunPassive = CreateSunPassive(validRune);
                             // Determine the way the rune is being applied.
-                            if (sourceAction.HasTrait(ModTraits.Etched))
+                            if (sourceAction.HasTrait(Enums.Traits.Etched))
                                 sunPassive = sunPassive.WithIsEtched();
-                            else if (sourceAction.HasTrait(ModTraits.Traced))
+                            else if (sourceAction.HasTrait(Enums.Traits.Traced))
                                 sunPassive = sunPassive.WithIsTraced();
         
                             target.AddQEffect(sunPassive);
