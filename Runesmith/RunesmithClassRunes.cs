@@ -486,7 +486,7 @@ public class RunesmithClassRunes
             IllustrationName.ThunderingRunestone,
             1,
             "drawn on a bludgeoning weapon or unarmed Strike",
-            "This rune magnifies force many times over as it passes through the rune’s concentric rings.",
+            "This rune magnifies force many times over as it passes through the rune's concentric rings.",
             "The weapon deals 1 bludgeoning splash damage per weapon damage die. If the weapon is a melee weapon, the rune-bearer is immune to this splash damage.",
             "The weapon vibrates as power concentrates within it. The next successful Strike made with the weapon before the end of its wielder's next turn deals an additional die of damage and the target must succeed at a Fortitude save against your class DC or be pushed 10 feet in a straight line backwards, or 20 feet on a critical failure.")
         {
