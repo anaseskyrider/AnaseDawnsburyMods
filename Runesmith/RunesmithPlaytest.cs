@@ -67,7 +67,6 @@ public class RunesmithPlaytest
             Enums.Traits.Runesmith);
         ModManager.AddFeat(RunesmithRunicRepertoireFeat);
         
-        // TODO: Populate target dropdowns with trace rune actions
         RunesmithTraceRune = new Feat(
                 Enums.FeatNames.TraceRune,
                 "Your fingers dance, glowing light leaving behind the image of a rune.",
@@ -78,11 +77,59 @@ public class RunesmithPlaytest
             {
                 qfFeat.Name += " {icon:Action}–{icon:TwoActions}"; // No WithActionCost method, so update the sheet name to have actions.
                 
-                qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                qfFeat.ProvideMainAction = qfThis =>
                 {
-                    if (section.PossibilitySectionId != PossibilitySectionId.MainActions)
+                    List<Possibility> traceRunePossibilities = [];
+                    RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(qfThis.Owner);
+                    if (repertoire == null)
                         return null;
-                    
+                    foreach (Rune rune in repertoire.GetRunesKnown(qfThis.Owner))
+                    {
+                        CombatAction oneActionTraceRune = rune.CreateTraceAction(qfThis.Owner, 1);
+                        oneActionTraceRune.ContextMenuName = "{icon:Action} " + oneActionTraceRune.Name;
+                        CombatAction twoActionTraceRune = rune.CreateTraceAction(qfThis.Owner, 2);
+                        twoActionTraceRune.ContextMenuName = "{icon:TwoActions} " + oneActionTraceRune.Name;
+                        // Disabled. Affects the UI menu buttons, when I wanted it to only affect the context menu.
+                        /*(twoActionTraceRune.Target as CreatureTarget)!.WithAdditionalConditionOnTargetCreature((attacker, defender) =>
+                        attacker.IsAdjacentTo(defender) ? Usability.NotUsableOnThisCreature("QOL: use 1-action variant instead") : Usability.Usable);*/
+
+                        SubmenuPossibility specificRuneMenu = new SubmenuPossibility(
+                            rune.Illustration,
+                            rune.Name,
+                            PossibilitySize.Half)
+                        {
+                            SpellIfAny = rune.CreateTraceAction(qfThis.Owner, -3), // variable action trace rune
+                            Subsections =
+                            {
+                                new PossibilitySection(rune.Name) // rune.Name is how features like Drawn In Red find these sections.
+                                {
+                                    Possibilities = [
+                                        new ActionPossibility(oneActionTraceRune) { Caption = "Touch", Illustration = IllustrationName.Action },
+                                        new ActionPossibility(twoActionTraceRune) { Caption = "30 feet", Illustration = IllustrationName.TwoActions }
+                                    ]
+                                }
+                            }
+                        };
+                        
+                        traceRunePossibilities.Add(specificRuneMenu);
+                    }
+
+                    SubmenuPossibility traceRuneMenu = new SubmenuPossibility(
+                        Enums.Illustrations.TraceRune,
+                        "Trace Rune")
+                    {
+                        SubmenuId = Enums.SubmenuIds.TraceRune,
+                        SpellIfAny = new CombatAction(qfThis.Owner, Enums.Illustrations.TraceRune, "Trace Rune", [Trait.Concentrate, Trait.Magical, Trait.Manipulate, Enums.Traits.Runesmith], "{i}Your fingers dance, glowing light leaving behind the image of a rune.{/i}\n\n{b}Requirements{b} You have a hand free.\n\nYou apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend {icon:TwoActions} two actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.", Target.Self()).WithActionCost(-3), // This doesn't DO anything, it's just to provide description to the menu.
+                        Subsections = { new PossibilitySection("Trace Rune")
+                        {
+                            Possibilities = traceRunePossibilities,
+                        }}
+                    };
+                    return traceRuneMenu;
+                };
+                // Old code held onto for the time-being.
+                /*qfFeat.ProvideMainAction = (qfThis) =>
+                {
                     List<Possibility> traceActionSections = [];
                     RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(qfThis.Owner);
                     if (repertoire == null)
@@ -95,7 +142,7 @@ public class RunesmithPlaytest
                             if (ownerActions.ActionsLeft >= actionCost)
                                 return true;
                             return !ownerActions.UsedQuickenedAction && ownerActions.QuickenedForActions != null && ownerActions.QuickenedForActions.Invoke(theAction) && ownerActions.ActionsLeft + 1 >= actionCost;
-                        }*/
+                        }#1#
                         
                         // BUG: Quickened action from Tracing Trance not usable on the basic Trace actions with insufficient regular actions.
                         
@@ -108,7 +155,7 @@ public class RunesmithPlaytest
                                 IllustrationName.Action,
                                 "One Action",
                                 1,
-                                /*!CanPayForCombatAction(drawRuneAction, 1) ? Usability.CommonReasons.NoActions :*/ drawRuneAction.Owner.Actions.ActionsLeft < 1 ?
+                                /*!CanPayForCombatAction(drawRuneAction, 1) ? Usability.CommonReasons.NoActions :#1# drawRuneAction.Owner.Actions.ActionsLeft < 1 ?
                                     Usability.CommonReasons.NoActions :
                                     (drawRuneAction.Target is DependsOnActionsSpentTarget target1 ?
                                         target1.TargetFromActionCount(1).CanBeginToUse(drawRuneAction.Owner) :
@@ -120,7 +167,7 @@ public class RunesmithPlaytest
                                 IllustrationName.TwoActions,
                                 "Two Actions",
                                 2,
-                                /*!CanPayForCombatAction(drawRuneAction, 2) ? Usability.CommonReasons.NoActions :*/ drawRuneAction.Owner.Actions.ActionsLeft < 2 ?
+                                /*!CanPayForCombatAction(drawRuneAction, 2) ? Usability.CommonReasons.NoActions :#1# drawRuneAction.Owner.Actions.ActionsLeft < 2 ?
                                     Usability.CommonReasons.NoActions : 
                                     (drawRuneAction.Target is DependsOnActionsSpentTarget target2 ?
                                         target2.TargetFromActionCount(2).CanBeginToUse(drawRuneAction.Owner) :
@@ -154,7 +201,7 @@ public class RunesmithPlaytest
                         }}
                     };
                     return traceMenu;
-                };
+                };*/
             });
         ModManager.AddFeat(RunesmithTraceRune);
 
@@ -294,7 +341,7 @@ public class RunesmithPlaytest
                             Option chosenOption = (await self.Battle.SendRequest( // Send a request to pick an option
                                 new AdvancedRequest(self, "Choose a rune to invoke.", options)
                                 {
-                                    TopBarText = "Choose a rune to invoke" + (i==0 ? " or right-click to cancel" : null) + $". ({numberOfRunes})",
+                                    TopBarText = "Choose a rune to invoke" + (i==0 ? " or right-click to cancel" : null) + $". (Runes: {numberOfRunes})",
                                     TopBarIcon = flurryOfInvokes.Illustration,
                                 })).ChosenOption;
 
@@ -724,6 +771,7 @@ public class RunesmithPlaytest
         ModTooltips.RegisterTooltips();
         RunesmithClassRunes.LoadRunes();
         ClassFeats.CreateFeats();
+        ModItems.LoadItems();
     }
     
     public static int RunesmithDC(Creature runesmith)

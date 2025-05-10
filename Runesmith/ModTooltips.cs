@@ -4,6 +4,18 @@ namespace Dawnsbury.Mods.RunesmithPlaytest;
 
 public class ModTooltips
 {
+    public static readonly string TraitRune = "{tooltip:Runesmith.Trait.Rune";
+    public static readonly string TraitInvocation = "{tooltip:Runesmith.Trait.Invocation";
+    public static readonly string ActionTraceRune = "{tooltip:Runesmith.Action.TraceRune";
+    public static readonly string ActionInvokeRune = "{tooltip:Runesmith.Action.InvokeRune";
+    public static readonly string ActionEtchRune = "{tooltip:Runesmith.Action.EtchRune";
+    public static readonly string FeatureRunicCrafter = "{tooltip:Runesmith.Features.RunicCrafter";
+    public static readonly string FeatureSmithsWeaponExpertise = "{tooltip:Runesmith.Features.SmithsWeaponExpertise";
+    public static readonly string FeatureRunicOptimization = "{tooltip:Runesmith.Features.RunicOptimization";
+    public static readonly string FeatsFortifyingKnock = "{tooltip:Runesmith.Feats.FortifyingKnock";
+    public static readonly string FeatsRunicTattoo = "{tooltip:Runesmith.Feats.RunicTattoo";
+    public static readonly string FeatsWordsFlyFree = "{tooltip:Runesmith.Feats.WordsFlyFree";
+    
     public static void RegisterTooltips()
     {
         ////////////
@@ -22,7 +34,7 @@ public class ModTooltips
         /////////////
         ModManager.RegisterInlineTooltip(
             "Runesmith.Action.TraceRune",
-            "{b}Trace Rune {icon:Action}–{icon:TwoActions}{/b}\n{i}Concentrate, Magical, Manipulate{i}\n(Requires a free hand)\nYou apply one rune to an adjacent target matching the rune’s Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.");
+            "{b}Trace Rune {icon:Action}–{icon:TwoActions}{/b}\n{i}Concentrate, Magical, Manipulate{i}\n(Requires a free hand)\nYou apply one rune to an adjacent target matching the rune’s Usage description. The rune remains until the end of your next turn. If you spend {icon:TwoActions} two actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.");
         
         ModManager.RegisterInlineTooltip(
             "Runesmith.Action.InvokeRune",
