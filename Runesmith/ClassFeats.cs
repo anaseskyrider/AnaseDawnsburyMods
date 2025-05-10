@@ -386,7 +386,7 @@ public class ClassFeats
                                 
                                 // Provoke manipulate
                                 await CombatAction.CreateSimple(caster, $"Trace {rune.Name}", Trait.DoNotShowInCombatLog,
-                                    Trait.Manipulate).AllExecute();
+                                    Trait.Manipulate).WithActionCost(0).AllExecute();
                                 
                                 // Trace the rune
                                 Rune actionRune = (thisAction.Tag as Rune)!;
