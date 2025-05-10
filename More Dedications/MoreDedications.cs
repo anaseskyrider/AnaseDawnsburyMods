@@ -9,15 +9,15 @@ public class MoreDedications
     [DawnsburyDaysModMainMethod]
     public static void LoadMod()
     {
-        ///////////////
-        // Mod Trait //
-        ///////////////
+        ////////////////////////
+        // Updated Archetypes //
+        ////////////////////////
+        ArchetypeArcher.LoadMod();
         
         ////////////////////
         // New Archetypes //
         ////////////////////
         ArchetypeMauler.LoadMod();
-        ArchetypeArcher.LoadMod();
         ArchetypeBastion.LoadMod();
         ArchetypeMartialArtist.LoadMod();
     }
