@@ -7,7 +7,7 @@
 \[Workshop Files\]/
 
 # .csproj (let users adjust file paths without disrupting the repo)
-.csproj
+MoreBasicActions.csproj
 
 # User-specific files
 *.rsuser
