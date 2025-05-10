@@ -935,7 +935,16 @@ public class RunesmithClassRunes
                         stringBuilder.AppendLine($"Moved while debuffed: {result.Item2}" +
                                                  $"\n\n{{b}}{flatDC} DC breakdown:\n5{{/b}} Flat DC" +
                                                  (flatDC == 11 ? "\n{b}{Red}+6{/Red}{/b} moved further away" : ""));
-                        return result.Item1 < CheckResult.Success;
+                        
+                        if (result.Item1 < CheckResult.Success)
+                            return true;
+                        
+                        // Certain basic actions don't reach the code block where this log is announced,
+                        // so this manually announces them anyway.
+                        if (action.Name is "Stride" or "Step" or "Fly")
+                            action.Owner.Battle.Log("Flat check passed.", action.Name, stringBuilder.ToString());
+                        
+                        return false;
                     };
                     
                     // Seek to disbelieve the illusion.
