@@ -6,6 +6,9 @@
 # Personal Project Folders
 \[Workshop Files\]/
 
+# .csproj (let users adjust file paths without disrupting the repo)
+.csproj
+
 # User-specific files
 *.rsuser
 *.suo
