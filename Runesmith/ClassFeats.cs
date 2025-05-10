@@ -158,7 +158,7 @@ public class ClassFeats
                         .WithAdditionalConditionOnTargetCreature( (attacker, defender) => 
                             qfFeat.UsedThisTurn ? Usability.NotUsable("Already used this round") : Usability.Usable)
                         .WithAdditionalConditionOnTargetCreature( (attacker, defender) => 
-                            attacker.HasFreeHand ? Usability.Usable : Usability.NotUsable("You must have a free hand to trace a rune"));
+                            attacker.HasFreeHand || attacker.HeldItems.Any(item => item.HasTrait(Enums.Traits.CountsAsRunesmithFreeHand)) ? Usability.Usable : Usability.NotUsable("You must have a free hand to trace a rune"));
                     
                     return engravingStrike;
                 };
@@ -366,7 +366,7 @@ public class ClassFeats
                                 string freeHandReason = "You must have a free hand to trace a rune";
                                 string usedReason = "Already used this round";
                                 return shieldItem != null
-                                    ? (self.HasFreeHand ? (qfThis.UsedThisTurn ? usedReason : null) : freeHandReason)
+                                    ? (self.HasFreeHand || self.HeldItems.Any(item => item.HasTrait(Enums.Traits.CountsAsRunesmithFreeHand)) ? (qfThis.UsedThisTurn ? usedReason : null) : freeHandReason)
                                     : hasShieldReason;
                             });
                         knockThisRune.EffectOnOneTarget = null; // Reset behavior so we can hard code this

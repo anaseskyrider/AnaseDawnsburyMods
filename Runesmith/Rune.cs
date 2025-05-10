@@ -530,7 +530,7 @@ public class Rune
                 continue;
             crTar.WithAdditionalConditionOnTargetCreature( // Free hand
                 (attacker, defender) =>
-                    attacker.HasFreeHand ? Usability.Usable : Usability.NotUsable("You must have a free hand to trace a rune"));
+                    attacker.HasFreeHand || attacker.HeldItems.Any(item => item.HasTrait(Enums.Traits.CountsAsRunesmithFreeHand)) ? Usability.Usable : Usability.NotUsable("You must have a free hand to trace a rune"));
             if (this.UsageCondition != null)
                 crTar.WithAdditionalConditionOnTargetCreature(this.UsageCondition); // UsageCondition
         }
