@@ -767,6 +767,7 @@ public class RunesmithClassRunes
                     QEffect invokedOljinex = invokedRune.NewInvocationEffect(
                         "INCOMPLETE TEXT. COMPLAIN AT ANASE IF YOU SEE THIS TEXT!",
                         ExpirationCondition.ExpiresAtStartOfSourcesTurn);
+                    invokedOljinex.CountsAsADebuff = true;
                     
                     /* Oljinex can't reliably work as written. Here's some designs instead. */
                     
@@ -1059,6 +1060,7 @@ public class RunesmithClassRunes
                         .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
                         .WithSoundEffect(SfxName.MinorAbjuration)
                         .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithPlaytest.RunesmithDC(caster)))
+                        .WithNoSaveFor((thisAction, cr) => thisRune.IsImmuneToThisInvocation(cr))
                         .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
                         {
                             // foreach (Creature cr in caster.Battle.AllCreatures.Where(cr => cr.DistanceTo(target) <= emanationSize))
