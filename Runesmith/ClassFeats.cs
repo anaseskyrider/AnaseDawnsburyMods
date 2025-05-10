@@ -273,7 +273,9 @@ public class ClassFeats
                         if (foundRune is null)
                             return null;
 
-                        CombatAction runeSingerAction = foundRune.CreateTraceAction(qfThis.Owner, 2).WithActionCost(1);
+                        CombatAction runeSingerAction = foundRune.CreateTraceAction(qfThis.Owner, 2)
+                            .WithActionCost(1)
+                            .WithExtraTrait(Trait.Basic);
                         runeSingerAction.Name = runeSingerAction.Name.Remove(0, "Trace".Length).Insert(0, "Sing");
                         runeSingerAction.Traits.Remove(Trait.Manipulate);
                         // Manually recreate target to remove the free hand requirement
@@ -1377,7 +1379,9 @@ public class ClassFeats
 
                     if (foundRune.UsageCondition?.Invoke(qfFeat.Owner, bloodTarget) == Usability.Usable)
                     {
-                        CombatAction bloodTrace = foundRune.CreateTraceAction(qfThis.Owner, 2, 12).WithActionCost(1);
+                        CombatAction bloodTrace = foundRune.CreateTraceAction(qfThis.Owner, 2, 12)
+                            .WithActionCost(1)
+                            .WithExtraTrait(Trait.Basic);
                         ((CreatureTarget)bloodTrace.Target).WithAdditionalConditionOnTargetCreature(
                             (attacker, defender) => defender == bloodTarget
                                 ? Usability.Usable
