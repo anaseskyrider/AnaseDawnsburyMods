@@ -59,7 +59,7 @@ public class RunesmithClassRunes
         
         Rune runeAtryl = new Rune(
             "Atryl, Rune of Fire",
-            ModTraits.Atryl, 
+            Enums.Traits.Atryl, 
             IllustrationName.FlamingRunestone,
             1,
             "drawn on a creature or object",
@@ -145,7 +145,7 @@ public class RunesmithClassRunes
         // BUG: Add ignores concealment to the invocation... or should I?
         Rune runeEsvadir = new Rune(
             "Esvadir, Rune of Whetstones",
-            ModTraits.Esvadir,
+            Enums.Traits.Esvadir,
             IllustrationName.WoundingRunestone,
             1,
             "drawn on a piercing or slashing weapon or unarmed Strike", 
@@ -264,9 +264,9 @@ public class RunesmithClassRunes
                     {
                         DrawnRune? esvadirPassive = MakeEsvadirPassive(validItem);
                         // Determine the way the rune is being applied.
-                        if (sourceAction.HasTrait(ModTraits.Etched))
+                        if (sourceAction.HasTrait(Enums.Traits.Etched))
                             esvadirPassive = esvadirPassive.WithIsEtched();
-                        else if (sourceAction.HasTrait(ModTraits.Traced))
+                        else if (sourceAction.HasTrait(Enums.Traits.Traced))
                             esvadirPassive = esvadirPassive.WithIsTraced();
         
                         target.AddQEffect(esvadirPassive);
@@ -341,7 +341,7 @@ public class RunesmithClassRunes
 
         Rune runeHoltrik = new Rune(
             "Holtrik, Rune of Dwarven Ramparts",
-            ModTraits.Holtrik,
+            Enums.Traits.Holtrik,
             IllustrationName.ArmorPotencyRunestone,
             1,
             "drawn on a shield",
@@ -410,9 +410,9 @@ public class RunesmithClassRunes
                             {
                                 DrawnRune? holtrikPassive = MakeHoltrikPassive(validItem);
                                 // Determine the way the rune is being applied.
-                                if (sourceAction.HasTrait(ModTraits.Etched))
+                                if (sourceAction.HasTrait(Enums.Traits.Etched))
                                     holtrikPassive = holtrikPassive.WithIsEtched();
-                                else if (sourceAction.HasTrait(ModTraits.Traced))
+                                else if (sourceAction.HasTrait(Enums.Traits.Traced))
                                     holtrikPassive = holtrikPassive.WithIsTraced();
         
                                 target.AddQEffect(holtrikPassive);
@@ -422,7 +422,10 @@ public class RunesmithClassRunes
                         }
                         else
                         {
-                            Item targetItem = await target.Battle.AskForConfirmation(caster, (Illustration) IllustrationName.MagicWeapon, $"{{b}}{sourceAction.Name}{{/b}}\nWhich shield would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?", target.HeldItems[0].Name, target.HeldItems[1].Name) ? target.HeldItems[0] : target.HeldItems[1];
+                            Item targetItem = await target.Battle.AskForConfirmation(caster, IllustrationName.MagicWeapon,
+                                $"{{b}}{sourceAction.Name}{{/b}}\nWhich shield would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                                target.HeldItems[0].Name,
+                                target.HeldItems[1].Name) ? target.HeldItems[0] : target.HeldItems[1];
 
                             return MakeHoltrikPassive(targetItem);
                         }
@@ -482,7 +485,7 @@ public class RunesmithClassRunes
         
         Rune runeMarssyl = new Rune(
             "Marssyl, Rune of Impact",
-            ModTraits.Marssyl, 
+            Enums.Traits.Marssyl, 
             IllustrationName.ThunderingRunestone,
             1,
             "drawn on a bludgeoning weapon or unarmed Strike",
@@ -595,9 +598,9 @@ public class RunesmithClassRunes
                     {
                         DrawnRune? marssylPassive = MakeMarssylPassive(validItem);
                         // Determine the way the rune is being applied.
-                        if (sourceAction.HasTrait(ModTraits.Etched))
+                        if (sourceAction.HasTrait(Enums.Traits.Etched))
                             marssylPassive = marssylPassive.WithIsEtched();
-                        else if (sourceAction.HasTrait(ModTraits.Traced))
+                        else if (sourceAction.HasTrait(Enums.Traits.Traced))
                             marssylPassive = marssylPassive.WithIsTraced();
         
                         target.AddQEffect(marssylPassive);
@@ -665,14 +668,14 @@ public class RunesmithClassRunes
 
         Rune runeOljinex = new Rune(
             "Oljinex, Rune of Cowards' Bane",
-            ModTraits.Oljinex,
+            Enums.Traits.Oljinex,
             IllustrationName.FearsomeRunestone,
             1,
             "drawn on a shield",
             "This rune resembles a broken arrow.",
             "While the shield is raised, it also grants the bearer a +1 status bonus to AC against physical ranged attacks. {i}(NYI: doesn't check for damage types, works against any ranged attack.){/i}",
             "(illusion, mental, visual) The rune creates an illusion in the minds of all creatures adjacent to the rune-bearer that lasts for 1 round. The illusion is of a impeding terrain. Creatures affected by this invocation must succeed at a DC 5 flat check when they take a move action or else it's lost. The DC is 11 instead if they attempt to move further away from the rune-bearer. This lasts for 1 round or until they disbelieve the illusion by using a Seek action against your class DC.",
-            additionalTraits: [Trait.Occult, ModTraits.Rune])
+            additionalTraits: [Trait.Occult, Enums.Traits.Rune])
         {
             UsageCondition = (attacker, defender) =>
             {
@@ -728,9 +731,9 @@ public class RunesmithClassRunes
                             {
                                 DrawnRune? oljinexPassive = MakeOljinexPassive(validItem);
                                 // Determine the way the rune is being applied.
-                                if (sourceAction.HasTrait(ModTraits.Etched))
+                                if (sourceAction.HasTrait(Enums.Traits.Etched))
                                     oljinexPassive = oljinexPassive.WithIsEtched();
-                                else if (sourceAction.HasTrait(ModTraits.Traced))
+                                else if (sourceAction.HasTrait(Enums.Traits.Traced))
                                     oljinexPassive = oljinexPassive.WithIsTraced();
         
                                 target.AddQEffect(oljinexPassive);
@@ -977,7 +980,7 @@ public class RunesmithClassRunes
 
         Rune runePluuna = new Rune(
             "Pluuna, Rune of Illumination",
-            ModTraits.Pluuna,
+            Enums.Traits.Pluuna,
             IllustrationName.HolyRunestone,
             1,
             "drawn on a creature", // or armor
@@ -1027,7 +1030,7 @@ public class RunesmithClassRunes
 
                 return pluunaPassive;
             },
-            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target, DrawnRune invokedRune) =>
+            InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
             {
                 const float emanationSize = 4f; // 20 feet
                 
@@ -1090,7 +1093,7 @@ public class RunesmithClassRunes
 
         Rune runeRanshu = new Rune(
             "Ranshu, Rune of Thunder",
-            ModTraits.Ranshu,
+            Enums.Traits.Ranshu,
             IllustrationName.ShockRunestone,
             1,
             "drawn on a creature", // or object
@@ -1171,13 +1174,13 @@ public class RunesmithClassRunes
 
         Rune runeSunDiacritic = new Rune(
             "Sun-, Diacritic Rune of Preservation",
-            ModTraits.SunDiacritic,
+            Enums.Traits.SunDiacritic,
             IllustrationName.DisruptingRunestone,
             1,
             "drawn on a rune",
             "This spiraling diacritic channels the magic of a rune outwards, then back to the same location, allowing a rune to reconstitute itself.",
             "After the base rune is invoked, the rune automatically Traces itself back upon the same target.\n\n{b}Special{/b} You can have only one copy of {i}sun-, diacritic rune of preservation{/i} applied at a given time, and once you invoke it, you cannot Etch or Trace it again this combat.",
-            additionalTraits: [ModTraits.Diacritic])
+            additionalTraits: [Enums.Traits.Diacritic])
             {
                 UsageCondition = (attacker, defender) =>
                 {
@@ -1190,11 +1193,11 @@ public class RunesmithClassRunes
                             return Usability.NotUsableOnThisCreature("all runes have diacritics");
                     return Usability.Usable;
                 },
-                NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
+                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
                 {
                     // Only one instance allowed when drawn
                     foreach (Creature cr in caster.Battle.AllCreatures)
-                        cr.RemoveAllQEffects(qf => qf.Traits.Contains(ModTraits.SunDiacritic));
+                        cr.RemoveAllQEffects(qf => qf.Traits.Contains(Enums.Traits.SunDiacritic));
 
                     DrawnRune CreateSunPassive(DrawnRune targetRune)
                     {
@@ -1205,20 +1208,21 @@ public class RunesmithClassRunes
                             ExpirationCondition.Ephemeral,
                             caster,
                             thisRune.Illustration)
-                        {
-                            Traits = new List<Trait>(thisRune.Traits), //[..thisRune.Traits],
-                            BeforeInvokingRune = async (thisDr, drInvoked) =>
                             {
-                                if (thisDr.Disabled)
-                                    return;
-                                CombatAction sunRedraw = CombatAction.CreateSimple(
-                                    drInvoked.Source!,
-                                    "Sun, Diacritic Rune of Preservation",
-                                    [ModTraits.Traced]); // <- Even if it WAS etched before, it's now traced.
-                                await drInvoked.Rune.DrawRuneOnTarget(sunRedraw, thisDr.Source!, drInvoked.Owner, false);
-                                thisDr.Source!.PersistentUsedUpResources.UsedUpActions.Add("SunDiacritic");
-                            },
-                        }.WithDiacriticRegulator(targetRune);
+                                Traits = new List<Trait>(thisRune.Traits), //[..thisRune.Traits],
+                                BeforeInvokingRune = async (thisDr, drInvoked) =>
+                                {
+                                    if (thisDr.Disabled)
+                                        return;
+                                    CombatAction sunRedraw = CombatAction.CreateSimple(
+                                        drInvoked.Source!,
+                                        "Sun, Diacritic Rune of Preservation",
+                                        [Enums.Traits.Traced]); // <- Even if it WAS etched before, it's now traced.
+                                    await drInvoked.Rune.DrawRuneOnTarget(sunRedraw, thisDr.Source!, drInvoked.Owner, false);
+                                    thisDr.Source!.PersistentUsedUpResources.UsedUpActions.Add("SunDiacritic");
+                                },
+                            }
+                            .WithDiacriticRegulator(targetRune);
                 
                         return drawnSun;
                     }
@@ -1268,7 +1272,7 @@ public class RunesmithClassRunes
         // TODO: Make final decision on whether this buffs Marssyl's invocation.
         Rune runeUrDiacritic = new Rune(
             "Ur-, Diacritic Rune of Intensity",
-            ModTraits.UrDiacritic,
+            Enums.Traits.UrDiacritic,
             IllustrationName.DemolishingRunestone,
             1,
             "drawn on a rune",
@@ -1311,7 +1315,7 @@ public class RunesmithClassRunes
                                         if (thisDr.Disabled)
                                             return null;
 
-                                        if (!action.HasTrait(ModTraits.Invocation)
+                                        if (!action.HasTrait(Enums.Traits.Invocation)
                                             || action.Tag is not Rune
                                             || drInvoked != thisDr.DrawnOn)
                                             return null;
@@ -1342,9 +1346,9 @@ public class RunesmithClassRunes
                         {
                             DrawnRune? urPassive = CreateUrPassive(validRune);
                             // Determine the way the rune is being applied.
-                            if (sourceAction.HasTrait(ModTraits.Etched))
+                            if (sourceAction.HasTrait(Enums.Traits.Etched))
                                 urPassive = urPassive.WithIsEtched();
-                            else if (sourceAction.HasTrait(ModTraits.Traced))
+                            else if (sourceAction.HasTrait(Enums.Traits.Traced))
                                 urPassive = urPassive.WithIsTraced();
         
                             target.AddQEffect(urPassive);
@@ -1376,7 +1380,7 @@ public class RunesmithClassRunes
         // The exact nature of how you're supposed to apply Zohk's bonus is a little unclear to me from the original wording anyway.
         Rune runeZohk = new Rune(
             "Zohk, Rune of Homecoming",
-            ModTraits.Zohk,
+            Enums.Traits.Zohk,
             IllustrationName.ReturningRunestone,
             1,
             "drawn on a creature",

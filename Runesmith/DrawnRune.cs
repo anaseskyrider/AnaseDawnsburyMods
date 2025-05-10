@@ -84,14 +84,14 @@ public class DrawnRune : QEffect
     {
         get
         {
-            bool isEtched = this.Traits.Contains(ModTraits.Etched);
-            bool isTraced = this.Traits.Contains(ModTraits.Traced);
+            bool isEtched = this.Traits.Contains(Enums.Traits.Etched);
+            bool isTraced = this.Traits.Contains(Enums.Traits.Traced);
             if (isEtched && isTraced) // It's not supposed to be both, so return a null just in case.
                 return null;
             else if (isEtched)
-                return ModTraits.Etched;
+                return Enums.Traits.Etched;
             else if (isTraced)
-                return ModTraits.Traced;
+                return Enums.Traits.Traced;
             else
                 return null;
         }
@@ -142,17 +142,17 @@ public class DrawnRune : QEffect
     /// <summary>
     /// Applies the supplied Etched or Traced trait, and modifies the duration of the QEffect according to Etched and Traced behavior.
     /// </summary>
-    /// <param name="drawTrait">The <see cref="ModTraits.Etched"/> or <see cref="ModTraits.Traced"/> trait.</param>
+    /// <param name="drawTrait">The <see cref="Enums.Traits.Etched"/> or <see cref="Enums.Traits.Traced"/> trait.</param>
     /// <returns></returns>
     public DrawnRune WithDrawDuration(Trait drawTrait)
     {
-        return drawTrait == ModTraits.Etched ? this.WithIsEtched() : (drawTrait == ModTraits.Traced ? this.WithIsTraced() : this);
+        return drawTrait == Enums.Traits.Etched ? this.WithIsEtched() : (drawTrait == Enums.Traits.Traced ? this.WithIsTraced() : this);
     }
 
     public DrawnRune WithIsEtched()
     {
-        this.Traits.Remove(ModTraits.Traced);
-        this.Traits.Add(ModTraits.Etched);
+        this.Traits.Remove(Enums.Traits.Traced);
+        this.Traits.Add(Enums.Traits.Etched);
         this.ExpiresAt = ExpirationCondition.Never;
         this.Description += "\n\n{i}{Blue}Etched: lasts until the end of combat.{/Blue}{/i}";
         return this;
@@ -160,8 +160,8 @@ public class DrawnRune : QEffect
 
     public DrawnRune WithIsTraced()
     {
-        this.Traits.Remove(ModTraits.Etched);
-        this.Traits.Add(ModTraits.Traced);
+        this.Traits.Remove(Enums.Traits.Etched);
+        this.Traits.Add(Enums.Traits.Traced);
         this.ExpiresAt = ExpirationCondition.ExpiresAtEndOfSourcesTurn;
         this.CannotExpireThisTurn = true;
         this.Description += "\n\n{i}{Blue}Traced: lasts until the end of " + this.Source?.Name + "'s next turn.{/Blue}{/i}";
@@ -375,7 +375,7 @@ public class DrawnRune : QEffect
             Name = $"Invoked {this.Rune.Name}",
             Description = description,
             Illustration = this.Illustration,
-            Traits = [ModTraits.Invocation],
+            Traits = [Enums.Traits.Invocation],
             Source = this.Source,
             ExpiresAt = expiresAt,
         };
@@ -459,8 +459,8 @@ public class DrawnRune : QEffect
         List<DrawnRune> drawnRunes = runeBearer.QEffects.Where(
             qf => (qf is DrawnRune && 
                    ((caster != null && qf.Source == caster) || true) &&
-                   qf.Traits.Contains(ModTraits.Rune) &&
-                   !qf.Traits.Contains(ModTraits.Invocation))).Cast<DrawnRune>().ToList();
+                   qf.Traits.Contains(Enums.Traits.Rune) &&
+                   !qf.Traits.Contains(Enums.Traits.Invocation))).Cast<DrawnRune>().ToList();
         return drawnRunes;
     }
     #endregion

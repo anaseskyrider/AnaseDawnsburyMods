@@ -43,7 +43,7 @@ public class Rune
     /// <summary>
     /// The traits associated with the rune. By default, all runes have at least the Rune, Runesmith, and Magical traits.
     /// </summary>
-    public List<Trait> Traits { get; set; } = [ModTraits.Rune, ModTraits.Runesmith, Trait.Magical];
+    public List<Trait> Traits { get; set; } = [Enums.Traits.Rune, Enums.Traits.Runesmith, Trait.Magical];
 
     /// <summary>
     /// A very-abstract list of traits to associate with attempts to draw runes.<br></br>
@@ -328,12 +328,12 @@ public class Rune
     }
     
     /// <summary>
-    /// Adds ModTraits.Rune to DrawTechnicalTraits, which indicates to other parts of the mod that the rune is drawn onto a rune.
+    /// Adds Enums.Traits.Rune to DrawTechnicalTraits, which indicates to other parts of the mod that the rune is drawn onto a rune.
     /// </summary>
     /// <returns></returns>
     public Rune WithDrawnOnRuneTechnical()
     {
-        this.DrawTechnicalTraits = this.DrawTechnicalTraits.Concat([ModTraits.Rune]).ToList();
+        this.DrawTechnicalTraits = this.DrawTechnicalTraits.Concat([Enums.Traits.Rune]).ToList();
         return this;
     }
 
@@ -410,9 +410,9 @@ public class Rune
         {
             Name = "Invocation Immunity: " + this.Name,
             Description = "Cannot be affected by another instance of this invocation until the end of this action.",
-            Illustration = new SuperimposedIllustration(this.Illustration, ModIllustrations.NoSymbol),
+            Illustration = new SuperimposedIllustration(this.Illustration, Enums.Illustrations.NoSymbol),
             Tag = this,
-            Traits = [ModTraits.InvocationImmunity, this.RuneId], // ImmunityQFs are identified by these traits.
+            Traits = [Enums.Traits.InvocationImmunity, this.RuneId], // ImmunityQFs are identified by these traits.
             ExpiresAt = ExpirationCondition.ExpiresAtEndOfAnyTurn, // This QF is supposed to be removed when the activity making invokeActions completes. This is a back-up safety for developer-error.
             DoNotShowUpOverhead = true,
         };
@@ -421,14 +421,14 @@ public class Rune
     }
     
     /// <summary>
-    /// Determines whether a TARGET Creature is immune to the invocation effects of this Rune by searching for a QEffect with the <see cref="ModTraits.InvocationImmunity"/> trait and a trait matching this Rune's <see cref="RuneId"/>.
+    /// Determines whether a TARGET Creature is immune to the invocation effects of this Rune by searching for a QEffect with the <see cref="Enums.Traits.InvocationImmunity"/> trait and a trait matching this Rune's <see cref="RuneId"/>.
     /// </summary>
     /// <param name="target">The CREATURE to check.</param>
     /// <returns>(bool) Returns true if the immunity QEffect is present on the TARGET.</returns>
     public bool IsImmuneToThisInvocation(Creature target)
     {
         QEffect? thisRunesImmunity = target.QEffects.FirstOrDefault(qfToFind =>
-            qfToFind.Traits.Contains(ModTraits.InvocationImmunity) &&
+            qfToFind.Traits.Contains(Enums.Traits.InvocationImmunity) &&
             qfToFind.Traits.Contains(this.RuneId));
         return thisRunesImmunity != null;
     }
@@ -455,7 +455,7 @@ public class Rune
     /// <summary>
     /// The CASTER uses an ACTION to apply the RUNE's <see cref="NewDrawnRune"/> to the TARGET, which might IGNORE targeting restrictions.
     /// </summary>
-    /// <param name="sourceAction">The CombatAction which is applying the rune. This action should have either the <see cref="ModTraits.Traced"/> or the <see cref="ModTraits.Etched"/> traits to determine the duration of the effect being applied.</param>
+    /// <param name="sourceAction">The CombatAction which is applying the rune. This action should have either the <see cref="Enums.Traits.Traced"/> or the <see cref="Enums.Traits.Etched"/> traits to determine the duration of the effect being applied.</param>
     /// <param name="caster">The Creature applying the rune.</param>
     /// <param name="target">The Creature the rune is applying to.</param>
     /// <param name="ignoreUsageRequirements">(Default: false) If false, then the DrawnRune is applied only when its Rune's <see cref="UsageCondition"/> is valid for the target. This is true for cases like the Runic Reprisal feat which allows a Runesmith to apply any damaging rune to their shield, taking none of the passive effects, but allowing it to be invoked on a creature when they Shield Block.</param>
@@ -489,9 +489,9 @@ public class Rune
         }*/
         
         // Determine the way the rune is being applied.
-        if (sourceAction.HasTrait(ModTraits.Etched))
+        if (sourceAction.HasTrait(Enums.Traits.Etched))
             qfToApply = qfToApply.WithIsEtched();
-        else if (sourceAction.HasTrait(ModTraits.Traced))
+        else if (sourceAction.HasTrait(Enums.Traits.Traced))
             qfToApply = qfToApply.WithIsTraced();
         
         target.AddQEffect(qfToApply);
@@ -500,7 +500,7 @@ public class Rune
     }
 
     /// <summary>
-    /// Creates a generic CombatAction which when executed, calls <see cref="DrawRuneOnTarget"/> on each target using this Rune. This action inherits the mechanics of Tracing a Rune, such as the <see cref="ModTraits.Traced"/> and Manipulate traits.
+    /// Creates a generic CombatAction which when executed, calls <see cref="DrawRuneOnTarget"/> on each target using this Rune. This action inherits the mechanics of Tracing a Rune, such as the <see cref="Enums.Traits.Traced"/> and Manipulate traits.
     /// </summary>
     /// <param name="owner">The creature (Runesmith) who is using this action.</param>
     /// <param name="actions">The number of actions for this variant. If actions==-3, a 1-2 action variable target is used. If actions==1, an adjacent target is used. If actions==2, a ranged target is used (6 tiles). Otherwise, a Self target is used. The action cost can still be altered afterward (such as for use in subsidiary actions).</param>
@@ -540,7 +540,7 @@ public class Rune
             [Trait.Concentrate,
                 Trait.Magical,
                 Trait.Manipulate,
-                ModTraits.Traced,
+                Enums.Traits.Traced,
                 Trait.Spell] // <- Should apply magic immunity.
             ).ToArray();
         
@@ -609,7 +609,7 @@ public class Rune
     }
 
     /// <summary>
-    /// Creates a variant of <see cref="CreateTraceAction"/> that inherits the mechanics of Etching a Rune, such as the <see cref="ModTraits.Etched"/> trait and a map-sized range limit, and only applying runes to allies.
+    /// Creates a variant of <see cref="CreateTraceAction"/> that inherits the mechanics of Etching a Rune, such as the <see cref="Enums.Traits.Etched"/> trait and a map-sized range limit, and only applying runes to allies.
     /// </summary>
     /// <param name="owner">The creature (Runesmith) who is using this action.</param>
     /// <returns>(CombatAction) The action which etches the given rune on the target.</returns>
@@ -620,10 +620,10 @@ public class Rune
             .WithActionCost(0).WithSoundEffect(SfxName.AttachRune);
         etchAction.Name = $"Etch {this.Name}";
         etchAction.Description = this.CreateTraceActionDescription(etchAction, false, prologueText:"{Blue}Etched: lasts until the end of combat.{/Blue}\n");
-        etchAction.Traits.Remove(ModTraits.Traced);
+        etchAction.Traits.Remove(Enums.Traits.Traced);
         etchAction.Traits.Remove(Trait.Manipulate); // Just in case this might provoke a reaction.
         etchAction.Traits.Remove(Trait.Concentrate); // Just in case this might provoke a reaction.
-        etchAction.Traits.Add(ModTraits.Etched);
+        etchAction.Traits.Add(Enums.Traits.Etched);
         
         // Usable across the whole map
         etchAction.Target = Target.RangedFriend(99); // BUG: Is blocked by line of effect. I don't currently know a way around this.
@@ -668,7 +668,7 @@ public class Rune
 
         Trait[] traits = this.Traits.ToArray().Concat(
             [
-                ModTraits.Invocation,
+                Enums.Traits.Invocation,
                 Trait.UnaffectedByConcealment,
                 Trait.Spell, // <- Should apply magic immunity.
             ])
@@ -740,12 +740,12 @@ public class Rune
     /// Removes all invocation immunities from a creature.
     /// </summary>
     /// <param name="cr">The <see cref="Creature"/> whose QEffects will be searched.</param>
-    /// <returns>(bool) True if at least one QEffect with the <see cref="ModTraits.InvocationImmunity"/> trait was removed, false otherwise.</returns>
+    /// <returns>(bool) True if at least one QEffect with the <see cref="Enums.Traits.InvocationImmunity"/> trait was removed, false otherwise.</returns>
     public static bool RemoveAllImmunities(Creature cr)
     {
         int removals = cr.RemoveAllQEffects(
             qf =>
-                qf.Traits.Contains(ModTraits.InvocationImmunity)
+                qf.Traits.Contains(Enums.Traits.InvocationImmunity)
         );
         return (removals > 0);
     }
@@ -847,7 +847,7 @@ public class Rune
             new AdvancedRequest(caster, "Choose a rune to Trace.", options)
             {
                 TopBarText = topBarText,
-                TopBarIcon = ModIllustrations.TraceRune,
+                TopBarIcon = Enums.Illustrations.TraceRune,
             })).ChosenOption;
         
         // Do stuff based on specific type of choice
@@ -918,7 +918,7 @@ public class Rune
             new AdvancedRequest(caster, "Choose a rune to Trace.", options)
             {
                 TopBarText = topBarText,
-                TopBarIcon = ModIllustrations.TraceRune,
+                TopBarIcon = Enums.Illustrations.TraceRune,
             })).ChosenOption;
         
         // Do stuff based on specific type of choice
@@ -974,8 +974,8 @@ public class Rune
                 if (qf is not DrawnRune dRune)
                     continue;
                 if (dRune.Source != caster
-                    || !dRune.Traits.Contains(ModTraits.Rune)
-                    || dRune.Traits.Contains(ModTraits.Invocation))
+                    || !dRune.Traits.Contains(Enums.Traits.Rune)
+                    || dRune.Traits.Contains(Enums.Traits.Invocation))
                     continue;
                 
             }
@@ -990,8 +990,8 @@ public class Rune
                                  qf is DrawnRune dRune 
                                  && dRune.Rune == rune
                                  && dRune.Source == caster
-                                 && dRune.Traits.Contains(ModTraits.Rune)
-                                 && !dRune.Traits.Contains(ModTraits.Invocation)))
+                                 && dRune.Traits.Contains(Enums.Traits.Rune)
+                                 && !dRune.Traits.Contains(Enums.Traits.Invocation)))
                     {
                         if (runeQf is not DrawnRune dRune)
                             continue;
@@ -1028,7 +1028,7 @@ public class Rune
             new AdvancedRequest(caster, "Choose a rune to Invoke.", options)
             {
                 TopBarText = topBarText,
-                TopBarIcon = ModIllustrations.TraceRune,
+                TopBarIcon = Enums.Illustrations.TraceRune,
             })).ChosenOption;
         
         // Do stuff based on specific type of choice
@@ -1144,16 +1144,3 @@ public class Rune
 
     #endregion
 }
-
-/* QEffect Properties to utilize
- * .Key     for anti-stacking behavior
- * .AppliedThisStateCheck
- * .Hidden
- * .HideFromPortrait
- * .Tag
- * .UsedThisTurn
- * .Value
- * .Source
- * .SourceAction
- * .Owner
- */

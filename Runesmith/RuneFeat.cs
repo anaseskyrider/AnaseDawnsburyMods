@@ -21,7 +21,7 @@ public class RuneFeat : Feat
             null)
     {
         this.Rune = rune;
-        this.Traits.RemoveFirst(trait => trait == ModTraits.Runesmith); // Rune feat needs to not show up as a class feat option.
+        this.Traits.RemoveFirst(trait => trait == Enums.Traits.Runesmith); // Rune feat needs to not show up as a class feat option.
         this.WithPrerequisite(
             values => values.AllFeats.FirstOrDefault(feat => feat is RunicRepertoireFeat) != null,
             "You must have a runic repertoire.");

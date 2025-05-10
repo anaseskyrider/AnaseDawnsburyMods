@@ -21,8 +21,8 @@ public class RunicRepertoireFeat : Feat
             traits ?? [],
             null)
     {
-        if (!this.Traits.Contains(ModTraits.RunicRepertoire))
-            this.Traits.Add(ModTraits.RunicRepertoire);
+        if (!this.Traits.Contains(Enums.Traits.RunicRepertoire))
+            this.Traits.Add(Enums.Traits.RunicRepertoire);
         this.Source = source;
         this.EtchLimit = 2;
     }
@@ -35,7 +35,7 @@ public class RunicRepertoireFeat : Feat
     public int EtchLimit { get; set; }
     
     /// <summary>
-    /// A trait representing the source of the runic repertoire, such as a class trait, or a trait unique to an archetype. No enforcement mechanisms exist to stop a character from having multiple runic repertoires from the same source, so use with prudence. This mod uses <see cref="ModTraits.Runesmith"/> as its source.
+    /// A trait representing the source of the runic repertoire, such as a class trait, or a trait unique to an archetype. No enforcement mechanisms exist to stop a character from having multiple runic repertoires from the same source, so use with prudence. This mod uses <see cref="Enums.Traits.Runesmith"/> as its source.
     /// </summary>
     public Trait Source { get; set; }
     #endregion

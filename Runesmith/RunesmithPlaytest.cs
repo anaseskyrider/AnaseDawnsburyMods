@@ -60,20 +60,20 @@ public class RunesmithPlaytest
         // Class Features //
         ////////////////////
         RunesmithRunicRepertoireFeat = new RunicRepertoireFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.RunesmithRepertoire", null),
+            Enums.FeatNames.RunicRepertoire,
             null,
             "",
             [],
-            ModTraits.Runesmith);
+            Enums.Traits.Runesmith);
         ModManager.AddFeat(RunesmithRunicRepertoireFeat);
         
         // TODO: Populate target dropdowns with trace rune actions
         RunesmithTraceRune = new Feat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.TraceRune", "Trace Rune"),
-            "Your fingers dance, glowing light leaving behind the image of a rune.",
-            "You apply one rune to an adjacent target matching the rune’s Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.",
-            [Trait.Concentrate, Trait.Magical, Trait.Manipulate],
-            null)
+                Enums.FeatNames.TraceRune,
+                "Your fingers dance, glowing light leaving behind the image of a rune.",
+                "You apply one rune to an adjacent target matching the rune’s Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.",
+                [Trait.Concentrate, Trait.Magical, Trait.Manipulate],
+                null)
             .WithPermanentQEffect("You apply one rune to an adjacent target as an action, or to within 30 feet as two actions.", qfFeat =>
             {
                 qfFeat.Name += " {icon:Action}–{icon:TwoActions}"; // No WithActionCost method, so update the sheet name to have actions.
@@ -144,10 +144,10 @@ public class RunesmithPlaytest
                     }
 
                     SubmenuPossibility traceMenu = new SubmenuPossibility(
-                        ModIllustrations.TraceRune,
+                        Enums.Illustrations.TraceRune,
                         "Trace Rune")
                     {
-                        SpellIfAny = new CombatAction(qfThis.Owner, ModIllustrations.TraceRune, "Trace Rune", [Trait.Concentrate, Trait.Magical, Trait.Manipulate, ModTraits.Runesmith], "{b}Requirements{b} You have a hand free.\n\nYour fingers dance, glowing light leaving behind the image of a rune. You apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.", Target.Self()).WithActionCost(-3), // This doesn't DO anything, it's just to provide description to the menu.
+                        SpellIfAny = new CombatAction(qfThis.Owner, Enums.Illustrations.TraceRune, "Trace Rune", [Trait.Concentrate, Trait.Magical, Trait.Manipulate, Enums.Traits.Runesmith], "{b}Requirements{b} You have a hand free.\n\nYour fingers dance, glowing light leaving behind the image of a rune. You apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.", Target.Self()).WithActionCost(-3), // This doesn't DO anything, it's just to provide description to the menu.
                         Subsections = { new PossibilitySection("Trace Rune")
                         {
                             Possibilities = traceActionSections,
@@ -159,12 +159,12 @@ public class RunesmithPlaytest
         ModManager.AddFeat(RunesmithTraceRune);
 
         RunesmithInvokeRune = new Feat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.InvokeRune", "Invoke Rune"),
-            "",
-            "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed. You can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are affected only once, as normal for duplicate effects.",
-            [ModTraits.Invocation, Trait.Magical],
-            null
-            ).WithPermanentQEffect("You invoke any number of runes within 30 feet.", qfFeat =>
+                Enums.FeatNames.InvokeRune,
+                "",
+                "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed. You can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are affected only once, as normal for duplicate effects.",
+                [Enums.Traits.Invocation, Trait.Magical],
+                null)
+            .WithPermanentQEffect("You invoke any number of runes within 30 feet.", qfFeat =>
             {
                 qfFeat.Name += " {icon:Action}";
                 
@@ -172,9 +172,9 @@ public class RunesmithPlaytest
                 {
                     CombatAction invokeRuneAction = new CombatAction(
                     qfThis.Owner, 
-                    ModIllustrations.InvokeRune,
+                    Enums.Illustrations.InvokeRune,
                     "Invoke Rune", 
-                    [ModTraits.Invocation, Trait.Magical, ModTraits.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment],
+                    [Enums.Traits.Invocation, Trait.Magical, Enums.Traits.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment],
                     "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed. You can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are affected only once, as normal for duplicate effects.",
                     Target.Self().WithAdditionalRestriction(caster =>
                     {
@@ -190,8 +190,8 @@ public class RunesmithPlaytest
                                     qfToFind => 
                                         qfToFind is DrawnRune && // -that is a DrawnRune,
                                         qfToFind.Source == caster && // that is created by us,
-                                        qfToFind.Traits.Contains(ModTraits.Rune) && // with the rune trait,
-                                        !qfToFind.Traits.Contains(ModTraits.Invocation) // but not the invocation trait.
+                                        qfToFind.Traits.Contains(Enums.Traits.Rune) && // with the rune trait,
+                                        !qfToFind.Traits.Contains(Enums.Traits.Invocation) // but not the invocation trait.
                                     ) != null
                                 )
                             {
@@ -220,8 +220,8 @@ public class RunesmithPlaytest
                                 {
                                     if (qfOnCreature is DrawnRune && // If valid QF,
                                         qfOnCreature.Source == self &&
-                                        qfOnCreature.Traits.Contains(ModTraits.Rune) &&
-                                        !qfOnCreature.Traits.Contains(ModTraits.Invocation))
+                                        qfOnCreature.Traits.Contains(Enums.Traits.Rune) &&
+                                        !qfOnCreature.Traits.Contains(Enums.Traits.Invocation))
                                         numberOfRunes++; // then count it.
                                 });
                             }
@@ -253,8 +253,8 @@ public class RunesmithPlaytest
                                     {
                                         if (qfToFind is DrawnRune drawnRune &&
                                             drawnRune.Source == self &&
-                                            drawnRune.Traits.Contains(ModTraits.Rune) &&
-                                            !drawnRune.Traits.Contains(ModTraits.Invocation))
+                                            drawnRune.Traits.Contains(Enums.Traits.Rune) &&
+                                            !drawnRune.Traits.Contains(Enums.Traits.Invocation))
                                         {
                                             creatureRunes.Add(drawnRune);
                                         }
@@ -336,11 +336,11 @@ public class RunesmithPlaytest
         
         // BUG: Action triggers before animal companions spawn.
         RunesmithEtchRune = new Feat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.EtchRune", "Etch Rune"),
-            "An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.",
-            "At the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they’re expended or removed. You can etch up to 2 runes, and you can etch an additional rune at levels 5, 9, 13, and 17.",
-            [], // No traits, we don't want anything inside the encounter to try to interact with this action at the start of combat.
-            null)
+                Enums.FeatNames.EtchRune,
+                "An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.",
+                "At the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they’re expended or removed. You can etch up to 2 runes, and you can etch an additional rune at levels 5, 9, 13, and 17.",
+                [], // No traits, we don't want anything inside the encounter to try to interact with this action at the start of combat.
+                null)
             .WithPermanentQEffect("You apply runes to your allies at the start of combat which last until the end of combat or consumed.", qfFeat =>
             {
                 qfFeat.StartOfCombat = async qfThis =>
@@ -386,7 +386,7 @@ public class RunesmithPlaytest
                             new AdvancedRequest(qfThis.Owner, "Etch a rune on yourself or an ally.", options)
                             {
                                 TopBarText = $"Etch a rune on yourself or an ally. ({i+1}/{etchLimit})",
-                                TopBarIcon = ModIllustrations.EtchRune,
+                                TopBarIcon = Enums.Illustrations.EtchRune,
                             })).ChosenOption;
                         
                         switch (chosenOption)
@@ -410,11 +410,11 @@ public class RunesmithPlaytest
         ModManager.AddFeat(RunesmithEtchRune);
 
         RunesmithRunicCrafter = new Feat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.RunicCrafter", "Runic Crafter"),
-            "Your study of secret runes leaves you well practiced in crafting their more common cousins.",
-            "Your equipment gains the effects of the highest level fundamental armor and weapon runes for your level. This does not count as having runes for the purposes of other rules (you must still have potency runes to apply property runes).",
-            [],
-            null)
+                Enums.FeatNames.RunicCrafter,
+                "Your study of secret runes leaves you well practiced in crafting their more common cousins.",
+                "Your equipment gains the effects of the highest level fundamental armor and weapon runes for your level. This does not count as having runes for the purposes of other rules (you must still have potency runes to apply property runes).",
+                [],
+                null)
             .WithPermanentQEffect("INCOMPLETE TEXT", qfFeat =>
             {
                 int lvl = qfFeat.Owner.Level;
@@ -499,28 +499,28 @@ public class RunesmithPlaytest
         // Runesmith Class //
         /////////////////////
         RunesmithClassFeat = new ClassSelectionFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.RunesmithClass", "Runesmith"),
-            "At the heart of all communication is the word, and at the heart of all magic is the rune. Equal parts scholar and artist, you devote yourself to the study of these mystic symbols, learning to carve, etch, brand, and paint the building blocks of magic to channel powers greater than yourself.",
-            ModTraits.Runesmith,
-            new EnforcedAbilityBoost(Ability.Intelligence),
-            8,
-            [Trait.Perception, Trait.Reflex, Trait.Unarmed, Trait.Simple, Trait.Martial, Trait.UnarmoredDefense, Trait.LightArmor, Trait.MediumArmor, Trait.Crafting],
-            [Trait.Fortitude, Trait.Will],
-            2,
-            "{b}1. Runic Repertoire.{/b} A runesmith doesn't cast spells, but they can use {tooltip:Runesmith.Trait.Rune}runesmith runes{/}. You learn 4 runes of 1st-level. You learn additional runes at higher levels. Your runes are the same level you are, regardless when you learn them {i}(some runes increase in power at higher levels, as listed in their Level entry){/i}. Runes use your class DC, which is based on Intelligence." +
-            "\r\n\r\n{b}2. Applying Runes.{/b} You can apply runes in one of two ways: {i}tracing{/i} the rune with the {tooltip:Runesmith.Action.TraceRune}Trace Rune{/} action, or by {i}etching{/i} the rune at the start of combat with the {tooltip:Runesmith.Action.EtchRune}Etch Rune{/} activity." +
-            "\r\n\r\n{b}3. Invoking Runes.{/b} You can also invoke a rune with the {tooltip:Runesmith.Action.InvokeRune}Invoke Rune{/} action." +
-            "\r\n\r\n{b}4. Runesmith feat.{/b}" +
-            "\r\n\r\n{b}5. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks" +
-            "\r\n\r\n{b}At higher levels:{/b}" +
-            "\r\n{b}Level 2:{/b} Runesmith feat, {tooltip:Runesmith.Features.RunicCrafter}runic crafter{/}" +
-            "\r\n{b}Level 3:{/b} General feat, skill increase, additional level 1 rune known" +
-            "\r\n{b}Level 4:{/b} Runesmith feat" +
-            "\r\n{b}Level 5:{/b} Attribute boosts, ancestry feat, skill increase, {tooltip:Runesmith.Features.SmithsWeaponExpertise}smith's weapon expertise{/}, additional level 1 rune known, additional maximum etched rune" +
-            "\r\n{b}Level 6:{/b} Runesmith feat" +
-            "\r\n{b}Level 7:{/b} General feat, skill increase, expert class DC, expert in Reflex saves, {tooltip:Runesmith.Features.RunicOptimization}runic optimization{/} ({Red}NYI{/Red}, uses Weapon Specialization), additional level 1 rune known" + // TODO: adjust text with Runic Optimization implementation
-            "\r\n{b}Level 8:{/b} Runesmith feat",
-            null)
+                Enums.FeatNames.RunesmithClass,
+                "At the heart of all communication is the word, and at the heart of all magic is the rune. Equal parts scholar and artist, you devote yourself to the study of these mystic symbols, learning to carve, etch, brand, and paint the building blocks of magic to channel powers greater than yourself.",
+                Enums.Traits.Runesmith,
+                new EnforcedAbilityBoost(Ability.Intelligence),
+                8,
+                [Trait.Perception, Trait.Reflex, Trait.Unarmed, Trait.Simple, Trait.Martial, Trait.UnarmoredDefense, Trait.LightArmor, Trait.MediumArmor, Trait.Crafting],
+                [Trait.Fortitude, Trait.Will],
+                2,
+                "{b}1. Runic Repertoire.{/b} A runesmith doesn't cast spells, but they can use {tooltip:Runesmith.Trait.Rune}runesmith runes{/}. You learn 4 runes of 1st-level. You learn additional runes at higher levels. Your runes are the same level you are, regardless when you learn them {i}(some runes increase in power at higher levels, as listed in their Level entry){/i}. Runes use your class DC, which is based on Intelligence." +
+                "\r\n\r\n{b}2. Applying Runes.{/b} You can apply runes in one of two ways: {i}tracing{/i} the rune with the {tooltip:Runesmith.Action.TraceRune}Trace Rune{/} action, or by {i}etching{/i} the rune at the start of combat with the {tooltip:Runesmith.Action.EtchRune}Etch Rune{/} activity." +
+                "\r\n\r\n{b}3. Invoking Runes.{/b} You can also invoke a rune with the {tooltip:Runesmith.Action.InvokeRune}Invoke Rune{/} action." +
+                "\r\n\r\n{b}4. Runesmith feat.{/b}" +
+                "\r\n\r\n{b}5. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks" +
+                "\r\n\r\n{b}At higher levels:{/b}" +
+                "\r\n{b}Level 2:{/b} Runesmith feat, {tooltip:Runesmith.Features.RunicCrafter}runic crafter{/}" +
+                "\r\n{b}Level 3:{/b} General feat, skill increase, additional level 1 rune known" +
+                "\r\n{b}Level 4:{/b} Runesmith feat" +
+                "\r\n{b}Level 5:{/b} Attribute boosts, ancestry feat, skill increase, {tooltip:Runesmith.Features.SmithsWeaponExpertise}smith's weapon expertise{/}, additional level 1 rune known, additional maximum etched rune" +
+                "\r\n{b}Level 6:{/b} Runesmith feat" +
+                "\r\n{b}Level 7:{/b} General feat, skill increase, expert class DC, expert in Reflex saves, {tooltip:Runesmith.Features.RunicOptimization}runic optimization{/} ({Red}NYI{/Red}, uses Weapon Specialization), additional level 1 rune known" + // TODO: adjust text with Runic Optimization implementation
+                "\r\n{b}Level 8:{/b} Runesmith feat",
+                null)
             .WithOnSheet( values =>
             {
                 // extra skill
@@ -538,7 +538,7 @@ public class RunesmithPlaytest
                     "Runesmith feat",
                     1,
                     ft =>
-                        ft.HasTrait(ModTraits.Runesmith)));
+                        ft.HasTrait(Enums.Traits.Runesmith)));
                 
                 // other feats
                 values.GrantFeat(FeatName.ShieldBlock);
@@ -586,7 +586,7 @@ public class RunesmithPlaytest
                 values.AddAtLevel(7, values =>
                 {
                     values.SetProficiency(Trait.Reflex, Proficiency.Expert);
-                    values.SetProficiency(ModTraits.Runesmith, Proficiency.Expert);
+                    values.SetProficiency(Enums.Traits.Runesmith, Proficiency.Expert);
                 });
                 // Future content
                 values.AddAtLevel(9, values =>
@@ -616,7 +616,7 @@ public class RunesmithPlaytest
                 });
                 values.AddAtLevel(15, values =>
                 {
-                    values.SetProficiency(ModTraits.Runesmith, Proficiency.Master);
+                    values.SetProficiency(Enums.Traits.Runesmith, Proficiency.Master);
                 });
                 values.AddAtLevel(17, values =>
                 {
@@ -625,7 +625,7 @@ public class RunesmithPlaytest
                 });
                 values.AddAtLevel(19, values =>
                 {
-                    values.SetProficiency(ModTraits.Runesmith, Proficiency.Legendary);
+                    values.SetProficiency(Enums.Traits.Runesmith, Proficiency.Legendary);
                     
                     values.SetProficiency(Trait.UnarmoredDefense, Proficiency.Master);
                     values.SetProficiency(Trait.LightArmor, Proficiency.Master);
@@ -667,7 +667,7 @@ public class RunesmithPlaytest
         // Runesmith Archetype //
         /////////////////////////
         Feat runesmithDedication = ArchetypeFeats.CreateMulticlassDedication(
-            ModTraits.Runesmith,
+            Enums.Traits.Runesmith,
             "You have dabbled in the scholarly art at the heart of all magic, the rune.",
             "You become trained in Crafting; if you were already trained in Crafting, you instead become trained in a skill of your choice.\n\nYou can use {tooltip:Runesmith.Trait.Rune}runes{/} like a runesmith. You gain a runic repertoire with two 1st-level runes from the runesmith's rune list. The DCs for these runes is based on your class DC and your Intelligence.\n\nYou can use the {tooltip:Runesmith.Action.TraceRune}Trace Rune{/} {icon:Action}–{icon:TwoActions} and {tooltip:Runesmith.Action.InvokeRune}Invoke Rune{/} {icon:Action} actions.")
             .WithOnSheet(values =>
@@ -690,8 +690,8 @@ public class RunesmithPlaytest
                     .WithIsOptional());
                 values.GrantFeat(RunesmithTraceRune.FeatName);
                 values.GrantFeat(RunesmithInvokeRune.FeatName);
-                values.SetProficiency(ModTraits.Runesmith, Proficiency.Trained); // Might be redundant, but just in case...
-                values.Proficiencies.AddProficiencyAdjustment(traits => traits.Contains(ModTraits.Runesmith), values.Class!.ClassTrait);
+                values.SetProficiency(Enums.Traits.Runesmith, Proficiency.Trained); // Might be redundant, but just in case...
+                values.Proficiencies.AddProficiencyAdjustment(traits => traits.Contains(Enums.Traits.Runesmith), values.Class!.ClassTrait);
             })
             .WithPrerequisite(values => // Can't use the built-in WithDemandsAbility, so as to avoid non-ORC text.
                 values.FinalAbilityScores.TotalScore(Ability.Intelligence) >= 14,
@@ -699,7 +699,7 @@ public class RunesmithPlaytest
         runesmithDedication.Traits.Add(Trait.Homebrew);
         ModManager.AddFeat(runesmithDedication);
 
-        foreach (Feat feat in ArchetypeFeats.CreateBasicAndAdvancedMulticlassFeatGrantingArchetypeFeats(ModTraits.Runesmith, "Runic Technique"))
+        foreach (Feat feat in ArchetypeFeats.CreateBasicAndAdvancedMulticlassFeatGrantingArchetypeFeats(Enums.Traits.Runesmith, "Runic Technique"))
         {
             ModManager.AddFeat(feat);
         }
@@ -711,7 +711,7 @@ public class RunesmithPlaytest
                 "You add a 1st-level runesmith rune of your choice to your runic repertoire.",
                 [])
             .WithMultipleSelection()
-            .WithAvailableAsArchetypeFeat(ModTraits.Runesmith)
+            .WithAvailableAsArchetypeFeat(Enums.Traits.Runesmith)
             .WithOnSheet(values =>
             {
                 values.AddSelectionOption(new SingleFeatSelectionOption("rune"+values.CurrentLevel, "Level 1 rune", values.CurrentLevel, ft => ft is RuneFeat rf && rf.Rune.BaseLevel == 1).WithIsOptional());
@@ -729,7 +729,7 @@ public class RunesmithPlaytest
     public static int RunesmithDC(Creature runesmith)
     {
         return runesmith.PersistentCharacterSheet?.Class != null
-            ? runesmith.Proficiencies.Get([ModTraits.Runesmith]).ToNumber(runesmith.Level) + runesmith.Abilities.Intelligence + 10
+            ? runesmith.Proficiencies.Get([Enums.Traits.Runesmith]).ToNumber(runesmith.Level) + runesmith.Abilities.Intelligence + 10
             : Checks.DetermineClassProficiencyFromMonsterLevel(runesmith.Level).ToNumber(runesmith.Level) + runesmith.Abilities.GetTop() + 10;
     }
     
@@ -883,3 +883,18 @@ You can now use the many new methods in the CommonQuestions class to add dialogu
     })
     .WithIllustration(thisRune.Illustration);
 options.Add(runeOption);*/
+
+
+
+/* QEffect Properties to utilize
+ * .Key     for anti-stacking behavior
+ * .AppliedThisStateCheck
+ * .Hidden
+ * .HideFromPortrait
+ * .Tag
+ * .UsedThisTurn
+ * .Value
+ * .Source
+ * .SourceAction
+ * .Owner
+ */
