@@ -341,15 +341,15 @@ public class ClassFeats
                         // Disable this rune if it isn't a proper shield rune.
                         bool isDisabledRune = !rune.DrawTechnicalTraits.Contains(Trait.Shield);
                         
-                        CombatAction knockThisRune = rune.CreateTraceAction(qfThis.Owner, 1);
+                        CombatAction knockThisRune = rune.CreateTraceAction(qfThis.Owner, 1)
+                            .WithExtraTrait(Trait.DoesNotProvoke) // Provoke manually later
+                            .WithExtraTrait(Trait.DoNotShowInCombatLog); // Too much text spam.
                         knockThisRune.Name = $"Knock {rune.Name}";
                         knockThisRune.Illustration = new SideBySideIllustration(shieldIll, rune.Illustration);
                         knockThisRune.Description = rune.CreateTraceActionDescription(
                             knockThisRune,
                             withFlavorText: false,
                             afterFlavorText:"{b}Frequency{/b} once per round");
-                        knockThisRune.WithExtraTrait(Trait.DoesNotProvoke); // Provoke manually later
-                        knockThisRune.WithExtraTrait(Trait.DoNotShowInCombatLog); // Too much text spam.
                         if (isDisabledRune)
                         {
                             string oldPassiveText = rune.PassiveTextWithHeightening(rune, knockThisRune.Owner.Level);
