@@ -382,11 +382,15 @@ public class RunesmithClassRunes
                                  !targetDefense.IsSavingThrow() || attackAction == null ||
                                  !attackAction.HasTrait(Trait.Spell)))
                                 return null;
-
-                            if (!qfSelf.Owner.HasEffect(QEffectId.RaisingAShield) || // If they aren't raising a shield,
-                                target.QEffects.FirstOrDefault( // or already have a Holtrik,
-                                    qfSearch => qfSearch.Name == qfSelf.Name && qfSearch != qfSelf) != null)
-                                return null; // No bonus.
+                            
+                            // If they aren't raising a shield,
+                            if (!qfSelf.Owner.HasEffect(QEffectId.RaisingAShield))
+                                return null; // no bonus.
+                            
+                            // If not the first of multiple duplicate effects,
+                            if (qfSelf != qfSelf.Owner.QEffects.First(qf =>
+                                    qf is DrawnRune dr && dr.Rune.RuneId == Enums.Traits.Holtrik))
+                                return null; // no bonus.
 
                             return new Bonus(1, BonusType.Untyped, "Holtrik (raised shield)");
                         },
@@ -543,9 +547,9 @@ public class RunesmithClassRunes
                                     return;
                             }
                             
-                            // Fail to splash if duplicate effect
-                            if (qfSelf.Owner.QEffects.FirstOrDefault(qf =>
-                                    qf is DrawnRune dr && dr.Rune.RuneId == ModTraits.Marssyl && dr != qfSelf) != null)
+                            // Fail to splash if not the first of multiple duplicate effects
+                            if (qfSelf != qfSelf.Owner.QEffects.First(qf =>
+                                    qf is DrawnRune dr && dr.Rune.RuneId == Enums.Traits.Marssyl))
                                 return;
                             
                             // Determine weapon damage dice count
