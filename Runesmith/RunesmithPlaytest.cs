@@ -706,7 +706,10 @@ public class RunesmithPlaytest
                 if (cr.Level >= 7)
                 {
                     // TODO: Runic Optimization, which is slightly different from weapon spec.
-                    cr.AddQEffect(QEffect.WeaponSpecialization());
+                    QEffect wepSpec = QEffect.WeaponSpecialization();
+                    wepSpec.Description =
+                        "You deal 2 more damage with any expert weapon and unarmed attacks, or 3 if you're a master, or 4 if you're legendary.";
+                    cr.AddQEffect(wepSpec);
                 }
                 
                 // Higher level content
