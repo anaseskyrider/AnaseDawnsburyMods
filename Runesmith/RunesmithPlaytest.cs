@@ -533,12 +533,34 @@ public class RunesmithPlaytest
                     return null;
                 };
 
-                qfFeat.Description = "" +
-                                     (attackPotency > 0 ? $"You have a +{attackPotency} item bonus to weapon attack rolls" : null) +
-                                     (lvl >= 4 ? ", your Strikes deal two damage dice instead of one" : null) +
-                                     (defensePotency > 0 ? $", a +{defensePotency} item bonus to AC" : null) +
-                                     (savingThrowPotency > 0 ? $", and a +{savingThrowPotency} item bonus to all saving throws" : null) +
-                                     ".";
+                string[] descriptionStack = [];
+                if (attackPotency > 0)
+                    descriptionStack = descriptionStack.Append($"You have a +{attackPotency} item bonus to weapon attack rolls").ToArray();
+                if (lvl >= 4)
+                    descriptionStack = descriptionStack.Append("your Strikes deal two damage dice instead of one").ToArray();
+                if (defensePotency > 0)
+                    descriptionStack = descriptionStack.Append($"a +{defensePotency} item bonus to AC").ToArray();
+                if (savingThrowPotency > 0)
+                    descriptionStack = descriptionStack.Append($"a +{savingThrowPotency} item bonus to all saving throws").ToArray();
+                string description = "";
+                switch (descriptionStack.Length)
+                {
+                    case 0:
+                        break;
+                    case 1:
+                        description = descriptionStack.First();
+                        break;
+                    case 2:
+                        description = string.Join(" and ", descriptionStack);
+                        break;
+                    default:
+                        descriptionStack[^1] = descriptionStack[^1].Insert(0, "and ");
+                        description = string.Join(", ", descriptionStack);
+                        break;
+                }
+                description += ".";
+                    
+                qfFeat.Description = description;
             });
         ModManager.AddFeat(RunesmithRunicCrafter);
         
