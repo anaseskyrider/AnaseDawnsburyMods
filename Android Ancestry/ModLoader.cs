@@ -11,7 +11,7 @@ public static class ModLoader
     {
         ModManager.RegisterBooleanSettingsOption(
             "AndroidAncestry.RemoveNaniteSurgeAura",
-            "(Android Ancestry) Remove Nanite Surge Glow",
+            "Android: Remove Nanite Surge Glow",
             "Nanite Surge emits a temporary glow after the reaction is taken. This is purely cosmetic in Dawnsbury Days, and can be safely disabled by enabling this option.",
             false);
         

@@ -65,7 +65,7 @@ public static class AndroidAncestry
                         if (action == null || !action.HasTrait(Trait.Disease) && !action.HasTrait(Trait.Poison))
                             return null;
 
-                        return new Bonus(1, BonusType.Circumstance, "Constructed");
+                        return new Bonus(1, BonusType.Circumstance, "constructed");
                     };
                 });
         ModManager.AddFeat(constructedFeature);

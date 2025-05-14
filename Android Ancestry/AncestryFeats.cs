@@ -43,27 +43,28 @@ public static class AncestryFeats
             });
         ModManager.AddFeat(androidLore);
 
-        // TODO: Test this feat
         Feat cleansingSubroutine = new TrueFeat(
             Enums.FeatNames.CleansingSubroutine,
             1,
             "Your nanites help purge your body of harmful chemicals and toxins.",
-            "Each time you succeed at a Fortitude save against a poison affliction, you reduce its stage by 2"/*, or by 1 against a virulent poison*/+". Each critical success you achieve against a poison affliction reduces its stage by 3"/*, or by 2 against a virulent poison*/+".",
+            "Each time you succeed at a save against a poison affliction, you reduce its stage by 2. Each critical success you achieve against a poison affliction reduces its stage by 3.",    
+            //"Each time you succeed at a Fortitude save against a poison affliction, you reduce its stage by 2, or by 1 against a virulent poison. Each critical success you achieve against a poison affliction reduces its stage by 3, or by 2 against a virulent poison.",
             [Enums.Traits.AndroidAncestry])
             .WithPermanentQEffect("Reduce poisons you save against by an additional stage.",
                 qfFeat =>
                 {
-                    // Wow, that was easy.
-                    qfFeat.BeforeYourSavingThrow = async (qfThis, action, self) =>
+                    // PETR: Doesn't work in like a lot of cases. Any time RollSavingThrow is called with an action that doesn't have a .SavingThrow field simply won't call this.
+                    // PETR: Similarly, AfterYourSavingThrow will lack saving throw data.
+                    /*qfFeat.BeforeYourSavingThrow = async (qfThis, action, self) =>
                     {
-                        qfFeat.Id = (action.SavingThrow!.Defense == Defense.Fortitude || !action.HasTrait(Trait.Poison) && AndroidAncestry.CanUseNanites(self))
+                        qfThis.Id = action.SavingThrow!.Defense == Defense.Fortitude && action.HasTrait(Trait.Poison) /*&& AndroidAncestry.CanUseNanites(self)#1#
                             ? QEffectId.StrongBloodedDwarf
                             : QEffectId.Unspecified;
-                    };
+                    };*/
+                    qfFeat.Id = QEffectId.StrongBloodedDwarf;
                 });
         ModManager.AddFeat(cleansingSubroutine);
         
-        // TODO: Test this feat
         Feat emotionless = new TrueFeat(
             Enums.FeatNames.Emotionless,
             1,
