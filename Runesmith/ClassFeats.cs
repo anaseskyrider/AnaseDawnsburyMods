@@ -950,7 +950,7 @@ public class ClassFeats
             "When you use {tooltip:Runesmith.Feats.FortifyingKnock}Fortifying Knock {icon:Action}{/}, you can trace a damaging rune on your shield, even if it could not normally be applied to a shield. The traced rune doesn't have its normal effect, instead fading into your shield. If you Shield Block {icon:Reaction} with the shield against an adjacent target, you can {tooltip:Runesmith.Action.InvokeRune}Invoke the Rune{/} as part of the reaction, causing the rune to detonate outwards and apply its invocation effect to the attacking creature.",
             [Enums.Traits.Invocation, Enums.Traits.Runesmith])
             .WithPrerequisite(FortifyingKnock.FeatName, "Fortifying Knock")
-            .WithPermanentQEffect("You can use damaging runes with Fortifying Knock, disabling the passive effects on yourself, and invoking it on your attacker when you Shield Block.", qfFeat =>
+            .WithPermanentQEffect("You can use Fortifying Knock with damaging runes. You invoke the rune on your attacker when you Shield Block.", qfFeat =>
             {
                 // This captures the RaisedShield qf to allow it to call its internal behavior, with
                 // the stipulation of adding the reprisal functionality after shield blocking.
