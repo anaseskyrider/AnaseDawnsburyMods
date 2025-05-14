@@ -390,6 +390,4 @@ public static class AncestryFeats
             .WithPrerequisite(Enums.FeatNames.NaniteSurge,"Nanite Surge");
         ModManager.AddFeat(protectiveSubroutine);
     }
-
-    
 }
