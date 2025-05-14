@@ -122,7 +122,9 @@ public static class Enums
         #endregion
 
         #region Class Features
-        public static readonly FeatName RunicRepertoire = ModManager.RegisterFeatName("RunesmithPlaytest.RunesmithRepertoire", null);
+        public static readonly FeatName RunesmithRepertoire = ModManager.RegisterFeatName("RunesmithPlaytest.RunesmithRepertoire", "Runic Repertoire");
+        
+        public static readonly FeatName DedicationRepertoire = ModManager.RegisterFeatName("RunesmithPlaytest.DedicationRepertoire", "Runic Repertoire");
 
         public static readonly FeatName TraceRune = ModManager.RegisterFeatName("RunesmithPlaytest.TraceRune", "Trace Rune");
         

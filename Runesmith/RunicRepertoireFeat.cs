@@ -1,47 +1,80 @@
+using Dawnsbury.Auxiliary;
+using Dawnsbury.Campaign.Path;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.Creatures;
+using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
 
 public class RunicRepertoireFeat : Feat
 {
+    #region Properties
+    /*/// <summary>
+    /// The creature who possesses this repertoire.
+    /// </summary>
+    public Creature Self { get; set; }*/
+
+    /*/// <summary>
+    /// The maximum number of runes which can be Etched at once.
+    /// </summary>
+    private int EtchLimit { get; set; }*/
+    
+    private Dictionary<int, int> EtchLimitIncreases { get; set; } = new();
+    
+    /// <summary>
+    /// Functions similar to <see cref="SpellcastingSource.SpellcastingTradition"/>. This mod uses <see cref="Enums.Traits.Runesmith"/> as its source.
+    /// </summary>
+    public Trait ClassOfOrigin { get; set; }
+    
+    /*/// <summary>
+    /// The <see cref="Ability"/> that this repertoire uses for its DCs.
+    /// </summary>
+    public Ability RunicAbility { get; set; }*/
+    #endregion
+    
     #region Initializer
     public RunicRepertoireFeat(
         FeatName featName,
-        string? flavorText,
-        string rulesText,
-        List<Trait>? traits,
-        Trait source)
+        // Ability runicAbility,
+        Trait classOfOrigin,
+        int? etchLimit = null)
         : base(
             featName,
-            flavorText,
-            rulesText,
-            traits ?? [],
+            null,
+            "",
+            [Enums.Traits.RunicRepertoire],
             null)
     {
-        if (!this.Traits.Contains(Enums.Traits.RunicRepertoire))
-            this.Traits.Add(Enums.Traits.RunicRepertoire);
-        this.Source = source;
-        this.EtchLimit = 2;
+        // this.RunicAbility = runicAbility;
+        this.ClassOfOrigin = classOfOrigin;
+        if (etchLimit != null)
+            this.EtchLimitIncreases.Add(1, (int)etchLimit);
+        //this.EtchLimit = 2;
+        
+        // Description-maker
+        this.WithPermanentQEffect("", qfFeat =>
+        {
+            qfFeat.Description = DescribeRepertoire(qfFeat.Owner);
+            
+            /*qfFeat.StartOfCombatBeforeOpeningCutscene = async qfThis =>
+            {
+                qfThis.Description = DescribeRepertoire(qfThis.Owner);
+            };*/
+            
+            qfFeat.StateCheck += async qfThis =>
+            {
+                qfThis.Description = DescribeRepertoire(qfThis.Owner);
+            };
+        });
     }
     #endregion
     
-    #region Properties
-    /// <summary>
-    /// The number of runes which can be Etched at once.
-    /// </summary>
-    public int EtchLimit { get; set; }
-    
-    /// <summary>
-    /// A trait representing the source of the runic repertoire, such as a class trait, or a trait unique to an archetype. No enforcement mechanisms exist to stop a character from having multiple runic repertoires from the same source, so use with prudence. This mod uses <see cref="Enums.Traits.Runesmith"/> as its source.
-    /// </summary>
-    public Trait Source { get; set; }
-    #endregion
-
-    #region Instance Methods    
-    /// <summary>
+    #region Get Runes
+        /// <summary>
     /// Gets the list of runes known up to the given creature's current level. To get runes at higher levels, use <see cref="CharacterSheet.ToCreature"/>.
     /// </summary>
     /// <returns></returns>
@@ -109,6 +142,74 @@ public class RunicRepertoireFeat : Feat
         }
         
         return true;
+    }
+    #endregion
+    
+    #region Instance Methods    
+    public string DescribeRepertoire(Creature owner)
+    {
+        int DC = RunesmithPlaytest.RunesmithDC(owner);
+        string stats = $"DC {DC};";
+        int etchLimitNum = this.GetEtchLimit(owner.Level);
+        string etchLimit = etchLimitNum > 0 ? $"{{b}}etch limit{{/b}} ({etchLimitNum} runes); " : "";
+        string runesKnown = string.Join("; ",
+            GetRunesKnown(owner)
+                .GroupBy(rune => rune.BaseLevel)
+                .OrderByDescending(rg => rg.Key)
+                .Select(rg =>
+                {
+                    string rank = "{b}" + rg.Key.Ordinalize2() + "{/b}";
+                    string runes = string.Join(", ",
+                        rg.GroupBy(rn => rn.Name)
+                            .OrderBy(lg => lg.Key)
+                            .Select(runes =>
+                            {
+                                Rune first = runes.First();
+                                return first.Name.Substring(0, first.RuneId.ToStringOrTechnical().Length);
+                            }));
+                    return rank + " {i}" + runes + "{/i}";
+                })
+        );
+        string description = stats + " " + etchLimit + runesKnown;
+        return description;
+
+        /*List<Rune> runesKnown = GetRunesKnown(owner)
+            .OrderByDescending(rn => rn.BaseLevel)
+            .ToList();
+        foreach (Rune rune in runesKnown)
+        {
+            string shortName = rune.Name.Substring(0, rune.RuneId.ToStringOrTechnical().Length);
+            string ordinal = rune.BaseLevel.Ordinalize2();
+            if (!description.Contains(ordinal))
+            {
+                if (description.EndsWith(','))
+                    description = description.Remove(description.Length-1);
+                description += $"; {{b}}{ordinal}{{/b}}";
+            }
+            description += $" {{i}}{shortName}{{/i}},";
+        }
+
+        if (description.EndsWith(','))
+            description = description.Remove(description.Length);
+
+        return description;*/
+    }
+
+    public void IncreaseEtchLimit(int level, int amount)
+    {
+        if (amount < 1)
+            return;
+        
+        if (!EtchLimitIncreases.TryAdd(level, amount))
+            EtchLimitIncreases[level] = Math.Max(amount, EtchLimitIncreases[level]);
+    }
+
+    public int GetEtchLimit(int level)
+    {
+        int etchLimit = EtchLimitIncreases
+            .Where(increase => increase.Key <= level)
+            .Sum(increase => increase.Value);
+        return etchLimit;
     }
     #endregion
 

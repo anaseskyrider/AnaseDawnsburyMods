@@ -7,6 +7,7 @@ using Dawnsbury.Core.Animations.Movement;
 using Dawnsbury.Core.CharacterBuilder.AbilityScores;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Kineticist;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
@@ -60,11 +61,10 @@ public class RunesmithPlaytest
         // Class Features //
         ////////////////////
         RunesmithRunicRepertoireFeat = new RunicRepertoireFeat(
-            Enums.FeatNames.RunicRepertoire,
-            null,
-            "",
-            [],
-            Enums.Traits.Runesmith);
+            Enums.FeatNames.RunesmithRepertoire,
+            // Ability.Intelligence,
+            Enums.Traits.Runesmith,
+            2);
         ModManager.AddFeat(RunesmithRunicRepertoireFeat);
         
         RunesmithTraceRune = new Feat(
@@ -76,6 +76,7 @@ public class RunesmithPlaytest
             .WithPermanentQEffect("You apply one rune to an adjacent target as an action, or to within 30 feet as two actions.", qfFeat =>
             {
                 qfFeat.Name += " {icon:Action}–{icon:TwoActions}"; // No WithActionCost method, so update the sheet name to have actions.
+                qfFeat.Innate = false;
                 
                 qfFeat.ProvideMainAction = qfThis =>
                 {
@@ -214,7 +215,7 @@ public class RunesmithPlaytest
             .WithPermanentQEffect("You invoke any number of runes within 30 feet.", qfFeat =>
             {
                 qfFeat.Name += " {icon:Action}";
-                
+                qfFeat.Innate = false;
                 qfFeat.ProvideMainAction = qfThis =>
                 {
                     CombatAction invokeRuneAction = new CombatAction(
@@ -390,6 +391,7 @@ public class RunesmithPlaytest
                 null)
             .WithPermanentQEffect("You apply runes to your allies at the start of combat which last until the end of combat or consumed.", qfFeat =>
             {
+                qfFeat.Innate = false;
                 qfFeat.StartOfCombat = async qfThis =>
                 {
                     RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(qfThis.Owner);
@@ -406,7 +408,7 @@ public class RunesmithPlaytest
                     }
                     
                     List<Rune> runesKnown = repertoire.GetRunesKnown(qfFeat.Owner);
-                    int etchLimit = repertoire.EtchLimit;
+                    int etchLimit = repertoire.GetEtchLimit(qfThis.Owner.Level); //repertoire.EtchLimit;
 
                     for (int i = 0; i < etchLimit; i++)
                     {
@@ -650,7 +652,7 @@ public class RunesmithPlaytest
                     values.SetProficiency(Trait.Simple, Proficiency.Expert);
                     values.SetProficiency(Trait.Martial, Proficiency.Expert);
                     RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
-                    repertoire.EtchLimit = 3;
+                    repertoire.IncreaseEtchLimit(5, 1); //repertoire.EtchLimit = 3;
                 });
                 values.AddAtLevel(7, values =>
                 {
@@ -661,7 +663,7 @@ public class RunesmithPlaytest
                 values.AddAtLevel(9, values =>
                 {
                     RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
-                    repertoire.EtchLimit = 4;
+                    repertoire.IncreaseEtchLimit(9, 1); //repertoire.EtchLimit = 4;
                 });
                 values.AddAtLevel(11, values =>
                 {
@@ -681,7 +683,7 @@ public class RunesmithPlaytest
                     values.SetProficiency(Trait.Martial, Proficiency.Master);
                     
                     RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
-                    repertoire.EtchLimit = 5;
+                    repertoire.IncreaseEtchLimit(13, 1); //repertoire.EtchLimit = 5;
                 });
                 values.AddAtLevel(15, values =>
                 {
@@ -690,7 +692,7 @@ public class RunesmithPlaytest
                 values.AddAtLevel(17, values =>
                 {
                     RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
-                    repertoire.EtchLimit = 6;
+                    repertoire.IncreaseEtchLimit(17, 1); //repertoire.EtchLimit = 6;
                 });
                 values.AddAtLevel(19, values =>
                 {
@@ -738,6 +740,12 @@ public class RunesmithPlaytest
         /////////////////////////
         // Runesmith Archetype //
         /////////////////////////
+        RunicRepertoireFeat dedicationRepertoire = new RunicRepertoireFeat(
+            Enums.FeatNames.DedicationRepertoire,
+            Enums.Traits.Runesmith,
+            0);
+        ModManager.AddFeat(dedicationRepertoire);
+        
         Feat runesmithDedication = ArchetypeFeats.CreateMulticlassDedication(
             Enums.Traits.Runesmith,
             "You have dabbled in the scholarly art at the heart of all magic, the rune.",
@@ -752,7 +760,7 @@ public class RunesmithPlaytest
                         ft =>
                             ft.FeatName is FeatName.Arcana or FeatName.Nature or FeatName.Occultism or FeatName.Religion)
                     .WithIsOptional());*/
-                values.GrantFeat(RunesmithRunicRepertoireFeat.FeatName);
+                values.GrantFeat(dedicationRepertoire.FeatName);
                 values.AddSelectionOptionRightNow(new MultipleFeatSelectionOption(
                         "initialRunes",
                         "Initial level 1 runes",
