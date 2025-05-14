@@ -1,9 +1,11 @@
 using System.Text;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
@@ -43,7 +45,7 @@ public class ArchetypeBastion
 
         // Add Agile Shield Grip to Bastion
         ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion.Champion.AgileShieldGripFeatName,
+            Champion.AgileShieldGripFeatName,
             Enums.Traits.BastionArchetype, 4));
 
         // Disarming Block
@@ -249,6 +251,13 @@ public class ArchetypeBastion
         ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.FighterReflexiveShield, Enums.Traits.BastionArchetype, 8));
 
         // Add Shield Warden to Bastion
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.ShieldWarden, Enums.Traits.BastionArchetype, 8));
+        TrueFeat bastionShieldWarden = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.ShieldWarden,
+            Enums.Traits.BastionArchetype,
+            8);
+        // Removes the requirement, "You must be a Fighter, or you must have Shield Ally as your divine ally." .
+        bastionShieldWarden.Prerequisites.RemoveAll(req =>
+            req.Description.Contains("must have Shield Ally") || req.Description.Contains("must be a Fighter,"));
+        ModManager.AddFeat(bastionShieldWarden);
     }
 }
