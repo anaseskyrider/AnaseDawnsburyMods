@@ -487,6 +487,7 @@ public class RunesmithClassRunes
         .WithDrawnOnShieldTechnical();
         RuneFeatHoltrik = CreateAndAddRuneFeat("RunesmithPlaytest.RuneHoltrik", runeHoltrik);
         
+        // BUG: Gunslinger's Fakeout triggers splash damage.
         Rune runeMarssyl = new Rune(
             "Marssyl, Rune of Impact",
             Enums.Traits.Marssyl, 
@@ -553,7 +554,7 @@ public class RunesmithClassRunes
                                 return;
                             
                             // Determine weapon damage dice count
-                            string weaponDamageDiceCount = actionItem.WeaponProperties!.DamageDieCount.ToString();;
+                            string weaponDamageDiceCount = actionItem.WeaponProperties!.DamageDieCount.ToString();
                             if (action.TrueDamageFormula is { } trueDamage)
                             {
                                 Capture diceCountCapture = Regex.Match(trueDamage.ToString(), @"(\d+)d\d+").Groups[1];
@@ -573,7 +574,7 @@ public class RunesmithClassRunes
                                                  action.ChosenTargets.ChosenCreature.IsAdjacentTo(cr))) // Loop through all adjacent creatures,
                                     {
                                         if (target != qfSelf.Owner || !actionItem.HasTrait(Trait.Melee)) // And if it's a melee attack, skip me, otherwise include me when I,
-                                            await CommonSpellEffects.DealDirectSplashDamage(CombatAction.CreateSimple(qfSelf.Owner, "Marssyl"), splashAmount, target, DamageKind.Bludgeoning); // splash them too.
+                                            await CommonSpellEffects.DealDirectSplashDamage(action, splashAmount, target, DamageKind.Bludgeoning); // splash them too.
                                     }
                                 }
                             }
@@ -1032,12 +1033,9 @@ public class RunesmithClassRunes
                             .ForEach(cr =>
                                 cr.AddQEffect(new QEffect("Pluuna's Light", "You have a -1 item penalty to Stealth checks.", ExpirationCondition.Ephemeral, qfThis.Owner, IllustrationName.Light)
                                 {
-                                    BonusToSkills = skill =>
-                                    {
-                                        return skill == Skill.Stealth
-                                            ? new Bonus(-1, BonusType.Item, thisRune.Name)
-                                            : null;
-                                    }
+                                    BonusToSkills = skill => skill == Skill.Stealth
+                                        ? new Bonus(-1, BonusType.Item, thisRune.Name)
+                                        : null
                                 }));
                     },
                 };
