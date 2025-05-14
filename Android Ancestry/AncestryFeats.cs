@@ -131,7 +131,7 @@ public static class AncestryFeats
             "{b}Frequency{/b} once per combat.\n{b}Trigger{/b} You attempt a skill check requiring three actions or fewer.\n\nYou gain a +2 status bonus to the triggering skill check. {i}(Cosmetic){/i} In addition, your circuitry glows, lighting a 10-foot emanation with dim light for 1 round.",
             [Enums.Traits.AndroidAncestry, Trait.Concentrate])
             .WithActionCost(-2)
-            .WithPermanentQEffect("As a reaction once per combat, boost a skill check you're about to attempt.", qfFeat =>
+            .WithPermanentQEffect("Once per combat, boost a skill check you're about to attempt.", qfFeat =>
             {
                 qfFeat.BeforeYourActiveRoll = async (qfThis, action, target) =>
                 {
