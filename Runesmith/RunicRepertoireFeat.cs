@@ -17,12 +17,10 @@ public class RunicRepertoireFeat : Feat
     /// The creature who possesses this repertoire.
     /// </summary>
     public Creature Self { get; set; }*/
-
-    /*/// <summary>
-    /// The maximum number of runes which can be Etched at once.
-    /// </summary>
-    private int EtchLimit { get; set; }*/
     
+    /// <summary>
+    /// A dictionary containing the level at which your Etch Limit was increased, and by how much.
+    /// </summary>
     private Dictionary<int, int> EtchLimitIncreases { get; set; } = new();
     
     /// <summary>
@@ -53,7 +51,6 @@ public class RunicRepertoireFeat : Feat
         this.ClassOfOrigin = classOfOrigin;
         if (etchLimit != null)
             this.EtchLimitIncreases.Add(1, (int)etchLimit);
-        //this.EtchLimit = 2;
         
         // Description-maker
         this.WithPermanentQEffect("", qfFeat =>
@@ -145,7 +142,11 @@ public class RunicRepertoireFeat : Feat
     }
     #endregion
     
-    #region Instance Methods    
+    #region Instance Methods
+    
+    /// <summary>
+    /// Produces a detailed description of your runic repertoire, similar to spellcasting on a stat block.
+    /// </summary>
     public string DescribeRepertoire(Creature owner)
     {
         int DC = RunesmithPlaytest.RunesmithDC(owner);
@@ -172,29 +173,11 @@ public class RunicRepertoireFeat : Feat
         );
         string description = stats + " " + etchLimit + runesKnown;
         return description;
-
-        /*List<Rune> runesKnown = GetRunesKnown(owner)
-            .OrderByDescending(rn => rn.BaseLevel)
-            .ToList();
-        foreach (Rune rune in runesKnown)
-        {
-            string shortName = rune.Name.Substring(0, rune.RuneId.ToStringOrTechnical().Length);
-            string ordinal = rune.BaseLevel.Ordinalize2();
-            if (!description.Contains(ordinal))
-            {
-                if (description.EndsWith(','))
-                    description = description.Remove(description.Length-1);
-                description += $"; {{b}}{ordinal}{{/b}}";
-            }
-            description += $" {{i}}{shortName}{{/i}},";
-        }
-
-        if (description.EndsWith(','))
-            description = description.Remove(description.Length);
-
-        return description;*/
     }
 
+    /// <summary>
+    /// Add an increase at what level and by how much to your Etch Limit.
+    /// </summary>
     public void IncreaseEtchLimit(int level, int amount)
     {
         if (amount < 1)
@@ -204,6 +187,9 @@ public class RunicRepertoireFeat : Feat
             EtchLimitIncreases[level] = Math.Max(amount, EtchLimitIncreases[level]);
     }
 
+    /// <summary>
+    /// Gets your etch limit based on the given level.
+    /// </summary>
     public int GetEtchLimit(int level)
     {
         int etchLimit = EtchLimitIncreases
@@ -213,7 +199,7 @@ public class RunicRepertoireFeat : Feat
     }
     #endregion
 
-    #region Static Methods
+    #region Get Repertoire
     /// <summary>
     /// Gets the RunicRepertoireFeat known by the CREATURE.
     /// </summary>
