@@ -28,16 +28,20 @@
     <Target Name="CopyToGameModsFolder" AfterTargets="Build">
         <ItemGroup>
             <AndroidAncestryAssets Include="AndroidAncestryAssets\**\*.*"/>
+            <AndroidAncestryPortraits Include="CustomPortraits\**\*.*"/>
         </ItemGroup>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods"/>
         <Copy SourceFiles="@(AndroidAncestryAssets)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods\AndroidAncestryAssets\%(RecursiveDir)"/>
+        <Copy SourceFiles="@(AndroidAncestryPortraits)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomPortraits\%(RecursiveDir)"/>
     </Target>
     <Target Name="CopyToWorkshopUploadable" AfterTargets="Build">
         <ItemGroup>
             <AndroidAncestryAssets Include="AndroidAncestryAssets\**\*.*"/>
+            <AndroidAncestryPortraits Include="CustomPortraits\**\*.*"/>
         </ItemGroup>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopExport)\CustomModsV3"/>
         <Copy SourceFiles="OGL copyright notice.html" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
         <Copy SourceFiles="@(AndroidAncestryAssets)" DestinationFolder="$(WorkshopExport)\CustomModsV3\AndroidAncestryAssets\%(RecursiveDir)"/>
+        <Copy SourceFiles="@(AndroidAncestryPortraits)" DestinationFolder="$(WorkshopExport)\CustomPortraits\%(RecursiveDir)"/>
     </Target>
 </Project>
