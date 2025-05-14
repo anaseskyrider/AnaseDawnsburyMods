@@ -44,7 +44,6 @@ public static class AncestryFeats
         ModManager.AddFeat(androidLore);
 
         // TODO: Test this feat
-        // PUBLISH: Virulent afflictions don't exist in DD, so that part of the functionality does not exist.
         Feat cleansingSubroutine = new TrueFeat(
             Enums.FeatNames.CleansingSubroutine,
             1,
@@ -95,7 +94,6 @@ public static class AncestryFeats
                 });
         ModManager.AddFeat(emotionless);
         
-        // PUBLISH: This behaves as a free draw or replace (regardless of your settings on the action cost of replacing items) once per combat, limited to items which are not two-handed.
         Feat internalCompartment = new TrueFeat(
             Enums.FeatNames.InternalCompartment,
             1,
@@ -125,12 +123,11 @@ public static class AncestryFeats
             });
         ModManager.AddFeat(internalCompartment);
 
-        // PUBLISH: The lighting component does not exist in DD.
         Feat naniteSurge = new TrueFeat(
             Enums.FeatNames.NaniteSurge,
             1,
             "You stimulate your nanites, forcing your body to temporarily increase its efficiency.",
-            "{b}Frequency{/b} once per combat.\n{b}Trigger{/b} You attempt a skill check requiring three actions or fewer.\n\nYou gain a +2 status bonus to the triggering skill check." /*In addition, your circuitry glows, lighting a 10-foot emanation with dim light for 1 round.*/,
+            "{b}Frequency{/b} once per combat.\n{b}Trigger{/b} You attempt a skill check requiring three actions or fewer.\n\nYou gain a +2 status bonus to the triggering skill check. {i}(Cosmetic){/i} In addition, your circuitry glows, lighting a 10-foot emanation with dim light for 1 round.",
             [Enums.Traits.AndroidAncestry, Trait.Concentrate])
             .WithActionCost(-2)
             .WithPermanentQEffect("As a reaction once per combat, boost a skill check you're about to attempt.", qfFeat =>
@@ -139,7 +136,7 @@ public static class AncestryFeats
                 {
                     Creature self = qfThis.Owner;
                     
-                    if (action.ActiveRollSpecification?.TaggedDetermineBonus.InvolvedSkill == null)
+                    if (action.ActiveRollSpecification?.TaggedDetermineBonus.InvolvedSkill is not { } skill)
                         return;
                     
                     if (self.HasEffect(Enums.QEffectIds.NaniteSurgeImmunity) || !AndroidAncestry.CanUseNanites(self))
@@ -148,31 +145,28 @@ public static class AncestryFeats
                     if (action.ActionCost is < 1 or > 3)
                         return;
                     
-                    // TODO: Make into combat action with concentrate and nanite trait
-                    
-                    if (await self.Battle.AskToUseReaction(self, $"{{b}}Nanite Surge {{icon:Reaction}}{{b}}\nYou're about to roll a {action.ActiveRollSpecification.TaggedDetermineBonus.InvolvedSkill.HumanizeTitleCase2()} check. Add a +2 status bonus to the roll?\n{{Red}}{{b}}Frequency{{/b}} once per combat.{{Red}}", IllustrationName.ArcaneCascade))
-                    {
-                        self.AddQEffect(new QEffect(ExpirationCondition.EphemeralAtEndOfImmediateAction)
+                    await AndroidAncestry.AskToUseNanitesReaction(
+                        self,
+                        new QEffect(ExpirationCondition.Never)
                         {
-                            BonusToSkillChecks = (skill, combatAction, target2) =>
+                            BonusToSkillChecks = (skill2, combatAction, target2) =>
                             {
-                                if (combatAction != action ||
-                                    action.ActiveRollSpecification?.TaggedDetermineBonus.InvolvedSkill != skill)
+                                if (combatAction != action || skill2 != skill)
                                     return null;
                                 return new Bonus(2, BonusType.Status, "nanite surge");
-                            }
-                        });
-
-                        self.AddQEffect(new QEffect() { Id = Enums.QEffectIds.NaniteSurgeImmunity });
-
-                        // TODO: add a cosmetic glow just for fun?
-                    }
+                            },
+                            AfterYouTakeAction = async (qfThis2, combatAction) =>
+                            {
+                                if (combatAction == action)
+                                    qfThis2.ExpiresAt = ExpirationCondition.Immediately;
+                            },
+                        },
+                        skill.HumanizeTitleCase2()+" check",
+                        "+2 status bonus");
                 };
             });
         ModManager.AddFeat(naniteSurge);
         
-        // PUBLISH: Darkvision doesn't exist in DD, so this offers an innate casting of See Invisibility, a 2nd-level spell in a 1st-level feat (what a bargain!)
-        // TODO: Make it like +2 circ to Seeks instead? If so, add check for nanite prevention.
         Feat ultravisualAdaptation = new TrueFeat(
             Enums.FeatNames.UltravisualAdaptation,
             1,
@@ -194,7 +188,6 @@ public static class AncestryFeats
             });
         ModManager.AddFeat(ultravisualAdaptation);
 
-        // PUBLISH: Due to how DD's initiative works, this grants Incredible Initiative directly.
         Feat proximityAlert = new TrueFeat(
             Enums.FeatNames.ProximityAlert,
             1,
@@ -209,7 +202,6 @@ public static class AncestryFeats
         ModManager.AddFeat(proximityAlert);
 
         // BUG: Doesn't announce overheads? Nbd but it should probably look a lot like Bless.
-        // PUBLISH: Without meaningful lightning mechanics, the area of bright light instead imposes a -1 circumstance penalty to Stealth checks.
         Feat radiantCircuitry = new TrueFeat(
             Enums.FeatNames.RadiantCircuitry,
             1,
@@ -225,7 +217,7 @@ public static class AncestryFeats
                         qfThis.Owner,
                         Enums.Illustrations.RadiantCircuitry,
                         "Radiant Circuitry " + (qfThis.Owner.HasEffect(Enums.QEffectIds.RadiantCircuitry) ? "(off)" : "(on)"),
-                        [Enums.Traits.AndroidAncestry, Trait.Concentrate, Trait.Light],
+                        [Enums.Traits.AndroidAncestry, Trait.Concentrate, Trait.Light, Trait.Basic],
                         "{i}Your biological circuitry emits light like a torch.{/i}\n\n"+"You create a 20-foot emanation of light. Creatures in this emanation have a -1 circumstance penalty to Stealth checks.\n\nThe light shuts off when you take this action again or are knocked unconscious.",
                         Target.Self())
                         .WithActionCost(1)
@@ -298,7 +290,6 @@ public static class AncestryFeats
         //     Enums.FeatNames.InoculationSubroutine,);
         // ModManager.AddFeat(inoculationSubroutine);
 
-        // PUBLISH: I've added the ability to dismiss Nanite Shroud early.
         Feat naniteShroud = new TrueFeat(
             Enums.FeatNames.NaniteShroud,
             5,
@@ -317,7 +308,7 @@ public static class AncestryFeats
                         qfThis.Owner,
                         IllustrationName.ChillingDarkness, // TODO
                         "Nanite Shroud",
-                        [Enums.Traits.AndroidAncestry, Trait.Concentrate],
+                        [Enums.Traits.AndroidAncestry, Trait.Concentrate, Trait.Basic],
                         "{i}Your nanites fly out of your body, swarming around you in a cloud.{/i}\n\n{b}Frequency{/b} once per day\n\nYou become concealed for {Blue}" + qfThis.Owner.Level/2 + "{/Blue} rounds (you can't use this concealment to Hide or Sneak) or until you dismiss it.\n\nWhile Nanite Shroud is active, you can't use other abilities that require the use of your nanites.",
                         Target.Self())
                         .WithActionCost(2)
@@ -351,6 +342,7 @@ public static class AncestryFeats
                                         : null
                             };
                             self.AddQEffect(naniteShroud);
+                            self.RemoveAllQEffects(qf => qf.Traits.Contains(Enums.Traits.Nanites));
                             self.PersistentUsedUpResources.UsedUpActions.Add("NaniteShroud");
                         });
                     
@@ -359,10 +351,44 @@ public static class AncestryFeats
             });
         ModManager.AddFeat(naniteShroud);
 
-        // TODO: Protective Subroutine.
-        // Feat protectiveSubroutine = new TrueFeat(
-        //     Enums.FeatNames.ProtectiveSubroutine,);
-        // ModManager.AddFeat(protectiveSubroutine);
+        Feat protectiveSubroutine = new TrueFeat(
+            Enums.FeatNames.ProtectiveSubroutine,
+            5,
+            "Your nanites can augment your defenses.",
+            "You can also activate Nanite Surge {icon:Reaction} when you attempt a saving throw. If you do, you gain a +2 status bonus to the triggering saving throw.",
+            [Enums.Traits.AndroidAncestry])
+            .WithPermanentQEffect("You can use Nanite Surge {icon:Reaction} with saving throws.", qfFeat =>
+            {
+                qfFeat.BeforeYourSavingThrow = async (qfThis, action, self) =>
+                {
+                    Defense save = action.SavingThrow!.Defense;
+                    
+                    if (self.HasEffect(Enums.QEffectIds.NaniteSurgeImmunity) || !AndroidAncestry.CanUseNanites(self))
+                        return;
+                    
+                    await AndroidAncestry.AskToUseNanitesReaction(
+                        self,
+                        new QEffect(ExpirationCondition.Never)
+                        {
+                            BonusToDefenses = (qfThis2, combatAction, def) =>
+                            {
+                                if (combatAction != action || def != save)
+                                    return null;
+                                return new Bonus(2, BonusType.Status, "nanite surge");
+                            },
+                            AfterYouMakeSavingThrow = async (qfThis2, combatAction, result) => 
+                            {
+                                if (combatAction == action)
+                                    qfThis2.ExpiresAt = ExpirationCondition.Immediately;
+                            },
+                        },
+                        save.HumanizeTitleCase2()+" saving throw",
+                        "+2 status bonus");
+                };
+                
+            })
+            .WithPrerequisite(Enums.FeatNames.NaniteSurge,"Nanite Surge");
+        ModManager.AddFeat(protectiveSubroutine);
     }
 
     
