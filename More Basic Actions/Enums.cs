@@ -7,7 +7,7 @@ using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 
-namespace MoreBasicActions;
+namespace Dawnsbury.Mods.MoreBasicActions;
 
 public static class Enums
 {

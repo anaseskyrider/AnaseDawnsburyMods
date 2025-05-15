@@ -20,7 +20,7 @@ using Dawnsbury.Display.Text;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
 
-namespace MoreBasicActions;
+namespace Dawnsbury.Mods.MoreBasicActions;
 
 // TODO: Stacking DC penalties for repeat Aid.
 
@@ -36,7 +36,7 @@ public static class Aid
             "No effect.",
             "Your ally takes a -1 circumstance penalty to the triggering check.");
 
-    public static void LoadMod()
+    public static void LoadAid()
     {
         // Option to allow untrained Prepare to Aid actions
         ModManager.RegisterBooleanSettingsOption("MoreBasicActions.UntrainedAid",
@@ -452,6 +452,7 @@ public static class Aid
 
     public static string AorAn(string check)
     {
+        //check.WithIndefiniteArticle();
         switch (check.ToUpper()[0])
         {
             case 'A':

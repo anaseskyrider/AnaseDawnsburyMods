@@ -10,6 +10,7 @@
         <WarningsAsErrors>0618</WarningsAsErrors>
         <DevelopersDawnsburyInstall>Z:\Steam Library\steamapps\common\Dawnsbury Days</DevelopersDawnsburyInstall>
         <WorkshopExport>..\[Exports]\More Basic Actions</WorkshopExport>
+        <RootNamespace>Dawnsbury.Mods.MoreBasicActions</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
