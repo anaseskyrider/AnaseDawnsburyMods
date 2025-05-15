@@ -1253,13 +1253,10 @@ public class ClassFeats
                             return null;
                         
                         Feat? selectedTattoo = null;
-                        foreach (Feat ft in RunicTattoo.Subfeats)
-                            if (qfThis.Owner.HasFeat(ft.FeatName))
-                                selectedTattoo = ft;
+                        foreach (Feat ft in RunicTattoo.Subfeats.Where(ft => qfThis.Owner.HasFeat(ft.FeatName)))
+                            selectedTattoo = ft;
 
-                        Rune? tattooedRune = selectedTattoo?.Tag as Rune;
-
-                        if (selectedTattoo == null || tattooedRune == null)
+                        if (selectedTattoo is not { Tag: Rune tattooedRune })
                             return null;
                         
                         CombatAction flyFreeAction = new CombatAction(

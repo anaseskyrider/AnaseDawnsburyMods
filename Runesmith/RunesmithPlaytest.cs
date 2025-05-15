@@ -408,11 +408,11 @@ public class RunesmithPlaytest
                     }
                     
                     List<Rune> runesKnown = repertoire.GetRunesKnown(qfFeat.Owner);
-                    int etchLimit = repertoire.GetEtchLimit(qfThis.Owner.Level); //repertoire.EtchLimit;
+                    int etchLimit = repertoire.GetEtchLimit(qfThis.Owner.Level);
 
                     for (int i = 0; i < etchLimit; i++)
                     {
-                        await qfThis.Owner.Battle.GameLoop.StateCheck(); // Idk why but they all do this so keep it.
+                        await qfThis.Owner.Battle.GameLoop.StateCheck();
                         
                         List<Option> options = new List<Option>();
                         foreach (Rune rune in runesKnown)
@@ -423,10 +423,7 @@ public class RunesmithPlaytest
                         }
                         
                         if (options.Count <= 0)
-                            continue; // Go to next loop if no options.
-                            
-                        //if (i == 0) // If at the beginning of the action,
-                            //options.Add(new CancelOption(true)); // allow us to cancel it.
+                            continue;
                             
                         options.Add(new PassViaButtonOption(" Confirm no additional etchings "));
                         
@@ -441,11 +438,7 @@ public class RunesmithPlaytest
                         switch (chosenOption)
                         {
                             case CreatureOption creatureOption:
-                            {
                                 break;
-                            }
-                            //case CancelOption:
-                                //return;
                             case PassViaButtonOption:
                                 return;
                         }

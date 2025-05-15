@@ -617,7 +617,8 @@ public class Rune
         Creature owner)
     {
         CombatAction etchAction = this.CreateTraceAction(owner, 2)
-            .WithActionCost(0).WithSoundEffect(SfxName.AttachRune);
+            .WithActionCost(0)
+            .WithSoundEffect(Enums.SfxNames.EtchRune);
         etchAction.Name = $"Etch {this.Name}";
         etchAction.Description = this.CreateTraceActionDescription(etchAction, false, prologueText:"{Blue}Etched: lasts until the end of combat.{/Blue}\n");
         etchAction.Traits.Remove(Enums.Traits.Traced);
