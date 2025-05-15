@@ -562,7 +562,7 @@ public class Rune
                 Tag = this,
             }
             .WithActionCost(actions)
-            .WithSoundEffect(SfxName.AncientDust) // TODO: Consider alternative SFX for Trace Rune.
+            .WithSoundEffect(Enums.SfxNames.TraceRune)
             .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
             {
                 Rune actionRune = (thisAction.Tag as Rune)!;
@@ -698,7 +698,7 @@ public class Rune
             }
             .WithActionCost(0)
             .WithProjectileCone(VfxStyle.BasicProjectileCone(this.Illustration))
-            .WithSoundEffect(SfxName.DazzlingFlash) // TODO: Consider better SFX for Invoke Rune.
+            .WithSoundEffect(Enums.SfxNames.InvokeRune)
             .WithEffectOnEachTarget(async (thisInvokeAction, caster, target, result) =>
             {
                 await Rune.InvokeDrawnRune(thisInvokeAction, caster, target, runeTarget);

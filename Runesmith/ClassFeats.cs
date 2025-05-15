@@ -829,7 +829,7 @@ public class ClassFeats
                                         Usability.Usable : Usability.NotUsableOnThisCreature("Doesn't bear one of your runes");
                             }))
                         .WithActionCost(1)
-                        .WithSoundEffect(SfxName.OminousActivation)
+                        .WithSoundEffect(Enums.SfxNames.TransposeEtchingStart)
                         .WithEffectOnEachTarget(async (transposeAction, caster, transposeFrom, result) =>
                             {
                                 /*
@@ -873,7 +873,7 @@ public class ClassFeats
                                                         // Call NewDrawnRune in case it prompts for a selection, such as if the rune applies to an item, so we can move this rune to that creature AND its item.
                                                         DrawnRune pretendNewRune = (await thisRune.NewDrawnRune!.Invoke(thisTransposeAction, caster, transposeTo, thisRune))!;
                                                         await runeQf.MoveRuneToTarget(transposeTo, pretendNewRune.DrawnOn);
-                                                        Sfxs.Play(SfxName.GaleBlast);
+                                                        Sfxs.Play(Enums.SfxNames.TransposeEtchingEnd);
 
                                                     })
                                                     .WithIllustration(thisRune.Illustration!);
@@ -1268,7 +1268,7 @@ public class ClassFeats
                             Target.Cone(3))
                             .WithActionCost(1)
                             .WithProjectileCone(VfxStyle.BasicProjectileCone(selectedTattoo.Illustration ?? IllustrationName.Action))
-                            .WithSoundEffect(SfxName.AncientDust)
+                            .WithSoundEffect(Enums.SfxNames.WordsFlyFree)
                             .WithEffectOnEachTarget( async (thisAction, caster, target, result) =>
                             {
                                 await tattooedRune.DrawRuneOnTarget(thisAction, caster, target, false);
@@ -1468,7 +1468,7 @@ public class ClassFeats
                                                     newItem.WithModificationRune(runestoneOption);
                                                     target.HeldItems[target.HeldItems.IndexOf(item)] = newItem;
                                                     target.PersistentUsedUpResources.UsedUpActions.Add("ElementalRevision");
-                                                    Sfxs.Play(SfxName.ShieldSpell);
+                                                    Sfxs.Play(Enums.SfxNames.ElementalRevision);
                                                     await caster.FictitiousSingleTileMove(target.Occupies);
                                                     target.Occupies.Overhead(newItem.Name, Color.Black);
                                                     await caster.FictitiousSingleTileMove(caster.Occupies);

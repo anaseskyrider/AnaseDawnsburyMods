@@ -1,3 +1,4 @@
+using Dawnsbury.Audio;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CombatActions;
@@ -180,5 +181,19 @@ public static class Enums
     {
         // public static readonly PossibilitySectionId AidSkills = ModManager.RegisterEnumMember<PossibilitySectionId>("AidSkills");
         // public static readonly PossibilitySectionId AidAttacks = ModManager.RegisterEnumMember<PossibilitySectionId>("AidAttacks");
+    }
+
+    public static class SfxNames
+    {
+        public const SfxName TraceRune = SfxName.AncientDust; // TODO: Consider alternative SFX for Trace Rune.
+        public const SfxName InvokeRune = SfxName.DazzlingFlash; // TODO: Consider alternative SFX for Invoke Rune.
+        public const SfxName EtchRune = SfxName.AttachRune; // Much more subtle than Trace Rune.
+        public const SfxName InvokedEsvadir = SfxName.RayOfFrost;
+        public const SfxName InvokedPluuna = SfxName.MinorAbjuration;
+        public const SfxName InvokedZohk = SfxName.PhaseBolt;
+        public const SfxName TransposeEtchingStart = SfxName.OminousActivation;
+        public const SfxName TransposeEtchingEnd = SfxName.GaleBlast;
+        public const SfxName WordsFlyFree = SfxName.AncientDust; // Could be linked to Trace Rune but doesn't have to be.
+        public const SfxName ElementalRevision = SfxName.ShieldSpell;
     }
 }

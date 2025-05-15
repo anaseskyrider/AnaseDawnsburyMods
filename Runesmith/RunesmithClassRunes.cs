@@ -306,7 +306,7 @@ public class RunesmithClassRunes
                     }))
                         .WithActionCost(0)
                         .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
-                        .WithSoundEffect(SfxName.RayOfFrost)
+                        .WithSoundEffect(Enums.SfxNames.InvokedEsvadir)
                         .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithPlaytest.RunesmithDC(caster)))
                         .WithEffectOnEachTarget(async (selfAction, caster, target, result) =>
                         {
@@ -1056,7 +1056,7 @@ public class RunesmithClassRunes
                     Target.Emanation((int)emanationSize))
                         .WithActionCost(0)
                         .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
-                        .WithSoundEffect(SfxName.MinorAbjuration)
+                        .WithSoundEffect(Enums.SfxNames.InvokedPluuna)
                         .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithPlaytest.RunesmithDC(caster)))
                         .WithNoSaveFor((thisAction, cr) => thisRune.IsImmuneToThisInvocation(cr))
                         .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
@@ -1512,7 +1512,7 @@ public class RunesmithClassRunes
                             if (selectedOption is TileOption selectedTile)
                             {
                                 await CommonSpellEffects.Teleport(target, selectedTile.Tile);
-                                Sfxs.Play(SfxName.PhaseBolt);
+                                Sfxs.Play(Enums.SfxNames.InvokedZohk);
                             }
                         }
                     }
