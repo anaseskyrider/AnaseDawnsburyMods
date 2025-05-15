@@ -10,6 +10,16 @@ namespace Dawnsbury.Mods.RunesmithPlaytest;
 
 public static class ModData
 {
+    public static class BooleanOptions
+    {
+        /* Added the ability for mods to add settings options with  ModManager.RegisterBooleanSettingsOption(string technicalName, string caption, string longDescription, bool default) for registration API and PlayerProfile.Instance.IsBooleanOptionEnabled(string technicalName) for reading API.
+
+        You can now use the many new methods in the CommonQuestions class to add dialogue and other player interactivity choices. */
+        
+        public const string EsvadirOnEnemies = "RunesmithPlaytest.EsvadirOnEnemies";
+        public const string OljinexOnEnemies = "RunesmithPlaytest.OljinexOnEnemies";
+    }
+    
     public static class Traits
     {
         #region Class

@@ -149,7 +149,7 @@ public static class RunesmithRunes
             LevelFormat = "+2",
             UsageCondition = (attacker, defender) =>
             {
-                if (PlayerProfile.Instance.IsBooleanOptionEnabled("RunesmithPlaytest.EsvadirOnEnemies"))
+                if (PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.EsvadirOnEnemies))
                     return Usability.Usable;
                 bool isAlly = defender.FriendOf(attacker);
                 Usability allyNotUsable = Usability.NotUsableOnThisCreature("enemy creature");
@@ -675,7 +675,7 @@ public static class RunesmithRunes
                 Usability shieldNotUsable = Usability.NotUsableOnThisCreature("doesn't have a shield");
                 bool isAlly = defender.FriendOf(attacker);
                 Usability allyNotUsable = Usability.NotUsableOnThisCreature("enemy creature");
-                if (PlayerProfile.Instance.IsBooleanOptionEnabled("RunesmithPlaytest.OljinexOnEnemies"))
+                if (PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.OljinexOnEnemies))
                     return hasShield ? Usability.Usable : shieldNotUsable;
                 return isAlly ? (hasShield ? Usability.Usable : shieldNotUsable) : allyNotUsable;
             },

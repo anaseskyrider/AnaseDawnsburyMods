@@ -2,6 +2,7 @@ using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Display;
 using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
@@ -17,9 +18,9 @@ public static class RunesmithArchetype
         ModManager.AddFeat(dedicationRepertoire);
         
         Feat runesmithDedication = ArchetypeFeats.CreateMulticlassDedication(
-            ModData.Traits.Runesmith,
-            "You have dabbled in the scholarly art at the heart of all magic, the rune.",
-            "You become trained in Crafting; if you were already trained in Crafting, you instead become trained in a skill of your choice.\n\nYou can use {tooltip:Runesmith.Trait.Rune}runes{/} like a runesmith. You gain a runic repertoire with two 1st-level runes from the runesmith's rune list. The DCs for these runes is based on your class DC and your Intelligence.\n\nYou can use the {tooltip:Runesmith.Action.TraceRune}Trace Rune{/} {icon:Action}–{icon:TwoActions} and {tooltip:Runesmith.Action.InvokeRune}Invoke Rune{/} {icon:Action} actions.")
+                ModData.Traits.Runesmith,
+                "You have dabbled in the scholarly art at the heart of all magic, the rune.",
+                "You become trained in Crafting; if you were already trained in Crafting, you instead become trained in a skill of your choice.\n\nYou can use "+ModTooltips.TraitRune+"runes{/} like a runesmith. You gain a runic repertoire with two 1st-level runes from the runesmith's rune list. The DCs for these runes is based on your class DC and your Intelligence.\n\nYou can use the "+ModTooltips.ActionTraceRune+"Trace Rune{/} "+RulesBlock.GetIconTextFromNumberOfActions(-3)+" and "+ModTooltips.ActionInvokeRune+"Invoke Rune{/} "+RulesBlock.GetIconTextFromNumberOfActions(1)+" actions.")
             .WithOnSheet(values =>
             {
                 values.TrainInThisOrSubstitute(Skill.Crafting);
@@ -54,7 +55,7 @@ public static class RunesmithArchetype
             ModManager.AddFeat(feat);
         }
 
-        TrueFeat runesmithLearnRune = (new TrueFeat(
+        Feat runesmithLearnRune = new TrueFeat(
                 ModManager.RegisterFeatName("RunesmithPlaytest.Archetype.ExpandKnowledge", "Expand Knowledge"),
                 2,
                 null,
@@ -64,8 +65,13 @@ public static class RunesmithArchetype
             .WithAvailableAsArchetypeFeat(ModData.Traits.Runesmith)
             .WithOnSheet(values =>
             {
-                values.AddSelectionOption(new SingleFeatSelectionOption("rune"+values.CurrentLevel, "Level 1 rune", values.CurrentLevel, ft => ft is RuneFeat rf && rf.Rune.BaseLevel == 1).WithIsOptional());
-            }) as TrueFeat)!;
+                values.AddSelectionOption(new SingleFeatSelectionOption(
+                        "rune"+values.CurrentLevel,
+                        "Level 1 rune",
+                        values.CurrentLevel,
+                        ft => ft is RuneFeat { Rune.BaseLevel: 1 })
+                    .WithIsOptional());
+            });
         ModManager.AddFeat(runesmithLearnRune);
     }
 }
