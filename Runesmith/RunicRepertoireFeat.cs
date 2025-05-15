@@ -1,11 +1,8 @@
 using Dawnsbury.Auxiliary;
-using Dawnsbury.Campaign.Path;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.Creatures;
-using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
-using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
@@ -24,7 +21,7 @@ public class RunicRepertoireFeat : Feat
     private Dictionary<int, int> EtchLimitIncreases { get; set; } = new();
     
     /// <summary>
-    /// Functions similar to <see cref="SpellcastingSource.SpellcastingTradition"/>. This mod uses <see cref="Enums.Traits.Runesmith"/> as its source.
+    /// Functions similar to <see cref="SpellcastingSource.SpellcastingTradition"/>. This mod uses <see cref="ModData.Traits.Runesmith"/> as its source.
     /// </summary>
     public Trait ClassOfOrigin { get; set; }
     
@@ -44,7 +41,7 @@ public class RunicRepertoireFeat : Feat
             featName,
             null,
             "",
-            [Enums.Traits.RunicRepertoire],
+            [ModData.Traits.RunicRepertoire],
             null)
     {
         // this.RunicAbility = runicAbility;
@@ -69,6 +66,8 @@ public class RunicRepertoireFeat : Feat
         });
     }
     #endregion
+    
+    #region Instance Methods
     
     #region Get Runes
         /// <summary>
@@ -142,14 +141,12 @@ public class RunicRepertoireFeat : Feat
     }
     #endregion
     
-    #region Instance Methods
-    
     /// <summary>
     /// Produces a detailed description of your runic repertoire, similar to spellcasting on a stat block.
     /// </summary>
     public string DescribeRepertoire(Creature owner)
     {
-        int DC = RunesmithPlaytest.RunesmithDC(owner);
+        int DC = RunesmithClass.RunesmithDC(owner);
         string stats = $"DC {DC};";
         int etchLimitNum = this.GetEtchLimit(owner.Level);
         string etchLimit = etchLimitNum > 0 ? $"{{b}}etch limit{{/b}} ({etchLimitNum} runes); " : "";
@@ -199,6 +196,7 @@ public class RunicRepertoireFeat : Feat
     }
     #endregion
 
+    #region Static Methods
     #region Get Repertoire
     /// <summary>
     /// Gets the RunicRepertoireFeat known by the CREATURE.
@@ -217,6 +215,7 @@ public class RunicRepertoireFeat : Feat
         RunicRepertoireFeat? repertoire = values.AllFeats.FirstOrDefault(ft => ft is RunicRepertoireFeat ) as RunicRepertoireFeat;
         return repertoire;
     }
+    #endregion
     #endregion
 
     #region Obsolete Runes Known Code

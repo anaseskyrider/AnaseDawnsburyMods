@@ -4,17 +4,17 @@ namespace Dawnsbury.Mods.RunesmithPlaytest;
 
 public class ModTooltips
 {
-    public static readonly string TraitRune = "{tooltip:Runesmith.Trait.Rune";
-    public static readonly string TraitInvocation = "{tooltip:Runesmith.Trait.Invocation";
-    public static readonly string ActionTraceRune = "{tooltip:Runesmith.Action.TraceRune";
-    public static readonly string ActionInvokeRune = "{tooltip:Runesmith.Action.InvokeRune";
-    public static readonly string ActionEtchRune = "{tooltip:Runesmith.Action.EtchRune";
-    public static readonly string FeatureRunicCrafter = "{tooltip:Runesmith.Features.RunicCrafter";
-    public static readonly string FeatureSmithsWeaponExpertise = "{tooltip:Runesmith.Features.SmithsWeaponExpertise";
-    public static readonly string FeatureRunicOptimization = "{tooltip:Runesmith.Features.RunicOptimization";
-    public static readonly string FeatsFortifyingKnock = "{tooltip:Runesmith.Feats.FortifyingKnock";
-    public static readonly string FeatsRunicTattoo = "{tooltip:Runesmith.Feats.RunicTattoo";
-    public static readonly string FeatsWordsFlyFree = "{tooltip:Runesmith.Feats.WordsFlyFree";
+    public static readonly string TraitRune = "{tooltip:Runesmith.Trait.Rune}";
+    public static readonly string TraitInvocation = "{tooltip:Runesmith.Trait.Invocation}";
+    public static readonly string ActionTraceRune = "{tooltip:Runesmith.Action.TraceRune}";
+    public static readonly string ActionInvokeRune = "{tooltip:Runesmith.Action.InvokeRune}";
+    public static readonly string ActionEtchRune = "{tooltip:Runesmith.Action.EtchRune}";
+    public static readonly string FeatureRunicCrafter = "{tooltip:Runesmith.Features.RunicCrafter}";
+    public static readonly string FeatureSmithsWeaponExpertise = "{tooltip:Runesmith.Features.SmithsWeaponExpertise}";
+    public static readonly string FeatureRunicOptimization = "{tooltip:Runesmith.Features.RunicOptimization}";
+    public static readonly string FeatsFortifyingKnock = "{tooltip:Runesmith.Feats.FortifyingKnock}";
+    public static readonly string FeatsRunicTattoo = "{tooltip:Runesmith.Feats.RunicTattoo}";
+    public static readonly string FeatsWordsFlyFree = "{tooltip:Runesmith.Feats.WordsFlyFree}";
     
     public static void RegisterTooltips()
     {

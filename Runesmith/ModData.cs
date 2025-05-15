@@ -1,8 +1,6 @@
 using Dawnsbury.Audio;
-using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CombatActions;
-using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
@@ -10,7 +8,7 @@ using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
 
-public static class Enums
+public static class ModData
 {
     public static class Traits
     {
@@ -135,6 +133,28 @@ public static class Enums
         
         public static readonly FeatName RunicCrafter = ModManager.RegisterFeatName("RunesmithPlaytest.RunicCrafter", "Runic Crafter");
         #endregion
+
+        #region Class Feats
+        public static readonly FeatName BackupRunicEnhancement = ModManager.RegisterFeatName("RunesmithPlaytest.FeatBackupRunicEnhancement", "Backup Runic Enhancement");
+        public static readonly FeatName EngravingStrike = ModManager.RegisterFeatName("RunesmithPlaytest.FeatEngravingStrike", "Engraving Strike");
+        public static readonly FeatName RemoteDetonation = ModManager.RegisterFeatName("RunesmithPlaytest.FeatRemoteDetonation", "Remote Detonation");
+        public static readonly FeatName RuneSinger = ModManager.RegisterFeatName("RunesmithPlaytest.FeatRuneSinger", "Rune-Singer");
+        public static readonly FeatName FortifyingKnock = ModManager.RegisterFeatName("RunesmithPlaytest.FeatFortifyingKnock", "Fortifying Knock");
+        public static readonly FeatName InvisibleInk = ModManager.RegisterFeatName("RunesmithPlaytest.FeatInvisibleInk", "Invisible Ink");
+        public static readonly FeatName RunicTattoo = ModManager.RegisterFeatName("RunesmithPlaytest.FeatRunicTattoo", "Runic Tattoo");
+        public static readonly FeatName SmithingWeaponsFamiliarity = ModManager.RegisterFeatName("RunesmithPlaytest.FeatSmithingWeaponsFamiliarity", "Smithing Weapons Familiarity");
+        public static readonly FeatName ArtistsAttendance = ModManager.RegisterFeatName("RunesmithPlaytest.FeatArtistsAttendance", "Artist's Attendance");
+        public static readonly FeatName GhostlyResonance = ModManager.RegisterFeatName("RunesmithPlaytest.FeatGhostlyResonance", "Ghostly Resonance");
+        public static readonly FeatName TerrifyingInvocation = ModManager.RegisterFeatName("RunesmithPlaytest.FeatTerrifyingInvocation", "Terrifying Invocation");
+        public static readonly FeatName TransposeEtching = ModManager.RegisterFeatName("RunesmithPlaytest.FeatTransposeEtching", "Transpose Etching");
+        public static readonly FeatName RunicReprisal = ModManager.RegisterFeatName("RunesmithPlaytest.FeatRunicReprisal", "Runic Reprisal");
+        public static readonly FeatName TracingTrance = ModManager.RegisterFeatName("RunesmithPlaytest.FeatTracingTrance", "Tracing Trance");
+        public static readonly FeatName VitalCompositeInvocation = ModManager.RegisterFeatName("RunesmithPlaytest.FeatVitalCompositeInvocation", "Vital Composite Invocation");
+        public static readonly FeatName WordsFlyFree = ModManager.RegisterFeatName("RunesmithPlaytest.FeatWordsFlyFree", "Words, Fly Free");
+        public static readonly FeatName DrawnInRed = ModManager.RegisterFeatName("RunesmithPlaytest.FeatDrawnInRed", "Drawn In Red");
+        public static readonly FeatName ElementalRevision = ModManager.RegisterFeatName("RunesmithPlaytest.FeatElementalRevision", "Elemental Revision");
+        public static readonly FeatName ReadTheBones = ModManager.RegisterFeatName("RunesmithPlaytest.FeatReadTheBones", "Read the Bones");
+        #endregion
     }
     
     public static class QEffectIds
@@ -186,10 +206,17 @@ public static class Enums
     public static class SfxNames
     {
         public const SfxName TraceRune = SfxName.AncientDust; // TODO: Consider alternative SFX for Trace Rune.
+            // SfxName.AuraExpansion;
         public const SfxName InvokeRune = SfxName.DazzlingFlash; // TODO: Consider alternative SFX for Invoke Rune.
         public const SfxName EtchRune = SfxName.AttachRune; // Much more subtle than Trace Rune.
+        public const SfxName InvokedAtryl = SfxName.FireRay;
         public const SfxName InvokedEsvadir = SfxName.RayOfFrost;
+        public const SfxName InvokedMarssylShove = SfxName.Shove;
+        public const SfxName InvokedOljinex = SfxName.Fear;
         public const SfxName InvokedPluuna = SfxName.MinorAbjuration;
+        public const SfxName PassiveRanshu = SfxName.ElectricBlast; // SfxName(ElectricBlast == ShockingGrasp)???
+        public const SfxName InvokedRanshu = SfxName.ElectricArc;
+        public const SfxName InvokedSun = SfxName.AuraExpansion;
         public const SfxName InvokedZohk = SfxName.PhaseBolt;
         public const SfxName TransposeEtchingStart = SfxName.OminousActivation;
         public const SfxName TransposeEtchingEnd = SfxName.GaleBlast;

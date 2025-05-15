@@ -29,33 +29,8 @@ using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
 
-public class ClassFeats
+public static class RunesmithFeats
 {
-    // 1sts
-    public static Feat? BackupRunicEnhancement;
-    public static Feat? EngravingStrike;
-    public static Feat? RemoteDetonation;
-    public static Feat? RuneSinger;
-    // 2nds
-    public static Feat? FortifyingKnock;
-    public static Feat? InvisibleInk;
-    public static Feat? RunicTattoo;
-    public static Feat? SmithingWeaponsFamiliarity;
-    // 4ths
-    public static Feat? ArtistsAttendance;
-    public static Feat? GhostlyResonance;
-    public static Feat? TerrifyingInvocation;
-    public static Feat? TransposeEtching;
-    // 6ths
-    public static Feat? RunicReprisal;
-    public static Feat? TracingTrance;
-    public static Feat? VitalCompositeInvocation;
-    public static Feat? WordsFlyFree;
-    // 8ths
-    public static Feat? DrawnInRed;
-    public static Feat? ElementalRevision;
-    public static Feat? ReadTheBones;
-    
     // TODO: More enums for stuff, per Sudo's recommendations.
     /* public static readonly QEffectId HitTheDirt = ModManager.RegisterEnumMember<QEffectId>("Hit the Dirt QEID");
     caster.AddQEffect(new QEffect() { Id = HitTheDirt; }
@@ -68,19 +43,19 @@ public class ClassFeats
         /////////////////////
         // 1st Level Feats //
         /////////////////////
-        BackupRunicEnhancement = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatBackupRunicEnhancement", "Backup Runic Enhancement"),
-            1,
-            "While you are not a spellcaster, you have a working knowledge of the most fundamental of runic magic.",
-            "Once per day, you can cast your choice of either " + AllSpells.CreateModernSpellTemplate(SpellId.MagicFang, Trait.Wizard).ToSpellLink().Replace("magic fang", "runic body") + " or " + AllSpells.CreateModernSpellTemplate(SpellId.MagicWeapon, Trait.Wizard).ToSpellLink().Replace("magic weapon", "runic weapon") + " as an innate spell. The rank of these spells is equal to half your level, rounded up" + "." + /*TODO: ", (NYI) and the tradition can be any tradition for which you are at least trained in the related skill." +*/ "\n\n"+new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString+" {b}Reminder{/b} You choose which one to cast. You cannot cast both in a day.",
-            [Enums.Traits.Runesmith])
+        Feat backupRunicEnhancement = new TrueFeat(
+                ModData.FeatNames.BackupRunicEnhancement,
+                1,
+                "While you are not a spellcaster, you have a working knowledge of the most fundamental of runic magic.",
+                "Once per day, you can cast your choice of either " + AllSpells.CreateModernSpellTemplate(SpellId.MagicFang, Trait.Wizard).ToSpellLink().Replace("magic fang", "runic body") + " or " + AllSpells.CreateModernSpellTemplate(SpellId.MagicWeapon, Trait.Wizard).ToSpellLink().Replace("magic weapon", "runic weapon") + " as an innate spell. The rank of these spells is equal to half your level, rounded up" + "." + /*TODO: ", (NYI) and the tradition can be any tradition for which you are at least trained in the related skill." +*/ "\n\n"+new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString+" {b}Reminder{/b} You choose which one to cast. You cannot cast both in a day.",
+                [ModData.Traits.Runesmith])
             .WithOnSheet(sheet =>
             {
                 sheet.SetProficiency(Trait.Spell, Proficiency.Trained);
             })
             .WithOnCreature(creature =>
             {
-                Trait classOfOrigin = Enums.Traits.Runesmith;
+                Trait classOfOrigin = ModData.Traits.Runesmith;
                 creature.GetOrCreateSpellcastingSource(
                     SpellcastingKind.Innate,
                     classOfOrigin,
@@ -95,7 +70,7 @@ public class ClassFeats
                 qfFeat.AfterYouExpendSpellcastingResources = (qfThis, action) => // Fires with innate spells too
                 {
                     SpellcastingSource? spellcastingSource = action.SpellcastingSource;
-                    if (spellcastingSource != null && spellcastingSource.ClassOfOrigin == Enums.Traits.Runesmith) // If source is Backup Runic Enhancement,
+                    if (spellcastingSource != null && spellcastingSource.ClassOfOrigin == ModData.Traits.Runesmith) // If source is Backup Runic Enhancement,
                     {
                         switch (action.SpellId)
                         {
@@ -117,14 +92,14 @@ public class ClassFeats
                     }
                 };
             });
-        ModManager.AddFeat(BackupRunicEnhancement);
+        ModManager.AddFeat(backupRunicEnhancement);
         
-        EngravingStrike = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatEngravingStrike", "Engraving Strike"),
-            1,
-            "You draw a rune onto the surface of your weapon in reverse, the mark branding or bruising itself into your target in the moment of impact.",
-            "{b}Frequency{/b} once per round\n{b}Requirements{/b} You are wielding a melee weapon and {i}(due to Trace Rune){/i} have a free hand\n\nMake a melee Strike with the weapon. On a success, you {tooltip:Runesmith.Action.TraceRune}Trace a Rune{/} onto the target of the Strike.\n\n"+new ModdedIllustration(Enums.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Playtest Ruling{/b} You can Trace runes that draw onto the target's equipment, not just the creature itself.",
-            [Enums.Traits.Runesmith])
+        Feat engravingStrike = new TrueFeat(
+                ModData.FeatNames.EngravingStrike,
+                1,
+                "You draw a rune onto the surface of your weapon in reverse, the mark branding or bruising itself into your target in the moment of impact.",
+                "{b}Frequency{/b} once per round\n{b}Requirements{/b} You are wielding a melee weapon and {i}(due to Trace Rune){/i} have a free hand\n\nMake a melee Strike with the weapon. On a success, you {tooltip:Runesmith.Action.TraceRune}Trace a Rune{/} onto the target of the Strike.\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Playtest Ruling{/b} You can Trace runes that draw onto the target's equipment, not just the creature itself.",
+                [ModData.Traits.Runesmith])
             .WithActionCost(1)
             .WithPermanentQEffect("Make a melee Strike. On a hit, Trace a Rune on the target.", qfFeat =>
             {
@@ -147,7 +122,7 @@ public class ClassFeats
                         });
                     engravingStrike.Name = "Engraving Strike";
                     engravingStrike.Illustration =
-                        new SideBySideIllustration(item.Illustration, Enums.Illustrations.TraceRune);
+                        new SideBySideIllustration(item.Illustration, ModData.Illustrations.TraceRune);
                     engravingStrike.Description = StrikeRules.CreateBasicStrikeDescription4(
                         engravingStrike.StrikeModifiers,
                         prologueText: "{b}Frequency{/b} once per round\n{b}Requirements{/b} {i}(Trace Rune){/i} You have a free hand\n",
@@ -158,24 +133,24 @@ public class ClassFeats
                         .WithAdditionalConditionOnTargetCreature( (attacker, defender) => 
                             qfFeat.UsedThisTurn ? Usability.NotUsable("Already used this round") : Usability.Usable)
                         .WithAdditionalConditionOnTargetCreature( (attacker, defender) => 
-                            attacker.HasFreeHand || attacker.HeldItems.Any(item => item.HasTrait(Enums.Traits.CountsAsRunesmithFreeHand)) ? Usability.Usable : Usability.NotUsable("You must have a free hand to trace a rune"));
+                            attacker.HasFreeHand || attacker.HeldItems.Any(item => item.HasTrait(ModData.Traits.CountsAsRunesmithFreeHand)) ? Usability.Usable : Usability.NotUsable("You must have a free hand to trace a rune"));
                     
                     return engravingStrike;
                 };
             });
-        ModManager.AddFeat(EngravingStrike);
+        ModManager.AddFeat(engravingStrike);
         
-        RemoteDetonation = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatRemoteDetonation", "Remote Detonation"),
-            1,
-            "You whisper an invocation over an arrow or sling bullet as you fire it, and the hissing of the missile through the air sounds just like your murmured voice.",
-            "{b}Frequency{/b} once per round\n{b}Requirements{/b} You are wielding a ranged weapon\n\nMake a ranged Strike against a target within the weapon's first range increment" /*+ " using physical ammunition"*/ + ". On a success, you invoke all the runes on the target as the missile's whispering sets off the runes. On a critical success, the target also takes a –1 circumstance penalty on any saving throws against the runes invoked by your Remote Detonation.",
-            [Enums.Traits.Invocation, Enums.Traits.Runesmith, Trait.Spell])
+        Feat remoteDetonation = new TrueFeat(
+                ModData.FeatNames.RemoteDetonation,
+                1,
+                "You whisper an invocation over an arrow or sling bullet as you fire it, and the hissing of the missile through the air sounds just like your murmured voice.",
+                "{b}Frequency{/b} once per round\n{b}Requirements{/b} You are wielding a ranged weapon\n\nMake a ranged Strike against a target within the weapon's first range increment" /*+ " using physical ammunition"*/ + ". On a success, you invoke all the runes on the target as the missile's whispering sets off the runes. On a critical success, the target also takes a –1 circumstance penalty on any saving throws against the runes invoked by your Remote Detonation.",
+                [ModData.Traits.Invocation, ModData.Traits.Runesmith, Trait.Spell])
             .WithActionCost(1)
             .WithPermanentQEffect("Make a ranged Strike. On a hit, invokes all runes on the target. On a crit, it also takes a -1 circumstance penalty to its saving throws against these invocations.", qfFeat =>
             {
                 Illustration remoteDetIllustration = new SideBySideIllustration(IllustrationName.LooseTimesArrow,
-                    Enums.Illustrations.InvokeRune);
+                    ModData.Illustrations.InvokeRune);
 
                 qfFeat.ProvideStrikeModifier = item =>
                 {
@@ -185,9 +160,9 @@ public class ClassFeats
                     CombatAction remoteDet = qfFeat.Owner.CreateStrike(item).WithActionCost(1);
                     remoteDet.Name = "Remote Detonation";
                     remoteDet.Illustration =
-                        new SideBySideIllustration(item.Illustration, Enums.Illustrations.InvokeRune);
-                    remoteDet.Traits.Add(Enums.Traits.Invocation);
-                    remoteDet.Traits.Add(Enums.Traits.Runesmith);
+                        new SideBySideIllustration(item.Illustration, ModData.Illustrations.InvokeRune);
+                    remoteDet.Traits.Add(ModData.Traits.Invocation);
+                    remoteDet.Traits.Add(ModData.Traits.Runesmith);
                     remoteDet.Description =
                         StrikeRules.CreateBasicStrikeDescription4(remoteDet.StrikeModifiers, prologueText:"{b}Frequency{/b} once per round", additionalSuccessText: " Invoke all runes on the target.", additionalCriticalSuccessText: " The target also has a -1 circumstance penalty to any saving throws against these invocations.");
                     (remoteDet.Target as CreatureTarget)!.WithAdditionalConditionOnTargetCreature((attacker, defender) =>
@@ -214,7 +189,7 @@ public class ClassFeats
                                 BonusToDefenses = (detPenaltyQf, invokeAction, defense) =>
                                 {
                                     if (invokeAction != null &&
-                                        invokeAction.HasTrait(Enums.Traits.Invocation) &&
+                                        invokeAction.HasTrait(ModData.Traits.Invocation) &&
                                         defense.IsSavingThrow())
                                     {
                                         return new Bonus(-1, BonusType.Circumstance,
@@ -246,15 +221,15 @@ public class ClassFeats
                     return remoteDet;
                 };
             });
-        ModManager.AddFeat(RemoteDetonation);
+        ModManager.AddFeat(remoteDetonation);
         
         // TODO: Adjust implementation to work with subsidiary Trace Runes?
-        RuneSinger = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatRuneSinger", "Rune-Singer"),
-            1,
-            "You practice the lost art of using music to guide the act of carving your runes, singing them into existence as much as crafting them.",
-            /*"You can use Performance instead of Crafting when attempting Crafting checks related to runes. " + */"Once per minute, you can {tooltip:Runesmith.Action.TraceRune}Trace a Rune{/} with song alone, removing the need to have a free hand, removing the manipulate trait from Trace Rune, and allowing you to use the {icon:TwoActions} 2-action version of Trace Rune as a single {icon:Action} action. You don't need to be able to move your hands when Tracing a Rune using song, but you do need to be able to sing in a clear voice.",
-            [Enums.Traits.Runesmith])
+        Feat runeSinger = new TrueFeat(
+                ModData.FeatNames.RuneSinger,
+                1,
+                "You practice the lost art of using music to guide the act of carving your runes, singing them into existence as much as crafting them.",
+                /*"You can use Performance instead of Crafting when attempting Crafting checks related to runes. " + */"Once per minute, you can {tooltip:Runesmith.Action.TraceRune}Trace a Rune{/} with song alone, removing the need to have a free hand, removing the manipulate trait from Trace Rune, and allowing you to use the {icon:TwoActions} 2-action version of Trace Rune as a single {icon:Action} action. You don't need to be able to move your hands when Tracing a Rune using song, but you do need to be able to sing in a clear voice.",
+                [ModData.Traits.Runesmith])
             .WithPermanentQEffect("Once per combat, you can Trace a Rune without a free hand on a target up to 30 feet away.",
                 qfFeat =>
                 {
@@ -264,7 +239,7 @@ public class ClassFeats
                             return null;
 
                         Rune? foundRune = null;
-                        foreach (Rune rune in RunesmithClassRunes.AllRunes)
+                        foreach (Rune rune in RunesmithRunes.AllRunes)
                         {
                             if (section.Name == rune.Name)
                                 foundRune = rune;
@@ -291,23 +266,23 @@ public class ClassFeats
                         {
                             Caption = "Rune-Singer",
                             Illustration = new SideBySideIllustration(IllustrationName.Action,
-                                Enums.Illustrations.RuneSinger)
+                                ModData.Illustrations.RuneSinger)
                         };
                         
                         return singPossibility;
                     };
                 });
-        ModManager.AddFeat(RuneSinger);
+        ModManager.AddFeat(runeSinger);
         
         /////////////////////
         // 2nd Level Feats //
         /////////////////////
-        FortifyingKnock = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatFortifyingKnock", "Fortifying Knock"),
-            2,
-            "Your shield is a natural canvas for your art.",
-            "{b}Frequency{/b} once per round\n{b}Requirements{/b} You are wielding a shield and {i}(due to Trace Rune){/i} have a free hand\n\nIn one motion, you Raise a Shield and {tooltip:Runesmith.Action.TraceRune}Trace a Rune{/} on your shield.",
-            [Enums.Traits.Runesmith, Trait.Spell])
+        Feat fortifyingKnock = new TrueFeat(
+                ModData.FeatNames.FortifyingKnock,
+                2,
+                "Your shield is a natural canvas for your art.",
+                "{b}Frequency{/b} once per round\n{b}Requirements{/b} You are wielding a shield and {i}(due to Trace Rune){/i} have a free hand\n\nIn one motion, you Raise a Shield and {tooltip:Runesmith.Action.TraceRune}Trace a Rune{/} on your shield.",
+                [ModData.Traits.Runesmith, Trait.Spell])
             .WithActionCost(1)
             .WithPrerequisite(FeatName.ShieldBlock, "Shield Block")
             .WithPermanentQEffect("Raise a Shield and Trace a Rune on your shield.", qfFeat =>
@@ -333,7 +308,7 @@ public class ClassFeats
                     // Generate fortifying knock and runic reprisal options
                     foreach (Rune rune in repertoire.GetRunesKnown(qfThis.Owner))
                     {
-                        bool validReprisal = qfThis.Owner.HasFeat(RunicReprisal!.FeatName) &&
+                        bool validReprisal = qfThis.Owner.HasFeat(ModData.FeatNames.RunicReprisal) &&
                                              rune.InvokeTechnicalTraits.Contains(Trait.IsHostile);
                         bool validKnock = rune.DrawTechnicalTraits.Contains(Trait.Shield);// &&
                                           //(rune.UsageCondition == null || rune.UsageCondition.Invoke(qfThis.Owner, qfThis.Owner) == Usability.Usable);
@@ -366,7 +341,7 @@ public class ClassFeats
                                 string freeHandReason = "You must have a free hand to trace a rune";
                                 string usedReason = "Already used this round";
                                 return shieldItem != null
-                                    ? (self.HasFreeHand || self.HeldItems.Any(item => item.HasTrait(Enums.Traits.CountsAsRunesmithFreeHand)) ? (qfThis.UsedThisTurn ? usedReason : null) : freeHandReason)
+                                    ? (self.HasFreeHand || self.HeldItems.Any(item => item.HasTrait(ModData.Traits.CountsAsRunesmithFreeHand)) ? (qfThis.UsedThisTurn ? usedReason : null) : freeHandReason)
                                     : hasShieldReason;
                             });
                         knockThisRune.EffectOnOneTarget = null; // Reset behavior so we can hard code this
@@ -421,11 +396,11 @@ public class ClassFeats
                     }
                     
                     SubmenuPossibility fortifyingKnockSubmenu = new SubmenuPossibility(
-                        new SideBySideIllustration(shieldIll, Enums.Illustrations.TraceRune),
+                        new SideBySideIllustration(shieldIll, ModData.Illustrations.TraceRune),
                         "Fortifying Knock",
                         PossibilitySize.Half)
                     {
-                        SpellIfAny = new CombatAction(qfThis.Owner, new SideBySideIllustration(shieldIll, Enums.Illustrations.TraceRune), "Fortifying Knock", [Enums.Traits.Runesmith], "{i}Your shield is a natural canvas for your art.{/i}\n\n"+
+                        SpellIfAny = new CombatAction(qfThis.Owner, new SideBySideIllustration(shieldIll, ModData.Illustrations.TraceRune), "Fortifying Knock", [ModData.Traits.Runesmith], "{i}Your shield is a natural canvas for your art.{/i}\n\n"+
                             "{b}Frequency{/b} once per round\n{b}Requirements{/b} You are wielding a shield and {i}(due to Trace Rune){/i} have a free hand\n\nIn one motion, you Raise a Shield and Trace a Rune on your shield.", Target.Self()).WithActionCost(1), // This doesn't DO anything, it's just to provide description to the menu.
                         Subsections = { fortSection, repriseSection },
                     };
@@ -433,34 +408,34 @@ public class ClassFeats
                     return fortifyingKnockSubmenu;
                 };
             });
-        ModManager.AddFeat(FortifyingKnock);
+        ModManager.AddFeat(fortifyingKnock);
         
-        InvisibleInk = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatInvisibleInk", "Invisible Ink"),
-            2,
-            "When your rune is drawn, it leaves only the barest mark.",
-            "You no longer cease being hidden when you {tooltip:Runesmith.Action.TraceRune}Trace a Rune{/}.",
-            [Enums.Traits.Runesmith])
+        Feat invisibleInk = new TrueFeat(
+                ModData.FeatNames.InvisibleInk,
+                2,
+                "When your rune is drawn, it leaves only the barest mark.",
+                "You no longer cease being hidden when you {tooltip:Runesmith.Action.TraceRune}Trace a Rune{/}.",
+                [ModData.Traits.Runesmith])
             .WithPermanentQEffect(null, qfFeat =>
             {
                 qfFeat.YouBeginAction = async (qfThis, action) =>
                 {
-                    if (action.HasTrait(Enums.Traits.Traced) || action.HasTrait(Enums.Traits.Etched))
+                    if (action.HasTrait(ModData.Traits.Traced) || action.HasTrait(ModData.Traits.Etched))
                         action.WithExtraTrait(Trait.DoesNotBreakStealth);
                 };
             });
-        ModManager.AddFeat(InvisibleInk);
+        ModManager.AddFeat(invisibleInk);
         
         // Runic Tattoo
         // TODO: Let you retrain for future learned runes.
-        RunicTattoo = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatRunicTattoo", "Runic Tattoo"),
-            2,
-            "Drawing your favorite rune in your flesh, you know you'll never be without it.",
-            "Choose one rune you know, which you apply as a tattoo to your body. The rune is etched at the beginning of combat and doesn't count toward your maximum limit of etched runes. You can invoke this rune like any of your other runes, but once invoked, the rune fades significantly and is drained of power until your next daily preparations.\n\n{b}Special{/b} {Red}{b}(NYI){/b}{/Red} You can retrain this feat to select any runes you learned at higher levels.\n\n"+new ModdedIllustration(Enums.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Implementation{/b} At level 6, the feat {tooltip:Runesmith.Feats.WordsFlyFree}Words, Fly Free{/} offers a way to offensively use the available tattoo options that would otherwise be detrimental to yourself.",
-            [Enums.Traits.Runesmith],
-            []);
-        foreach (RuneFeat runeFeat in RunesmithClassRunes.AllRuneFeats)
+        Feat runicTattoo = new TrueFeat(
+                ModData.FeatNames.RunicTattoo,
+                2,
+                "Drawing your favorite rune in your flesh, you know you'll never be without it.",
+                "Choose one rune you know, which you apply as a tattoo to your body. The rune is etched at the beginning of combat and doesn't count toward your maximum limit of etched runes. You can invoke this rune like any of your other runes, but once invoked, the rune fades significantly and is drained of power until your next daily preparations.\n\n{b}Special{/b} {Red}{b}(NYI){/b}{/Red} You can retrain this feat to select any runes you learned at higher levels.\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Implementation{/b} At level 6, the feat {tooltip:Runesmith.Feats.WordsFlyFree}Words, Fly Free{/} offers a way to offensively use the available tattoo options that would otherwise be detrimental to yourself.",
+                [ModData.Traits.Runesmith],
+                []);
+        foreach (RuneFeat runeFeat in RunesmithRunes.AllRuneFeats)
         {
             Feat tattooFeat = new Feat(
                 ModManager.RegisterFeatName("RunesmithPlaytest.FeatRunicTattoo"+runeFeat.Rune.RuneId.ToStringOrTechnical(), runeFeat.Name),
@@ -535,7 +510,7 @@ public class ClassFeats
                                 CombatAction.CreateSimple(
                                     runesmith,
                                     $"Runic Tattoo ({runeFeat.Rune.Name})",
-                                    [Enums.Traits.Etched]),
+                                    [ModData.Traits.Etched]),
                                 runesmith,
                                 runesmith,
                                 true); //runesmith.Battle.GameLoop.FullCast(etchTattoo, ChosenTargets.CreateSingleTarget(runesmith));
@@ -556,16 +531,16 @@ public class ClassFeats
                             qfThis.UsedThisTurn = true;
                         };
                     });
-            RunicTattoo.Subfeats?.Add(tattooFeat);
+            runicTattoo.Subfeats?.Add(tattooFeat);
         }
-        ModManager.AddFeat(RunicTattoo);
+        ModManager.AddFeat(runicTattoo);
 
-        SmithingWeaponsFamiliarity = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatSmithingWeaponsFamiliarity", "Smithing Weapons Familiarity"),
-            2,
-            "Though you are an artisan, you are well versed in using the tools of the trade to fend off enemies.",
-            "You have familiarity with weapons in the hammer, pick, and knife weapon groups -- for the purposes of proficiency, you treat any of these that are martial weapons as simple weapons and any that are advanced weapons as martial weapons.\n\n"+new ModdedIllustration(Enums.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Modding{/b} Other mods which add advanced weapons are required to benefit from this feat.",
-            [Enums.Traits.Runesmith])
+        Feat smithingWeaponsFamiliarity = new TrueFeat(
+                ModData.FeatNames.SmithingWeaponsFamiliarity,
+                2,
+                "Though you are an artisan, you are well versed in using the tools of the trade to fend off enemies.",
+                "You have familiarity with weapons in the hammer, pick, and knife weapon groups -- for the purposes of proficiency, you treat any of these that are martial weapons as simple weapons and any that are advanced weapons as martial weapons.\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Modding{/b} Other mods which add advanced weapons are required to benefit from this feat.",
+                [ModData.Traits.Runesmith])
             .WithOnSheet(sheet =>
             {
                 // Treat martials as simple
@@ -578,17 +553,17 @@ public class ClassFeats
                         (Traits.Contains(Trait.Hammer) || Traits.Contains(Trait.Pick) || Traits.Contains(Trait.Knife)) && Traits.Contains(Trait.Advanced), Trait.Martial
                 );
             });
-        ModManager.AddFeat(SmithingWeaponsFamiliarity);
+        ModManager.AddFeat(smithingWeaponsFamiliarity);
         
         /////////////////////
         // 4th Level Feats //
         /////////////////////
-        ArtistsAttendance = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatArtistsAttendance", "Artist's Attendance"),
-            4,
-            "Your runes call you to better attend to your art.",
-            "{b}Frequency{/b} once per round\n\nStride twice. If you end your movement within reach of a creature that is bearing one of your runes, you can {tooltip:Runesmith.Action.TraceRune}Trace a Rune{/} upon any creature adjacent to you (even a different creature).\n\n"+new ModdedIllustration(Enums.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Playtest Ruling{/b} You can also be a rune-bearer within your reach, and your reach can be based on a weapon or unarmed attack with the Reach trait. The Trace target must still be adjacent.",
-            [Enums.Traits.Runesmith])
+        Feat artistsAttendance = new TrueFeat(
+                ModData.FeatNames.ArtistsAttendance,
+                4,
+                "Your runes call you to better attend to your art.",
+                "{b}Frequency{/b} once per round\n\nStride twice. If you end your movement within reach of a creature that is bearing one of your runes, you can {tooltip:Runesmith.Action.TraceRune}Trace a Rune{/} upon any creature adjacent to you (even a different creature).\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Playtest Ruling{/b} You can also be a rune-bearer within your reach, and your reach can be based on a weapon or unarmed attack with the Reach trait. The Trace target must still be adjacent.",
+                [ModData.Traits.Runesmith])
             .WithActionCost(2)
             .WithPermanentQEffect("Stride twice towards a rune-bearing creature, then Trace a Rune upon {b}any{/b} adjacent creature.",
             qfFeat =>
@@ -600,9 +575,9 @@ public class ClassFeats
 
                     CombatAction attendAction = new CombatAction(
                         qfThis.Owner,
-                        new SideBySideIllustration(IllustrationName.FleetStep, Enums.Illustrations.TraceRune),
+                        new SideBySideIllustration(IllustrationName.FleetStep, ModData.Illustrations.TraceRune),
                         "Artist's Attendance",
-                        [Enums.Traits.Runesmith, Trait.Basic],
+                        [ModData.Traits.Runesmith, Trait.Basic],
                         "{i}Your runes call you to better attend to your art.{/i}\n\n{b}Frequency{/b} once per round\n\nStride twice. If you end your movement within reach of a creature that is bearing one of your runes, you can Trace a Rune upon any creature adjacent to you (even a different creature).",
                         Target.Self())
                         .WithActionCost(2)
@@ -649,15 +624,15 @@ public class ClassFeats
                     return new ActionPossibility(attendAction, PossibilitySize.Full);
                 };
             });
-        ModManager.AddFeat(ArtistsAttendance);
+        ModManager.AddFeat(artistsAttendance);
         
         // TODO: item tooltip
-        GhostlyResonance = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatGhostlyResonance", "Ghostly Resonance"),
-            4,
-            "Your runes can not only draw power from the world of the spirits, but they can let even the most mundane objects harm spiritual beings as well.",
-            "Any ally, or any items your allies wield, which bears one of your divine or occult runes gains the benefits of a ghost touch rune for as long as they are bearing your rune.\n\n"+new ModdedIllustration(Enums.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Implementation{/b} Any rune which lacks a tradition trait (Arcane, Divine, Primal, or Occult) is considered Divine if you're trained in Religion, or Occult if you're trained in Occultism, or both.",
-            [Enums.Traits.Runesmith])
+        Feat ghostlyResonance = new TrueFeat(
+                ModData.FeatNames.GhostlyResonance,
+                4,
+                "Your runes can not only draw power from the world of the spirits, but they can let even the most mundane objects harm spiritual beings as well.",
+                "Any ally, or any items your allies wield, which bears one of your divine or occult runes gains the benefits of a ghost touch rune for as long as they are bearing your rune.\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Implementation{/b} Any rune which lacks a tradition trait (Arcane, Divine, Primal, or Occult) is considered Divine if you're trained in Religion, or Occult if you're trained in Occultism, or both.",
+                [ModData.Traits.Runesmith])
             .WithPermanentQEffect("Your divine and occult runes grant the benefits of a ghost touch rune to allied creatures or items.",
             qfFeat =>
             {
@@ -754,14 +729,14 @@ public class ClassFeats
                     }
                 );
             });
-        ModManager.AddFeat(GhostlyResonance);
+        ModManager.AddFeat(ghostlyResonance);
         
-        TerrifyingInvocation = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatTerrifyingInvocation", "Terrifying Invocation"),
-            4,
-            "You spit and roar as you pronounce your rune's terrible name.",
-            "You attempt to Demoralize a single target within range, and then {tooltip:Runesmith.Action.InvokeRune}Invoke one Rune{/} upon the target. You can Demoralize the target as long as they are within range of your invocation, and you don't take a penalty if the creature doesn't understand your language.",
-            [Enums.Traits.Invocation, Enums.Traits.Runesmith])
+        Feat terrifyingInvocation = new TrueFeat(
+                ModData.FeatNames.TerrifyingInvocation,
+                4,
+                "You spit and roar as you pronounce your rune's terrible name.",
+                "You attempt to Demoralize a single target within range, and then {tooltip:Runesmith.Action.InvokeRune}Invoke one Rune{/} upon the target. You can Demoralize the target as long as they are within range of your invocation, and you don't take a penalty if the creature doesn't understand your language.",
+                [ModData.Traits.Invocation, ModData.Traits.Runesmith])
             .WithActionCost(1)
             .WithPermanentQEffect("Demoralize a creature, then Invoke one Rune on them.", qfFeat =>
             {
@@ -770,9 +745,9 @@ public class ClassFeats
                     CombatAction scaryInvoke = new CombatAction(
                         qfThis.Owner,
                         new SideBySideIllustration(IllustrationName.Demoralize,
-                            Enums.Illustrations.InvokeRune),
+                            ModData.Illustrations.InvokeRune),
                         "Terrifying Invocation",
-                        [Enums.Traits.Invocation, Enums.Traits.Runesmith, Trait.Spell, Trait.Basic],
+                        [ModData.Traits.Invocation, ModData.Traits.Runesmith, Trait.Spell, Trait.Basic],
                         "{i}You spit and roar as you pronounce your rune’s terrible name.{/i}\n\n" +
                         "You attempt to Demoralize a single target within range, and then Invoke one Rune upon the target. You can Demoralize the target as long as they are within range of your invocation, and you don’t take a penalty if the creature doesn't understand your language.",
                         Target.RangedCreature(6)
@@ -802,14 +777,14 @@ public class ClassFeats
                     return new ActionPossibility(scaryInvoke, PossibilitySize.Full);
                 };
             });
-        ModManager.AddFeat(TerrifyingInvocation);
+        ModManager.AddFeat(terrifyingInvocation);
         
-        TransposeEtching = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatTransposeEtching", "Transpose Etching"),
-            4,
-            "With a pinching gesture, you pick up a word and move it elsewhere.",
-            "You move any one of your runes within 30 feet to a different target within 30 feet.\n\n"+new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString+" {b}Reminder{/b} Despite the name, this can be used on traced runes, not just etched ones.",
-            [Trait.Manipulate, Enums.Traits.Runesmith])
+        Feat transposeEtching = new TrueFeat(
+                ModData.FeatNames.TransposeEtching,
+                4,
+                "With a pinching gesture, you pick up a word and move it elsewhere.",
+                "You move any one of your runes within 30 feet to a different target within 30 feet.\n\n"+new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString+" {b}Reminder{/b} Despite the name, this can be used on traced runes, not just etched ones.",
+                [Trait.Manipulate, ModData.Traits.Runesmith])
             .WithActionCost(1)
             .WithPermanentQEffect("Move a rune from one target to another, both within 30 feet.", qfFeat =>
             {
@@ -818,9 +793,9 @@ public class ClassFeats
                 {
                     CombatAction transposeAction = new CombatAction(
                         qfThis.Owner,
-                        Enums.Illustrations.TransposeEtching,
+                        ModData.Illustrations.TransposeEtching,
                         "Transpose Etching",
-                        [Trait.Manipulate, Enums.Traits.Runesmith, Trait.Spell, Trait.Basic],
+                        [Trait.Manipulate, ModData.Traits.Runesmith, Trait.Spell, Trait.Basic],
                         "You move any one of your runes within 30 feet to a different target within 30 feet.",
                         Target.RangedCreature(6)
                             .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
@@ -829,7 +804,7 @@ public class ClassFeats
                                         Usability.Usable : Usability.NotUsableOnThisCreature("Doesn't bear one of your runes");
                             }))
                         .WithActionCost(1)
-                        .WithSoundEffect(Enums.SfxNames.TransposeEtchingStart)
+                        .WithSoundEffect(ModData.SfxNames.TransposeEtchingStart)
                         .WithEffectOnEachTarget(async (transposeAction, caster, transposeFrom, result) =>
                             {
                                 /*
@@ -844,7 +819,7 @@ public class ClassFeats
                                         caster,
                                         thisRune.Illustration!,
                                         "Transpose " + thisRune.Name,
-                                        [Trait.Manipulate, Enums.Traits.Runesmith, Trait.Basic, Trait.DoNotShowInCombatLog],
+                                        [Trait.Manipulate, ModData.Traits.Runesmith, Trait.Basic, Trait.DoNotShowInCombatLog],
                                         "You move any one of your runes within 30 feet to a different target within 30 feet.",
                                         Target.RangedCreature(6).WithAdditionalConditionOnTargetCreature( 
                                             (attacker, defender) =>
@@ -873,7 +848,7 @@ public class ClassFeats
                                                         // Call NewDrawnRune in case it prompts for a selection, such as if the rune applies to an item, so we can move this rune to that creature AND its item.
                                                         DrawnRune pretendNewRune = (await thisRune.NewDrawnRune!.Invoke(thisTransposeAction, caster, transposeTo, thisRune))!;
                                                         await runeQf.MoveRuneToTarget(transposeTo, pretendNewRune.DrawnOn);
-                                                        Sfxs.Play(Enums.SfxNames.TransposeEtchingEnd);
+                                                        Sfxs.Play(ModData.SfxNames.TransposeEtchingEnd);
 
                                                     })
                                                     .WithIllustration(thisRune.Illustration!);
@@ -938,18 +913,18 @@ public class ClassFeats
                     return new ActionPossibility(transposeAction, PossibilitySize.Half);
                 };
             });
-        ModManager.AddFeat(TransposeEtching);
+        ModManager.AddFeat(transposeEtching);
         
         /////////////////////
         // 6th Level Feats //
         /////////////////////
-        RunicReprisal = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatRunicReprisal", "Runic Reprisal"),
-            6,
-            "When you raise your shield, you bury a runic trap into it, to be set off by the clash of an enemy weapon.",
-            "When you use {tooltip:Runesmith.Feats.FortifyingKnock}Fortifying Knock {icon:Action}{/}, you can trace a damaging rune on your shield, even if it could not normally be applied to a shield. The traced rune doesn't have its normal effect, instead fading into your shield. If you Shield Block {icon:Reaction} with the shield against an adjacent target, you can {tooltip:Runesmith.Action.InvokeRune}Invoke the Rune{/} as part of the reaction, causing the rune to detonate outwards and apply its invocation effect to the attacking creature.",
-            [Enums.Traits.Invocation, Enums.Traits.Runesmith])
-            .WithPrerequisite(FortifyingKnock.FeatName, "Fortifying Knock")
+        Feat runicReprisal = new TrueFeat(
+                ModData.FeatNames.RunicReprisal,
+                6,
+                "When you raise your shield, you bury a runic trap into it, to be set off by the clash of an enemy weapon.",
+                "When you use {tooltip:Runesmith.Feats.FortifyingKnock}Fortifying Knock {icon:Action}{/}, you can trace a damaging rune on your shield, even if it could not normally be applied to a shield. The traced rune doesn't have its normal effect, instead fading into your shield. If you Shield Block {icon:Reaction} with the shield against an adjacent target, you can {tooltip:Runesmith.Action.InvokeRune}Invoke the Rune{/} as part of the reaction, causing the rune to detonate outwards and apply its invocation effect to the attacking creature.",
+                [ModData.Traits.Invocation, ModData.Traits.Runesmith])
+            .WithPrerequisite(ModData.FeatNames.FortifyingKnock, "Fortifying Knock")
             .WithPermanentQEffect("You can use Fortifying Knock with damaging runes. You invoke the rune on your attacker when you Shield Block.", qfFeat =>
             {
                 // This captures the RaisedShield qf to allow it to call its internal behavior, with
@@ -985,7 +960,7 @@ public class ClassFeats
                             {
                                 
                                 if (await defender.Battle.AskForConfirmation(defender,
-                                        reprisalDr.Illustration ?? Enums.Illustrations.InvokeRune,
+                                        reprisalDr.Illustration ?? ModData.Illustrations.InvokeRune,
                                         $"{{b}}Runic Reprisal{{/b}}\nYou just Shield Blocked. Invoke {{Blue}}{reprisalDr.Rune.Name}{{/Blue}} from your shield against {attacker.Name}?",
                                         "Invoke", "Pass"))
                                 {
@@ -1007,14 +982,14 @@ public class ClassFeats
                     }
                 };
             });
-        ModManager.AddFeat(RunicReprisal);
+        ModManager.AddFeat(runicReprisal);
         
-        TracingTrance = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatTracingTrance", "Tracing Trance"),
-            6,
-            "Your hands flow unbidden, tracing runes as if by purest instinct.",
-            "{b}Trigger{/b} Your turn begins.\n\nYou become quickened until the end of your turn and can use the extra action only to {tooltip:Runesmith.Action.TraceRune}Trace Runes{/}, including to supply {icon:Action} 1 action if using the {icon:TwoActions} 2-action version of Trace Rune. Absorbed in the act of creation, you can't use any {tooltip:Runesmith.Trait.Invocation}invocation{/} actions this turn.",
-            [Enums.Traits.Runesmith])
+        Feat tracingTrance = new TrueFeat(
+                ModData.FeatNames.TracingTrance,
+                6,
+                "Your hands flow unbidden, tracing runes as if by purest instinct.",
+                "{b}Trigger{/b} Your turn begins.\n\nYou become quickened until the end of your turn and can use the extra action only to {tooltip:Runesmith.Action.TraceRune}Trace Runes{/}, including to supply {icon:Action} 1 action if using the {icon:TwoActions} 2-action version of Trace Rune. Absorbed in the act of creation, you can't use any {tooltip:Runesmith.Trait.Invocation}invocation{/} actions this turn.",
+                [ModData.Traits.Runesmith])
             .WithActionCost(0)
             .WithPermanentQEffect("At the start of your turn, you can give up taking any invocation actions to become quickened 1 for that turn (only to Trace Runes).",
             qfFeat =>
@@ -1026,14 +1001,14 @@ public class ClassFeats
                         QEffect tranceEffect = QEffect.Quickened(action =>
                         {
                             // Code not shortened in case I need to expand the logic.
-                            if (action.HasTrait(Enums.Traits.Traced))
+                            if (action.HasTrait(ModData.Traits.Traced))
                                 return true;
                             return false;
                         });
                         tranceEffect.PreventTakingAction = action =>
                         {
                             // Code not shortened in case I need to expand the logic.
-                            if (action.HasTrait(Enums.Traits.Invocation))
+                            if (action.HasTrait(ModData.Traits.Invocation))
                                 return "(tracing trance) can't take invocation actions";
                             return null;
                         };
@@ -1048,21 +1023,21 @@ public class ClassFeats
                         else
                             caster.Actions.QuickenedForActions.Add(tranceEffect.QuickenedFor!);
                         CombatAction dummyTraceAction =
-                            CombatAction.CreateSimple(caster, "Dummy Trace Action", [Enums.Traits.Traced]);
+                            CombatAction.CreateSimple(caster, "Dummy Trace Action", [ModData.Traits.Traced]);
                         dummyTraceAction.UsedQuickenedAction = true;
                         caster.Actions.RevertExpendingOfResources(1, dummyTraceAction);
                         //caster.Actions.ResetToFull(); // <-- Has bug: Bypasses stunned and slowed (or at least acts as if taking a 2nd turn when generating actions)
                     }
                 };
             });
-        ModManager.AddFeat(TracingTrance);
+        ModManager.AddFeat(tracingTrance);
         
-        VitalCompositeInvocation = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatVitalCompositeInvocation", "Vital Composite Invocation"),
-            6,
-            "As you invoke runes from traditions that manipulate vital energy, you can release that energy to restore flesh.",
-            "{b}Frequency{/b} once per combat\n\nYou {tooltip:Runesmith.Action.InvokeRune}Invoke two Runes{/} of your choice on a single creature or on any items it's wielding; one must be a divine rune, and one must be a primal rune. In addition to the runes’ normal effects, the creature also regains Hit Points equal to your Intelligence modifier + double your level.\n\n"+new ModdedIllustration(Enums.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Implementation{/b} Any rune without a tradition trait (Arcane, Divine, Primal, or Occult) is considered Divine if you're trained in Religion, or Primal if you're trained in Nature, or both.",
-            [Trait.Healing, Enums.Traits.Invocation, Enums.Traits.Runesmith, Trait.Positive])
+        Feat vitalCompositeInvocation = new TrueFeat(
+                ModData.FeatNames.VitalCompositeInvocation,
+                6,
+                "As you invoke runes from traditions that manipulate vital energy, you can release that energy to restore flesh.",
+                "{b}Frequency{/b} once per combat\n\nYou {tooltip:Runesmith.Action.InvokeRune}Invoke two Runes{/} of your choice on a single creature or on any items it's wielding; one must be a divine rune, and one must be a primal rune. In addition to the runes’ normal effects, the creature also regains Hit Points equal to your Intelligence modifier + double your level.\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Implementation{/b} Any rune without a tradition trait (Arcane, Divine, Primal, or Occult) is considered Divine if you're trained in Religion, or Primal if you're trained in Nature, or both.",
+                [Trait.Healing, ModData.Traits.Invocation, ModData.Traits.Runesmith, Trait.Positive])
             .WithActionCost(2)
             .WithPermanentQEffect("You can invoke a divine and primal rune on an ally to also heal them.", qfFeat =>
             {
@@ -1075,7 +1050,7 @@ public class ClassFeats
                         qfThis.Owner,
                         new SideBySideIllustration(IllustrationName.Heal, IllustrationName.Bless),
                         "Vital Composite Invocation",
-                        [Trait.Healing, Enums.Traits.Invocation, Enums.Traits.Runesmith, Trait.Positive, Trait.Basic],
+                        [Trait.Healing, ModData.Traits.Invocation, ModData.Traits.Runesmith, Trait.Positive, Trait.Basic],
                         "{i}As you invoke runes from traditions that manipulate vital energy, you can release that energy to restore flesh.{/i}\n\n" + "{b}Frequency{/b} once per combat\n\nYou invoke two runes of your choice on a single creature or on any items it's wielding; one must be a divine rune, and one must be a primal rune. In addition to the runes’ normal effects, the creature also regains Hit Points equal to your Intelligence modifier + double your level.",
                         Target.RangedFriend(6)
                             .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
@@ -1172,7 +1147,7 @@ public class ClassFeats
                             
                             // Find the opposite invocation to do next
                             Rune? chosenRune = null;
-                            foreach (Rune rune in RunesmithClassRunes.AllRunes)
+                            foreach (Rune rune in RunesmithRunes.AllRunes)
                             {
                                 if (chosenOption.Text.Contains(rune.Name))
                                 {
@@ -1234,26 +1209,26 @@ public class ClassFeats
                     return new ActionPossibility(vci);
                 };
             });
-        ModManager.AddFeat(VitalCompositeInvocation);
+        ModManager.AddFeat(vitalCompositeInvocation);
         
-        WordsFlyFree = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatWordsFlyFree", "Words, Fly Free"),
-            6,
-            "Just because your runes are tattooed on your body doesn't mean they need to remain there.",
-            "{b}Requirements{/b} Your Runic Tattoo is not faded.\n\nYou fling your hand out, the rune from your {tooltip:Runesmith.Feats.RunicTattoo}Runic Tattoo{/} flowing down it and flying through the air in a crescent. You {tooltip:Runesmith.Action.TraceRune}Trace the Rune{/} onto all creatures or objects within a 15-foot cone that match the rune's usage requirement. The rune then returns to you, faded.",
-            [Trait.Manipulate, Enums.Traits.Runesmith])
+        Feat wordsFlyFree = new TrueFeat(
+                ModData.FeatNames.WordsFlyFree,
+                6,
+                "Just because your runes are tattooed on your body doesn't mean they need to remain there.",
+                "{b}Requirements{/b} Your Runic Tattoo is not faded.\n\nYou fling your hand out, the rune from your {tooltip:Runesmith.Feats.RunicTattoo}Runic Tattoo{/} flowing down it and flying through the air in a crescent. You {tooltip:Runesmith.Action.TraceRune}Trace the Rune{/} onto all creatures or objects within a 15-foot cone that match the rune's usage requirement. The rune then returns to you, faded.",
+                [Trait.Manipulate, ModData.Traits.Runesmith])
             .WithActionCost(1)
-            .WithPrerequisite(RunicTattoo.FeatName, "Runic Tattoo")
+            .WithPrerequisite(ModData.FeatNames.RunicTattoo, "Runic Tattoo")
             .WithPermanentQEffect("You can expend your Runic Tattoo by tracing it on all valid targets in a 15-foot cone.",
                 qfFeat =>
                 {
                     qfFeat.ProvideMainAction = qfThis =>
                     {
-                        if (qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains("RunicTattoo") || RunicTattoo.Subfeats == null)
+                        if (qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains("RunicTattoo") || runicTattoo.Subfeats == null)
                             return null;
                         
                         Feat? selectedTattoo = null;
-                        foreach (Feat ft in RunicTattoo.Subfeats.Where(ft => qfThis.Owner.HasFeat(ft.FeatName)))
+                        foreach (Feat ft in runicTattoo.Subfeats.Where(ft => qfThis.Owner.HasFeat(ft.FeatName)))
                             selectedTattoo = ft;
 
                         if (selectedTattoo is not { Tag: Rune tattooedRune })
@@ -1263,12 +1238,12 @@ public class ClassFeats
                             qfThis.Owner,
                             new SideBySideIllustration(selectedTattoo.Illustration ?? IllustrationName.Action, IllustrationName.SeekCone),
                             "Words, Fly Free",
-                            [Trait.Manipulate, Enums.Traits.Runesmith, Enums.Traits.Traced, Trait.Basic],
+                            [Trait.Manipulate, ModData.Traits.Runesmith, ModData.Traits.Traced, Trait.Basic],
                             "{i}Just because your runes are tattooed on your body doesn't mean they need to remain there.{/i}\n\n{b}Requirements{/b} Your Runic Tattoo is not faded.\n\nYou fling your hand out, the rune from your Runic Tattoo flowing down it and flying through the air in a crescent. You trace the rune onto all creatures or objects within a 15-foot cone that match the rune's usage requirement. The rune then returns to you, faded.",
                             Target.Cone(3))
                             .WithActionCost(1)
                             .WithProjectileCone(VfxStyle.BasicProjectileCone(selectedTattoo.Illustration ?? IllustrationName.Action))
-                            .WithSoundEffect(Enums.SfxNames.WordsFlyFree)
+                            .WithSoundEffect(ModData.SfxNames.WordsFlyFree)
                             .WithEffectOnEachTarget( async (thisAction, caster, target, result) =>
                             {
                                 await tattooedRune.DrawRuneOnTarget(thisAction, caster, target, false);
@@ -1290,17 +1265,17 @@ public class ClassFeats
                         return new ActionPossibility(flyFreeAction, PossibilitySize.Full);
                     };
                 });
-        ModManager.AddFeat(WordsFlyFree);
+        ModManager.AddFeat(wordsFlyFree);
         
         /////////////////////
         // 8th Level Feats //
         /////////////////////
-        DrawnInRed = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatDrawnInRed", "Drawn In Red"),
-            8,
-            "After striking the target, you run a brush or finger along your weapon to collect a bit of its blood.",
-            "{b}Requirements{/b} Your last action was a successful melee Strike that dealt physical damage.\n\nFor the encounter, when you {tooltip:Runesmith.Action.TraceRune}Trace a Rune{/} and the target is that creature, you can do so at a range of 60 feet as a single {icon:Action} action. Using Drawn in Red against a different creature ends the benefits against the previous creature.",
-            [Enums.Traits.Runesmith])
+        Feat drawnInRed = new TrueFeat(
+                ModData.FeatNames.DrawnInRed,
+                8,
+                "After striking the target, you run a brush or finger along your weapon to collect a bit of its blood.",
+                "{b}Requirements{/b} Your last action was a successful melee Strike that dealt physical damage.\n\nFor the encounter, when you {tooltip:Runesmith.Action.TraceRune}Trace a Rune{/} and the target is that creature, you can do so at a range of 60 feet as a single {icon:Action} action. Using Drawn in Red against a different creature ends the benefits against the previous creature.",
+                [ModData.Traits.Runesmith])
             .WithActionCost(0)
             .WithPermanentQEffect("After a successful physical melee strike, you can use the target's blood to Trace Runes up to 60 feet away as a single action.",
             qfFeat =>
@@ -1330,9 +1305,9 @@ public class ClassFeats
 
                     CombatAction drawnInRedAction = new CombatAction(
                         qfThis.Owner,
-                        Enums.Illustrations.DrawnInRed,
+                        ModData.Illustrations.DrawnInRed,
                         "Drawn In Red",
-                        [Enums.Traits.Runesmith, Trait.Basic],
+                        [ModData.Traits.Runesmith, Trait.Basic],
                         "{i}After striking the target, you run a brush or finger along your weapon to collect a bit of its blood.{/i}\n\n{b}Requirements{/b} Your last action was a successful melee Strike that dealt physical damage.\n\nFor the next minute, when you Trace a Rune and the target is that creature, you can do so at a range of 60 feet as a single action. Using Drawn in Red against a different creature ends the benefits against the previous creature.",
                         Target.Self())
                         .WithActionCost(0)
@@ -1365,7 +1340,7 @@ public class ClassFeats
                         return null;
 
                     Rune? foundRune = null;
-                    foreach (Rune rune in RunesmithClassRunes.AllRunes)
+                    foreach (Rune rune in RunesmithRunes.AllRunes)
                     {
                         if (section.Name == rune.Name)
                             foundRune = rune;
@@ -1389,7 +1364,7 @@ public class ClassFeats
                         ActionPossibility bloodPossibility = new ActionPossibility(bloodTrace)
                         {
                             Caption = "Drawn In Red",
-                            Illustration = new SideBySideIllustration(IllustrationName.Action, Enums.Illustrations.DrawnInRed),
+                            Illustration = new SideBySideIllustration(IllustrationName.Action, ModData.Illustrations.DrawnInRed),
                         };
                         return bloodPossibility;
                     }
@@ -1397,15 +1372,15 @@ public class ClassFeats
                     return null;
                 };
             });
-        ModManager.AddFeat(DrawnInRed);
+        ModManager.AddFeat(drawnInRed);
         
         // TODO: item tooltips
-        ElementalRevision = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatElementalRevision", "Elemental Revision"),
-            8,
-            "You can scratch out and rewrite part of an elemental rune to temporarily change the type of power it channels.",
-            "You touch an adjacent {i}corrosive{/i}, {i}flaming{/i}, {i}frost{/i}, {i}shock{/i}, or {i}thundering{/i} property rune on an item held by an ally, and you change it to any other property rune from that list. The revision lasts until the end of combat, before the property rune's original magic reasserts itself. When you do so, the ally wielding the item becomes immune to this ability until your next daily preparations.",
-            [Enums.Traits.Runesmith])
+        Feat elementalRevision = new TrueFeat(
+                ModData.FeatNames.ElementalRevision,
+                8,
+                "You can scratch out and rewrite part of an elemental rune to temporarily change the type of power it channels.",
+                "You touch an adjacent {i}corrosive{/i}, {i}flaming{/i}, {i}frost{/i}, {i}shock{/i}, or {i}thundering{/i} property rune on an item held by an ally, and you change it to any other property rune from that list. The revision lasts until the end of combat, before the property rune's original magic reasserts itself. When you do so, the ally wielding the item becomes immune to this ability until your next daily preparations.",
+                [ModData.Traits.Runesmith])
             .WithActionCost(1)
             .WithPermanentQEffect("Replace an ally's corrosive, flaming, frost, shock, or thundering rune. Once per day per ally.",
             qfFeat =>
@@ -1416,7 +1391,7 @@ public class ClassFeats
                         qfFeat.Owner,
                         IllustrationName.ResistEnergy,
                         "Elemental Revision",
-                        [Enums.Traits.Runesmith],
+                        [ModData.Traits.Runesmith],
                         "{i}You can scratch out and rewrite part of an elemental runestone to temporarily change the type of power it channels.{/i}\n\nYou touch an adjacent {Blue}corrosive{/Blue}, {Blue}flaming{/Blue}, {Blue}frost{/Blue}, {Blue}shock{/Blue}, or {Blue}thundering{/Blue} runestone on an item held by an ally, and you change it to any other runestone from that list. The revision lasts until the end of combat, before the runestone's original magic reasserts itself. You can only revise a runestone on an ally's item once per day.",
                         Target.RangedFriend(1) // Ranged 1 is used instead of adjacent in order to avoid an animation.
                             .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
@@ -1468,7 +1443,7 @@ public class ClassFeats
                                                     newItem.WithModificationRune(runestoneOption);
                                                     target.HeldItems[target.HeldItems.IndexOf(item)] = newItem;
                                                     target.PersistentUsedUpResources.UsedUpActions.Add("ElementalRevision");
-                                                    Sfxs.Play(Enums.SfxNames.ElementalRevision);
+                                                    Sfxs.Play(ModData.SfxNames.ElementalRevision);
                                                     await caster.FictitiousSingleTileMove(target.Occupies);
                                                     target.Occupies.Overhead(newItem.Name, Color.Black);
                                                     await caster.FictitiousSingleTileMove(caster.Occupies);
@@ -1510,18 +1485,18 @@ public class ClassFeats
                     return new ActionPossibility(revisionAction, PossibilitySize.Full);
                 };
             });
-        ModManager.AddFeat(ElementalRevision);
+        ModManager.AddFeat(elementalRevision);
         
-        ReadTheBones = new TrueFeat(
-            ModManager.RegisterFeatName("RunesmithPlaytest.FeatReadTheBones", "Read the Bones"),
-            8,
-            "Using ancient scripts, you carve a question into bone before casting it into fire, where it cracks.",
-            "You gain a permanent +1 status bonus to initiative rolls.",
-            [Enums.Traits.Runesmith])
+        Feat readTheBones = new TrueFeat(
+                ModData.FeatNames.ReadTheBones,
+                8,
+                "Using ancient scripts, you carve a question into bone before casting it into fire, where it cracks.",
+                "You gain a permanent +1 status bonus to initiative rolls.",
+                [ModData.Traits.Runesmith])
             .WithPermanentQEffect("You gain a +1 status bonus to initiative rolls.", qfFeat =>
             {
                 qfFeat.BonusToInitiative = qfThis => new Bonus(1, BonusType.Status, "Read The Bones");
             });
-        ModManager.AddFeat(ReadTheBones);
+        ModManager.AddFeat(readTheBones);
     }
 }

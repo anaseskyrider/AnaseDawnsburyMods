@@ -1,13 +1,8 @@
-using System.Drawing;
 using System.Text.RegularExpressions;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
-using Dawnsbury.Core.Animations;
 using Dawnsbury.Core.Animations.AuraAnimations;
-using Dawnsbury.Core.Animations.Movement;
-using Dawnsbury.Core.CharacterBuilder.Feats;
-using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
@@ -17,7 +12,6 @@ using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Intelligence;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
-using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
@@ -32,22 +26,10 @@ using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
 
-public class RunesmithClassRunes
+public static class RunesmithRunes
 {
-    public static List<Rune> AllRunes { get; } = new List<Rune>();
-    public static List<RuneFeat> AllRuneFeats { get; } = new List<RuneFeat>();
-    
-    // Rune Feats
-    public static Feat? RuneFeatAtryl;
-    public static Feat? RuneFeatEsvadir;
-    public static Feat? RuneFeatHoltrik;
-    public static Feat? RuneFeatMarssyl;
-    public static Feat? RuneFeatOljinex;
-    public static Feat? RuneFeatPluuna;
-    public static Feat? RuneFeatRanshu;
-    public static Feat? RuneFeatSunDiacritic;
-    public static Feat? RuneFeatUrDiacritic;
-    public static Feat? RuneFeatZohk;
+    public static List<Rune> AllRunes { get; } = [];
+    public static List<RuneFeat> AllRuneFeats { get; } = [];
     
     public static void LoadRunes()
     {
@@ -59,7 +41,7 @@ public class RunesmithClassRunes
         
         Rune runeAtryl = new Rune(
             "Atryl, Rune of Fire",
-            Enums.Traits.Atryl, 
+            ModData.Traits.Atryl, 
             IllustrationName.FlamingRunestone,
             1,
             "drawn on a creature or object",
@@ -91,7 +73,7 @@ public class RunesmithClassRunes
             {
                 return defender.EnemyOf(attacker) ? Usability.Usable : Usability.NotUsableOnThisCreature("not an enemy");
             }),
-            NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
+            NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
             {
                 int resistReductionAmount = 6 + (caster!=null ? ((caster.Level-thisRune.BaseLevel) / 2) : 0);
                 DrawnRune atrylPassive = new DrawnRune(thisRune, thisRune.Name, "Fire resistance reduced by " + resistReductionAmount + ".")
@@ -118,15 +100,16 @@ public class RunesmithClassRunes
                 };
                 return atrylPassive;
             },
-            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target, DrawnRune invokedRune) =>
+            InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
             {
                 if (!thisRune.IsImmuneToThisInvocation(target))
                 {
                     int roundHalfLevel = ((caster.Level - 1) / 2);
                     int damageAmount = 2 + roundHalfLevel * 2;
-                    CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude, RunesmithPlaytest.RunesmithDC(caster));
+                    CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude, RunesmithClass.RunesmithDC(caster));
                     await CommonSpellEffects.DealBasicDamage(sourceAction, caster, target, result,
                         damageAmount + "d6", DamageKind.Fire);
+                    Sfxs.Play(ModData.SfxNames.InvokedAtryl);
                     if (result == CheckResult.CriticalFailure)
                     {
                         target.AddQEffect(QEffect.Dazzled().WithExpirationOneRoundOrRestOfTheEncounter(caster, false));
@@ -140,12 +123,12 @@ public class RunesmithClassRunes
         .WithDetrimentalPassiveTechnical()
         .WithDamagingInvocationTechnical()
         .WithFortitudeSaveInvocationTechnical();
-        RuneFeatAtryl = CreateAndAddRuneFeat("RunesmithPlaytest.RuneAtryl", runeAtryl);
+        AddRuneAsRuneFeat("RunesmithPlaytest.RuneAtryl", runeAtryl);
         
         // BUG: Add ignores concealment to the invocation... or should I?
         Rune runeEsvadir = new Rune(
             "Esvadir, Rune of Whetstones",
-            Enums.Traits.Esvadir,
+            ModData.Traits.Esvadir,
             IllustrationName.WoundingRunestone,
             1,
             "drawn on a piercing or slashing weapon or unarmed Strike", 
@@ -264,9 +247,9 @@ public class RunesmithClassRunes
                     {
                         DrawnRune? esvadirPassive = MakeEsvadirPassive(validItem);
                         // Determine the way the rune is being applied.
-                        if (sourceAction.HasTrait(Enums.Traits.Etched))
+                        if (sourceAction.HasTrait(ModData.Traits.Etched))
                             esvadirPassive = esvadirPassive.WithIsEtched();
-                        else if (sourceAction.HasTrait(Enums.Traits.Traced))
+                        else if (sourceAction.HasTrait(ModData.Traits.Traced))
                             esvadirPassive = esvadirPassive.WithIsTraced();
         
                         target.AddQEffect(esvadirPassive);
@@ -306,8 +289,8 @@ public class RunesmithClassRunes
                     }))
                         .WithActionCost(0)
                         .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
-                        .WithSoundEffect(Enums.SfxNames.InvokedEsvadir)
-                        .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithPlaytest.RunesmithDC(caster)))
+                        .WithSoundEffect(ModData.SfxNames.InvokedEsvadir)
+                        .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
                         .WithEffectOnEachTarget(async (selfAction, caster, target, result) =>
                         {
                             if (!thisRune.IsImmuneToThisInvocation(target))
@@ -337,11 +320,11 @@ public class RunesmithClassRunes
         }
         .WithDamagingInvocationTechnical()
         .WithFortitudeSaveInvocationTechnical();
-        RuneFeatEsvadir = CreateAndAddRuneFeat("RunesmithPlaytest.RuneEsvadir", runeEsvadir);
+        AddRuneAsRuneFeat("RunesmithPlaytest.RuneEsvadir", runeEsvadir);
 
         Rune runeHoltrik = new Rune(
             "Holtrik, Rune of Dwarven Ramparts",
-            Enums.Traits.Holtrik,
+            ModData.Traits.Holtrik,
             IllustrationName.ArmorPotencyRunestone,
             1,
             "drawn on a shield",
@@ -389,7 +372,7 @@ public class RunesmithClassRunes
                             
                             // If not the first of multiple duplicate effects,
                             if (qfSelf != qfSelf.Owner.QEffects.First(qf =>
-                                    qf is DrawnRune dr && dr.Rune.RuneId == Enums.Traits.Holtrik))
+                                    qf is DrawnRune dr && dr.Rune.RuneId == ModData.Traits.Holtrik))
                                 return null; // no bonus.
 
                             return new Bonus(1, BonusType.Untyped, "Holtrik (raised shield)");
@@ -414,9 +397,9 @@ public class RunesmithClassRunes
                             {
                                 DrawnRune? holtrikPassive = MakeHoltrikPassive(validItem);
                                 // Determine the way the rune is being applied.
-                                if (sourceAction.HasTrait(Enums.Traits.Etched))
+                                if (sourceAction.HasTrait(ModData.Traits.Etched))
                                     holtrikPassive = holtrikPassive.WithIsEtched();
-                                else if (sourceAction.HasTrait(Enums.Traits.Traced))
+                                else if (sourceAction.HasTrait(ModData.Traits.Traced))
                                     holtrikPassive = holtrikPassive.WithIsTraced();
         
                                 target.AddQEffect(holtrikPassive);
@@ -485,12 +468,12 @@ public class RunesmithClassRunes
             },
         }
         .WithDrawnOnShieldTechnical();
-        RuneFeatHoltrik = CreateAndAddRuneFeat("RunesmithPlaytest.RuneHoltrik", runeHoltrik);
+        AddRuneAsRuneFeat("RunesmithPlaytest.RuneHoltrik", runeHoltrik);
         
         // BUG: Gunslinger's Fakeout triggers splash damage.
         Rune runeMarssyl = new Rune(
             "Marssyl, Rune of Impact",
-            Enums.Traits.Marssyl, 
+            ModData.Traits.Marssyl, 
             IllustrationName.ThunderingRunestone,
             1,
             "drawn on a bludgeoning weapon or unarmed Strike",
@@ -550,7 +533,7 @@ public class RunesmithClassRunes
                             
                             // Fail to splash if not the first of multiple duplicate effects
                             if (qfSelf != qfSelf.Owner.QEffects.First(qf =>
-                                    qf is DrawnRune dr && dr.Rune.RuneId == Enums.Traits.Marssyl))
+                                    qf is DrawnRune dr && dr.Rune.RuneId == ModData.Traits.Marssyl))
                                 return;
                             
                             // Determine weapon damage dice count
@@ -603,12 +586,15 @@ public class RunesmithClassRunes
                     {
                         DrawnRune? marssylPassive = MakeMarssylPassive(validItem);
                         // Determine the way the rune is being applied.
-                        if (sourceAction.HasTrait(Enums.Traits.Etched))
-                            marssylPassive = marssylPassive.WithIsEtched();
-                        else if (sourceAction.HasTrait(Enums.Traits.Traced))
-                            marssylPassive = marssylPassive.WithIsTraced();
-        
-                        target.AddQEffect(marssylPassive);
+                        if (marssylPassive != null)
+                        {
+                            if (sourceAction.HasTrait(ModData.Traits.Etched))
+                                marssylPassive = marssylPassive.WithIsEtched();
+                            else if (sourceAction.HasTrait(ModData.Traits.Traced))
+                                marssylPassive = marssylPassive.WithIsTraced();
+
+                            target.AddQEffect(marssylPassive);
+                        }
                     }
 
                     return new DrawnRune(thisRune); // Return an ephemeral DrawnRune since we just applied this to a whole batch of items.
@@ -654,10 +640,11 @@ public class RunesmithClassRunes
                             action.Owner.RemoveAllQEffects(qfToRemove => qfToRemove == qfSelf);
                             CheckResult result = CommonSpellEffects.RollSavingThrow(action.ChosenTargets.ChosenCreature,
                                 CombatAction.CreateSimple(action.Owner, $"Invoked {thisRune.Name}"), Defense.Fortitude,
-                                RunesmithPlaytest.RunesmithDC(action.Owner));
+                                RunesmithClass.RunesmithDC(action.Owner));
                             int tilePush = result <= CheckResult.Failure
                                 ? (result == CheckResult.CriticalFailure ? 4 : 2)
                                 : 0;
+                            Sfxs.Play(ModData.SfxNames.InvokedMarssylShove);
                             await action.Owner.PushCreature(action.ChosenTargets.ChosenCreature, tilePush);
                         }
                     };
@@ -669,18 +656,18 @@ public class RunesmithClassRunes
                 thisRune.ApplyImmunity(target);
             },
         };
-        RuneFeatMarssyl = CreateAndAddRuneFeat("RunesmithPlaytest.RuneMarssyl", runeMarssyl);
+        AddRuneAsRuneFeat("RunesmithPlaytest.RuneMarssyl", runeMarssyl);
 
         Rune runeOljinex = new Rune(
             "Oljinex, Rune of Cowards' Bane",
-            Enums.Traits.Oljinex,
+            ModData.Traits.Oljinex,
             IllustrationName.FearsomeRunestone,
             1,
             "drawn on a shield",
             "This rune resembles a broken arrow.",
             "While the shield is raised, it also grants the bearer a +1 status bonus to AC against physical ranged attacks. {i}(NYI: doesn't check for damage types, works against any ranged attack.){/i}",
             "(illusion, mental, visual) The rune creates an illusion in the minds of all creatures adjacent to the rune-bearer that lasts for 1 round. The illusion is of a impeding terrain. Creatures affected by this invocation must succeed at a DC 5 flat check when they take a move action or else it's lost. The DC is 11 instead if they attempt to move further away from the rune-bearer. This lasts for 1 round or until they disbelieve the illusion by using a Seek action against your class DC.",
-            additionalTraits: [Trait.Occult, Enums.Traits.Rune])
+            additionalTraits: [Trait.Occult, ModData.Traits.Rune])
         {
             UsageCondition = (attacker, defender) =>
             {
@@ -736,9 +723,9 @@ public class RunesmithClassRunes
                             {
                                 DrawnRune? oljinexPassive = MakeOljinexPassive(validItem);
                                 // Determine the way the rune is being applied.
-                                if (sourceAction.HasTrait(Enums.Traits.Etched))
+                                if (sourceAction.HasTrait(ModData.Traits.Etched))
                                     oljinexPassive = oljinexPassive.WithIsEtched();
-                                else if (sourceAction.HasTrait(Enums.Traits.Traced))
+                                else if (sourceAction.HasTrait(ModData.Traits.Traced))
                                     oljinexPassive = oljinexPassive.WithIsTraced();
         
                                 target.AddQEffect(oljinexPassive);
@@ -764,6 +751,8 @@ public class RunesmithClassRunes
                 {
                     if (cr.IsImmuneTo(Trait.Illusion) || cr.IsImmuneTo(Trait.Mental) || cr.IsImmuneTo(Trait.Visual))
                         continue;
+
+                    Sfxs.Play(ModData.SfxNames.InvokedOljinex);
                     
                     QEffect invokedOljinex = invokedRune.NewInvocationEffect(
                         "INCOMPLETE TEXT. COMPLAIN AT ANASE IF YOU SEE THIS TEXT!",
@@ -972,7 +961,7 @@ public class RunesmithClassRunes
                                     (cr, ai) => int.MinValue)) // TODO: encourage the action?
                             .WithActiveRollSpecification(new ActiveRollSpecification(
                                 Checks.Perception(),
-                                (action, attacker, defender) => new CalculatedNumber(RunesmithPlaytest.RunesmithDC(defender!), "Class DC", [])))
+                                (action, attacker, defender) => new CalculatedNumber(RunesmithClass.RunesmithDC(defender!), "Class DC", [])))
                             .WithActionId(ActionId.Seek)
                             .WithActionCost(1)
                             .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
@@ -991,11 +980,11 @@ public class RunesmithClassRunes
             },
         }
         .WithDrawnOnShieldTechnical();
-        RuneFeatOljinex = CreateAndAddRuneFeat("RunesmithPlaytest.RuneOljinex", runeOljinex);
+        AddRuneAsRuneFeat("RunesmithPlaytest.RuneOljinex", runeOljinex);
 
         Rune runePluuna = new Rune(
             "Pluuna, Rune of Illumination",
-            Enums.Traits.Pluuna,
+            ModData.Traits.Pluuna,
             IllustrationName.HolyRunestone,
             1,
             "drawn on a creature", // or armor
@@ -1056,8 +1045,8 @@ public class RunesmithClassRunes
                     Target.Emanation((int)emanationSize))
                         .WithActionCost(0)
                         .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
-                        .WithSoundEffect(Enums.SfxNames.InvokedPluuna)
-                        .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithPlaytest.RunesmithDC(caster)))
+                        .WithSoundEffect(ModData.SfxNames.InvokedPluuna)
+                        .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
                         .WithNoSaveFor((thisAction, cr) => thisRune.IsImmuneToThisInvocation(cr))
                         .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
                         {
@@ -1102,11 +1091,11 @@ public class RunesmithClassRunes
             },
         }
         .WithFortitudeSaveInvocationTechnical();
-        RuneFeatPluuna = CreateAndAddRuneFeat("RunesmithPlaytest.RunePluuna", runePluuna);
+        AddRuneAsRuneFeat("RunesmithPlaytest.RunePluuna", runePluuna);
 
         Rune runeRanshu = new Rune(
             "Ranshu, Rune of Thunder",
-            Enums.Traits.Ranshu,
+            ModData.Traits.Ranshu,
             IllustrationName.ShockRunestone,
             1,
             "drawn on a creature", // or object
@@ -1117,7 +1106,7 @@ public class RunesmithClassRunes
             [Trait.Electricity, Trait.Primal])
         {
             LevelFormat = "+2",
-            PassiveTextWithHeightening = (Rune thisRune, int charLevel) =>
+            PassiveTextWithHeightening = (thisRune, charLevel) =>
             {
                 int bonusDamage = (charLevel - thisRune.BaseLevel) / 2;
                 string damage = "1d4" + 
@@ -1126,7 +1115,7 @@ public class RunesmithClassRunes
                                     null);
                 return $"If the bearer does not take a move action at least once on its turn, lightning finds it at the end of its turn, dealing {damage} electricity damage.";
             },
-            InvocationTextWithHeightening = (Rune thisRune, int charLevel) =>
+            InvocationTextWithHeightening = (thisRune, charLevel) =>
             {
                 int numDice = 2 + (int)Math.Floor((charLevel - thisRune.BaseLevel) / 2d)*2;
                 string heightenedVar = S.HeightenedVariable(numDice, 2);
@@ -1134,11 +1123,11 @@ public class RunesmithClassRunes
                 return
                     $"The preliminary streaks of lightning braid together into a powerful bolt. The rune-bearer takes {heightenedVar}d6 electricity damage, with a basic Fortitude save.";
             },
-            UsageCondition = ((attacker, defender) =>
+            UsageCondition = (attacker, defender) =>
             {
                 return defender.EnemyOf(attacker) ? Usability.Usable : Usability.NotUsableOnThisCreature("not an enemy");
-            }),
-            NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
+            },
+            NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
             {
                 int bonusDamage = ((caster?.Level ?? 1) - thisRune.BaseLevel) / 2;
                 DiceFormula immobilityDamage = DiceFormula.FromText($"1d4+{bonusDamage}");
@@ -1160,20 +1149,22 @@ public class RunesmithClassRunes
                         if (qfThis.UsedThisTurn == true) // If you have moved this turn,
                             return; // don't take any damage.
                         await CommonSpellEffects.DealDirectDamage(null, immobilityDamage, self,  CheckResult.Failure, DamageKind.Electricity);
+                        Sfxs.Play(ModData.SfxNames.PassiveRanshu);
                     },
                 };
                 return ranshuPassive;
             },
-            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target, DrawnRune invokedRune) =>
+            InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
             {
                 if (!thisRune.IsImmuneToThisInvocation(target))
                 {
                     int numDice = 2 + (int)Math.Floor((caster.Level - thisRune.BaseLevel) / 2d)*2;
                     DiceFormula invocationDamage = DiceFormula.FromText($"{numDice}d6");
                     CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude,
-                        RunesmithPlaytest.RunesmithDC(caster));
+                        RunesmithClass.RunesmithDC(caster));
                     await CommonSpellEffects.DealBasicDamage(sourceAction, caster, target, result,
                         invocationDamage, DamageKind.Electricity);
+                    Sfxs.Play(ModData.SfxNames.InvokedRanshu);
                 }
                 
                 thisRune.RemoveDrawnRune(invokedRune);
@@ -1183,17 +1174,17 @@ public class RunesmithClassRunes
         .WithDetrimentalPassiveTechnical()
         .WithDamagingInvocationTechnical()
         .WithFortitudeSaveInvocationTechnical();
-        RuneFeatRanshu = CreateAndAddRuneFeat("RunesmithPlaytest.RuneRanshu", runeRanshu);
+        AddRuneAsRuneFeat("RunesmithPlaytest.RuneRanshu", runeRanshu);
 
         Rune runeSunDiacritic = new Rune(
             "Sun-, Diacritic Rune of Preservation",
-            Enums.Traits.SunDiacritic,
+            ModData.Traits.SunDiacritic,
             IllustrationName.DisruptingRunestone,
             1,
             "drawn on a rune",
             "This spiraling diacritic channels the magic of a rune outwards, then back to the same location, allowing a rune to reconstitute itself.",
             "After the base rune is invoked, the rune automatically Traces itself back upon the same target.\n\n{b}Special{/b} You can have only one copy of {i}sun-, diacritic rune of preservation{/i} applied at a given time, and once you invoke it, you cannot Etch or Trace it again this combat.",
-            additionalTraits: [Enums.Traits.Diacritic])
+            additionalTraits: [ModData.Traits.Diacritic])
             {
                 UsageCondition = (attacker, defender) =>
                 {
@@ -1210,7 +1201,7 @@ public class RunesmithClassRunes
                 {
                     // Only one instance allowed when drawn
                     foreach (Creature cr in caster.Battle.AllCreatures)
-                        cr.RemoveAllQEffects(qf => qf.Traits.Contains(Enums.Traits.SunDiacritic));
+                        cr.RemoveAllQEffects(qf => qf.Traits.Contains(ModData.Traits.SunDiacritic));
 
                     DrawnRune CreateSunPassive(DrawnRune targetRune)
                     {
@@ -1230,8 +1221,10 @@ public class RunesmithClassRunes
                                     CombatAction sunRedraw = CombatAction.CreateSimple(
                                         drInvoked.Source!,
                                         "Sun, Diacritic Rune of Preservation",
-                                        [Enums.Traits.Traced]); // <- Even if it WAS etched before, it's now traced.
-                                    await drInvoked.Rune.DrawRuneOnTarget(sunRedraw, thisDr.Source!, drInvoked.Owner, false);
+                                        [ModData.Traits.Traced]); // <- Even if it WAS etched before, it's now traced.
+                                    if (await drInvoked.Rune.DrawRuneOnTarget(sunRedraw, thisDr.Source!,
+                                            drInvoked.Owner, false) != null)
+                                        Sfxs.Play(ModData.SfxNames.InvokedSun);
                                     thisDr.Source!.PersistentUsedUpResources.UsedUpActions.Add("SunDiacritic");
                                 },
                             }
@@ -1255,9 +1248,9 @@ public class RunesmithClassRunes
                         {
                             DrawnRune? sunPassive = CreateSunPassive(validRune);
                             // Determine the way the rune is being applied.
-                            if (sourceAction.HasTrait(Enums.Traits.Etched))
+                            if (sourceAction.HasTrait(ModData.Traits.Etched))
                                 sunPassive = sunPassive.WithIsEtched();
-                            else if (sourceAction.HasTrait(Enums.Traits.Traced))
+                            else if (sourceAction.HasTrait(ModData.Traits.Traced))
                                 sunPassive = sunPassive.WithIsTraced();
         
                             target.AddQEffect(sunPassive);
@@ -1280,12 +1273,12 @@ public class RunesmithClassRunes
                 }
             }
             .WithDrawnOnRuneTechnical();
-        RuneFeatSunDiacritic = CreateAndAddRuneFeat("RunesmithPlaytest.RuneSunDiacritic", runeSunDiacritic);
+        AddRuneAsRuneFeat("RunesmithPlaytest.RuneSunDiacritic", runeSunDiacritic);
 
         // TODO: Make final decision on whether this buffs Marssyl's invocation.
         Rune runeUrDiacritic = new Rune(
             "Ur-, Diacritic Rune of Intensity",
-            Enums.Traits.UrDiacritic,
+            ModData.Traits.UrDiacritic,
             IllustrationName.DemolishingRunestone,
             1,
             "drawn on a rune",
@@ -1328,7 +1321,7 @@ public class RunesmithClassRunes
                                         if (thisDr.Disabled)
                                             return null;
 
-                                        if (!action.HasTrait(Enums.Traits.Invocation)
+                                        if (!action.HasTrait(ModData.Traits.Invocation)
                                             || action.Tag is not Rune
                                             || drInvoked != thisDr.DrawnOn)
                                             return null;
@@ -1359,9 +1352,9 @@ public class RunesmithClassRunes
                         {
                             DrawnRune? urPassive = CreateUrPassive(validRune);
                             // Determine the way the rune is being applied.
-                            if (sourceAction.HasTrait(Enums.Traits.Etched))
+                            if (sourceAction.HasTrait(ModData.Traits.Etched))
                                 urPassive = urPassive.WithIsEtched();
-                            else if (sourceAction.HasTrait(Enums.Traits.Traced))
+                            else if (sourceAction.HasTrait(ModData.Traits.Traced))
                                 urPassive = urPassive.WithIsTraced();
         
                             target.AddQEffect(urPassive);
@@ -1384,7 +1377,7 @@ public class RunesmithClassRunes
                 }
             }
             .WithDrawnOnRuneTechnical();
-        RuneFeatUrDiacritic = CreateAndAddRuneFeat("RunesmithPlaytest.RuneUrDiacritic", runeUrDiacritic);
+        AddRuneAsRuneFeat("RunesmithPlaytest.RuneUrDiacritic", runeUrDiacritic);
 
         // Last possible minute, I thought of a somewhat-accurate implementation, MAYBE for a future update?
         // At the start of the bearer's turn, get the distance to the caster.
@@ -1393,7 +1386,7 @@ public class RunesmithClassRunes
         // The exact nature of how you're supposed to apply Zohk's bonus is a little unclear to me from the original wording anyway.
         Rune runeZohk = new Rune(
             "Zohk, Rune of Homecoming",
-            Enums.Traits.Zohk,
+            ModData.Traits.Zohk,
             IllustrationName.ReturningRunestone,
             1,
             "drawn on a creature",
@@ -1463,7 +1456,7 @@ public class RunesmithClassRunes
                                 });
                                 
                                 Creature runeCaster = qfThis.Source!;
-                                if (!await RunesmithPlaytest.StrideCloserToEnemyAsync(qfThis.Owner, runeCaster, $"Stride closer to {runeCaster.Name} or right-click to cancel."))
+                                if (!await RunesmithClass.StrideCloserToEnemyAsync(qfThis.Owner, runeCaster, $"Stride closer to {runeCaster.Name} or right-click to cancel."))
                                 {
                                     thisAction.RevertRequested = true;
                                 }
@@ -1482,7 +1475,7 @@ public class RunesmithClassRunes
                     CheckResult result = CheckResult.Failure;
                     if (!target.FriendOf(caster))
                     {
-                        result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Will, RunesmithPlaytest.RunesmithDC(caster));
+                        result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Will, RunesmithClass.RunesmithDC(caster));
                     }
 
                     if (result <= CheckResult.Failure)
@@ -1512,7 +1505,7 @@ public class RunesmithClassRunes
                             if (selectedOption is TileOption selectedTile)
                             {
                                 await CommonSpellEffects.Teleport(target, selectedTile.Tile);
-                                Sfxs.Play(Enums.SfxNames.InvokedZohk);
+                                Sfxs.Play(ModData.SfxNames.InvokedZohk);
                             }
                         }
                     }
@@ -1523,22 +1516,20 @@ public class RunesmithClassRunes
             }
         }
         .WithWillSaveInvocationTechnical();
-        RuneFeatZohk = CreateAndAddRuneFeat("RunesmithPlaytest.RuneZohk", runeZohk);
+        AddRuneAsRuneFeat("RunesmithPlaytest.RuneZohk", runeZohk);
     }
 
     /// <summary>
-    /// Creates a new <see cref="RuneFeat"/> from a given instance of a <see cref="Rune"/>, adds it to <see cref="RunesmithClassRunes.AllRunes"/>, adds it to <see cref="RunesmithClassRunes.AllRuneFeats"/>, then adds it to the ModManager.
+    /// Creates a new <see cref="RuneFeat"/> from a given instance of a <see cref="Rune"/>, adds it to <see cref="RunesmithRunes.AllRunes"/>, adds it to <see cref="RunesmithRunes.AllRuneFeats"/>, then adds it to the ModManager.
     /// </summary>
     /// <param name="technicalName">The technical name to be passed into <see cref="ModManager.RegisterFeatName"/>.</param>
     /// <param name="rune">The <see cref="Rune"/> to create a RuneFeat for.</param>
     /// <returns>(<see cref="RuneFeat"/>) The feat associated with the Rune.</returns>
-    public static RuneFeat CreateAndAddRuneFeat(
+    public static RuneFeat AddRuneAsRuneFeat(
         string technicalName,
         Rune rune)
     {
-        RuneFeat runeFeat = new RuneFeat(
-            ModManager.RegisterFeatName(technicalName, rune.Name),
-            rune);
+        RuneFeat runeFeat = RuneFeat.CreateRuneFeatFromRune(technicalName, rune);
         if (!AllRunes.Contains(rune))
             AllRunes.Add(rune);
         AllRuneFeats.Add(runeFeat);
