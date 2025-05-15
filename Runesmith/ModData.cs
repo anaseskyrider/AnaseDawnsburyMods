@@ -1,6 +1,7 @@
 using Dawnsbury.Audio;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
@@ -169,7 +170,8 @@ public static class ModData
     
     public static class QEffectIds
     {
-        // public static readonly QEffectId PreparedToAid = ModManager.RegisterEnumMember<QEffectId>("Prepared to Aid");
+        public static readonly QEffectId RuneSinger = ModManager.RegisterEnumMember<QEffectId>("Rune-Singer");
+        public static readonly QEffectId RuneSingerCreator = ModManager.RegisterEnumMember<QEffectId>("RuneSingerCreator");
     }
 
     public static class ActionIds
@@ -209,8 +211,7 @@ public static class ModData
     
     public static class PossibilitySectionIds
     {
-        // public static readonly PossibilitySectionId AidSkills = ModManager.RegisterEnumMember<PossibilitySectionId>("AidSkills");
-        // public static readonly PossibilitySectionId AidAttacks = ModManager.RegisterEnumMember<PossibilitySectionId>("AidAttacks");
+        public static readonly PossibilitySectionId RuneSinger = ModManager.RegisterEnumMember<PossibilitySectionId>("RuneSinger");
     }
 
     public static class SfxNames
@@ -228,6 +229,8 @@ public static class ModData
         public const SfxName InvokedRanshu = SfxName.ElectricArc;
         public const SfxName InvokedSun = SfxName.AuraExpansion;
         public const SfxName InvokedZohk = SfxName.PhaseBolt;
+        public const SfxName ToggleRuneSinger = SfxName.OminousActivation; //SfxName.AuraExpansion;
+        public const SfxName SingRune = SfxName.Choir;
         public const SfxName TransposeEtchingStart = SfxName.OminousActivation;
         public const SfxName TransposeEtchingEnd = SfxName.GaleBlast;
         public const SfxName WordsFlyFree = SfxName.AncientDust; // Could be linked to Trace Rune but doesn't have to be.

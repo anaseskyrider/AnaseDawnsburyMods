@@ -53,10 +53,29 @@ public static class RunesmithClass
                         return null;
                     foreach (Rune rune in repertoire.GetRunesKnown(qfThis.Owner))
                     {
-                        CombatAction oneActionTraceRune = rune.CreateTraceAction(qfThis.Owner, 1);
-                        oneActionTraceRune.ContextMenuName = "{icon:Action} " + oneActionTraceRune.Name;
+                        List<Possibility> specificRunePossibilities = [];
+                        
+                        // Don't make the 1-action version if you have RuneSinger.
+                        bool hasRuneSinger = qfThis.Owner.HasEffect(ModData.QEffectIds.RuneSinger);
+                        if (!hasRuneSinger)
+                        {
+                            CombatAction oneActionTraceRune = rune.CreateTraceAction(qfThis.Owner, 1);
+                            oneActionTraceRune.ContextMenuName = "{icon:Action} " + oneActionTraceRune.Name;
+                            ActionPossibility traceRunePossibility1 = new ActionPossibility(oneActionTraceRune)
+                                { Caption = "Touch", Illustration = IllustrationName.Action };
+                            specificRunePossibilities.Add(traceRunePossibility1);
+                        }
+                        
                         CombatAction twoActionTraceRune = rune.CreateTraceAction(qfThis.Owner, 2);
-                        twoActionTraceRune.ContextMenuName = "{icon:TwoActions} " + oneActionTraceRune.Name;
+                        twoActionTraceRune.ContextMenuName = RulesBlock.GetIconTextFromNumberOfActions(twoActionTraceRune.ActionCost) + " " + twoActionTraceRune.Name;
+                        ActionPossibility traceRunePossibility2 = new ActionPossibility(twoActionTraceRune)
+                        {
+                            Caption = "30 feet",
+                            Illustration = hasRuneSinger
+                                ? new SideBySideIllustration(IllustrationName.Action, ModData.Illustrations.RuneSinger)
+                                : IllustrationName.TwoActions
+                        };
+                        specificRunePossibilities.Add(traceRunePossibility2);
                         // Disabled. Affects the UI menu buttons, when I wanted it to only affect the context menu.
                         /*(twoActionTraceRune.Target as CreatureTarget)!.WithAdditionalConditionOnTargetCreature((attacker, defender) =>
                         attacker.IsAdjacentTo(defender) ? Usability.NotUsableOnThisCreature("QOL: use 1-action variant instead") : Usability.Usable);*/
@@ -71,10 +90,7 @@ public static class RunesmithClass
                             {
                                 new PossibilitySection(rune.Name) // rune.Name is how features like Drawn In Red find these sections.
                                 {
-                                    Possibilities = [
-                                        new ActionPossibility(oneActionTraceRune) { Caption = "Touch", Illustration = IllustrationName.Action },
-                                        new ActionPossibility(twoActionTraceRune) { Caption = "30 feet", Illustration = IllustrationName.TwoActions }
-                                    ]
+                                    Possibilities = specificRunePossibilities,
                                 }
                             }
                         };
@@ -714,6 +730,13 @@ public static class RunesmithClass
         return runesmith.PersistentCharacterSheet?.Class != null
             ? runesmith.Proficiencies.Get([ModData.Traits.Runesmith]).ToNumber(runesmith.Level) + runesmith.Abilities.Intelligence + 10
             : Checks.DetermineClassProficiencyFromMonsterLevel(runesmith.Level).ToNumber(runesmith.Level) + runesmith.Abilities.GetTop() + 10;
+    }
+
+    public static bool IsRunesmithHandFree(Creature runesmith)
+    {
+        return runesmith.HasFreeHand
+               || runesmith.HeldItems.Any(item => item.HasTrait(ModData.Traits.CountsAsRunesmithFreeHand))
+               || runesmith.HasEffect(ModData.QEffectIds.RuneSinger);
     }
     
     /// <summary>

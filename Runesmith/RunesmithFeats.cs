@@ -2,6 +2,7 @@ using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Campaign.Path;
 using Dawnsbury.Core;
+using Dawnsbury.Core.Animations.AuraAnimations;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
@@ -133,7 +134,7 @@ public static class RunesmithFeats
                         .WithAdditionalConditionOnTargetCreature( (attacker, defender) => 
                             qfFeat.UsedThisTurn ? Usability.NotUsable("Already used this round") : Usability.Usable)
                         .WithAdditionalConditionOnTargetCreature( (attacker, defender) => 
-                            attacker.HasFreeHand || attacker.HeldItems.Any(item => item.HasTrait(ModData.Traits.CountsAsRunesmithFreeHand)) ? Usability.Usable : Usability.NotUsable("You must have a free hand to trace a rune"));
+                            RunesmithClass.IsRunesmithHandFree(attacker) ? Usability.Usable : Usability.NotUsable("You must have a free hand to trace a rune"));
                     
                     return engravingStrike;
                 };
@@ -223,20 +224,66 @@ public static class RunesmithFeats
             });
         ModManager.AddFeat(remoteDetonation);
         
-        // TODO: Adjust implementation to work with subsidiary Trace Runes?
         Feat runeSinger = new TrueFeat(
                 ModData.FeatNames.RuneSinger,
                 1,
                 "You practice the lost art of using music to guide the act of carving your runes, singing them into existence as much as crafting them.",
-                /*"You can use Performance instead of Crafting when attempting Crafting checks related to runes. " + */"Once per minute, you can "+ModTooltips.ActionTraceRune+"Trace a Rune{/} with song alone, removing the need to have a free hand, removing the manipulate trait from Trace Rune, and allowing you to use the "+RulesBlock.GetIconTextFromNumberOfActions(2)+" 2-action version of Trace Rune as a single "+RulesBlock.GetIconTextFromNumberOfActions(1)+" action. You don't need to be able to move your hands when Tracing a Rune using song, but you do need to be able to sing in a clear voice.",
+                /*"You can use Performance instead of Crafting when attempting Crafting checks related to runes. " + */"Once per combat, you can "+ModTooltips.ActionTraceRune+"Trace a Rune{/} with song alone, removing the need to have a free hand, removing the manipulate trait from Trace Rune, and allowing you to use the "+RulesBlock.GetIconTextFromNumberOfActions(2)+" 2-action version of Trace Rune as a single "+RulesBlock.GetIconTextFromNumberOfActions(1)+" action."/*+" You don't need to be able to move your hands when Tracing a Rune using song, but you do need to be able to sing in a clear voice."*/,
                 [ModData.Traits.Runesmith])
             .WithPermanentQEffect("Once per combat, you can Trace a Rune without a free hand on a target up to 30 feet away.",
                 qfFeat =>
                 {
-                    qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                    qfFeat.Id = ModData.QEffectIds.RuneSingerCreator;
+                    
+                    qfFeat.ProvideSectionIntoSubmenu = (qfThis, submenu) =>
                     {
-                        if (qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains("Rune-Singer"))
+                        if (submenu.SubmenuId != ModData.SubmenuIds.TraceRune)
                             return null;
+
+                        CombatAction toggleSinger = new CombatAction(
+                                qfThis.Owner,
+                                ModData.Illustrations.RuneSinger,
+                                $"Rune-Singer {(qfThis.Owner.HasEffect(ModData.QEffectIds.RuneSinger) ? "(off)" : "(on)")}",
+                                [ModData.Traits.Runesmith, Trait.Basic],
+                                "{i}You practice the lost art of using music to guide the act of carving your runes, singing them into existence as much as crafting them.{/i}\n\n"+"The next time you "+ModTooltips.ActionTraceRune+"Trace a Rune{/} will be with song alone, removing the need to have a free hand, removing the manipulate trait from Trace Rune, and allowing you to use the "+RulesBlock.GetIconTextFromNumberOfActions(2)+" 2-action version of Trace Rune as a single "+RulesBlock.GetIconTextFromNumberOfActions(1)+" action."+/*" You don't need to be able to move your hands when Tracing a Rune using song, but you do need to be able to sing in a clear voice."+*/"\n\nOnce you Trace a Rune in this way, you can't do so again for the rest of this combat.",
+                                Target.Self())
+                            .WithActionCost(0)
+                            .WithSoundEffect(ModData.SfxNames.ToggleRuneSinger)
+                            .WithEffectOnSelf(self =>
+                            {
+                                switch (self.HasEffect(ModData.QEffectIds.RuneSinger))
+                                {
+                                    case true:
+                                        self.RemoveAllQEffects(qf => qf.Id == ModData.QEffectIds.RuneSinger);
+                                        break;
+                                    case false:
+                                        QEffect singerEffect = new QEffect(
+                                                "Rune-Singer",
+                                                "{Red}{b}Frequency{/b} once per combat{/Red}\nThe next time you Trace a Rune, it won't require a free hand, it won't have the manipulate trait, and you can use the 2-action version as a single action.",
+                                                ExpirationCondition.Never,
+                                                self,
+                                                ModData.Illustrations.RuneSinger)
+                                            {
+                                                Id = ModData.QEffectIds.RuneSinger,
+                                                DoNotShowUpOverhead = true,
+                                            };
+                                        self.AddQEffect(singerEffect);
+                                        break;
+                                }
+                            });
+
+                        return new PossibilitySection("Rune-Singer")
+                        {
+                            PossibilitySectionId = ModData.PossibilitySectionIds.RuneSinger,
+                            Possibilities = { new ActionPossibility(toggleSinger, PossibilitySize.Full)}
+                        };
+                    };
+                    
+                    // Held onto for now.
+                    /*qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                    {
+                        /*if (qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains("Rune-Singer"))
+                            return null;#1#
 
                         Rune? foundRune = null;
                         foreach (Rune rune in RunesmithRunes.AllRunes)
@@ -262,7 +309,10 @@ public static class RunesmithFeats
                         runeSingerAction.Target = newTarget;
                         runeSingerAction.Description =
                             foundRune.CreateTraceActionDescription(runeSingerAction, prologueText:"{Blue}{b}Range{/b} 30 feet{/Blue}\n", withFlavorText: false, afterFlavorText:"{Blue}{b}Frequency{/b} once per combat{/Blue}");
-                        runeSingerAction.WithEffectOnSelf(self => { self.PersistentUsedUpResources.UsedUpActions.Add("Rune-Singer"); });
+                        runeSingerAction.WithEffectOnSelf(self =>
+                        {
+                            qfFeat.ExpiresAt = ExpirationCondition.Immediately;
+                        });
                         
                         ActionPossibility singPossibility = new ActionPossibility(runeSingerAction)
                         {
@@ -272,7 +322,7 @@ public static class RunesmithFeats
                         };
                         
                         return singPossibility;
-                    };
+                    };*/
                 });
         ModManager.AddFeat(runeSinger);
         
@@ -320,15 +370,18 @@ public static class RunesmithFeats
                         // Disable this rune if it isn't a proper shield rune.
                         bool isDisabledRune = !rune.DrawTechnicalTraits.Contains(Trait.Shield);
                         
-                        CombatAction knockThisRune = rune.CreateTraceAction(qfThis.Owner, 1)
-                            .WithExtraTrait(Trait.DoesNotProvoke) // Provoke manually later
+                        CombatAction knockThisRune = rune.CreateTraceAction(qfThis.Owner, 0)
+                            .WithActionCost(1)
                             .WithExtraTrait(Trait.DoNotShowInCombatLog); // Too much text spam.
+                        if (knockThisRune.HasTrait(Trait.Manipulate)) // Don't bother adding if it doesn't have manipulate
+                            knockThisRune.WithExtraTrait(Trait.DoesNotProvoke); // Provoke manually later
                         knockThisRune.Name = $"Knock {rune.Name}";
                         knockThisRune.Illustration = new SideBySideIllustration(shieldIll, rune.Illustration);
                         knockThisRune.Description = rune.CreateTraceActionDescription(
                             knockThisRune,
                             withFlavorText: false,
                             afterFlavorText:"{b}Frequency{/b} once per round");
+                        knockThisRune.Description = knockThisRune.Description.Replace(rune.UsageText, "{Blue}drawn on your raised shield.{/Blue}");
                         if (isDisabledRune)
                         {
                             string oldPassiveText = rune.PassiveTextWithHeightening(rune, knockThisRune.Owner.Level);
@@ -336,15 +389,16 @@ public static class RunesmithFeats
                             if (start != -1)
                                 knockThisRune.Description = knockThisRune.Description.Replace(oldPassiveText, "{Blue}(Runic Reprisal) When you use Shield Block against an adjacent attacker, this rune's invocation effects are detonated outward onto the attacker.{/Blue}");
                         }
+
+                        var oldRestriction = (knockThisRune.Target as SelfTarget)!.AdditionalRestriction;
                         knockThisRune.Target = Target.Self()
                             .WithAdditionalRestriction(self =>
                             {
-                                string hasShieldReason = "You must have a shield equipped";
-                                string freeHandReason = "You must have a free hand to trace a rune";
-                                string usedReason = "Already used this round";
-                                return shieldItem != null
-                                    ? (self.HasFreeHand || self.HeldItems.Any(item => item.HasTrait(ModData.Traits.CountsAsRunesmithFreeHand)) ? (qfThis.UsedThisTurn ? usedReason : null) : freeHandReason)
-                                    : hasShieldReason;
+                                if (shieldItem == null)
+                                    return "You must have a shield equipped";
+                                if (qfThis.UsedThisTurn)
+                                    return "Already used this round";
+                                return oldRestriction?.Invoke(self);
                             });
                         knockThisRune.EffectOnOneTarget = null; // Reset behavior so we can hard code this
                         knockThisRune.WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
@@ -363,9 +417,18 @@ public static class RunesmithFeats
                                 List<Option> actions = await caster.Battle.GameLoop.CreateActions(caster, shieldActions, null);
                                 await caster.Battle.GameLoop.OfferOptions(caster, actions, true);
                                 
-                                // Provoke manipulate
-                                await CombatAction.CreateSimple(caster, $"Trace {rune.Name}", Trait.DoNotShowInCombatLog,
-                                    Trait.Manipulate).WithActionCost(0).AllExecute();
+                                // Provoke manipulate, if the action is supposed to (e.g. Rune-Singer)
+                                CombatAction phantomManipulate = CombatAction.CreateSimple(
+                                        caster,
+                                        $"Trace {rune.Name}",
+                                        Trait.DoNotShowInCombatLog,
+                                        Trait.Manipulate)
+                                    .WithActionCost(0);
+                                if (thisAction.HasTrait(Trait.Manipulate))
+                                    await phantomManipulate.AllExecute();
+
+                                if (phantomManipulate.Disrupted)
+                                    return;
                                 
                                 // Trace the rune
                                 Rune actionRune = (thisAction.Tag as Rune)!;
@@ -388,13 +451,9 @@ public static class RunesmithFeats
                             });
 
                         if (isDisabledRune)
-                        {
                             repriseSection.AddPossibility(new ActionPossibility(knockThisRune, PossibilitySize.Full));
-                        }
                         else
-                        {
                             fortSection.AddPossibility(new ActionPossibility(knockThisRune, PossibilitySize.Full));
-                        }
                     }
                     
                     SubmenuPossibility fortifyingKnockSubmenu = new SubmenuPossibility(
@@ -1360,9 +1419,14 @@ public static class RunesmithFeats
                             (attacker, defender) => defender == bloodTarget
                                 ? Usability.Usable
                                 : Usability.NotUsableOnThisCreature("not Drawn In Blood target"));
-                        bloodTrace.Name = bloodTrace.Name.Remove(0, "Trace".Length).Insert(0, "Draw");
-                        bloodTrace.Description =
-                            foundRune.CreateTraceActionDescription(bloodTrace, prologueText:"{Blue}{b}Range{/b} 60 feet{/Blue}\n", withFlavorText: false, afterUsageText:$" {{Blue}}(only against {bloodTarget.Name}){{/Blue}}");
+                        bloodTrace.Name = bloodTrace.Name
+                            .Remove(0, "Trace".Length)
+                            .Insert(0, "Draw");
+                        bloodTrace.Description = foundRune.CreateTraceActionDescription(
+                            bloodTrace,
+                            prologueText:"{Blue}{b}Range{/b} 60 feet{/Blue}\n",
+                            withFlavorText: false,
+                            afterUsageText:$" {{Blue}}(only against {bloodTarget.Name}){{/Blue}}");
                         ActionPossibility bloodPossibility = new ActionPossibility(bloodTrace)
                         {
                             Caption = "Drawn In Red",

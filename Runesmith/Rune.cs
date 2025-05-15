@@ -1,3 +1,4 @@
+using Dawnsbury.Audio;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations;
 using Dawnsbury.Core.CombatActions;
@@ -509,6 +510,11 @@ public class Rune
         int actions = 0,
         int? range = 6)
     {
+        bool hasRuneSinger = owner.HasEffect(ModData.QEffectIds.RuneSinger);
+        
+        if (hasRuneSinger && actions == 1)
+            actions = 2; // Make it the 2-action version instead
+        
         // Determine range to target (logic maybe expanded later)
         int rangeToTarget = range ?? 6;
 
@@ -528,34 +534,37 @@ public class Rune
                 continue;
             crTar.WithAdditionalConditionOnTargetCreature( // Free hand
                 (attacker, defender) =>
-                    attacker.HasFreeHand || attacker.HeldItems.Any(item => item.HasTrait(ModData.Traits.CountsAsRunesmithFreeHand)) ? Usability.Usable : Usability.NotUsable("You must have a free hand to trace a rune"));
+                    RunesmithClass.IsRunesmithHandFree(attacker)
+                        ? Usability.Usable
+                        : Usability.NotUsable("You must have a free hand to trace a rune"));
             if (this.UsageCondition != null)
                 crTar.WithAdditionalConditionOnTargetCreature(this.UsageCondition); // UsageCondition
         }
         
         // Determine traits
-        Trait[] traits = this.Traits.ToArray().Concat(
-            [Trait.Concentrate,
+        Trait[] traits = this.Traits.ToArray().Concat([
+                Trait.Concentrate,
                 Trait.Magical,
                 Trait.Manipulate,
                 ModData.Traits.Traced,
-                Trait.Spell] // <- Should apply magic immunity.
-            ).ToArray();
+                Trait.Spell // <- Should apply magic immunity.
+            ]).ToArray();
         
         // Create action
         CombatAction drawRuneAction = new CombatAction(
-            owner,
-            this.Illustration!, // Suppress
-            "Trace " + this.Name,
-            traits,
-            "ERROR: INCOMPLETE DESCRIPTION",
-            actions switch
-            {
-                2 => rangedTarget,
-                1 => adjacentTarget,
-                -3 => varyTarget,
-                _ => Target.Self()
-            })
+                owner,
+                this.Illustration ?? IllustrationName.None,
+                "Trace " + this.Name,
+                traits,
+                "ERROR: INCOMPLETE DESCRIPTION",
+                actions switch
+                {
+                    2 => rangedTarget,
+                    1 => adjacentTarget,
+                    -3 => varyTarget,
+                    _ => Target.Self().WithAdditionalRestriction(self =>
+                        RunesmithClass.IsRunesmithHandFree(self) ? null : "You must have a free hand to trace a rune")
+                })
             {
                 Tag = this,
             }
@@ -569,12 +578,9 @@ public class Rune
             });
 
         if (actions != 1) // Isn't the melee one
-        {
             drawRuneAction.WithProjectileCone(VfxStyle.BasicProjectileCone(this.Illustration));
-        }
         
         if (actions == -3)
-        {
             drawRuneAction.WithCreateVariantDescription((actions, spellVariant) =>
             { // Just having this gives the variant range information.
                 return actions switch
@@ -584,7 +590,6 @@ public class Rune
                     _ => this.CreateTraceActionDescription(drawRuneAction, withFlavorText:false)
                 };
             });
-        }
         
         // Determine description based on actions preset
         switch (actions)
@@ -599,8 +604,24 @@ public class Rune
                 drawRuneAction.Description = this.CreateTraceActionDescription(drawRuneAction, prologueText:$"{{b}}Range{{/b}} {rangeToTarget*5} feet\n");
                 break;
             default:
-                drawRuneAction.Description = this.CreateTraceActionDescription(drawRuneAction);
+                drawRuneAction.Description = this.CreateTraceActionDescription(drawRuneAction, prologueText:"{b}Range{/b} self\n");
                 break;
+        }
+
+        // Modify according to Rune-Singer
+        if (hasRuneSinger)
+        {
+            drawRuneAction = drawRuneAction
+                .WithActionCost(actions == 0 ? 0 : 1)
+                .WithSoundEffect(ModData.SfxNames.SingRune)
+                .WithEffectOnSelf(self =>
+                {
+                    self.RemoveAllQEffects(qf => qf.Id == ModData.QEffectIds.RuneSinger || qf.Id == ModData.QEffectIds.RuneSingerCreator);
+                });
+            drawRuneAction.Name = drawRuneAction.Name.Replace("Trace", "Sing");
+            drawRuneAction.Description = drawRuneAction.Description.Replace("30 feet", "{Blue}30 feet{/Blue}");
+            //drawRuneAction.Illustration = new SideBySideIllustration(drawRuneAction.Illustration, ModData.Illustrations.RuneSinger);
+            drawRuneAction.Traits.Remove(Trait.Manipulate);
         }
         
         return drawRuneAction;
@@ -730,7 +751,6 @@ public class Rune
 
         return invokeThisRune;
     }
-    
     #endregion
 
     #region Static Methods
