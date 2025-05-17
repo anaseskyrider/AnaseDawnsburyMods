@@ -26,11 +26,11 @@ public static class ArchetypeArcher
         
         // Advanced Bow Training
         TrueFeat advancedBowTrainingFeat = (new TrueFeat(
-            Enums.FeatNames.AdvancedBowTraining,
+            ModData.FeatNames.AdvancedBowTraining,
             6,
             "Through constant practice and the crucible of experience, you increase your skill with advanced bows.",
             "You gain proficiency with all advanced bows as if they were martial weapons in the bow weapon group.",
-            [Enums.Traits.MoreDedications])
+            [ModData.Traits.MoreDedications])
             .WithAvailableAsArchetypeFeat(Trait.Archer)
             .WithOnSheet(values =>
             {
@@ -59,11 +59,11 @@ public static class ArchetypeArcher
         
         // Crossbow Terror
         TrueFeat crossbowTerrorFeat = new TrueFeat(
-                Enums.FeatNames.CrossbowTerror,
+                ModData.FeatNames.CrossbowTerror,
             6,
             "You are a dynamo with the crossbow.",
             "You gain a +2 circumstance bonus to damage with crossbows. If the crossbow is a simple weapon, also increase the damage die size for your attacks made with that crossbow by one step. As normal, this damage die increase can't be combined with other abilities that alter the weapon damage die (such as the ranger feat Crossbow Ace).",
-            [Enums.Traits.MoreDedications])
+            [ModData.Traits.MoreDedications])
             .WithAvailableAsArchetypeFeat(Trait.Archer)
             .WithPermanentQEffect(
                 "+2 circumstance bonus to Crossbow damage, increment Simple Crossbow die.",
@@ -91,11 +91,11 @@ public static class ArchetypeArcher
         
         // Parting Shot
         TrueFeat fighterPartingShotFeat = new TrueFeat(
-                Enums.FeatNames.FighterPartingShot,
+                ModData.FeatNames.FighterPartingShot,
             4,
             "You jump back and fire a quick shot that catches your opponent off guard.",
             "{b}Requirements{/b} You are wielding a loaded ranged weapon or a ranged weapon without reload 1 or reload 2.\n\nYou Step and then make a ranged Strike with the required weapon. Your target is flat-footed against the attack.",
-            [Trait.Fighter, Enums.Traits.MoreDedications])
+            [Trait.Fighter, ModData.Traits.MoreDedications])
             .WithActionCost(2)
             .WithPermanentQEffect("You jump back and fire a quick shot that catches your opponent off guard.",
             async qfFeat =>
@@ -139,17 +139,17 @@ public static class ArchetypeArcher
                 };
             });
         ModManager.AddFeat(fighterPartingShotFeat);
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.FighterPartingShot, Trait.Archer, 6));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.FighterPartingShot, Trait.Archer, 6));
         
         // Running Reload
         // Code from SudoProgramming's Gunslinger.cs.
         // This isn't an attribution, I just need to know the reference for when I inevitably forget how this code works after needing to make changes.
         TrueFeat rangerRunningReload = new TrueFeat(
-                Enums.FeatNames.RangerRunningReload,
+                ModData.FeatNames.RangerRunningReload,
             4,
             "You can reload your weapon on the move.",
             "You Stride, Step, or Sneak, then Interact to reload.\n\n{i}(This feat might not support modded firearms.){/i}",
-            [Trait.Ranger, Enums.Traits.MoreDedications])
+            [Trait.Ranger, ModData.Traits.MoreDedications])
             .WithActionCost(1)
             .WithPermanentQEffect("Stride and reload", qfFeat =>
             {
@@ -205,17 +205,17 @@ public static class ArchetypeArcher
                 };
             });
         ModManager.AddFeat(rangerRunningReload);
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.RangerRunningReload, Trait.Archer, 6));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.RangerRunningReload, Trait.Archer, 6));
         
         // TODO: Staggering Fire (lv6)
         
         // Archer's Aim
         TrueFeat archersAim = new TrueFeat(
-                Enums.FeatNames.ArchersAim,
+                ModData.FeatNames.ArchersAim,
             8,
             "You slow down, focus, and take a careful shot.",
             "Make a ranged Strike with a weapon in the bow weapon group. You gain a +2 circumstance bonus to the attack roll and ignore the target's concealed condition. If the target is hidden, reduce the flat check from being hidden from 11 to 5.",
-            [Trait.Concentrate, Enums.Traits.MoreDedications])
+            [Trait.Concentrate, ModData.Traits.MoreDedications])
             .WithActionCost(2)
             .WithAvailableAsArchetypeFeat(Trait.Archer)
             .WithPermanentQEffect("You can make a careful shot.", qfFeat =>

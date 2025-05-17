@@ -41,7 +41,7 @@ public static class ArchetypeMartialArtist
     {
         // Dedication Feat
         TrueFeat martialArtistDedication = (ArchetypeFeats.CreateAgnosticArchetypeDedication(
-                Enums.Traits.MartialArtistArchetype,
+                ModData.Traits.MartialArtistArchetype,
                 "You seek neither mysticism nor enlightenment, and you don't view this training as some greater path to wisdom. Yours is the way of the fist striking flesh, the hand turning aside the blade, and the devastating kick taking your enemy down.",
                 "You have trained to use your fists as deadly weapons. The damage die for your fist unarmed attacks becomes 1d6 instead of 1d4; and all of your unarmed attacks lose the nonlethal trait.\n\nWhenever you gain a class feature that grants you expert or greater proficiency in certain weapons, you also gain that proficiency rank in all unarmed attacks.")
             /*.WithOnSheet(values =>
@@ -61,12 +61,12 @@ public static class ArchetypeMartialArtist
         // Powder Punch Stance
         const IllustrationName ppStanceIcon = IllustrationName.AlchemistsFire;
         Feat powderPunchStance = new TrueFeat(
-            Enums.FeatNames.PowderPunchStance,
+            ModData.FeatNames.PowderPunchStance,
             2,
             "You infuse your handwraps with black powder.",
             "On your first melee Strike each round with an unarmed attack"+/*", knuckle duster, or black powder knuckle duster"+*/", you deal an additional 1 fire damage. If you critically succeed at an attempt to Shove while in this stance, the target is pushed back an additional 5 feet.",
-            [Enums.Traits.MoreDedications, Trait.Archetype, Trait.Stance])
-            .WithAvailableAsArchetypeFeat(Enums.Traits.MartialArtistArchetype)
+            [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Stance])
+            .WithAvailableAsArchetypeFeat(ModData.Traits.MartialArtistArchetype)
             .WithActionCost(1)
             .WithIllustration(ppStanceIcon)
             .WithPermanentQEffect("Your first melee Strike deals +1 fire damage, and critical Shoves push 5 more feet.",
@@ -85,7 +85,7 @@ public static class ArchetypeMartialArtist
                             "{i}You infuse your handwraps with black powder.{/i}\n\n"+"On your first melee Strike each round with an unarmed attack"+/*", knuckle duster, or black powder knuckle duster"+*/", you deal an additional 1 fire damage. If you critically succeed at an attempt to Shove while in this stance, the target is pushed back an additional 5 feet.",
                             Target.Self()
                                 .WithAdditionalRestriction(self =>
-                                    self.HasEffect(Enums.QEffectIds.PowderPunchStance) ? "You're already in this stance." : null))
+                                    self.HasEffect(ModData.QEffectIds.PowderPunchStance) ? "You're already in this stance." : null))
                             {
                                 ShortDescription = "Enter a stance where " + "Your first melee Strike deals +1 fire damage, and critical Shoves push 5 more feet.".Uncapitalize()
                             }
@@ -97,7 +97,7 @@ public static class ArchetypeMartialArtist
                                     ppStanceIcon,
                                     "Powder Punch Stance",
                                     "Your first melee Strike deals +1 fire damage, and critical Shoves push 5 more feet.",
-                                    Enums.QEffectIds.PowderPunchStance);
+                                    ModData.QEffectIds.PowderPunchStance);
                                 ppStance.AddExtraStrikeDamage = (action, defender) =>
                                 {
                                     if (!action.HasTrait(Trait.Unarmed) || qfFeat.UsedThisTurn == true)
@@ -156,25 +156,25 @@ public static class ArchetypeMartialArtist
         ModManager.AddFeat(powderPunchStance);
         
         // Add Brawling Focus to Martial Artist
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.BrawlingFocus, Enums.Traits.MartialArtistArchetype, 4));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.BrawlingFocus, ModData.Traits.MartialArtistArchetype, 4));
 
         // Add Existing stance feats to Martial Artist
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.CraneStance, Enums.Traits.MartialArtistArchetype, 4));
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.DragonStance, Enums.Traits.MartialArtistArchetype, 4));
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.GorillaStance, Enums.Traits.MartialArtistArchetype, 4));
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.MountainStance, Enums.Traits.MartialArtistArchetype, 4));
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.WolfStance, Enums.Traits.MartialArtistArchetype, 4));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.CraneStance, ModData.Traits.MartialArtistArchetype, 4));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.DragonStance, ModData.Traits.MartialArtistArchetype, 4));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.GorillaStance, ModData.Traits.MartialArtistArchetype, 4));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.MountainStance, ModData.Traits.MartialArtistArchetype, 4));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.WolfStance, ModData.Traits.MartialArtistArchetype, 4));
         
         // Stumbling Stance
         Feat stumblingStance = CreateMonkStance2(
-            Enums.FeatNames.StumblingStance,
+            ModData.FeatNames.StumblingStance,
             "Stumbling Stance",
             1,
-            Enums.QEffectIds.StumblingStance,
+            ModData.QEffectIds.StumblingStance,
             "You enter a seemingly unfocused stance that mimics the movements of the inebriated—bobbing, weaving, leaving false openings, and distracting your enemies from your true movements.",
             "While in this stance, you gain a +1 circumstance bonus to Deception checks to Feint; and if an enemy hits you with a melee Strike, it becomes flat-footed against the next stumbling swing Strike you make against it before the end of your next turn.",
             "You have a +1 to Feint, melee Strikes against you make enemies flat-footed to you, and can only make stumbling swing attacks.",
-            () => new Item(Enums.Illustrations.StumblingStance, "stumbling swing",
+            () => new Item(ModData.Illustrations.StumblingStance, "stumbling swing",
                 [Trait.Agile, Trait.Backstabber, Trait.Brawling, Trait.Finesse, Trait.Nonlethal, Trait.Unarmed])
                 .WithWeaponProperties(new WeaponProperties("1d8", DamageKind.Bludgeoning)),
             true,
@@ -215,16 +215,16 @@ public static class ArchetypeMartialArtist
             },
             false)
             .WithPrerequisite(FeatName.Deception, "Trained in Deception");
-        stumblingStance.Traits.Insert(0, Enums.Traits.MoreDedications);
+        stumblingStance.Traits.Insert(0, ModData.Traits.MoreDedications);
         ModManager.AddFeat(stumblingStance);
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.StumblingStance, Enums.Traits.MartialArtistArchetype, 4));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.StumblingStance, ModData.Traits.MartialArtistArchetype, 4));
 
         // Tiger Stance
         Feat tigerStance = CreateMonkStance2(
-            Enums.FeatNames.TigerStance,
+            ModData.FeatNames.TigerStance,
             "Tiger Stance",
             1,
-            Enums.QEffectIds.TigerStance,
+            ModData.QEffectIds.TigerStance,
             "You enter the stance of a tiger.",
             "As long as your Speed is at least 20 feet while in Tiger Stance, you can Step again as a free action when you Step.",//you can Step 10 feet.",
             "You can Step as a free action after Stepping, and can make tiger claw attacks.",
@@ -239,7 +239,7 @@ public static class ArchetypeMartialArtist
                 {
                     if (action.CheckResult == CheckResult.CriticalSuccess)
                     {
-                        string bleedAmount = "1d4" + (action.Tag is ActionId id && id == Enums.ActionIds.TigerSlash
+                        string bleedAmount = "1d4" + (action.Tag is ActionId id && id == ModData.ActionIds.TigerSlash
                             ? $"+{attacker.Abilities.Strength}"
                             : null);
                         QEffect critBleed = QEffect.PersistentDamage(bleedAmount,
@@ -274,19 +274,19 @@ public static class ArchetypeMartialArtist
                 };
             },
             true);
-        tigerStance.Traits.Insert(0, Enums.Traits.MoreDedications);
+        tigerStance.Traits.Insert(0, ModData.Traits.MoreDedications);
         ModManager.AddFeat(tigerStance);
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.TigerStance, Enums.Traits.MartialArtistArchetype, 4));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.TigerStance, ModData.Traits.MartialArtistArchetype, 4));
 
         // Follow-Up Strike
         TrueFeat followUpStrike = new TrueFeat(
-                Enums.FeatNames.FollowUpStrike,
+                ModData.FeatNames.FollowUpStrike,
               6,
               "You have trained to use all parts of your body as a weapon, and when you miss with an attack, you can usually continue the attack with a different body part and still deal damage.",
               "{b}Requirements{/b} Your last action was a missed Strike with a melee unarmed attack.\n\nMake another Strike with a melee unarmed attack, using the same multiple attack penalty step as for the missed Strike, if any.\n\n"+new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString+" {b}Limitation{/b} Pre-roll breakdown is an estimate. The final roll is accurate.",
-            [Enums.Traits.MoreDedications, Trait.Archetype, Trait.Flourish])
+            [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Flourish])
             .WithActionCost(1)
-            .WithAvailableAsArchetypeFeat(Enums.Traits.MartialArtistArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.MartialArtistArchetype)
             .WithPermanentQEffect("Make an unarmed Strike with your last multiple attack penalty step.", qfFeat =>
             {
                 qfFeat.AfterYouTakeAction = async (qfThis, action) =>
@@ -330,12 +330,12 @@ public static class ArchetypeMartialArtist
 
         // Thunder Clap
         Feat thunderClap = new TrueFeat(
-            Enums.FeatNames.ThunderClap,
+            ModData.FeatNames.ThunderClap,
             6,
             "You slam your hands together to unleash a deafening blast.",
             "{b}Requirements{/b} You are in Powder Punch Stance\n\nCreatures in a 15-foot cone take 3d6 sonic damage, with a basic Fortitude save against your class DC. Creatures that critically fail their save are also deafened for the rest of combat.\n\nYou can't use this ability again for 1d4 rounds as your hands recover from the thunderous vibrations.\n\nAt 8th level, and every 2 levels thereafter, the damage from Thunder Clap increases by 1d6.",
-            [Enums.Traits.MoreDedications, Trait.Archetype, Trait.Sonic])
-            .WithAvailableAsArchetypeFeat(Enums.Traits.MartialArtistArchetype)
+            [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Sonic])
+            .WithAvailableAsArchetypeFeat(ModData.Traits.MartialArtistArchetype)
             .WithActionCost(2)
             .WithPermanentQEffect("Deal basic sonic damage in a 15-foot cone.", qfFeat =>
             {
@@ -344,7 +344,7 @@ public static class ArchetypeMartialArtist
                     if (section.PossibilitySectionId != PossibilitySectionId.MainActions)
                         return null;
 
-                    if (qfThis.Owner.FindQEffect(Enums.QEffectIds.PowderPunchStance) == null)
+                    if (qfThis.Owner.FindQEffect(ModData.QEffectIds.PowderPunchStance) == null)
                         return null;
 
                     int numDice = 3 + (qfThis.Owner.Level - 6)/2;
@@ -373,16 +373,16 @@ public static class ArchetypeMartialArtist
                     return new ActionPossibility(clapAction);
                 };
             })
-            .WithPrerequisite(Enums.FeatNames.PowderPunchStance, "Powder Punch Stance");
+            .WithPrerequisite(ModData.FeatNames.PowderPunchStance, "Powder Punch Stance");
         ModManager.AddFeat(thunderClap);
 
         // Crane Flutter
         Feat craneFlutter = new TrueFeat(
-            Enums.FeatNames.CraneFlutter,
+            ModData.FeatNames.CraneFlutter,
             6,
             "You interpose your arm between yourself and your opponent.",
             "{b}Trigger{/b} You are targeted with a melee attack by an attacker you can see.\n{b}Requirements{/b} You are in Crane Stance\n\nYour circumstance bonus to AC from Crane Stance increases to +3 against the triggering attack. If the attack misses you, you can immediately make a crane wing Strike against the attacker at a –2 penalty and with the Reach trait for this attack.",
-            [Enums.Traits.MoreDedications, Trait.Monk])
+            [ModData.Traits.MoreDedications, Trait.Monk])
             .WithActionCost(-2)
             .WithPermanentQEffect("Against a melee attack, you can increase your AC and make a crane wing attack if it misses.",
                 qfFeat =>
@@ -400,7 +400,7 @@ public static class ArchetypeMartialArtist
                             self.Battle.Log($"{self} uses {{b}}Crane Flutter{{/b}}.", "Crane Flutter {icon:Reaction}", "Your circumstance bonus to AC from Crane Stance increases to +3 against the triggering attack. If the attack misses you, you can immediately make a crane wing Strike against the attacker at a –2 penalty and with the Reach trait for this attack.");
                             self.AddQEffect(new QEffect()
                             {
-                                Tag = Enums.ActionIds.CraneFlutter,
+                                Tag = ModData.ActionIds.CraneFlutter,
                                 BonusToDefenses = (qfThis, combatAction, def) => def == Defense.AC && combatAction == provokingAction ? new Bonus(
                                 3, BonusType.Circumstance, "Crane Flutter") : null,
                                 AfterYouAreTargeted = async (qfThis, combatAction) =>
@@ -422,15 +422,15 @@ public static class ArchetypeMartialArtist
                 })
             .WithPrerequisite(FeatName.CraneStance, "Crane Stance");
         ModManager.AddFeat(craneFlutter);
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.CraneFlutter, Enums.Traits.MartialArtistArchetype, 8));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.CraneFlutter, ModData.Traits.MartialArtistArchetype, 8));
         
         // Dragon Roar
         Feat dragonRoar = new TrueFeat(
-            Enums.FeatNames.DragonRoar,
+            ModData.FeatNames.DragonRoar,
             6,
             "You bellow, instilling fear in your enemies.",
             "{b}Requirements{/b} You are in Dragon Stance.\n\nEnemies within a 15-foot emanation must succeed at a Will save against your Intimidation DC or be frightened 1 (frightened 2 on a critical failure). When a creature frightened by the roar begins its turn adjacent to you, it can’t reduce its frightened value below 1 on that turn.\n\nYour first attack that hits a frightened creature after you roar and before the end of your next turn gains a +4 circumstance bonus to damage.\n\nAfter you use Dragon Roar, you can't use it again for 1d4 rounds. Its effects end immediately if you leave Dragon Stance. Creatures in the area of your roar are then temporarily immune for 1 minute.",
-            [Enums.Traits.MoreDedications, Trait.Auditory, Trait.Emotion, Trait.Fear, Trait.Mental, Trait.Monk])
+            [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Emotion, Trait.Fear, Trait.Mental, Trait.Monk])
             .WithActionCost(1)
             .WithPermanentQEffect("Frighten enemies in a 15-foot emanation (Will save), and do bonus damage to your next attack against a frightened enemy.", qfFeat =>
             {
@@ -449,7 +449,7 @@ public static class ArchetypeMartialArtist
                         qfThis.Owner,
                         roarIcon,
                         roarActionName,
-                        [Enums.Traits.MoreDedications, Trait.Auditory, Trait.Emotion, Trait.Fear, Trait.Mental, Trait.Monk],
+                        [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Emotion, Trait.Fear, Trait.Mental, Trait.Monk],
                         "{/i}You bellow, instilling fear in your enemies.{/i}\n\n"+
                         "{b}Requirements{/b} You are in Dragon Stance.\n\nEnemies within a 15-foot emanation must succeed at a Will save against your Intimidation DC or be frightened 1 (frightened 2 on a critical failure). When a creature frightened by the roar begins its turn adjacent to you, it can't reduce its frightened value below 1 on that turn.\n\nYour first attack that hits a frightened creature after you roar and before the end of your next turn gains a +4 circumstance bonus to damage.\n\nAfter you use Dragon Roar, you can't use it again for 1d4 rounds. Its effects end immediately if you leave Dragon Stance. Creatures in the area of your roar are then temporarily immune for 1 minute.",
                         Target.SelfExcludingEmanation(3)
@@ -458,10 +458,10 @@ public static class ArchetypeMartialArtist
                                 bool isEnemy = cr.EnemyOf(qfThis.Owner);
                                 bool isImmune = cr.QEffects.Any(qf =>
                                     qf is { Id: QEffectId.ImmunityToTargeting, Tag: ActionId id, Source: { } src } &&
-                                    id == Enums.ActionIds.DragonRoar && src == qfThis.Owner);
+                                    id == ModData.ActionIds.DragonRoar && src == qfThis.Owner);
                                 return isEnemy && !isImmune;
                             }))
-                        .WithActionId(Enums.ActionIds.DragonRoar)
+                        .WithActionId(ModData.ActionIds.DragonRoar)
                         .WithActionCost(1)
                         .WithSoundEffect(SfxName.Fear)
                         .WithProjectileCone(VfxStyle.BasicProjectileCone(roarIcon))
@@ -493,9 +493,9 @@ public static class ArchetypeMartialArtist
                                 target.AddQEffect(specialFrightened);
                             }
 
-                            QEffect roarImmunity = QEffect.ImmunityToTargeting(Enums.ActionIds.DragonRoar, caster);
+                            QEffect roarImmunity = QEffect.ImmunityToTargeting(ModData.ActionIds.DragonRoar, caster);
                             roarImmunity.Illustration = thisAction.Illustration;
-                            roarImmunity.Key = caster.Name+Enums.QEffectIds.DragonRoarImmunity;
+                            roarImmunity.Key = caster.Name+ModData.QEffectIds.DragonRoarImmunity;
                             roarImmunity.DoNotShowUpOverhead = true;
                             target.AddQEffect(roarImmunity);
                         })
@@ -543,15 +543,15 @@ public static class ArchetypeMartialArtist
             })
             .WithPrerequisite(FeatName.DragonStance, "Dragon Stance");
         ModManager.AddFeat(dragonRoar);
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.DragonRoar, Enums.Traits.MartialArtistArchetype, 8));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.DragonRoar, ModData.Traits.MartialArtistArchetype, 8));
         
         // Gorilla Pound
         Feat gorillaPound = new TrueFeat(
-                Enums.FeatNames.GorillaPound,
+                ModData.FeatNames.GorillaPound,
                 6,
                 "You pound your chest before slamming into your foes.",
                 "{b}Requirements{/b} You are in Gorilla Stance.\n\nAttempt an Intimidation check to Demoralize, then make one gorilla slam Strike against the same target. If your Strike hits, you gain a circumstance bonus to the damage roll equal to triple the value of the target's frightened condition." /*+"\n\n{b}Special{/b} While you are in Gorilla Stance, you gain a climb Speed of 15 feet."*/,
-                [Enums.Traits.MoreDedications, Trait.Emotion, Trait.Flourish, Trait.Mental, Trait.Monk])
+                [ModData.Traits.MoreDedications, Trait.Emotion, Trait.Flourish, Trait.Mental, Trait.Monk])
             .WithActionCost(1)
             .WithPermanentQEffect("Demoralize a creature and gorilla slam them with bonus damage.", qfFeat =>
             {
@@ -608,15 +608,15 @@ public static class ArchetypeMartialArtist
             .WithPrerequisite(FeatName.GorillaStance, "Gorilla Stance")
             .WithPrerequisite(FeatName.ExpertIntimidation, "Expert in Intimidation");
         ModManager.AddFeat(gorillaPound);
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.GorillaPound, Enums.Traits.MartialArtistArchetype, 8));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.GorillaPound, ModData.Traits.MartialArtistArchetype, 8));
         
         // Grievous Blow
         Feat grievousBlow = new TrueFeat(
-            Enums.FeatNames.GrievousBlow,
+            ModData.FeatNames.GrievousBlow,
             8,
             "You know how to deliver focused, powerful blows that bypass your enemies' resistances.",
             "Make an unarmed melee Strike. This counts as two attacks when calculating your multiple attack penalty. If this Strike hits, you deal two extra weapon damage dice."+/*" If you are at least 18th level, increase this to three extra weapon damage dice."+*/"\n\nThis attack also ignores an amount of resistance to physical damage, or to a specific physical damage type, equal to your level.",
-            [Enums.Traits.MoreDedications, Trait.Archetype, Trait.Flourish])
+            [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Flourish])
             .WithActionCost(2)
             .WithPermanentQEffect("Make an unarmed melee Strike that deals extra damage and partially ignores resistances.",
                 qfFeat =>
@@ -682,17 +682,17 @@ public static class ArchetypeMartialArtist
                         return strike;
                     };
                 })
-            .WithAvailableAsArchetypeFeat(Enums.Traits.MartialArtistArchetype);
+            .WithAvailableAsArchetypeFeat(ModData.Traits.MartialArtistArchetype);
         ModManager.AddFeat(grievousBlow);
         
         // Mountain Stronghold
         Feat mountainStronghold = new TrueFeat(
-                Enums.FeatNames.MountainStronghold,
+                ModData.FeatNames.MountainStronghold,
                 6,
                 "You focus on your connection to the earth and call upon the mountain to block attacks against you.",
                 "{b}Requirements{/b} You are in Mountain Stance.\n\nYou gain a +2 circumstance bonus to AC until the beginning of your next turn." +
                 "\n\n{b}Special{/b} If you have this feat, you can add up to +1 to your AC from your Dexterity modifier instead of none.",
-                [Enums.Traits.MoreDedications, Trait.Monk])
+                [ModData.Traits.MoreDedications, Trait.Monk])
             .WithActionCost(1)
             .WithPermanentQEffect("While in Mountain Stance, gain a +2 circumstance bonus to AC until next turn.", qfFeat =>
             {
@@ -704,7 +704,7 @@ public static class ArchetypeMartialArtist
                     if (qfThis.Owner.FindQEffect(QEffectId.MountainStance) == null)
                         return null;
 
-                    if (qfThis.Owner.FindQEffect(Enums.QEffectIds.MountainStronghold) != null)
+                    if (qfThis.Owner.FindQEffect(ModData.QEffectIds.MountainStronghold) != null)
                         return null;
 
                     CombatAction strongholdAction = new CombatAction(
@@ -720,7 +720,7 @@ public static class ArchetypeMartialArtist
                         {
                             QEffect strongholdBonus = new QEffect("Mountain Stronghold", "You have a +2 circumstance bonus to AC.", ExpirationCondition.ExpiresAtStartOfYourTurn, caster, thisAction.Illustration)
                             {
-                                Id = Enums.QEffectIds.MountainStronghold,
+                                Id = ModData.QEffectIds.MountainStronghold,
                                 BonusToDefenses = (qfThis, action, def) => def == Defense.AC ? new Bonus(2, BonusType.Circumstance, "Mountain stronghold") : null
                             };
                             caster.AddQEffect(strongholdBonus);
@@ -740,16 +740,16 @@ public static class ArchetypeMartialArtist
             })
             .WithPrerequisite(FeatName.MountainStance, "Mountain Stance");
         ModManager.AddFeat(mountainStronghold);
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.MountainStronghold, Enums.Traits.MartialArtistArchetype, 8));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.MountainStronghold, ModData.Traits.MartialArtistArchetype, 8));
         
         // Stumbling Feint
         // PETR: If levels extend beyond 8, account for dedication FoB. For now, class-check is sufficient.
         Feat stumblingFeint = new TrueFeat(
-            Enums.FeatNames.StumblingFeint,
+            ModData.FeatNames.StumblingFeint,
             6,
             "You lash out confusingly with what seems to be a weak move but instead allows you to unleash a dangerous flurry of blows upon your unsuspecting foe.",
             "{b}Requirements{/b} You are in Stumbling Stance.\n\nWhen you use Flurry of Blows, you can attempt a check to Feint as a free action just before the first Strike. On a success, instead of making the target flat-footed against your next attack, they become flat-footed against both attacks from the Flurry of Blows.",
-            [Enums.Traits.MoreDedications, Trait.Monk])
+            [ModData.Traits.MoreDedications, Trait.Monk])
             .WithPermanentQEffect("Feint just before you use Flurry of Blows. The target is flat-footed to both blows.",
                 qfFeat =>
                 {
@@ -758,7 +758,7 @@ public static class ArchetypeMartialArtist
                         if (section.PossibilitySectionId != PossibilitySectionId.MainActions)
                             return null;
 
-                        if (qfThis.Owner.FindQEffect(Enums.QEffectIds.StumblingStance) == null)
+                        if (qfThis.Owner.FindQEffect(ModData.QEffectIds.StumblingStance) == null)
                             return null;
                         
                         CombatAction stumblingFeintAction = new CombatAction(
@@ -768,7 +768,7 @@ public static class ArchetypeMartialArtist
                             [Trait.Monk, Trait.Flourish],
                             "{i}You lash out confusingly with what seems to be a weak move but instead allows you to unleash a dangerous flurry of blows upon your unsuspecting foe.{/i}\n\n{b}Requirements{/b} You are in Stumbling Stance.\n\nWhen you use Flurry of Blows, you can attempt a check to Feint as a free action just before the first Strike. On a success, instead of making the target flat-footed against your next attack, they become flat-footed against both attacks from the Flurry of Blows.",
                             Target.AdjacentCreature()//Target.Reach(qfThis.Owner.UnarmedStrike)
-                                .WithAdditionalConditionOnTargetCreature((attacker, defender) => attacker.HasEffect(Enums.QEffectIds.StumblingStance) ? Usability.Usable : Usability.NotUsable("requires stumbling stance"))
+                                .WithAdditionalConditionOnTargetCreature((attacker, defender) => attacker.HasEffect(ModData.QEffectIds.StumblingStance) ? Usability.Usable : Usability.NotUsable("requires stumbling stance"))
                                 .WithAdditionalConditionOnTargetCreature(new EnemyCreatureTargetingRequirement())
                                 .WithAdditionalConditionOnTargetCreature((attacker, defender) => defender.IsImmuneTo(Trait.Mental)
                                     ? Usability.NotUsableOnThisCreature("immune to mental")
@@ -794,7 +794,7 @@ public static class ArchetypeMartialArtist
                                 {
                                     target.AddQEffect(new QEffect()
                                     {
-                                        Id = Enums.QEffectIds.FlatFootedToStumblingFeint,
+                                        Id = ModData.QEffectIds.FlatFootedToStumblingFeint,
                                         IsFlatFootedTo = (qfThis2, creature, action) =>
                                             creature == caster ? "Stumbling Feint" : null,
                                     });
@@ -821,22 +821,22 @@ public static class ArchetypeMartialArtist
                                 
                                 caster.Actions.ActionsLeft -= 1;
 
-                                target.RemoveAllQEffects(qf => qf.Id == Enums.QEffectIds.FlatFootedToStumblingFeint);
+                                target.RemoveAllQEffects(qf => qf.Id == ModData.QEffectIds.FlatFootedToStumblingFeint);
                             });
                         return new ActionPossibility(stumblingFeintAction);
                     };
                 })
             .WithPrerequisite(FeatName.Monk, "Flurry of Blows");
         ModManager.AddFeat(stumblingFeint);
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.StumblingFeint, Enums.Traits.MartialArtistArchetype, 8));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.StumblingFeint, ModData.Traits.MartialArtistArchetype, 8));
         
         // Tiger Slash
         Feat tigerSlash = new TrueFeat(
-            Enums.FeatNames.TigerSlash,
+            ModData.FeatNames.TigerSlash,
             6,
             "You make a fierce swipe with both hands.",
             "{b}Requirements{/b} You are in Tiger Stance.\n\nMake a tiger claw Strike. It deals two extra weapon damage dice"/*+" (three extra dice if you’re 14th level or higher)"*/+", and you can push the target 5 feet away as if you had successfully Shoved them. If the attack is a critical success and deals damage, add your Strength modifier to the persistent bleed damage from your tiger claw.",
-            [Enums.Traits.MoreDedications, Trait.Monk])
+            [ModData.Traits.MoreDedications, Trait.Monk])
             .WithActionCost(2)
             .WithPermanentQEffect("While in Tiger Stance, you can make a tiger claw strike that deals additional damage, automatically deals a successful Shove on a hit, and adds your Strength modifier to the persistent bleed damage from a critical hit.",
                 qfFeat =>
@@ -907,22 +907,22 @@ public static class ArchetypeMartialArtist
                             additionalCriticalSuccessText: $"As success, and the bleed damage from tiger claw is increased by {{b}}{qfFeat.Owner.Abilities.Strength}{{/b}}.");
                         strike.Illustration =
                             new SideBySideIllustration(strike.Illustration, IllustrationName.BloodVendetta);
-                        strike.Tag = Enums.ActionIds.TigerSlash; // Tiger Claw checks this tag for bonus bleed.
+                        strike.Tag = ModData.ActionIds.TigerSlash; // Tiger Claw checks this tag for bonus bleed.
 
                         return strike;
                     };
                 })
-            .WithPrerequisite(Enums.FeatNames.TigerStance, "Tiger Stance");
+            .WithPrerequisite(ModData.FeatNames.TigerStance, "Tiger Stance");
         ModManager.AddFeat(tigerSlash);
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.TigerSlash, Enums.Traits.MartialArtistArchetype, 8));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.TigerSlash, ModData.Traits.MartialArtistArchetype, 8));
         
         // Wolf Drag
         Feat wolfDrag = new TrueFeat(
-            Enums.FeatNames.WolfDrag,
+            ModData.FeatNames.WolfDrag,
             6,
             "You rip your enemy off their feet.",
             "Make a wolf jaw Strike. Your wolf jaw gains the fatal d12 trait for this Strike, and if the attack succeeds, you knock the target prone.",
-            [Enums.Traits.MoreDedications, Trait.Monk])
+            [ModData.Traits.MoreDedications, Trait.Monk])
             .WithActionCost(2)
             .WithPermanentQEffect("Make a wolf jaw strike with the fatal d12 trait that knocks the target prone on a success.", qfFeat =>
             {
@@ -970,7 +970,7 @@ public static class ArchetypeMartialArtist
             })
             .WithPrerequisite(FeatName.WolfStance, "Wolf Stance");
         ModManager.AddFeat(wolfDrag);
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.WolfDrag, Enums.Traits.MartialArtistArchetype, 8));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.WolfDrag, ModData.Traits.MartialArtistArchetype, 8));
 
         ///////////////////
         // Bonus Stances //
@@ -981,10 +981,10 @@ public static class ArchetypeMartialArtist
         // Stoked Flame Stance
         // TODO: Inner Fire (SoM) follow-up Feat
         Feat stokedFlameStance = CreateMonkStance2(
-            Enums.FeatNames.StokedFlameStance,
+            ModData.FeatNames.StokedFlameStance,
             "Stoked Flame Stance",
             1,
-            Enums.QEffectIds.StokedFlameStance,
+            ModData.QEffectIds.StokedFlameStance,
             "You enter a stance of fast, fiery movements.",
             "You gain a +5-foot status bonus to your Speed. This bonus is cumulative with the status bonus from incredible movement.\n\nIf you have access to the flashing sparks' {tooltip:criteffect}critical specialization effects{/}, the target also takes 1d4 persistent fire damage if your critical Strike dealt damage.",
             "You can make flashing spark attacks and gain a +5-foot status bonus to your Speed.",
@@ -1030,7 +1030,7 @@ public static class ArchetypeMartialArtist
                 };
             },
             true);
-        stokedFlameStance.Traits.Insert(0, Enums.Traits.MoreDedications);
+        stokedFlameStance.Traits.Insert(0, ModData.Traits.MoreDedications);
         ModManager.AddFeat(stokedFlameStance);
         
         // Wild Winds Initiate

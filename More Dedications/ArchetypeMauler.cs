@@ -25,7 +25,7 @@ public static class ArchetypeMauler
     {
         // Dedication Feat
         TrueFeat maulerDedication = (ArchetypeFeats.CreateAgnosticArchetypeDedication(
-            Enums.Traits.MaulerArchetype,
+            ModData.Traits.MaulerArchetype,
             "You shove your way through legions of foes, knock enemies on all sides to the ground, and deal massive blows to anyone or anything that comes near.",
             "You become trained in all simple and martial melee weapons that require two hands to wield.\n\nWhenever you become expert, master, or legendary in any weapon, you also gain that proficiency rank in these weapons.\n\nAs long as you're at least expert in such a weapon, that weapon triggers {tooltip:criteffect}critical specialization effects{/}.")
             .WithOnSheet(values =>
@@ -51,20 +51,20 @@ public static class ArchetypeMauler
         ModManager.AddFeat(maulerDedication);
         
         // Add Knockdown to Mauler
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.Knockdown, Enums.Traits.MaulerArchetype, 4));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.Knockdown, ModData.Traits.MaulerArchetype, 4));
 
         // Add Power Attack to Mauler
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.PowerAttack, Enums.Traits.MaulerArchetype, 4));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.PowerAttack, ModData.Traits.MaulerArchetype, 4));
 
         // Clear the Way
         TrueFeat clearTheWay = new TrueFeat(
-            Enums.FeatNames.ClearTheWay,
+            ModData.FeatNames.ClearTheWay,
             6,
             "You put your body behind your massive weapon and swing, shoving enemies to clear a wide path.",
             "{b}Requirements{/b} You're wielding a melee weapon with the Shove trait in two hands.\n\nYou attempt to Shove up to five creatures adjacent to you, rolling a separate Athletics check for each target. Then Stride up to half your Speed.\n\nThis movement doesn't trigger reactions from any of the creatures you successfully Shoved.",
-            [Enums.Traits.MoreDedications])
+            [ModData.Traits.MoreDedications])
             .WithActionCost(2)
-            .WithAvailableAsArchetypeFeat(Enums.Traits.MaulerArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.MaulerArchetype)
             .WithPermanentQEffect("You put your body behind your massive weapon.", qfFeat =>
             {
                 qfFeat.ProvideMainAction = qfThis =>
@@ -124,13 +124,13 @@ public static class ArchetypeMauler
 
         // Shoving Sweep
         TrueFeat shovingSweep = (new TrueFeat(
-            Enums.FeatNames.ShovingSweep,
+            ModData.FeatNames.ShovingSweep,
             8,
             "You swing your weapon at a fleeing foe, rebuffing them back.",
             "{b}Requirements{/b} You're wielding a melee weapon in two hands.\n\nWhen a creature within your reach leaves a square during a move action it's using, you can spend a {icon:Reaction} reaction to attempt to Shove the triggering creature, ignoring the requirement that you have a hand free. {i}({Red}NYI:{/Red} The creature continues its movement after the Shove.){/i}",
-            [Enums.Traits.MoreDedications])
+            [ModData.Traits.MoreDedications])
             .WithActionCost(-2)
-            .WithAvailableAsArchetypeFeat(Enums.Traits.MaulerArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.MaulerArchetype)
             .WithPermanentQEffect(
                 "After a creature within your reach leaves a square during its move action, you can spend a reaction to Shove it.",
                 qfThis =>

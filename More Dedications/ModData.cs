@@ -7,7 +7,7 @@ using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.MoreDedications;
 
-public static class Enums
+public static class ModData
 {
     public static class Traits
     {

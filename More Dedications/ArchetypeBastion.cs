@@ -33,7 +33,7 @@ public class ArchetypeBastion
     {
         // Dedication Feat
         TrueFeat bastionDedication = (ArchetypeFeats.CreateAgnosticArchetypeDedication(
-                Enums.Traits.BastionArchetype,
+                ModData.Traits.BastionArchetype,
                 "Some say that a good offense is the best defense, but you find such boasting smacks of overconfidence. In your experience, the best defense is a good, solid shield between you and your enemies.",
                 "You gain the Reactive Shield {icon:Reaction} fighter feat.")
             .WithPrerequisite(FeatName.ShieldBlock, "Shield Block")
@@ -46,17 +46,17 @@ public class ArchetypeBastion
         // Add Agile Shield Grip to Bastion
         ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             Champion.AgileShieldGripFeatName,
-            Enums.Traits.BastionArchetype, 4));
+            ModData.Traits.BastionArchetype, 4));
 
         // Disarming Block
         TrueFeat disarmingBlockFeat = (new TrueFeat(
-            Enums.FeatNames.DisarmingBlock,
+            ModData.FeatNames.DisarmingBlock,
             4,
             null,
             "{b}Trigger{/b} You Shield Block a melee Strike made with a held weapon.\n\nYou attempt to Disarm the creature whose attack you blocked of the weapon they attacked you with. You can do so even if you don't have a hand free.",
-            [Enums.Traits.MoreDedications])
+            [ModData.Traits.MoreDedications])
             .WithActionCost(0)
-            .WithAvailableAsArchetypeFeat(Enums.Traits.BastionArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.BastionArchetype)
             .WithPrerequisite(FeatName.Athletics, "Trained in Athletics")
             .WithPermanentQEffect("You attempt to Disarm melee attackers when you Shield Block.", qfFeat =>
             {
@@ -122,11 +122,11 @@ public class ArchetypeBastion
 
         // Shielded Stride
         TrueFeat fighterShieldedStrideFeat = new TrueFeat(
-            Enums.FeatNames.FighterShieldedStride,
+            ModData.FeatNames.FighterShieldedStride,
             4,
             "When your shield is up, your enemies' blows can't touch you.",
             "When you have your shield raised, you can Stride to move half your Speed without triggering reactions that are triggered by your movement.",
-            [Trait.Fighter, Enums.Traits.MoreDedications])
+            [Trait.Fighter, ModData.Traits.MoreDedications])
             .WithPermanentQEffect("While your shield is raised, Striding half your speed doesn't provoke reactions.",
                 qfFeat =>
                 {
@@ -139,15 +139,15 @@ public class ArchetypeBastion
                     };
                 });
         ModManager.AddFeat(fighterShieldedStrideFeat);
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.FighterShieldedStride, Enums.Traits.BastionArchetype, 6));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.FighterShieldedStride, ModData.Traits.BastionArchetype, 6));
 
         // Reflexive Shield
         TrueFeat fighterReflexiveShieldFeat = new TrueFeat(
-            Enums.FeatNames.FighterReflexiveShield,
+            ModData.FeatNames.FighterReflexiveShield,
             6,
             "You can use your shield to fend off the worst of area effects and other damage.",
             "When you Raise your Shield, you gain your shield's circumstance bonus to Reflex saves. If you have the Shield Block reaction, damage you take as a result of a Reflex save can trigger that reaction, even if the damage isn't physical damage.",
-            [Trait.Fighter, Enums.Traits.MoreDedications])
+            [Trait.Fighter, ModData.Traits.MoreDedications])
             .WithPermanentQEffect("Raise a Shield benefits your Reflex saves. If you have Shield Block, you can block any damage from a Reflex save.",
                 qfFeat =>
                 {
@@ -248,12 +248,12 @@ public class ArchetypeBastion
                     };
                 });
         ModManager.AddFeat(fighterReflexiveShieldFeat);
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(Enums.FeatNames.FighterReflexiveShield, Enums.Traits.BastionArchetype, 8));
+        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.FighterReflexiveShield, ModData.Traits.BastionArchetype, 8));
 
         // Add Shield Warden to Bastion
         TrueFeat bastionShieldWarden = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.ShieldWarden,
-            Enums.Traits.BastionArchetype,
+            ModData.Traits.BastionArchetype,
             8);
         // Removes the requirement, "You must be a Fighter, or you must have Shield Ally as your divine ally." .
         bastionShieldWarden.Prerequisites.RemoveAll(req =>
