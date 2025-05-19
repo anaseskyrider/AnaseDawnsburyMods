@@ -11,14 +11,13 @@ public static class ModData
 {
     public static class Traits
     {
-        public static Trait MoreDedications = ModManager.RegisterTrait("MoreDedications", new TraitProperties("More Dedications", true));
+        public static readonly Trait MoreDedications = ModManager.RegisterTrait("MoreDedications", new TraitProperties("More Dedications", true));
             
         // Archetype Traits
-        public static Trait MaulerArchetype = ModManager.RegisterTrait("MoreDedications.Mauler", new TraitProperties("Mauler", true));
-        public static Trait BastionArchetype = ModManager.RegisterTrait("MoreDedications.Bastion", new TraitProperties("Bastion", true));
-        public static Trait MartialArtistArchetype = ModManager.RegisterTrait(
-            "MoreDedications.MartialArtist",
-            new TraitProperties("Martial Artist", true));
+        public static readonly Trait MaulerArchetype = ModManager.RegisterTrait("MoreDedications.Mauler", new TraitProperties("Mauler", true));
+        public static readonly Trait BastionArchetype = ModManager.RegisterTrait("MoreDedications.Bastion", new TraitProperties("Bastion", true));
+        public static readonly Trait MartialArtistArchetype = ModManager.RegisterTrait("MoreDedications.MartialArtist", new TraitProperties("Martial Artist", true));
+        public static readonly Trait MarshalArchetype = ModManager.RegisterTrait("MoreDedications.Marshal", new TraitProperties("Marshal", true));
     }
     
     public static class FeatNames
