@@ -406,7 +406,7 @@ public static class Aid
             {
                 BonusToAttackRolls = (qfThis, aidedAction, defender) =>
                     aidedAction == aidableAction
-                        ? new Bonus(bonus, BonusType.Circumstance, $"Aid {result.ToStringOrTechnical().ToLower()}")
+                        ? new Bonus(bonus, BonusType.Circumstance, $"Aid {result.HumanizeLowerCase2()}")
                         : null,
             });
         });
