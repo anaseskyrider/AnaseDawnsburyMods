@@ -1,3 +1,4 @@
+using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Mechanics;
@@ -53,12 +54,20 @@ public static class ModData
         public static readonly FeatName TigerSlash = ModManager.RegisterFeatName("TigerSlash", "Tiger Slash");
         public static readonly FeatName WolfDrag = ModManager.RegisterFeatName("WolfDrag", "Wolf Drag");
         
+        // Marshal
+        public static readonly FeatName DreadMarshalStance = ModManager.RegisterFeatName("MoreDedications.Archetype.Marshal.DreadMarshalStance", "Dread Marshal Stance");
+        public static readonly FeatName InspiringMarshalStance = ModManager.RegisterFeatName("MoreDedications.Archetype.Marshal.InspiringMarshalStance", "Inspiring Marshal Stance");
+        public static readonly FeatName SteelYourself = ModManager.RegisterFeatName("MoreDedications.Archetype.Marshal.SteelYourself", "Steel Yourself!");
+        public static readonly FeatName RallyingCharge = ModManager.RegisterFeatName("MoreDedications.Archetype.Marshal.RallyingCharge", "Rallying Charge");
+        public static readonly FeatName ToBattle = ModManager.RegisterFeatName("MoreDedications.Archetype.Marshal.ToBattle", "To Battle!");
+        
         // Bonus stance feats
         public static readonly FeatName StokedFlameStance = ModManager.RegisterFeatName("StokedFlameStance", "Stoked Flame Stance");
     }
     
     public static class QEffectIds
     {
+        // Martial Artist
         public static readonly QEffectId PowderPunchStance = ModManager.RegisterEnumMember<QEffectId>("Powder Punch Stance");
         public static readonly QEffectId StumblingStance = ModManager.RegisterEnumMember<QEffectId>("Stumbling Stance");
         public static readonly QEffectId TigerStance = ModManager.RegisterEnumMember<QEffectId>("Tiger Stance");
@@ -66,6 +75,12 @@ public static class ModData
         public static readonly QEffectId MountainStronghold = ModManager.RegisterEnumMember<QEffectId>("Mountain Stronghold");
         public static readonly QEffectId FlatFootedToStumblingFeint = ModManager.RegisterEnumMember<QEffectId>("FlatFootedToStumblingFeint");
         public static readonly QEffectId StokedFlameStance = ModManager.RegisterEnumMember<QEffectId>("Stoked Flame Stance");
+        
+        // Marshal
+        public static readonly QEffectId MarshalsAuraProvider = ModManager.RegisterEnumMember<QEffectId>("MarshalsAuraProvider");
+        public static readonly QEffectId MarshalsAuraEffect = ModManager.RegisterEnumMember<QEffectId>("Marshal's Aura");
+        public static readonly QEffectId DreadMarshalStance = ModManager.RegisterEnumMember<QEffectId>("Dread Marshal Stance");
+        public static readonly QEffectId InspiringMarshalStance = ModManager.RegisterEnumMember<QEffectId>("Inspiring Marshal Stance");
     }
 
     public static class ActionIds
@@ -78,5 +93,15 @@ public static class ModData
     public static class Illustrations
     {
         public static readonly Illustration StumblingStance = new ModdedIllustration("MoreDedicationsAssets/calabash.png");
+        public static readonly Illustration DreadMarshalStance = IllustrationName.HideousLaughter;
+        public static readonly Illustration InspiringMarshalStance = IllustrationName.WinningStreak;
+        public static readonly Illustration SteelYourself = new ModdedIllustration("MoreDedicationsAssets/heartburn.png");
+        public static readonly Illustration RallyingCharge = new SideBySideIllustration(IllustrationName.FleetStep, new ModdedIllustration("MoreDedicationsAssets/heart-wings.png"));
+        public static readonly Illustration ToBattle = new ModdedIllustration("MoreDedicationsAssets/flying-flag.png");
+    }
+
+    public static class Tooltips
+    {
+        public static readonly Func<string?, string> LeveledDC = inline => "{tooltip:MoreDedications.LevelBasedDC}" + inline + "{/}";
     }
 }
