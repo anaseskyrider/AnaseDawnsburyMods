@@ -77,6 +77,6 @@ public static class ModData
 
     public static class Illustrations
     {
-        public static readonly Illustration StumblingStance = new ModdedIllustration("MoreDedicationsAssets/new.png");
-    };
+        public static readonly Illustration StumblingStance = new ModdedIllustration("MoreDedicationsAssets/calabash.png");
+    }
 }
