@@ -6,6 +6,7 @@ STATEMENT OF INTENT: This repository, other than the licensed content it contain
 ### Links
 - [Steam Workshop: More Dedications](https://steamcommunity.com/sharedfiles/filedetails/?id=3447019566)
 - [Steam Workshop: Runesmith](https://steamcommunity.com/sharedfiles/filedetails/?id=3460180524)
+- [Steam Workshop: More Basic Actions](https://steamcommunity.com/sharedfiles/filedetails/?id=3485625903)
 - [Ko-Fi](https://ko-fi.com/anaseskyrider) (tips always appreciated)
 - I go by @AnaseSkyrider on Discord and most other places.
 
@@ -94,3 +95,28 @@ Attributions:
 - <a href="https://www.flaticon.com/free-icons/handmade" title="handmade icons">Handmade icons created by GOWI - Flaticon</a>
 - <a href="https://www.flaticon.com/free-icons/knife" title="knife icons">Knife icons created by kerismaker - Flaticon</a>
 - <a href="https://www.flaticon.com/free-icons/musical-note" title="musical note icons">Musical note icons created by Freepik - Flaticon</a>
+
+## More Basic Actions
+Adds more basic actions for characters to use.
+
+### Prepare to Aid
+**(Includes the Cooperative Nature human feat)**
+Spend an action and select either an adjacent ally who's attack or skill check you want to aid, or select an adjacent enemy whose incoming attacks you'd like to aid, and what check you're preparing to aid.
+
+When the trigger occurs, you make the same check against a flat DC, providing a bonus to the triggering roll depending on the results and your proficiency with the check.
+
+_(Mod options allow you to adjust the DC)_
+
+### Ready
+Spend two actions to prepare to use one of the premade reactions. Options include:
+- Brace: When a creature enters your reach, make a melee Strike against that creature.
+
+### Help Up
+When an adjacent ally is prone, you can spend an action to let them Stand as a free action.
+
+_(Mod options allow you to adjust whether the ally actually takes a move action, or simply ceases to be prone)_
+
+Attributions
+- <a href="https://www.flaticon.com/free-icons/help" title="help icons">Help icons created by Freepik - Flaticon</a>
+- <a href="https://www.flaticon.com/free-icons/protection" title="protection icons">Protection icons created by Freepik - Flaticon</a>
+- <a href="https://www.flaticon.com/free-icons/reaction" title="reaction icons">Reaction icons created by Freepik - Flaticon</a>
