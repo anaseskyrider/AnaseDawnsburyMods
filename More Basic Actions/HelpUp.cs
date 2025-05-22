@@ -48,7 +48,7 @@ public static class HelpUp
                 ModData.Illustrations.HelpUp,
                 "Help Up",
                 [Trait.Manipulate],
-                "{b}Requirements{/b} You have a free hand\n\nChoose an adjacent ally who is prone and is able to take move actions. " +
+                "{b}Requirements{/b} You have a free hand\n\nChoose an adjacent prone ally who is able to take move actions. " +
                 (doNotMove
                     ? "That ally ceases being prone."
                     : "That ally Stands as a free action."),
