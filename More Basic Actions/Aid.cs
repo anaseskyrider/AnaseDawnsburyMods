@@ -61,27 +61,27 @@ public static class Aid
                         return null;
                     
                     SubmenuPossibility aidMenu = new SubmenuPossibility(
-                        Enums.Illustrations.Aid,
+                        ModData.Illustrations.Aid,
                         "Prepare to Aid",
                         PossibilitySize.Full)
                     {
-                        SubmenuId = Enums.SubmenuIds.PrepareToAid,
+                        SubmenuId = ModData.SubmenuIds.PrepareToAid,
                         Subsections =
                         {
                             new PossibilitySection("Skill checks")
                             {
-                                PossibilitySectionId = Enums.PossibilitySectionIds.AidSkills,
+                                PossibilitySectionId = ModData.PossibilitySectionIds.AidSkills,
                                 Possibilities = CreatePrepareToAidSkills(cr),
                             },
                             new PossibilitySection("Attack rolls")
                             {
-                                PossibilitySectionId = Enums.PossibilitySectionIds.AidAttacks,
+                                PossibilitySectionId = ModData.PossibilitySectionIds.AidAttacks,
                                 Possibilities = CreatePrepareToAidAttacks(cr),
                             },
                         },
                         SpellIfAny = new CombatAction(
                             cr,
-                            Enums.Illustrations.Aid,
+                            ModData.Illustrations.Aid,
                             "Prepare to Aid",
                             [],
                             BasicPrepareToAidDescription+"\n\n"+BasicAidReactionDescription,
@@ -96,16 +96,16 @@ public static class Aid
         });
         
         TrueFeat cooperativeNature = new TrueFeat(
-            Enums.FeatNames.CooperativeNature,
+            ModData.FeatNames.CooperativeNature,
             1,
             "The short human life span lends perspective and has taught you from a young age to set aside differences and work with others to achieve greatness.",
             "You gain a +4 circumstance bonus on checks to Aid {icon:Reaction}.",
-            [Enums.Traits.MoreBasicActions, Trait.Human])
+            [ModData.Traits.MoreBasicActions, Trait.Human])
             .WithPermanentQEffect("You have a permanent +4 circumstance bonus on checks to Aid {icon:Reaction}.", qfFeat =>
             {
                 qfFeat.BonusToAttackRolls = (qfThis, action, defender) =>
                 {
-                    if (action.Name.Contains("Aid Strike") || action.ActionId == Enums.ActionIds.AidReaction)
+                    if (action.Name.Contains("Aid Strike") || action.ActionId == ModData.ActionIds.AidReaction)
                         return new Bonus(4, BonusType.Circumstance, "Cooperative Nature");
 
                     return null;
@@ -167,13 +167,13 @@ public static class Aid
         CombatAction? mostProficientAttack = null;
         CombatAction prepareToAidAction = new CombatAction(
                 owner,
-                Enums.Illustrations.Aid,
+                IllustrationName.Action,
                 "INCOMPLETE TEXT",
                 [Trait.DoNotShowOverheadOfActionName, Trait.Basic],
                 "INCOMPLETE TEXT",
                 skill != null ? Target.AdjacentFriend() : Target.AdjacentCreature())
             .WithActionCost(1)
-            .WithActionId(Enums.ActionIds.PrepareToAid)
+            .WithActionId(ModData.ActionIds.PrepareToAid)
             .WithSoundEffect(SfxName.OpenPage);
         
         // Skill or attack check
@@ -248,9 +248,9 @@ public static class Aid
             $"If you're adjacent to {{Blue}}{aidee.Name}{{/Blue}} when they " + (isEnemy ? "are attacked," : $"make {AorAn(checkName)} {{Blue}}{checkName}{{/Blue}},") + " you can aid {icon:Reaction} their check.",
             ExpirationCondition.ExpiresAtStartOfYourTurn,
             aider,
-            Enums.Illustrations.Aid)
+            ModData.Illustrations.Aid)
         {
-            Id = Enums.QEffectIds.PreparedToAid,
+            Id = ModData.QEffectIds.PreparedToAid,
             Tag = check,
         };
         
@@ -279,7 +279,7 @@ public static class Aid
                         || !aidableAction.HasTrait(Trait.Attack) // Must be an attack
                         || aidableAction.ActiveRollSpecification is not { } rollSpec // Must have a roll spec
                         || rollSpec.TaggedDetermineBonus.InvolvedSkill != null // Must not be a skill check
-                        || aidableAction.ActionId == Enums.ActionIds.PrepareToAid // Must not a preparation action
+                        || aidableAction.ActionId == ModData.ActionIds.PrepareToAid // Must not a preparation action
                         || qfThis.Tag is not QEffect preparation2 // Source must actually still be preparing to aid that action
                     )
                         return;
@@ -362,7 +362,7 @@ public static class Aid
                         CreateAidReactionDescription(rank).Replace("{b}Aid{b} {icon:Reaction}\n", ""),
                         Target.AdjacentCreature())
                     .WithActionCost(0)
-                    .WithActionId(Enums.ActionIds.AidReaction)
+                    .WithActionId(ModData.ActionIds.AidReaction)
                     .WithActiveRollSpecification(new ActiveRollSpecification(TaggedChecks.SkillCheck(skill), Checks.FlatDC(AidDC())));
                 break;
             case CombatAction attack:
@@ -372,7 +372,7 @@ public static class Aid
                 aidReaction = aider.CreateStrike(attack.Item)
                     .WithActionCost(0)
                     .WithExtraTrait(Trait.ReactiveAttack)
-                    .WithActionId(Enums.ActionIds.AidReaction)
+                    .WithActionId(ModData.ActionIds.AidReaction)
                     .WithItem(attack.Item)
                     .WithActiveRollSpecification(new ActiveRollSpecification(Checks.Attack(attack.Item, 0), Checks.FlatDC(AidDC())));
                     //.WithSoundEffect(aider.HasTrait(Trait.Female) ? SfxName.Intimidate : SfxName.MaleIntimidate);
