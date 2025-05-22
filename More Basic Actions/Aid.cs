@@ -424,7 +424,7 @@ public static class Aid
     {
         bool isAttack = checkName is "Attack";
         string flavorText = "{i}You prepare to help your ally with a task outside your turn.{/i}";
-        string rulesText = $"Choose an adjacent ally{(isAttack ? " or enemy" : null)}. When that ally makes {AorAn(checkName)} {checkName} check while adjacent to you,{(isAttack ? " or that enemy is targeted by an attack while adjacent to you," : null)} you can use the aid {{icon:Reaction}} reaction for that check as the trigger.";
+        string rulesText = $"Choose an adjacent ally{(isAttack ? " or enemy" : null)}. When that ally makes {AorAn(checkName)} {{Blue}}{checkName}{{/Blue}} check while adjacent to you,{(isAttack ? " or that enemy is targeted by an attack while adjacent to you," : null)} you can use the aid {{icon:Reaction}} reaction for that check as the trigger.";
         return flavorText + "\n\n" + rulesText + "\n\n" + CreateAidReactionDescription(rank);
     }
 
