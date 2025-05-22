@@ -9,5 +9,6 @@ public class MoreBasicActions
     {
         Aid.LoadAid();
         Ready.LoadReady();
+        HelpUp.LoadHelpUp();
     }
 }

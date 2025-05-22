@@ -39,6 +39,7 @@ public static class ModData
     {
         public static readonly Illustration Aid = new ModdedIllustration("MoreBasicActionsAssets/protection.png");
         public static readonly Illustration Ready = new ModdedIllustration("MoreBasicActionsAssets/chronometer.png");
+        public static readonly Illustration HelpUp = new ModdedIllustration("MoreBasicActionsAssets/helping-hand.png");
     };
 
     public static class SubmenuIds
