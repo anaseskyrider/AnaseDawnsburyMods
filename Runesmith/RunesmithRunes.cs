@@ -419,11 +419,12 @@ public static class RunesmithRunes
                         break;
                 }
             },
-            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target, DrawnRune invokedRune) =>
+            InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
             {
                 if (!thisRune.IsImmuneToThisInvocation(target))
                 {
                     // Raise their Shield
+                    // Copied from Shielding Strike
                     Possibilities shieldActions = Possibilities.Create(target)
                         .Filter( ap =>
                         {
@@ -436,6 +437,7 @@ public static class RunesmithRunes
                     List<Option> actions = await target.Battle.GameLoop.CreateActions(target, shieldActions, null);
                     await target.Battle.GameLoop.OfferOptions(target, actions, true);
                     
+                    // Adding the QF doesn't let you Shield Block.
                     //bool hasShieldBlock = target.HasEffect(QEffectId.ShieldBlock) || target.WieldsItem(Trait.AlwaysOfferShieldBlock);
                     //target.AddQEffect(QEffect.RaisingAShield(hasShieldBlock));
                 
