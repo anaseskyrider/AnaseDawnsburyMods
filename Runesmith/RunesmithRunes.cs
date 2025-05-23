@@ -548,6 +548,9 @@ public static class RunesmithRunes
                             }
                             DiceFormula splashAmount = DiceFormula.FromText(weaponDamageDiceCount, thisRune.Name);
                             
+                            // Make the strike magical while dealing splash damage (backfire mantle integration)
+                            action.WithExtraTrait(Trait.Magical);
+                            
                             // If the strike at least failed,
                             if (action.CheckResult > CheckResult.CriticalFailure)
                             {
@@ -563,6 +566,9 @@ public static class RunesmithRunes
                                     }
                                 }
                             }
+                            
+                            // Make the strike no longer magical
+                            action.Traits.Remove(Trait.Magical);
                         },
                     }.WithItemOrUnarmedRegulator(targetItem);
                     
