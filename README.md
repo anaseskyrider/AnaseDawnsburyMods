@@ -1,6 +1,8 @@
 # AnaseDawnsburyMods
 A compilation of all of my mods for Dawnsbury Days.
 
+⚠ The description in this repo is usually out of date. The most up to date descriptions of each mod are found at their Workshop pages. ⚠
+
 STATEMENT OF INTENT: This repository, other than the licensed content it contains, is public domain (see Unlicense). Follow the terms and conditions of those other licenses located in the associated mod folders before attempting to use the content of this project, which I do not possess the rights to commit to public domain.
 
 ### Links
