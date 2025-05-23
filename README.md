@@ -13,31 +13,39 @@ STATEMENT OF INTENT: This repository, other than the licensed content it contain
 - I go by @AnaseSkyrider on Discord and most other places.
 
 ## More Dedications
-_(Requires DawnniExpanded)_
 
-This mod adds more **Archetypes** to *DawnniExpanded*.
+This mod adds more **Archetypes** and expands existing Archetypes.
 
 ### Current Archetypes
-- **Archer** Assisting Shot, Point-Blank Shot, Quick Draw, Advanced Bow Training, Crossbow Terror, Parting Shot, Double Shot, Running Reload, Archer's Aim, Triple Shot
+- **Bastion** Agile Shield Grip, Disarming Block, Shielded Stride, Reflexive Shield
+- **Marshal** Dread Marshal Stance, Inspiring Marshal Stance, Steel Yourself!, Rallying Charge, Attack of Opportunity, To Battle!
+- **Martial Artist** Powder Punch Stance, Brawling Focus, Crane Stance, Dragon Stance, Gorilla Stance, Mountain Stance, Wolf Stance, Stumbling Stance, Tiger Stance, Follow-Up Strike, Thunder Clap, Crane Flutter, Dragon Roar, Gorilla Pound, Grievous Blow, Mountain Stronghold, Stumbling Feint, Tiger Slash, Wolf Drag
 - **Mauler** Knockdown, Power Attack, Clear the Way, Shoving Sweep
 
+### Expanded Archetypes
+- **Archer** Quick Draw, Advanced Bow Training, Crossbow Terror, Parting Shot, Running Reload, Archer's Aim
+
 ### Planned Archetypes (in order)
-1. Bastion
-2. Martial Artist
-3. Marshal
+1. ~~Bastion~~
+2. ~~Martial Artist~~
+3. ~~Marshal~~
 4. *(More after that, if I can)*
 
 ### Class Feats
 More Dedications also adds the following class feats which are not yet implemented in the base game (added as part of certain dedications):
-- (Fighter) Point-Blank Shot
-- (Fighter) Parting Shot
+- (Fighter) Parting Shot, Shielded Stride, Reflexive Shield
 - (Ranger) Running Reload
-- (Fighter) Triple Shot
+- (Monk) Crane Flutter, Dragon Roar, Gorilla Pound, Mountain Stronghold, Stumbling Feint, Stumbling Stance, Tiger Slash, Tiger Stance, Wolf Drag
+
+This mod also adds the following feats which are not part of any archetype (might be removed and repackaged in a separate mod at a later date):
+- (Monk) Stoked Flame Stance
 
 ### Differences from Tabletop:
-- Mauler/Clear the Way: This requires a weapon with the Shove trait, following the most-RAW interpretation of its CRB implementation. For licensing reasons, I will NOT be changing this. (For the same reasons, these Shoves use your MAP as normal.)
-- Mauler/Shoving Sweep: The Shove from this reaction disrupts a creature's movement action. This is base functionality of Dawnsbury Days. It's (very low) on my TODO to find an implementation that preserves the tabletop functionality.
-- Archer/Quick Shot: This is *Dawnbury Days'* implementation of *Quick Draw*.
+- **Archer/Quick Shot:** This is Dawnsbury Days' implementation of Quick Draw.
+- **Martial Artist/Stoked Flame Stance:** For technical reasons, the alternative crit spec effect applies on top of the usual crit spec, but does reduced persistent damage (1d4 instead of 1d6), similar to Tiger Stance. Access to crit spec is still required, unlike Tiger Stance.
+Martial Artist/Tiger Stance: Step functionality works very slightly differently. Any time you take a Step action, you can Step again as a free action. (This should allow it to combine with any action or reaction which Steps.)
+- **Mauler/Clear the Way:** This requires a weapon with the Shove trait, following the most-RAW interpretation of its CRB implementation. For licensing reasons, I will NOT be changing this. (For the same reasons, these Shoves use your MAP as normal.)
+- **Mauler/Shoving Sweep:** The Shove from this reaction disrupts a creature's movement action. This is base functionality of Dawnsbury Days. It's (very low) on my TODO to find an implementation that preserves the tabletop functionality.
 
 ## Runesmith
 Adds the *Runesmith* class from the Impossible Playtest, a warrior scholar who wields the root of all magic: the rune.
