@@ -63,6 +63,7 @@ public static class ModData
         
         // Bonus stance feats
         public static readonly FeatName StokedFlameStance = ModManager.RegisterFeatName("StokedFlameStance", "Stoked Flame Stance");
+        public static readonly FeatName InnerFire = ModManager.RegisterFeatName("InnerFireSOM", "Inner Fire (SoM)");
     }
     
     public static class QEffectIds
@@ -74,13 +75,15 @@ public static class ModData
         public static readonly QEffectId DragonRoarImmunity = ModManager.RegisterEnumMember<QEffectId>("Dragon Roar Immunity");
         public static readonly QEffectId MountainStronghold = ModManager.RegisterEnumMember<QEffectId>("Mountain Stronghold");
         public static readonly QEffectId FlatFootedToStumblingFeint = ModManager.RegisterEnumMember<QEffectId>("FlatFootedToStumblingFeint");
-        public static readonly QEffectId StokedFlameStance = ModManager.RegisterEnumMember<QEffectId>("Stoked Flame Stance");
         
         // Marshal
         public static readonly QEffectId MarshalsAuraProvider = ModManager.RegisterEnumMember<QEffectId>("MarshalsAuraProvider");
         public static readonly QEffectId MarshalsAuraEffect = ModManager.RegisterEnumMember<QEffectId>("Marshal's Aura");
         public static readonly QEffectId DreadMarshalStance = ModManager.RegisterEnumMember<QEffectId>("Dread Marshal Stance");
         public static readonly QEffectId InspiringMarshalStance = ModManager.RegisterEnumMember<QEffectId>("Inspiring Marshal Stance");
+        
+        // Bonus stances
+        public static readonly QEffectId StokedFlameStance = ModManager.RegisterEnumMember<QEffectId>("Stoked Flame Stance");
     }
 
     public static class ActionIds

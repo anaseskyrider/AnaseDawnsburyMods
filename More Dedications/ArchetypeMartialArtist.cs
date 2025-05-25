@@ -974,7 +974,6 @@ public static class ArchetypeMartialArtist
         // (thank The Matrix Dragon for requesting these)
         
         // Stoked Flame Stance
-        // TODO: Inner Fire (SoM) follow-up Feat
         Feat stokedFlameStance = CreateMonkStance2(
             ModData.FeatNames.StokedFlameStance,
             "Stoked Flame Stance",
@@ -1028,6 +1027,45 @@ public static class ArchetypeMartialArtist
         stokedFlameStance.Traits.Insert(0, ModData.Traits.MoreDedications);
         ModManager.AddFeat(stokedFlameStance);
         
+        Feat innerFire = new TrueFeat(
+            ModData.FeatNames.InnerFire,
+            6,
+            null,
+            "While you're in Stoked Flame Stance, you have cold and fire resistance equal to half your level, and any creature that hits you with an unarmed attack, tries to Grab or Grapple you, or otherwise touches you takes fire damage equal to your Wisdom modifier (minimum 1). A creature can take this damage no more than once per turn.",
+            [ModData.Traits.MoreDedications, Trait.Monk])
+            .WithPermanentQEffect("While in Stoked Flame Stance, you have cold and fire resistance, and creatures which touch you take fire damage.",
+                qfFeat =>
+                {
+                    qfFeat.StateCheck = qfThis =>
+                    {
+                        if (!qfThis.Owner.HasEffect(ModData.QEffectIds.StokedFlameStance))
+                            return;
+
+                        int amount = qfThis.Owner.Level / 2;
+                        qfThis.Owner.WeaknessAndResistance.AddResistance(DamageKind.Cold, amount);
+                        qfThis.Owner.WeaknessAndResistance.AddResistance(DamageKind.Fire, amount);
+                    };
+                    qfFeat.AfterYouAreTargeted = async (qfThis, action) =>
+                    {
+                        if (
+                            !(action.HasTrait(Trait.Unarmed) && action.CheckResult > CheckResult.Failure)
+                            && !(action.ActionId is ActionId.Grapple/* || action.HasTrait(Trait.Grab)*/)
+                            && !(action.Target is CreatureTarget ct &&
+                                ct.CreatureTargetingRequirements.Any(req => req is AdjacencyCreatureTargetingRequirement))
+                        )
+                            return;
+                        int amount = Math.Max(qfThis.Owner.Abilities.Wisdom, 1);
+                        await CommonSpellEffects.DealDirectDamage(
+                            CombatAction.CreateSimple(qfThis.Owner, "Inner Fire"),
+                            DiceFormula.FromText(amount.ToString(), "Wisdom"),
+                            action.Owner,
+                            CheckResult.Success,
+                            DamageKind.Fire);
+                    };
+                })
+            .WithPrerequisite(ModData.FeatNames.StokedFlameStance, "Stoked Flame Stance");
+        ModManager.AddFeat(innerFire);
+
         // Wild Winds Initiate
 
         // Jellyfish Stance
