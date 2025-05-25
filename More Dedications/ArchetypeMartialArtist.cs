@@ -1070,7 +1070,92 @@ public static class ArchetypeMartialArtist
 
         // Jellyfish Stance
 
-        // Tangled Forest Stance (for Leshy players)
+        // Tangled Forest Stance
+        Feat tangledStance = CreateMonkStance2(
+            ModData.FeatNames.TangledForestStance,
+            "Tangled Forest Stance",
+            8,
+            ModData.QEffectIds.TangledForestStance,
+            "You extend your arms like gnarled branches to interfere with your foes’ movements.",
+            "Every enemy in your reach that tries to move away from you must succeed at a Reflex save, Acrobatics check, or Athletics check against your class DC or be immobilized for that action. If you prefer, you can allow the enemy to move.",
+            "You can make lashing branch attacks and can prevent enemies from moving away from you.",
+            () => new Item(IllustrationName.ProtectorTree, "lashing branch", [Trait.Agile, Trait.Brawling, Trait.Finesse, Trait.Nonlethal, Trait.Unarmed])
+                .WithWeaponProperties(new WeaponProperties("1d8", DamageKind.Slashing)),
+            false,
+            qfStance =>
+            {
+                qfStance.AddGrantingOfTechnical(
+                    cr => cr.EnemyOf(qfStance.Owner)
+                          && cr.DistanceTo(qfStance.Owner) <= (qfStance.Owner.PrimaryWeaponIncludingRanged != null && qfStance.Owner.PrimaryWeaponIncludingRanged.HasTrait(Trait.Reach) ? 2 : 1),
+                    qfTech =>
+                    {
+                        qfTech.Name = "Tangled Forest Interference";
+                        qfTech.FizzleOutgoingActions = async (qfThis, action, strBuild) =>
+                        {
+                            Creature monk = qfStance.Owner;
+                            Creature mover = qfThis.Owner;
+                            
+                            // TODO: only if moving further away
+                            if (!action.HasTrait(Trait.Move)
+                                || (action.ChosenTargets.ChosenTile is {} tile && monk.Occupies.DistanceTo(tile) <= monk.DistanceTo(mover)))
+                                return false;
+
+                            if (!await monk.AskForConfirmation(IllustrationName.ProtectorTree,
+                                    "{b}Tangled Forest Stance{/b}\n{Blue}" + mover +
+                                    "{/Blue} is attempting to move away from you. Allow them to pass?",
+                                    "Disrupt",
+                                    "Pass"))
+                                return true;
+                            
+                            // Roll Data
+                            CalculatedNumber.CalculatedNumberProducer bestRoll = Checks.BestRoll(
+                                Checks.SavingThrow(Defense.Reflex),
+                                TaggedChecks.SkillCheck(Skill.Acrobatics, Skill.Athletics).CalculatedNumberProducer);
+                            CalculatedNumber classDC = new CalculatedNumber(
+                                qfStance.Owner.ClassDC(),
+                                "Class DC",
+                                new List<Bonus?>());
+                            ActiveRollSpecification rollSpec = new ActiveRollSpecification(
+                                bestRoll,
+                                (_, _, _) => classDC);
+                            string name = "Tangled Forest Interference";
+                            CheckBreakdown breakdown = CombatActionExecution.BreakdownAttackForTooltip(
+                                CombatAction.CreateSimple(mover, name)
+                                    .WithActiveRollSpecification(rollSpec),
+                                monk);
+                            CheckBreakdownResult breakdownResult = new CheckBreakdownResult(breakdown);
+                            
+                            // Code peeled out of RollCheck
+                            //CheckResult result = CommonSpellEffects.RollCheck("Tangled Forest Interference", new ActiveRollSpecification(bestRoll, (_, _, _) => classDC), mover, monk);
+                            
+                            // Log data
+                            //strBuild.AppendLine("{b}"+name+"{/b}");
+                            strBuild.AppendLine("Every enemy in your reach that tries to move away from you must succeed at a Reflex save, Acrobatics check, or Athletics check against your class DC or be immobilized for that action. If you prefer, you can allow the enemy to move.\n");
+                            strBuild.AppendLine(breakdown.DescribeWithFinalRollTotal(breakdownResult));
+                            strBuild.AppendLine();
+                            strBuild.Replace(action.Name, name); // Describe the effect being rolled against
+                            
+                            // PETR: Doesn't automatically log a success
+                            if (breakdownResult.CheckResult >= CheckResult.Success)
+                                action.Owner.Battle.Log(
+                                    (rollSpec.TaggedDetermineBonus.InvolvedSkill != null ? "Check" : "Saving throw") + " passed.", name, strBuild.ToString());
+                            
+                            // Overhead
+                            mover.Occupies.Overhead(
+                                breakdownResult.CheckResult.HumanizeTitleCase2(),
+                                Color.LightBlue/*,
+                                mover + " rolls " + breakdownResult.CheckResult.Greenify() + " on " + name + ".",
+                                name,
+                                breakdown.DescribeWithFinalRollTotal(breakdownResult)*/);
+                            
+                            // Result
+                            return breakdownResult.CheckResult < CheckResult.Success;
+                        };
+                    });
+            },
+            true);
+        tangledStance.Traits.Insert(0, ModData.Traits.MoreDedications);
+        ModManager.AddFeat(tangledStance);
     }
     
     public static Feat CreateMonkStance2(

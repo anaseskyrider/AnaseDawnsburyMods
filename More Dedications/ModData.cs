@@ -64,6 +64,7 @@ public static class ModData
         // Bonus stance feats
         public static readonly FeatName StokedFlameStance = ModManager.RegisterFeatName("StokedFlameStance", "Stoked Flame Stance");
         public static readonly FeatName InnerFire = ModManager.RegisterFeatName("InnerFireSOM", "Inner Fire (SoM)");
+        public static readonly FeatName TangledForestStance = ModManager.RegisterFeatName("TangledForestStance", "Tangled Forest Stance");
     }
     
     public static class QEffectIds
@@ -84,6 +85,7 @@ public static class ModData
         
         // Bonus stances
         public static readonly QEffectId StokedFlameStance = ModManager.RegisterEnumMember<QEffectId>("Stoked Flame Stance");
+        public static readonly QEffectId TangledForestStance = ModManager.RegisterEnumMember<QEffectId>("Tangled Forest Stance");
     }
 
     public static class ActionIds
