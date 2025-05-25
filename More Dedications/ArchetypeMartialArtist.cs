@@ -40,14 +40,10 @@ public static class ArchetypeMartialArtist
     public static void LoadMod()
     {
         // Dedication Feat
-        TrueFeat martialArtistDedication = (ArchetypeFeats.CreateAgnosticArchetypeDedication(
+        Feat martialArtistDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.MartialArtistArchetype,
                 "You seek neither mysticism nor enlightenment, and you don't view this training as some greater path to wisdom. Yours is the way of the fist striking flesh, the hand turning aside the blade, and the devastating kick taking your enemy down.",
                 "You have trained to use your fists as deadly weapons. The damage die for your fist unarmed attacks becomes 1d6 instead of 1d4; and all of your unarmed attacks lose the nonlethal trait.\n\nWhenever you gain a class feature that grants you expert or greater proficiency in certain weapons, you also gain that proficiency rank in all unarmed attacks.")
-            /*.WithOnSheet(values =>
-            {
-                
-            })*/
             .WithOnCreature(self =>
             {
                 self.WithUnarmedStrike(Item.ImprovedFist());
@@ -55,7 +51,7 @@ public static class ArchetypeMartialArtist
                 {
                     Id = QEffectId.PowerfulFist
                 });
-            }) as TrueFeat)!;
+            });
         ModManager.AddFeat(martialArtistDedication);
         
         // Powder Punch Stance
@@ -278,7 +274,7 @@ public static class ArchetypeMartialArtist
         ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(ModData.FeatNames.TigerStance, ModData.Traits.MartialArtistArchetype, 4));
 
         // Follow-Up Strike
-        TrueFeat followUpStrike = new TrueFeat(
+        Feat followUpStrike = new TrueFeat(
                 ModData.FeatNames.FollowUpStrike,
               6,
               "You have trained to use all parts of your body as a weapon, and when you miss with an attack, you can usually continue the attack with a different body part and still deal damage.",
