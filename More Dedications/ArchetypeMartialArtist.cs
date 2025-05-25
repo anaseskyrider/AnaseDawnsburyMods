@@ -59,7 +59,6 @@ public static class ArchetypeMartialArtist
         ModManager.AddFeat(martialArtistDedication);
         
         // Powder Punch Stance
-        const IllustrationName ppStanceIcon = IllustrationName.AlchemistsFire;
         Feat powderPunchStance = new TrueFeat(
             ModData.FeatNames.PowderPunchStance,
             2,
@@ -68,7 +67,7 @@ public static class ArchetypeMartialArtist
             [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Stance])
             .WithAvailableAsArchetypeFeat(ModData.Traits.MartialArtistArchetype)
             .WithActionCost(1)
-            .WithIllustration(ppStanceIcon)
+            .WithIllustration(ModData.Illustrations.PowderPunchStance)
             .WithPermanentQEffect("Your first melee Strike deals +1 fire damage, and critical Shoves push 5 more feet.",
                 qfFeat =>
                 {
@@ -79,7 +78,7 @@ public static class ArchetypeMartialArtist
 
                         CombatAction enterStance = new CombatAction(
                             qfThis.Owner,
-                            ppStanceIcon,
+                            ModData.Illustrations.PowderPunchStance,
                             "Powder Punch Stance",
                             [Trait.Archetype, Trait.Stance],
                             "{i}You infuse your handwraps with black powder.{/i}\n\n"+"On your first melee Strike each round with an unarmed attack"+/*", knuckle duster, or black powder knuckle duster"+*/", you deal an additional 1 fire damage. If you critically succeed at an attempt to Shove while in this stance, the target is pushed back an additional 5 feet.",
@@ -94,7 +93,7 @@ public static class ArchetypeMartialArtist
                             {
                                 QEffect ppStance = KineticistCommonEffects.EnterStance(
                                     self,
-                                    ppStanceIcon,
+                                    ModData.Illustrations.PowderPunchStance,
                                     "Powder Punch Stance",
                                     "Your first melee Strike deals +1 fire damage, and critical Shoves push 5 more feet.",
                                     ModData.QEffectIds.PowderPunchStance);

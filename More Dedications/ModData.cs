@@ -92,6 +92,7 @@ public static class ModData
 
     public static class Illustrations
     {
+        public static readonly Illustration PowderPunchStance = IllustrationName.AlchemistsFire;
         public static readonly Illustration StumblingStance = new ModdedIllustration("MoreDedicationsAssets/calabash.png");
         public static readonly Illustration DreadMarshalStance = IllustrationName.HideousLaughter;
         public static readonly Illustration InspiringMarshalStance = IllustrationName.WinningStreak;
