@@ -79,7 +79,7 @@ public static class Ready
             owner,
             IllustrationName.TwoActions,
             "Ready (Brace)",
-            [Trait.Concentrate],
+            [Trait.Concentrate, Trait.Basic],
             "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} A creature moves into your reach\n\nYou make a melee Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
             Target.Self())
             .WithActionCost(2)
