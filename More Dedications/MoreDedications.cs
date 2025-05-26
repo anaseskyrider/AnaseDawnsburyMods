@@ -25,5 +25,6 @@ public class MoreDedications
         ArchetypeBastion.LoadMod();
         ArchetypeMartialArtist.LoadMod();
         ArchetypeMarshal.LoadMod();
+        ArchetypeBlessedOne.LoadMod();
     }
 }

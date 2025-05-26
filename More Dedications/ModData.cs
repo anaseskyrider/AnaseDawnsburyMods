@@ -19,6 +19,7 @@ public static class ModData
         public static readonly Trait BastionArchetype = ModManager.RegisterTrait("MoreDedications.Bastion", new TraitProperties("Bastion", true));
         public static readonly Trait MartialArtistArchetype = ModManager.RegisterTrait("MoreDedications.MartialArtist", new TraitProperties("Martial Artist", true));
         public static readonly Trait MarshalArchetype = ModManager.RegisterTrait("MoreDedications.Marshal", new TraitProperties("Marshal", true));
+        public static readonly Trait BlessedOneArchetype = ModManager.RegisterTrait("MoreDedications.BlessedOne", new TraitProperties("Blessed One", true));
     }
     
     public static class FeatNames
@@ -60,6 +61,9 @@ public static class ModData
         public static readonly FeatName SteelYourself = ModManager.RegisterFeatName("MoreDedications.Archetype.Marshal.SteelYourself", "Steel Yourself!");
         public static readonly FeatName RallyingCharge = ModManager.RegisterFeatName("MoreDedications.Archetype.Marshal.RallyingCharge", "Rallying Charge");
         public static readonly FeatName ToBattle = ModManager.RegisterFeatName("MoreDedications.Archetype.Marshal.ToBattle", "To Battle!");
+        
+        // Blessed One
+        public static readonly FeatName BlessedSacrifice = ModManager.RegisterFeatName("MoreDedications.Archetype.BlessedOne.BlessedSacrifice", "Blessed Sacrifice");
         
         // Bonus stance feats
         public static readonly FeatName StokedFlameStance = ModManager.RegisterFeatName("StokedFlameStance", "Stoked Flame Stance");
@@ -104,6 +108,7 @@ public static class ModData
         public static readonly Illustration SteelYourself = new ModdedIllustration("MoreDedicationsAssets/heartburn.png");
         public static readonly Illustration RallyingCharge = new SideBySideIllustration(IllustrationName.FleetStep, new ModdedIllustration("MoreDedicationsAssets/heart-wings.png"));
         public static readonly Illustration ToBattle = new ModdedIllustration("MoreDedicationsAssets/flying-flag.png");
+        public static readonly Illustration ProtectorsSacrifice = new ModdedIllustration("MoreDedicationsAssets/protector's-sacrifice.png");
     }
 
     public static class Tooltips
