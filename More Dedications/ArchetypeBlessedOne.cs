@@ -123,8 +123,6 @@ public static class ArchetypeBlessedOne
                         protectorsSacrifice);
             });
         ModManager.AddFeat(blessedSacrifice);
-        /*ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            FeatName.BlessedSacrifice))*/
         
         // Accelerating Touch
         ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
