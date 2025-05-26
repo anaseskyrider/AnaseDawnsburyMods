@@ -725,6 +725,7 @@ public static class RunesmithClass
         ModManager.AddFeat(runesmithClassFeat);
     }
     
+    // TODO: Use the new function, public int ClassDC(Trait classTrait)
     public static int RunesmithDC(Creature runesmith)
     {
         return runesmith.PersistentCharacterSheet?.Class != null
