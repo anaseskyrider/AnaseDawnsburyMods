@@ -96,7 +96,7 @@ public class ArchetypeBastion
                             else
                             {
                                 CheckResult disarmResult = CommonSpellEffects.RollCheck(
-                                    "Aggressive Block",
+                                    "Disarming Block",
                                     new ActiveRollSpecification(TaggedChecks.SkillCheck(Skill.Athletics),
                                         TaggedChecks.DefenseDC(Defense.Reflex)),
                                     defender,
@@ -105,7 +105,7 @@ public class ArchetypeBastion
                                 await CommonAbilityEffects.Disarm(
                                     CombatAction.CreateSimple(
                                         defender,
-                                        "Aggressive Block"), // Don't assign an item, it'll try to drop it if you crit fail.
+                                        "Disarming Block"), // Don't assign an item, it'll try to drop it if you crit fail.
                                     defender,
                                     attacker,
                                     disarmResult);
