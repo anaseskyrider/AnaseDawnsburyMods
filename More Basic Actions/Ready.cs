@@ -34,6 +34,7 @@ public static class Ready
         {
             QEffect readyLoader = new QEffect()
             {
+                Name = "Ready Loader",
                 ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
                     if (section.PossibilitySectionId != PossibilitySectionId.SkillActions)
