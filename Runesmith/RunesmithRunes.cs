@@ -318,7 +318,14 @@ public static class RunesmithRunes
                         thisRune.ApplyImmunity(target2);
                     });
                 
-                await caster.Battle.GameLoop.FullCast(invokeEsvadirOnToAdjacentCreature);
+                if (sourceAction.HasTrait(ModData.Traits.InvokeAgainstGivenTarget))
+                    await caster.Battle.GameLoop.FullCast(invokeEsvadirOnToAdjacentCreature, ChosenTargets.CreateSingleTarget(target));
+                else
+                {
+                    invokeEsvadirOnToAdjacentCreature
+                        .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration)); // Add extra animation when going from A to B.
+                    await caster.Battle.GameLoop.FullCast(invokeEsvadirOnToAdjacentCreature);
+                }
             },
         }
         .WithDamagingInvocationTechnical()
