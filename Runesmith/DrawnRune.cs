@@ -295,6 +295,7 @@ public class DrawnRune : QEffect
             if (tag == true)
             {
                 this.EnableRune(true);
+                runeTarget.AttachedDiacritic = this;
             }
             else
                 this.DisableRune(false);
@@ -327,6 +328,8 @@ public class DrawnRune : QEffect
         if (newDrawnOn != null)
         {
             this.DrawnOn = newDrawnOn;
+            if (newDrawnOn is DrawnRune dr)
+                dr.AttachedDiacritic = this;
         }
         if (this.Owner != newOwner)
         {
