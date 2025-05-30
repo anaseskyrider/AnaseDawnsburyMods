@@ -279,7 +279,7 @@ public static class RunesmithRunes
                     target, // Get creatures adjacent to the rune, who is the creature with the drawn rune being invoked
                     thisRune.Illustration,
                     $"Invoke {thisRune.Name}",
-                    new List<Trait>(thisRune.Traits).Append(Trait.DoNotShowInCombatLog).ToArray(),
+                    [..thisRune.Traits, Trait.DoNotShowInCombatLog],
                     thisRune.InvocationTextWithHeightening(thisRune, caster.Level)!,
                     Target.RangedCreature(1)/*AdjacentCreature()*/
                         .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
@@ -298,11 +298,6 @@ public static class RunesmithRunes
                     {
                         if (!thisRune.IsImmuneToThisInvocation(target))
                         {
-                            // CheckResult result = CommonSpellEffects.RollSavingThrow(
-                            //     target, 
-                            //     CombatAction.CreateSimple(caster, $"Invoked {thisRune.Name}"),
-                            //     Defense.Fortitude,
-                            //     caster.ClassOrSpellDC());
                             int roundHalfLevel = ((caster.Level - thisRune.BaseLevel) / 2);
                             int damageAmount = 2 + roundHalfLevel * 2;
                             await CommonSpellEffects.DealBasicDamage(
@@ -351,7 +346,7 @@ public static class RunesmithRunes
                 Usability allyNotUsable = Usability.NotUsableOnThisCreature("enemy creature");
                 return isAlly ? (hasShield ? Usability.Usable : shieldNotUsable) : allyNotUsable;
             },
-            NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
+            NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
             {
                 DrawnRune? MakeHoltrikPassive(Item targetItem)
                 {                
@@ -1340,6 +1335,8 @@ public static class RunesmithRunes
                                     return;
                                 QEffect invokeBonus = new QEffect()
                                 {
+                                    // No expiration because it needs to exist longer for invocations such as Esvadir which have hidden subsidiaries going on
+                                    // Is removed on its own when the rune is invoked, and it only applies to the same type, so it should be safe to manually expire that way in this callback structure.
                                     //ExpiresAt = ExpirationCondition.EphemeralAtEndOfImmediateAction,
                                     BonusToDamage = (qfThis, action, defender) =>
                                     {
@@ -1354,11 +1351,6 @@ public static class RunesmithRunes
                                         return new Bonus(caster.Abilities.Intelligence, BonusType.Status,
                                                 "Ur, Diacritic Rune of Intensity");
                                     },
-                                    /*StateCheck = qfThis =>
-                                    {
-                                        if ()
-                                            qfThis.ExpiresAt = ExpirationCondition.Immediately;
-                                    },*/
                                 };
                                 thisDr.Source.AddQEffect(invokeBonus);
                             },

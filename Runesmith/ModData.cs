@@ -57,7 +57,7 @@ public static class ModData
                 "An invocation action allows a runesmith to surge power through a rune by uttering its true name. Invocation requires you to be able to speak clearly in a strong voice and requires that you be within 30 feet of the target rune or runes unless another ability changes this. The target rune then fades away immediately after the action resolves.",
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
         
-        // TODO: May have long-term issues. Potentially refactor InvocationBehavior signature and related functionality to use the "Creature target" parameter as an optional "invoke against this guy regardless who the runebearer is" functionality.
+        // TODO: May have long-term issues. Potentially refactor InvocationBehavior signature and related functionality to use the "Creature target" parameter as an optional "invoke against this guy regardless who the rune-bearer is" functionality.
         /// <summary>When a rune's invocation has an inaccessible subsidiary targeting action, such as Esvadir, then giving this trait to an invocation action will tell that subsidiary which creature to choose automatically.</summary>
         public static readonly Trait InvokeAgainstGivenTarget = ModManager.RegisterTrait("InvokeAgainstGivenTarget",
             new TraitProperties("InvokeAgainstGivenTarget", false)
