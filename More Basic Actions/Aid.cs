@@ -50,6 +50,12 @@ public static class Aid
             "The DC to Aid is normally 20. If enabled, the DC is reduced to 15 instead.",
             false);
         
+        // Option to move Prepare to Aid into submenus
+        ModManager.RegisterBooleanSettingsOption("MoreBasicActions.AidInSubmenus",
+            "More Basic Actions: Move Aid to Other Actions",
+            "Enabling this option will move the Aid menu to the Other Actions submenu.",
+            false);
+        
         // Add Prepare to Aid to every creature.
         ModManager.RegisterActionOnEachCreature(cr =>
         {
@@ -57,7 +63,11 @@ public static class Aid
             {
                 ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
-                    if (section.PossibilitySectionId != PossibilitySectionId.SkillActions)
+                    PossibilitySectionId sectionId =
+                        PlayerProfile.Instance.IsBooleanOptionEnabled("MoreBasicActions.AidInSubmenus")
+                            ? PossibilitySectionId.OtherManeuvers
+                            : PossibilitySectionId.SkillActions;
+                    if (section.PossibilitySectionId != sectionId)
                         return null;
                     
                     SubmenuPossibility aidMenu = new SubmenuPossibility(

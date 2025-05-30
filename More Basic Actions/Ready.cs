@@ -29,6 +29,13 @@ public static class Ready
     {
         // TODO: "Readying an attack is useful under two circumstances. First, an enemy comes within reach/range. This would be easy to implement. Second, an enemy is made flat-footed or flanked (most relevant for rogues)." - Dinglebob
         
+        
+        // Option to move Ready into submenus
+        ModManager.RegisterBooleanSettingsOption("MoreBasicActions.ReadyInSubmenus",
+            "More Basic Actions: Move Ready to Other Actions",
+            "Enabling this option will move the Ready menu to the Other Actions submenu.",
+            false);
+        
         // Add Prepare to Aid to every creature.
         ModManager.RegisterActionOnEachCreature(cr =>
         {
@@ -37,7 +44,11 @@ public static class Ready
                 Name = "Ready Loader",
                 ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
-                    if (section.PossibilitySectionId != PossibilitySectionId.SkillActions)
+                    PossibilitySectionId sectionId =
+                        PlayerProfile.Instance.IsBooleanOptionEnabled("MoreBasicActions.ReadyInSubmenus")
+                            ? PossibilitySectionId.OtherManeuvers
+                            : PossibilitySectionId.SkillActions;
+                    if (section.PossibilitySectionId != sectionId)
                         return null;
                     
                     SubmenuPossibility readyMenu = new SubmenuPossibility(
