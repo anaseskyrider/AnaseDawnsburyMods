@@ -63,6 +63,7 @@ public static class ModData
         public static readonly Trait InvocationImmunity = ModManager.RegisterTrait("InvocationImmunity",
             new TraitProperties("InvocationImmunity", false) { RelevantOnlyForClass = Runesmith });
         
+        /// <summary>DOC:</summary>
         public static readonly Trait Diacritic = ModManager.RegisterTrait("Diacritic",
             new TraitProperties("Diacritic", true,
                 "A diacritic is a special type of rune that is not applied directly to a creature or object, but rather to another rune itself, modifying or empowering that base rune. A diacritic can never be applied by itself, and any effect that would remove or invoke the base rune always also removes or invokes the diacritic rune. A rune can have only one diacritic.",

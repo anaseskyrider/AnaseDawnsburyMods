@@ -219,10 +219,11 @@ public static class RunesmithClass
                             if (caster.DistanceTo(cr) <= 6 && // Make sure creatures are in range.
                                 cr.QEffects.FirstOrDefault( // Find a Qf-
                                     qfToFind => 
-                                        qfToFind is DrawnRune && // -that is a DrawnRune,
-                                        qfToFind.Source == caster && // that is created by us,
-                                        qfToFind.Traits.Contains(ModData.Traits.Rune) && // with the rune trait,
-                                        !qfToFind.Traits.Contains(ModData.Traits.Invocation) // but not the invocation trait.
+                                        qfToFind is DrawnRune dr // -that is a DrawnRune,
+                                        && dr.Source == caster // that is created by us,
+                                        && dr.Traits.Contains(ModData.Traits.Rune) // with the rune trait,
+                                        && !dr.Traits.Contains(ModData.Traits.Invocation) // but not the invocation trait.
+                                        && !dr.Disabled
                                     ) != null
                                 )
                             {
@@ -249,10 +250,11 @@ public static class RunesmithClass
                             {
                                 cr.QEffects.ForEach(qfOnCreature => // then loop through its QFs.
                                 {
-                                    if (qfOnCreature is DrawnRune && // If valid QF,
-                                        qfOnCreature.Source == self &&
-                                        qfOnCreature.Traits.Contains(ModData.Traits.Rune) &&
-                                        !qfOnCreature.Traits.Contains(ModData.Traits.Invocation))
+                                    if (qfOnCreature is DrawnRune dr // If valid QF,
+                                        && dr.Source == self
+                                        && dr.Traits.Contains(ModData.Traits.Rune)
+                                        && !dr.Traits.Contains(ModData.Traits.Invocation)
+                                        && !dr.Disabled)
                                         numberOfRunes++; // then count it.
                                 });
                             }

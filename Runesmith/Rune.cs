@@ -778,7 +778,7 @@ public class Rune
     {
         Rune thisRune = runeToInvoke.Rune;
         
-        if (thisRune.InvocationBehavior == null || runeToInvoke.Disabled)
+        if (thisRune.InvocationBehavior == null || runeToInvoke.Hidden)
             return;
         
         foreach (Creature cr in caster.Battle.AllCreatures)

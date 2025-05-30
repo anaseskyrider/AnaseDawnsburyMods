@@ -106,11 +106,11 @@ public class DrawnRune : QEffect
     /// </summary>
     public DrawnRune? AttachedDiacritic { get; set; }
     
-    /// <summary>
-    /// <para>A DrawnRune which is disabled doesn't execute its passive behavior. This allows the rune to exist (optionally visible), without executing behavior.</para>
-    /// <para>Use Case: Runic Reprisal, which draws a damaging rune onto the shield, whilst not conferring its passive effects, in order to invoke it onto an attacker as part of Shield Block.</para>
-    /// </summary>
-    public bool Disabled { get; set; }
+    /// <summary>If true, the drawn rune doesn't execute its passive behavior, such as Atryl lowering fire resistance. To set true/false, use <see cref="EnableRune"/> and <see cref="DisableRune"/></summary>
+    public bool Disabled => this.Hidden || this.DisablePassive;
+
+    /// <summary>See <see cref="Disabled"/> for functionality.</summary>
+    private bool DisablePassive { get; set; }
     #endregion
 
     #region Callbacks
@@ -344,7 +344,7 @@ public class DrawnRune : QEffect
     /// <seealso cref="Disabled"/>
     public void DisableRune(bool showRuneOnCreature = false)
     {
-        this.Disabled = true;
+        this.DisablePassive = true;
         if (!showRuneOnCreature)
             this.HideFromPortrait = true;
     }
@@ -356,7 +356,7 @@ public class DrawnRune : QEffect
     /// <seealso cref="Disabled"/>
     public void EnableRune(bool showRuneOnCreature = true)
     {
-        this.Disabled = false;
+        this.DisablePassive = false;
         if (showRuneOnCreature)
             this.HideFromPortrait = false;
     }
