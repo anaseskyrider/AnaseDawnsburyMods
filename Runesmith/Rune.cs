@@ -787,9 +787,7 @@ public class Rune
             foreach (DrawnRune dr in drawnRunes)
             {
                 if (dr.BeforeInvokingRune != null)
-                {
                     await dr.BeforeInvokingRune.Invoke(dr, runeToInvoke);
-                }
             }
         }
         
@@ -801,9 +799,7 @@ public class Rune
             foreach (DrawnRune dr in drawnRunes)
             {
                 if (dr.AfterInvokingRune != null)
-                {
                     await dr.AfterInvokingRune.Invoke(dr, runeToInvoke);
-                }
             }
         }
     }

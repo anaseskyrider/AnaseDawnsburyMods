@@ -284,7 +284,7 @@ public class DrawnRune : QEffect
                     if (allCreature == this.Owner) // Don't move if they already have the QF.
                         continue;
                     
-                    await this.MoveRuneToTarget(allCreature, this.DrawnOn);
+                    await this.MoveRuneToTarget(allCreature, runeTarget);
                     break;
                 }
             }
@@ -293,7 +293,9 @@ public class DrawnRune : QEffect
             if (this.Tag is not bool tag)
                 return;
             if (tag == true)
+            {
                 this.EnableRune(true);
+            }
             else
                 this.DisableRune(false);
         };
@@ -323,7 +325,9 @@ public class DrawnRune : QEffect
         // Might need expanded functionality in the future.
         
         if (newDrawnOn != null)
+        {
             this.DrawnOn = newDrawnOn;
+        }
         if (this.Owner != newOwner)
         {
             this.Owner.RemoveAllQEffects(qf => qf == this);

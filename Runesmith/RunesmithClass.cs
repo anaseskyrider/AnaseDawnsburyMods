@@ -243,11 +243,11 @@ public static class RunesmithClass
                          * Find all the runes in play.
                          */
                         int numberOfRunes = 0; // Number of runes on the field.
-                        self.Battle.AllCreatures.ForEach( (Creature cr) =>  // Loop through all the creatures in combat.
+                        self.Battle.AllCreatures.ForEach( cr =>  // Loop through all the creatures in combat.
                         {
                             if (self.DistanceTo(cr) <= 6) // If the creature is in range,
                             {
-                                cr.QEffects.ForEach((QEffect qfOnCreature) => // then loop through its QFs.
+                                cr.QEffects.ForEach(qfOnCreature => // then loop through its QFs.
                                 {
                                     if (qfOnCreature is DrawnRune && // If valid QF,
                                         qfOnCreature.Source == self &&
