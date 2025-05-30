@@ -272,8 +272,6 @@ public static class RunesmithRunes
             },
             InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
             {
-                List<Creature> adjacentCreatures = new List<Creature>(caster.Battle.AllCreatures.Where(cr => cr.IsAdjacentTo(target)));
-                
                 // Create action wrapper for targeting and roll-inspection of invoking from target to adjacent creature.
                 CombatAction invokeEsvadirOnToAdjacentCreature = new CombatAction(
                     target, // Get creatures adjacent to the rune, who is the creature with the drawn rune being invoked
@@ -291,7 +289,7 @@ public static class RunesmithRunes
                                 : Usability.NotUsableOnThisCreature("Not enemy");
                         }))
                     .WithActionCost(0)
-                    .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
+                    //.WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
                     .WithSoundEffect(ModData.SfxNames.InvokedEsvadir)
                     .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
                     .WithEffectOnEachTarget(async (selfAction, caster2, target2, result) =>
