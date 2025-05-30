@@ -60,7 +60,7 @@ public static class HelpUp
                         if (!d.HasEffect(QEffectId.Prone))
                             return Usability.NotUsableOnThisCreature("not prone");
                         CombatAction standUp = CreateStandUpAction(d).WithActionCost(0);
-                        if (!standUp.CanBeginToUse(d))
+                        if (d.HasEffect(QEffectId.Unconscious) || !standUp.CanBeginToUse(d))
                             return Usability.NotUsableOnThisCreature("can't stand up");
                         return Usability.Usable;
                     }))
