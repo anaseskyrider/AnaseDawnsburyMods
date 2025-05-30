@@ -568,8 +568,7 @@ public static class RunesmithFeats
                             if (appliedRune != null)
                             {
                                 qfThis.Tag = appliedRune;
-                                // BUG: Won't behave very nicely with AfterInvokingRune behavior. Narrowly avoided bugs by disallowing diacritics. Ensure robustness later.
-                                appliedRune.AfterInvokingRune = async (thisDrawnRune, invokedRune) =>
+                                appliedRune.AfterInvokingRune += async (thisDrawnRune, invokedRune) =>
                                 {
                                     if (invokedRune == thisDrawnRune)
                                         invokedRune.Owner.PersistentUsedUpResources.UsedUpActions.Add("RunicTattoo");

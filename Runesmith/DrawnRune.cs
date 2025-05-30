@@ -1,3 +1,4 @@
+using Dawnsbury.Core;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
@@ -125,14 +126,14 @@ public class DrawnRune : QEffect
     /// </summary>
     /// <param name="DrawnRune">The DrawnRune this lambda is being called on.</param>
     /// <param name="DrawnRune">The DrawnRune that is about to be invoked.</param>
-    public Func<DrawnRune, DrawnRune, Task>? BeforeInvokingRune { get; set; } // TODO: Change into action so it can be "+="ed instead of set.
+    public Func<DrawnRune, DrawnRune, Task>? BeforeInvokingRune { get; set; }
     
     /// <summary>
     /// Happens after any DrawnRune is invoked.
     /// </summary>
     /// <param name="DrawnRune">The DrawnRune this lambda is being called on.</param>
     /// <param name="DrawnRune">The DrawnRune that was just invoked.</param>
-    public Func<DrawnRune, DrawnRune, Task>? AfterInvokingRune { get; set; } // TODO: Change into action so it can be "+="ed instead of set.
+    public Func<DrawnRune, DrawnRune, Task>? AfterInvokingRune { get; set; }
     #endregion
     
     #region Property Methods
@@ -300,7 +301,7 @@ public class DrawnRune : QEffect
             else
                 this.DisableRune(false);
         };
-        this.AfterInvokingRune = async (drThis, drInvoked) =>
+        this.AfterInvokingRune += async (drThis, drInvoked) =>
         {
             if (drInvoked == drThis.DrawnOn)
             {
