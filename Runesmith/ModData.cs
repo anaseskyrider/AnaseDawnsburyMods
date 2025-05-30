@@ -39,25 +39,19 @@ public static class ModData
                 "Various magical effects can be applied through runes, and they're affected by things which also affect spells. Runes can be applied via etching or tracing. Etched runes are applied outside of combat and last indefinitely, while traced runes last only until the end of your next turn. Their effects, however, are the same. Several abilities refer to creatures bearing one of your runes, known as rune-bearers: this is any creature who has one of your runes applied to its body or to any gear it is holding.",
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
         
-        /// <summary>
-        /// A <see cref="DrawnRune"/> with this trait represents a QEffect which has been temporarily traced.
-        /// </summary>
+        /// <summary>A <see cref="DrawnRune"/> with this trait represents a QEffect which has been temporarily traced.</summary>
         public static readonly Trait Traced = ModManager.RegisterTrait("Traced",
             new TraitProperties("Traced", true,
                 "A traced rune is drawn lightly in dust, light, or a similar fleeting medium. A runesmith can trace runes with the Trace Rune action, and it remains until the end of their next turn.",
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
         
-        /// <summary>
-        /// A <see cref="DrawnRune"/> with this trait represents a QEffect which has been semi-permanently etched.
-        /// </summary>
+        /// <summary>A <see cref="DrawnRune"/> with this trait represents a QEffect which has been semi-permanently etched.</summary>
         public static readonly Trait Etched = ModManager.RegisterTrait("Etched",
             new TraitProperties("Etched", true,
                 "An etched rune is carved, inked, or branded in. A runesmith's magic can sustain up to 2 etched runes at a time, or more at higher levels. Etched runes remain indefinitely until they're expended or removed.", //"Runes are etched before combat begins."
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
         
-        /// <summary>
-        /// An action with this trait represents an invocation action. A QEffect with this trait represents the effects of an invocation, as opposed to an effect that is the result of a rune being applied.
-        /// </summary>
+        /// <summary>An action with this trait represents an invocation action. A QEffect with this trait represents the effects of an invocation, as opposed to an effect that is the result of a rune being applied.</summary>
         public static readonly Trait Invocation = ModManager.RegisterTrait("Invocation",
             new TraitProperties("Invocation", true,
                 "An invocation action allows a runesmith to surge power through a rune by uttering its true name. Invocation requires you to be able to speak clearly in a strong voice and requires that you be within 30 feet of the target rune or runes unless another ability changes this. The target rune then fades away immediately after the action resolves.",
@@ -74,9 +68,7 @@ public static class ModData
                 "A diacritic is a special type of rune that is not applied directly to a creature or object, but rather to another rune itself, modifying or empowering that base rune. A diacritic can never be applied by itself, and any effect that would remove or invoke the base rune always also removes or invokes the diacritic rune. A rune can have only one diacritic.",
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
         
-        /// <summary>
-        /// An item with this trait doesn't count as occupying a hand for the purposes of tracing a rune.
-        /// </summary>
+        /// <summary>An item with this trait doesn't count as occupying a hand for the purposes of tracing a rune.</summary>
         public static readonly Trait CountsAsRunesmithFreeHand = ModManager.RegisterTrait("CountsAsRunesmithFreeHand",
             new TraitProperties("CountsAsRunesmithFreeHand", false));
         #endregion
@@ -168,7 +160,7 @@ public static class ModData
         #endregion
     }
     
-    public static class QEffectIds
+    public static class QEffectIds // Technical names are often used directly for the readable name, write accordingly.
     {
         public static readonly QEffectId RuneSinger = ModManager.RegisterEnumMember<QEffectId>("Rune-Singer");
         public static readonly QEffectId RuneSingerCreator = ModManager.RegisterEnumMember<QEffectId>("RuneSingerCreator");
