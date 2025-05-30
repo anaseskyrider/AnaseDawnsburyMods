@@ -8,6 +8,7 @@ using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Spellbook;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
+using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
@@ -488,18 +489,27 @@ public static class RunesmithFeats
         ModManager.AddFeat(invisibleInk);
         
         // Runic Tattoo
-        // TODO: Let you retrain for future learned runes.
+        // BUG: Feature fails to apply without warning if the chosen option is too high for your current level in free encounter mode.
         Feat runicTattoo = new TrueFeat(
-                ModData.FeatNames.RunicTattoo,
+                ModData.FeatNames.RunicTattoo, // "RunesmithPlaytest.FeatRunicTattoo"
                 2,
                 "Drawing your favorite rune in your flesh, you know you'll never be without it.",
-                "Choose one rune you know, which you apply as a tattoo to your body. The rune is etched at the beginning of combat and doesn't count toward your maximum limit of etched runes. You can invoke this rune like any of your other runes, but once invoked, the rune fades significantly and is drained of power until your next daily preparations.\n\n{b}Special{/b} {Red}{b}(NYI){/b}{/Red} You can retrain this feat to select any runes you learned at higher levels.\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Implementation{/b} At level 6, the feat "+ModTooltips.FeatsWordsFlyFree+"Words, Fly Free{/} offers a way to offensively use the available tattoo options that would otherwise be detrimental to yourself.",
-                [ModData.Traits.Runesmith],
-                []);
+                "Choose one rune you know. The rune is etched at the beginning of combat and doesn't count toward your maximum limit of etched runes. You can invoke this rune like any of your other runes, but once invoked, the rune fades significantly and is drained of power until your next daily preparations.\n\n{b}Special{/b} This feat can be retrained to select runes which were learned at higher levels. {i}(May fail to apply if playing at a level that's too low for your selection in Free Encounter Mode.){/i}\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Implementation{/b} This feat is expanded to allow you to etch onto items you're wielding each combat, rather than only runes drawn onto creatures. At level 6, the feat "+ModTooltips.FeatsWordsFlyFree+"Words, Fly Free{/} offers a way to use tattoo options that would otherwise be detrimental or useless on yourself.",
+                [ModData.Traits.Runesmith])
+            .WithOnSheet(values =>
+            {
+                values.AddSelectionOption(new SingleFeatSelectionOption(
+                    "RunesmithPlaytest.RunicTattooSelection",
+                    "Tattooed Rune",
+                    values.Sheet.MaximumLevel,
+                    ft =>
+                        ft.Tag is Rune rune
+                        && ft.ToTechnicalName().Contains("FeatTattooed")));
+            });
         foreach (RuneFeat runeFeat in RunesmithRunes.AllRuneFeats)
         {
             Feat tattooFeat = new Feat(
-                ModManager.RegisterFeatName("RunesmithPlaytest.FeatRunicTattoo"+runeFeat.Rune.RuneId.ToStringOrTechnical(), runeFeat.Name),
+                ModManager.RegisterFeatName("RunesmithPlaytest.FeatTattooed"+runeFeat.Rune.RuneId.ToStringOrTechnical(), runeFeat.Name),
                 runeFeat.FlavorText,
                 runeFeat.RulesText,
                 runeFeat.Traits,
@@ -515,47 +525,19 @@ public static class RunesmithFeats
                 .WithPrerequisite(values =>
                 {
                     RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values);
-                    
-                    // TODO: Future update
-                    /*
-                    // Getting this to work has been incredibly difficult, with low native documentation,
-                    // so I'm sorting this out into something I can understand even if it seems redundant.
-                    
-                    // All: the level at which the feat was acquired.
-                    int levelAtFeatAcquisition = values.CurrentLevel;
-                    
-                    // Free Encounter Mode: value seems to be the highest seen sheet level at any point after loading the game, even if you select a different level.
-                    // Campaign Mode (retraining): value seems to be the feat acquisition level.
-                    int persistMaxLevel = values.Sheet.MaximumLevel;
-                    
-                    // Free Encounter Mode: value is the current dropdown level selection
-                    // Campaign Mode (retraining): value is -1
-                    int freePlayEditorLevel = values.Sheet.EditingInventoryAtLevel; // The level in the inspector for freeplay. ==-1 in campaign play.
-                    
-                    int levelsToSearch = -1;
-                    if (freePlayEditorLevel != -1) // Free Encounter Mode
-                    {
-                        levelsToSearch = Math.Max(levelAtFeatAcquisition, freePlayEditorLevel);
-                    }
-                    else if (CampaignState.Instance != null) // Campaign Mode
-                    {
-                        levelsToSearch = Math.Max(levelAtFeatAcquisition, CampaignState.Instance.CurrentLevel);
-                    }
-                    
-                    // Create self using a higher level
-                    Creature maximumLevelSelf = values.Sheet.ToCreature(levelsToSearch);
-                    
-                    // Use the higher level self's calculated sheet.
-                    return repertoire != null && repertoire.KnowsRune(maximumLevelSelf, runeFeat.Rune);
-                    */
                     return repertoire != null && repertoire.KnowsRune(values, runeFeat.Rune);
                 },
-                "You must know this rune at this level.") //"You must know this rune (even at later levels).")
-                .WithPermanentQEffect("You have a rune tattooed on yourself. If invoked, this rune will be inactive until your next daily preparations.",
+                "You must know this rune.")
+                .WithPrerequisite(values =>
+                    {
+                        return !runeFeat.HasTrait(ModData.Traits.Diacritic);
+                    },
+                "Diacritic runes can't be tattooed onto yourself.")
+                .WithPermanentQEffect("You have a rune tattoo. Invoking it deactivates it until your next daily preparations.",
                     qfFeat =>
                     {
                         Creature runesmith = qfFeat.Owner;
-                        qfFeat.Name = $"Runic Tattoo ({runeFeat.Rune.Name})";
+                        qfFeat.Name = $"Runic Tattoo ({runeFeat.Rune.RuneId.ToStringOrTechnical()})";
                         qfFeat.StartOfCombat = async qfThis =>
                         {
                             if (runesmith.PersistentUsedUpResources.UsedUpActions.Contains("RunicTattoo"))
@@ -564,6 +546,13 @@ public static class RunesmithFeats
                             if (qfThis.UsedThisTurn)
                                 return;
 
+                            if (RunicRepertoireFeat.GetRepertoireOnCreature(runesmith) is not {} rep
+                                || !rep.KnowsRune(runesmith, runeFeat.Rune))
+                            {
+                                // BUG: see previous bug at the top of this feat
+                                runesmith.Battle.Log($"{runesmith}'s Runic Tattoo failed to apply: {{i}}{runeFeat.Name}{{/i}} is not known at this level.");
+                                return;
+                            }
                             // Etch that rune at the start of combat
                             CombatAction etchTattoo = runeFeat.Rune.CreateEtchAction(runesmith);
                             etchTattoo.Name = "Runic Tattoo";
@@ -579,6 +568,7 @@ public static class RunesmithFeats
                             if (appliedRune != null)
                             {
                                 qfThis.Tag = appliedRune;
+                                // BUG: Won't behave very nicely with AfterInvokingRune behavior. Narrowly avoided bugs by disallowing diacritics. Ensure robustness later.
                                 appliedRune.AfterInvokingRune = async (thisDrawnRune, invokedRune) =>
                                 {
                                     if (invokedRune == thisDrawnRune)
@@ -592,7 +582,7 @@ public static class RunesmithFeats
                             qfThis.UsedThisTurn = true;
                         };
                     });
-            runicTattoo.Subfeats?.Add(tattooFeat);
+            ModManager.AddFeat(tattooFeat);
         }
         ModManager.AddFeat(runicTattoo);
 
@@ -1027,7 +1017,8 @@ public static class RunesmithFeats
                                 {
                                     await attacker.FictitiousSingleTileMove(attacker.Occupies); // Move them back, so the invoke animation looks good
                                     
-                                    CombatAction? invokeThisRune = reprisalDr.Rune.CreateInvokeAction(null, defender, reprisalDr, 1, true, false);
+                                    CombatAction? invokeThisRune = reprisalDr.Rune.CreateInvokeAction(null, defender, reprisalDr, 6, true, false)?
+                                        .WithExtraTrait(ModData.Traits.InvokeAgainstGivenTarget);
                                     
                                     if (invokeThisRune == null)
                                         return result;
