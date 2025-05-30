@@ -275,6 +275,7 @@ public static class Aid
                 {
                     if (
                         qfThis.Source is not { } aider2 // Aid provider must still exist
+                        || aider2 == aidableAction.Owner // Aid provider cannot aid itself
                         || !qfThis.Owner.IsAdjacentTo(aider2) // Aid provider must be adjacent to enemy
                         || !aidableAction.HasTrait(Trait.Attack) // Must be an attack
                         || aidableAction.ActiveRollSpecification is not { } rollSpec // Must have a roll spec
