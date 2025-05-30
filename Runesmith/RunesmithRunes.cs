@@ -158,7 +158,7 @@ public static class RunesmithRunes
             InvokeTechnicalTraits = [
                 Trait.DoesNotRequireAttackRollOrSavingThrow, // Indicates the initial invocation doesn't have a saving throw.
             ],
-            NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
+            NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
             {
                 DrawnRune? MakeEsvadirPassive(Item targetItem)
                 {
@@ -270,7 +270,7 @@ public static class RunesmithRunes
                     return MakeEsvadirPassive(targetItem);
                 }
             },
-            InvocationBehavior = async (CombatAction sourceAction, Rune thisRune, Creature caster, Creature target, DrawnRune invokedRune) =>
+            InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
             {
                 List<Creature> adjacentCreatures = new List<Creature>(caster.Battle.AllCreatures.Where(cr => cr.IsAdjacentTo(target)));
                 
@@ -281,39 +281,42 @@ public static class RunesmithRunes
                     $"Invoke {thisRune.Name}",
                     new List<Trait>(thisRune.Traits).Append(Trait.DoNotShowInCombatLog).ToArray(),
                     thisRune.InvocationTextWithHeightening(thisRune, caster.Level)!,
-                    Target.RangedCreature(1)/*AdjacentCreature()*/.WithAdditionalConditionOnTargetCreature((attacker, defender) =>
-                    {
-                        bool isEnemy = defender.EnemyOf(caster);
-                        bool isAdjacent = defender.IsAdjacentTo(target);
-                        return isEnemy ? (isAdjacent ? Usability.Usable : Usability.NotUsableOnThisCreature("Not adjacent")) : Usability.NotUsableOnThisCreature("Not enemy");
-                    }))
-                        .WithActionCost(0)
-                        .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
-                        .WithSoundEffect(ModData.SfxNames.InvokedEsvadir)
-                        .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
-                        .WithEffectOnEachTarget(async (selfAction, caster, target, result) =>
+                    Target.RangedCreature(1)/*AdjacentCreature()*/
+                        .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
                         {
-                            if (!thisRune.IsImmuneToThisInvocation(target))
-                            {
-                                // CheckResult result = CommonSpellEffects.RollSavingThrow(
-                                //     target, 
-                                //     CombatAction.CreateSimple(caster, $"Invoked {thisRune.Name}"),
-                                //     Defense.Fortitude,
-                                //     caster.ClassOrSpellDC());
-                                int roundHalfLevel = ((caster.Level - thisRune.BaseLevel) / 2);
-                                int damageAmount = 2 + roundHalfLevel * 2;
-                                await CommonSpellEffects.DealBasicDamage(
-                                    sourceAction,
-                                    caster,
-                                    target,
-                                    result,
-                                    damageAmount + "d6",
-                                    DamageKind.Slashing);
-                            }
-                            
-                            thisRune.RemoveDrawnRune(invokedRune);
-                            thisRune.ApplyImmunity(target);
-                        });
+                            bool isEnemy = defender.EnemyOf(caster);
+                            bool isAdjacent = defender.IsAdjacentTo(target);
+                            return isEnemy ?
+                                (isAdjacent ? Usability.Usable : Usability.NotUsableOnThisCreature("Not adjacent"))
+                                : Usability.NotUsableOnThisCreature("Not enemy");
+                        }))
+                    .WithActionCost(0)
+                    .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
+                    .WithSoundEffect(ModData.SfxNames.InvokedEsvadir)
+                    .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
+                    .WithEffectOnEachTarget(async (selfAction, caster2, target2, result) =>
+                    {
+                        if (!thisRune.IsImmuneToThisInvocation(target))
+                        {
+                            // CheckResult result = CommonSpellEffects.RollSavingThrow(
+                            //     target, 
+                            //     CombatAction.CreateSimple(caster, $"Invoked {thisRune.Name}"),
+                            //     Defense.Fortitude,
+                            //     caster.ClassOrSpellDC());
+                            int roundHalfLevel = ((caster.Level - thisRune.BaseLevel) / 2);
+                            int damageAmount = 2 + roundHalfLevel * 2;
+                            await CommonSpellEffects.DealBasicDamage(
+                                sourceAction,
+                                caster2,
+                                target2,
+                                result,
+                                damageAmount + "d6",
+                                DamageKind.Slashing);
+                        }
+                        
+                        thisRune.RemoveDrawnRune(invokedRune);
+                        thisRune.ApplyImmunity(target2);
+                    });
                 
                 await caster.Battle.GameLoop.FullCast(invokeEsvadirOnToAdjacentCreature);
             },
@@ -1221,7 +1224,7 @@ public static class RunesmithRunes
                             caster,
                             thisRune.Illustration)
                             {
-                                Traits = new List<Trait>(thisRune.Traits), //[..thisRune.Traits],
+                                Traits = [..thisRune.Traits],
                                 BeforeInvokingRune = async (thisDr, drInvoked) =>
                                 {
                                     if (thisDr.Disabled)
@@ -1304,7 +1307,7 @@ public static class RunesmithRunes
                             return Usability.NotUsableOnThisCreature("no damaging runes");
                     return Usability.Usable;
                 },
-                NewDrawnRune = async (CombatAction? sourceAction, Creature? caster, Creature target, Rune thisRune) =>
+                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
                 {
                     DrawnRune CreateUrPassive(DrawnRune targetRune)
                     {
@@ -1316,7 +1319,7 @@ public static class RunesmithRunes
                             caster,
                             thisRune.Illustration)
                         {
-                            Traits = new List<Trait>(thisRune.Traits), //[..thisRune.Traits],
+                            Traits = [..thisRune.Traits],
                             BeforeInvokingRune = async (thisDr, drInvoked) =>
                             {
                                 if (thisDr.Disabled)
