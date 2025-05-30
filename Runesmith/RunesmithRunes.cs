@@ -1204,8 +1204,10 @@ public static class RunesmithRunes
                     if (DrawnRune.GetDrawnRunes(null, defender) is { } drawnRunes)
                         if (drawnRunes.Count == 0)
                             return Usability.NotUsableOnThisCreature("not a rune-bearer");
-                        else if (drawnRunes.Find(dr => dr.AttachedDiacritic == null) == null)
-                            return Usability.NotUsableOnThisCreature("all runes have diacritics");
+                        else if (drawnRunes.Any(dr => dr.AttachedDiacritic == null))
+                            return Usability.Usable;
+                        else
+                            return Usability.NotUsableOnThisCreature("no valid runes");
                     return Usability.Usable;
                 },
                 NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
@@ -1247,11 +1249,15 @@ public static class RunesmithRunes
                     // Target a specific rune
                     List<string> validRunesString = new List<string>();
                     List<DrawnRune> validRunes = new List<DrawnRune>();
-                    foreach (DrawnRune dr in DrawnRune.GetDrawnRunes(null, target).Where(dr => dr.AttachedDiacritic == null))
+                    foreach (DrawnRune dr in DrawnRune.GetDrawnRunes(null, target)
+                                 .Where(dr => dr.AttachedDiacritic == null))
                     {
                         validRunesString.Add(dr.Name);
                         validRunes.Add(dr);
                     }
+
+                    if (validRunes.Count == 0)
+                        return null;
                     
                     if (sourceAction?.Target is AreaTarget)
                     {
@@ -1294,17 +1300,18 @@ public static class RunesmithRunes
             1,
             "drawn on a rune",
             "This diacritic accentuates the base rune with bolder lines to give greater weight to its effects.",
-            "When the base rune is invoked, its invocation gains a status bonus to damage equal to your Intelligence modifier.")
+            "When the base rune is invoked, its invocation gains a status bonus to damage equal to your Intelligence modifier.",
+            additionalTraits: [ModData.Traits.Diacritic])
             {
                 UsageCondition = (attacker, defender) =>
                 {
                     if (DrawnRune.GetDrawnRunes(null, defender) is { } drawnRunes)
                         if (drawnRunes.Count == 0)
                             return Usability.NotUsableOnThisCreature("not a rune-bearer");
-                        else if (drawnRunes.Find(dr => dr.AttachedDiacritic == null) == null)
-                            return Usability.NotUsableOnThisCreature("all runes have diacritics");
-                        else if (drawnRunes.Find(dr => dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile)) == null)
-                            return Usability.NotUsableOnThisCreature("no damaging runes");
+                        else if (drawnRunes.Any(dr => dr.AttachedDiacritic == null && dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile)))
+                            return Usability.Usable;
+                        else
+                            return Usability.NotUsableOnThisCreature("no valid runes");
                     return Usability.Usable;
                 },
                 NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
@@ -1326,7 +1333,7 @@ public static class RunesmithRunes
                                     return;
                                 QEffect invokeBonus = new QEffect()
                                 {
-                                    ExpiresAt = ExpirationCondition.EphemeralAtEndOfImmediateAction,
+                                    //ExpiresAt = ExpirationCondition.EphemeralAtEndOfImmediateAction,
                                     BonusToDamage = (qfThis, action, defender) =>
                                     {
                                         if (thisDr.Disabled)
@@ -1340,6 +1347,11 @@ public static class RunesmithRunes
                                         return new Bonus(caster.Abilities.Intelligence, BonusType.Status,
                                                 "Ur, Diacritic Rune of Intensity");
                                     },
+                                    /*StateCheck = qfThis =>
+                                    {
+                                        if ()
+                                            qfThis.ExpiresAt = ExpirationCondition.Immediately;
+                                    },*/
                                 };
                                 thisDr.Source.AddQEffect(invokeBonus);
                             },
@@ -1351,11 +1363,15 @@ public static class RunesmithRunes
                     // Target a specific rune
                     List<string> validRunesString = new List<string>();
                     List<DrawnRune> validRunes = new List<DrawnRune>();
-                    foreach (DrawnRune dr in DrawnRune.GetDrawnRunes(null, target).Where(dr => dr.AttachedDiacritic == null))
+                    foreach (DrawnRune dr in DrawnRune.GetDrawnRunes(null, target)
+                                 .Where(dr => dr.AttachedDiacritic == null && dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile)))
                     {
                         validRunesString.Add(dr.Name);
                         validRunes.Add(dr);
                     }
+
+                    if (validRunes.Count == 0)
+                        return null;
                     
                     if (sourceAction?.Target is AreaTarget)
                     {
