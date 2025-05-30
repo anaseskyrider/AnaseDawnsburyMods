@@ -666,7 +666,7 @@ public class Rune
     /// <param name="caster">The Creature invoking the rune.</param>
     /// <param name="runeTarget">The DrawnRune to be invoked.</param>
     /// <param name="range">The range to the creature target. If no range is specified, the range is 30 feet.</param>
-    /// <param name="withImmediatelyRemoveImmunity">If true, then <see cref="WithImmediatelyRemovesImmunity"/> is called on the new CombatAction.</param>
+    /// <param name="immediatelyRemoveImmunity">If true, then <see cref="WithImmediatelyRemovesImmunity"/> is called on the new CombatAction.</param>
     /// <param name="requiresTargetHasDrawnRune">If true, this action can only be used against creatures who own the supplied runeTarget.</param>
     /// <returns></returns>
     public CombatAction? CreateInvokeAction(
@@ -674,7 +674,7 @@ public class Rune
         Creature caster,
         DrawnRune runeTarget,
         int range = 6,
-        bool withImmediatelyRemoveImmunity = false,
+        bool immediatelyRemoveImmunity = false,
         bool requiresTargetHasDrawnRune = true)
     {
         if (this.InvocationBehavior == null)
@@ -744,7 +744,7 @@ public class Rune
             });
         }
 
-        if (withImmediatelyRemoveImmunity)
+        if (immediatelyRemoveImmunity)
         {
             invokeThisRune = WithImmediatelyRemovesImmunity(invokeThisRune);
         }
