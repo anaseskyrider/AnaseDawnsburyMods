@@ -371,7 +371,7 @@ public class DrawnRune : QEffect
         {
             Name = $"Invoked {this.Rune.Name}",
             Description = description,
-            Illustration = new SuperimposedIllustration(this.Illustration, ModData.Illustrations.CheckSymbol),
+            Illustration = new SuperimposedIllustration(this.Illustration ?? IllustrationName.None, ModData.Illustrations.CheckSymbol),
             Traits = [ModData.Traits.Invocation],
             Source = this.Source,
             ExpiresAt = expiresAt,
