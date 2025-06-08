@@ -25,10 +25,7 @@ public static class Interrogation
             .WithOnSheet(values =>
             {
                 values.TrainInThisOrSubstitute(Skill.Diplomacy);
-            })
-            .WithOnCreature((values, cr) =>
-            {
-                if (ModManager.TryParse("NoCauseForAlarm", out FeatName causeAlarm))
+                if (ModManager.TryParse("No Cause for Alarm {icon:TwoActions}", out FeatName causeAlarm))
                 {
                     if (!values.HasFeat(causeAlarm))
                         values.GrantFeat(causeAlarm);
