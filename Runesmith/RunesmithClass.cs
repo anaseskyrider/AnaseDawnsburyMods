@@ -1,5 +1,6 @@
 ﻿using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
+using Dawnsbury.Core.Animations.Movement;
 using Dawnsbury.Core.CharacterBuilder.AbilityScores;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
@@ -17,6 +18,7 @@ using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
+using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
 
@@ -873,6 +875,102 @@ label_34:
             }
         }
         return false;
+    }
+
+    /// <summary>The PULLER moves a TARGET closer to it by a NUMBER OF SQUARES.</summary>
+    public static async Task PullCreatureByDistance(Creature puller, Creature target, int squareCount)
+    {
+        if (target.WeaknessAndResistance.ImmunityToForcedMovement)
+        {
+            target.Occupies.Overhead("{i}immune{/i}", Color.White, target?.ToString() + " is immune to forced movement and can't be pulled.");
+            return;
+        }
+        
+        Point finalPoint = new Point(
+            target.Occupies.X,
+            target.Occupies.Y);
+        Point pullerPoint = new Point(
+            puller.Occupies.X,
+            puller.Occupies.Y);
+        Point towardPullerInit = new Point(
+            Math.Sign(puller.Occupies.X - target.Occupies.X),
+            Math.Sign(puller.Occupies.Y - target.Occupies.Y));
+        
+        int maxDistance;
+        if (towardPullerInit.X != 0 && towardPullerInit.Y != 0)
+        {
+            switch (squareCount)
+            {
+                case 1:
+                    maxDistance = 1;
+                    break;
+                case 2:
+                case 3:
+                    maxDistance = 2;
+                    break;
+                case 4:
+                    maxDistance = 3;
+                    break;
+                case 5:
+                case 6:
+                    maxDistance = 4;
+                    break;
+                case 7:
+                    maxDistance = 5;
+                    break;
+                case 8:
+                case 9:
+                    maxDistance = 6;
+                    break;
+                default:
+                    maxDistance = squareCount / 2 + 2;
+                    break;
+            }
+        }
+        else
+            maxDistance = squareCount;
+
+        int countedDistance;
+        for (countedDistance = 1; countedDistance <= maxDistance; ++countedDistance)
+        {
+            Point towardPuller = new Point(
+                Math.Sign(pullerPoint.X - finalPoint.X),
+                Math.Sign(pullerPoint.Y - finalPoint.Y));
+            Point towardX = new Point(
+                Math.Sign(pullerPoint.X - finalPoint.X), 
+                0);
+            Point towardY = new Point(
+                0,
+                Math.Sign(pullerPoint.Y - finalPoint.Y));
+            Point lastPoint = finalPoint;
+            Point[] pointArray = [towardPuller, towardX, towardY];
+            foreach (Point pointInArray in pointArray)
+            {
+                Point nextPoint = new Point(
+                    finalPoint.X + pointInArray.X,
+                    finalPoint.Y + pointInArray.Y);
+                if (nextPoint == finalPoint)
+                    continue;
+                Tile? tile = puller.Battle.Map.GetTile(nextPoint.X, nextPoint.Y);
+                if (tile != null && tile.IsGenuinelyFreeTo(target))
+                {
+                    finalPoint = nextPoint;
+                    break;
+                }
+            }
+            if (lastPoint == finalPoint)
+                break;
+        }
+        int distanceToMove = countedDistance - 1;
+        if (distanceToMove <= 0)
+            return;
+        await target.MoveTo(puller.Battle.Map.GetTile(finalPoint.X, finalPoint.Y)!, null, new MovementStyle()
+        {
+            Shifting = true,
+            ShortestPath = true,
+            MaximumSquares = 100,
+            ForcedMovement = true
+        });
     }
 }
 
