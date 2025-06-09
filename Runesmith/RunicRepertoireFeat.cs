@@ -102,7 +102,7 @@ public class RunicRepertoireFeat : Feat
     /// <returns>(bool) True if the rune was found, or false if not.</returns>
     public bool KnowsRune(Creature cr, Rune rune)
     {
-        return this.KnowsRune(cr.PersistentCharacterSheet.Calculated, rune);
+        return cr.PersistentCharacterSheet != null && this.KnowsRune(cr.PersistentCharacterSheet.Calculated, rune);
     }
     
     /// <summary>
@@ -121,7 +121,7 @@ public class RunicRepertoireFeat : Feat
     /// <returns>(bool) True if all the runes were found, or false if not.</returns>
     public bool KnowsRunes(Creature cr, List<Rune> runes)
     {
-        return this.KnowsRunes(cr.PersistentCharacterSheet.Calculated, runes);
+        return cr.PersistentCharacterSheet != null && this.KnowsRunes(cr.PersistentCharacterSheet.Calculated, runes);
     }
 
     /// <summary>

@@ -177,7 +177,7 @@ public class DrawnRune : QEffect
     {
         this.DrawnOn = item;
         this.Tag = false;
-        this.StateCheck += async qfSelf =>
+        this.StateCheck += /*async*/ qfSelf =>
         {
             if (this.DrawnOn is not Item itemTarget) // Don't bother, if the item disappears or is a different target type
                 return;
@@ -195,7 +195,7 @@ public class DrawnRune : QEffect
                     if (allCreature == this.Owner) // Don't move if they already have the QF.
                         continue; 
                     
-                    await this.MoveRuneToTarget(allCreature, this.DrawnOn); // Move to the new creature without changing the item target.
+                    /*await*/ this.MoveRuneToTarget(allCreature, this.DrawnOn); // Move to the new creature without changing the item target.
                     break;
                 }
             }
@@ -218,7 +218,7 @@ public class DrawnRune : QEffect
     {
         this.DrawnOn = item;
         this.Tag = false; // (bool) HeldByAnyone. Check against this tag if the code segments need to not apply to its owner (the QF only moves itself when a new holder is found).
-        this.StateCheck += async qfSelf =>
+        this.StateCheck += /*async*/ qfSelf =>
         {
             if (this.DrawnOn is not Item itemTarget) 
                 return;
@@ -244,7 +244,7 @@ public class DrawnRune : QEffect
                         if (allCreature == this.Owner) // Don't move if they already have the QF.
                             continue;
 
-                        await this.MoveRuneToTarget(allCreature, this.DrawnOn); // Move to the new creature without changing the item target.
+                        /*await*/ this.MoveRuneToTarget(allCreature, this.DrawnOn); // Move to the new creature without changing the item target.
                         break;
                     }
                 }
@@ -265,11 +265,11 @@ public class DrawnRune : QEffect
     {
         this.DrawnOn = rune;
         this.Tag = false;
-        this.StateCheck += async qfSelf =>
+        this.StateCheck += /*async*/ qfSelf =>
         {
             if (this.DrawnOn is not DrawnRune runeTarget)
             {
-                this.ExpiresAt = ExpirationCondition.Ephemeral; // Unlike other regulators, if this is null, it needs to be deleted immediately.
+                this.ExpiresAt = ExpirationCondition.Immediately; // Unlike other regulators, if this is null, it needs to be deleted immediately.
                 return;
             }
 
@@ -285,7 +285,7 @@ public class DrawnRune : QEffect
                     if (allCreature == this.Owner) // Don't move if they already have the QF.
                         continue;
                     
-                    await this.MoveRuneToTarget(allCreature, runeTarget);
+                    /*await*/ this.MoveRuneToTarget(allCreature, runeTarget);
                     break;
                 }
             }
@@ -306,7 +306,8 @@ public class DrawnRune : QEffect
             if (drInvoked == drThis.DrawnOn)
             {
                 drThis.DrawnOn = null;
-                drThis.ExpiresAt = ExpirationCondition.Ephemeral;
+                drThis.ExpiresAt = ExpirationCondition.Immediately;
+                drInvoked.AttachedDiacritic = null;
             }
         };
         
@@ -322,7 +323,7 @@ public class DrawnRune : QEffect
     /// </summary>
     /// <param name="newOwner">(Creature) The creature who will own the DrawnRune.</param>
     /// <param name="newDrawnOn">(Creature, DrawnRune, Item) The new "real" target from the newOwner to apply the DrawnRune to, such as an item wielded by the newOwner, the creature itself, or another DrawnRune.</param>
-    public async Task MoveRuneToTarget(Creature newOwner, object? newDrawnOn)
+    public async void MoveRuneToTarget(Creature newOwner, object? newDrawnOn)
     {
         // Might need expanded functionality in the future.
         

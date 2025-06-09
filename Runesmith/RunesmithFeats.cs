@@ -897,7 +897,7 @@ public static class RunesmithFeats
                                                     {
                                                         // Call NewDrawnRune in case it prompts for a selection, such as if the rune applies to an item, so we can move this rune to that creature AND its item.
                                                         DrawnRune pretendNewRune = (await thisRune.NewDrawnRune!.Invoke(thisTransposeAction, caster, transposeTo, thisRune))!;
-                                                        await runeQf.MoveRuneToTarget(transposeTo, pretendNewRune.DrawnOn);
+                                                        /*await*/ runeQf.MoveRuneToTarget(transposeTo, pretendNewRune.DrawnOn);
                                                         Sfxs.Play(ModData.SfxNames.TransposeEtchingEnd);
 
                                                     })

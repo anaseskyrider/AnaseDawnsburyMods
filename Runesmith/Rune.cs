@@ -354,33 +354,30 @@ public class Rune
         return this;
     }
 
-    /// <summary>
-    /// Adds Trait.Fortitude to InvokeTechnicalTraits, which indicates a fortitude save roll breakdown before invoking the rune.
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>Adds Trait.Fortitude to InvokeTechnicalTraits, which indicates a fortitude save roll breakdown before invoking the rune.</summary>
     public Rune WithFortitudeSaveInvocationTechnical()
     {
         this.InvokeTechnicalTraits = this.InvokeTechnicalTraits.Concat([Trait.Fortitude]).ToList();
         return this;
     }
 
-    /// <summary>
-    /// Adds Trait.Reflex to InvokeTechnicalTraits, which indicates a reflex save roll breakdown before invoking the rune.
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>Adds Trait.Reflex to InvokeTechnicalTraits, which indicates a reflex save roll breakdown before invoking the rune.</summary>
     public Rune WithReflexSaveInvocationTechnical()
     {
         this.InvokeTechnicalTraits = this.InvokeTechnicalTraits.Concat([Trait.Reflex]).ToList();
         return this;
     }
 
-    /// <summary>
-    /// Adds Trait.Will to InvokeTechnicalTraits, which indicates a will save roll breakdown before invoking the rune.
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>Adds Trait.Will to InvokeTechnicalTraits, which indicates a will save roll breakdown before invoking the rune.</summary>
     public Rune WithWillSaveInvocationTechnical()
     {
         this.InvokeTechnicalTraits = this.InvokeTechnicalTraits.Concat([Trait.Will]).ToList();
+        return this;
+    }
+    /// <summary>Adds Adds Trait.DoesNotRequireAttackRollOrSavingThrow to InvokeTechnicalTraits, which indicates the initial invocation target doesn't have a saving throw.</summary>
+    public Rune WithTargetDoesNotSaveTechnical()
+    {
+        this.InvokeTechnicalTraits = this.InvokeTechnicalTraits.Concat([Trait.DoesNotRequireAttackRollOrSavingThrow]).ToList();
         return this;
     }
     
@@ -469,8 +466,10 @@ public class Rune
         if (!ignoreUsageRequirements &&
             (this.UsageCondition == null || this.UsageCondition.Invoke(caster, target) != Usability.Usable)) 
             return null;
-        
-        DrawnRune? qfToApply = await this.NewDrawnRune?.Invoke(sourceAction, caster, target, this);
+
+        DrawnRune? qfToApply = null;
+        if (this.NewDrawnRune != null)
+            qfToApply = await this.NewDrawnRune.Invoke(sourceAction, caster, target, this);
 
         if (qfToApply == null)
             return null;
@@ -519,14 +518,13 @@ public class Rune
         int rangeToTarget = range ?? 6;
 
         // Determine Target Properties
-        DependsOnActionsSpentTarget varyTarget;
         CreatureTarget adjacentTarget = Target.AdjacentCreatureOrSelf();
         CreatureTarget rangedTarget = Target.RangedCreature(rangeToTarget);
-        varyTarget = Target.DependsOnActionsSpent(
+        DependsOnActionsSpentTarget varyTarget = Target.DependsOnActionsSpent(
             adjacentTarget,
             rangedTarget,
-            null);
-                        
+            null! /*This shouldn't be possible, so this should ideally throw some kind of exception*/);
+
         // Add extra usage requirements
         foreach (Target tar in varyTarget.Targets)
         {
@@ -578,7 +576,7 @@ public class Rune
             });
 
         if (actions != 1) // Isn't the melee one
-            drawRuneAction.WithProjectileCone(VfxStyle.BasicProjectileCone(this.Illustration));
+            drawRuneAction.WithProjectileCone(VfxStyle.BasicProjectileCone(this.Illustration ?? IllustrationName.None));
         
         if (actions == -3)
             drawRuneAction.WithCreateVariantDescription((actions, spellVariant) =>
@@ -732,7 +730,8 @@ public class Rune
             {
                 Trait.Reflex => Defense.Reflex,
                 Trait.Fortitude => Defense.Fortitude,
-                Trait.Will => Defense.Will
+                Trait.Will => Defense.Will,
+                _ => throw new ArgumentOutOfRangeException()
             };
             invokeThisRune.WithTargetingTooltip((thisInvokeAction, target, index) =>
             {

@@ -267,7 +267,7 @@ public static class RunesmithClass
                          * We'll do a lot of state-check-like behavior each time we go, in case the field changes
                          * between loops (such as a creature dying, or all instances of a rune-type being invoked).
                          */
-                        List<Creature> chosenCreatures = new List<Creature>(); // Unused, but kept in case it's useful later.
+                        //List<Creature> chosenCreatures = []; // Unused, but kept in case it's useful later.
                         int i = 0; // In case it screws up.
                         while (numberOfRunes > 0 && i < 100)
                         {
@@ -335,11 +335,11 @@ public static class RunesmithClass
 
                             switch (chosenOption)
                             {
-                                case CreatureOption creatureOption:
+                                /*case CreatureOption creatureOption:
                                 {
                                     chosenCreatures.Add(creatureOption.Creature);
                                     break;
-                                }
+                                }*/
                                 case CancelOption:
                                     flurryOfInvokes.RevertRequested = true;
                                     chosenCreatures = null;
@@ -354,7 +354,7 @@ public static class RunesmithClass
                             i++;
                         }
 
-                        chosenCreatures = null;
+                        //chosenCreatures = null;
                     })
                     .WithEffectOnChosenTargets(async (caster, targets) =>
                     {
@@ -812,7 +812,7 @@ public static class RunesmithClass
         // Add a Cancel Option
         options.Add(new CancelOption(true));
         
-        Option selectedOption = null;
+        Option? selectedOption = null;
         if (options.Count == 1)
             selectedOption = options[0];
         else if (options.Count > 0)
@@ -839,7 +839,7 @@ label_34:
         if (selectedOption != null)
         {
             int num = await selectedOption.Action() ? 1 : 0;
-            self.Battle.MovementConfirmer = (MovementConfirmer) null;
+            self.Battle.MovementConfirmer = null;
             if (selectedOption is CancelOption or PassViaButtonOption)
             {
                 self.Actions.NextStrideIsFree = false;
