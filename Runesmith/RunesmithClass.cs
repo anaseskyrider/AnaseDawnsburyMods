@@ -736,6 +736,7 @@ public static class RunesmithClass
             : Checks.DetermineClassProficiencyFromMonsterLevel(runesmith.Level).ToNumber(runesmith.Level) + runesmith.Abilities.GetTop() + 10;
     }
 
+    /// <summary>Returns whether the Creature has a hand free for the purposes of tracing runes.</summary>
     public static bool IsRunesmithHandFree(Creature runesmith)
     {
         return runesmith.HasFreeHand
