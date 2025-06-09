@@ -103,8 +103,11 @@ public class Rune
     /// newRune.Name = "Atryl, Rune of Fire"
     /// </code>
     /// </summary>
-    public string Name { get; set; } 
-    
+    public string Name { get; set; }
+
+    /// <summary>The base name of the rune, such as "Atryl".</summary>
+    public string BaseName => this.RuneId.ToStringOrTechnical();
+
     /// <summary>
     /// The unformatted text describing the usage of the rune.
     /// <code>
