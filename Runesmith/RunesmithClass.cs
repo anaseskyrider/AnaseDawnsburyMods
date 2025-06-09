@@ -342,10 +342,8 @@ public static class RunesmithClass
                                 }*/
                                 case CancelOption:
                                     flurryOfInvokes.RevertRequested = true;
-                                    chosenCreatures = null;
                                     return;
                                 case PassViaButtonOption:
-                                    chosenCreatures = null;
                                     return;
                             }
 
