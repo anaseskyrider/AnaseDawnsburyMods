@@ -117,6 +117,17 @@ public static class ModData
             new TraitProperties("Zohk", false));
         
         // Level 9 rune traits, for a future update.
+        public static readonly Trait Feikris = ModManager.RegisterTrait("Feikris",
+            new TraitProperties("Feikris", false));
+        
+        public static readonly Trait Ichelsu = ModManager.RegisterTrait("Ichelsu",
+            new TraitProperties("Ichelsu", false));
+        
+        public static readonly Trait Jurroz = ModManager.RegisterTrait("Jurroz",
+            new TraitProperties("Jurroz", false));
+        
+        public static readonly Trait Kojastri = ModManager.RegisterTrait("Kojastri",
+            new TraitProperties("Kojastri", false));
         
         // Level 17 rune traits, for a future update.
         #endregion
@@ -162,6 +173,7 @@ public static class ModData
         public static readonly FeatName DrawnInRed = ModManager.RegisterFeatName("RunesmithPlaytest.FeatDrawnInRed", "Drawn In Red");
         public static readonly FeatName ElementalRevision = ModManager.RegisterFeatName("RunesmithPlaytest.FeatElementalRevision", "Elemental Revision");
         public static readonly FeatName ReadTheBones = ModManager.RegisterFeatName("RunesmithPlaytest.FeatReadTheBones", "Read the Bones");
+        public static readonly FeatName EarlyAccess = ModManager.RegisterFeatName("RunesmithPlaytest.EarlyAccess", "Early Access");
         #endregion
     }
     
@@ -226,6 +238,7 @@ public static class ModData
         public const SfxName InvokedRanshu = SfxName.ElectricArc;
         public const SfxName InvokedSun = SfxName.AuraExpansion;
         public const SfxName InvokedZohk = SfxName.PhaseBolt;
+        public const SfxName InvokedFeikris = SfxName.PhaseBolt;
         public const SfxName ToggleRuneSinger = SfxName.OminousActivation; //SfxName.AuraExpansion;
         public const SfxName SingRune = SfxName.Choir;
         public const SfxName TransposeEtchingStart = SfxName.OminousActivation;

@@ -1625,6 +1625,76 @@ public static class RunesmithRunes
             }
             .WithWillSaveInvocationTechnical();
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneZohk", runeZohk);
+
+        Rune runeFeikris = new Rune(
+            "Feikris, Rune of Gravity",
+            ModData.Traits.Feikris,
+            IllustrationName.AnarchicRunestone,
+            9,
+            "drawn on a creature" /* or armor"*/,
+            "The lines of this rune overlap strangely, making it seem larger than it really is.",
+            "The rune-bearer gains a +2 item bonus to Athletics checks." /* and gains the benefits of the Titan Wrestler feat.*/,
+            invocationText:
+            "All creatures in a 15-foot emanation around the rune-bearer must succeed at a Fortitude save or be pulled 5 feet towards the rune-bearer (or 10 feet on a critical failure).",
+            /*levelText: "The item bonus increases to +3.",*/
+            additionalTraits: [Trait.Arcane])
+            {
+                //LevelFormat = "17th",
+                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
+                {
+                    DrawnRune feikrisPassive = new DrawnRune(
+                        thisRune,
+                        "Feikris, Rune of Gravity",
+                        "You have a +2 item bonus to Athletics checks.")
+                    {
+                        Illustration = thisRune.Illustration,
+                        Source = caster,
+                        Traits = [..thisRune.Traits],
+                        BonusToSkills = skill =>
+                            skill is Skill.Athletics ? new Bonus(caster?.Level == 17 ? 3 : 2, BonusType.Item, "Feikris") : null,
+                    };
+                    return feikrisPassive;
+                },
+                InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
+                {
+                    // Create action wrapper for targeting and roll-inspection of invoking from target to emanation creatures.
+                    CombatAction invokePluunaOnEveryone = new CombatAction(
+                            target, // Get creatures near the rune, who is the creature with the drawn rune being invoked
+                            thisRune.Illustration,
+                            $"Invoke {thisRune.Name}",
+                            new List<Trait>(thisRune.Traits).Append(Trait.DoNotShowInCombatLog).ToArray(),
+                            thisRune.InvocationTextWithHeightening(thisRune, caster.Level) ?? thisRune.InvocationText!,
+                            Target.Emanation(3)
+                                .WithIncludeOnlyIf((tar, cr) => cr != target))
+                        .WithActionCost(0)
+                        .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
+                        .WithSoundEffect(ModData.SfxNames.InvokedFeikris)
+                        .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
+                        .WithNoSaveFor((thisAction, cr) => cr == target || thisRune.IsImmuneToThisInvocation(cr))
+                        .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
+                        {
+                            if (!thisRune.IsImmuneToThisInvocation(invokedOnto))
+                            {
+                                int distance = result switch
+                                {
+                                    CheckResult.CriticalFailure => 2,
+                                    CheckResult.Failure => 1,
+                                    _ => 0
+                                };
+                                if (distance > 0)
+                                    await RunesmithClass.PullCreatureByDistance(target, invokedOnto, distance);
+                                thisRune.ApplyImmunity(invokedOnto);
+                            }
+                        });
+
+                    if (await caster.Battle.GameLoop.FullCast(invokePluunaOnEveryone))
+                        thisRune.RemoveDrawnRune(invokedRune);
+                    else
+                        sourceAction.RevertRequested = true;
+                },
+            }
+            .WithFortitudeSaveInvocationTechnical();
+        AddRuneAsRuneFeat("RunesmithPlaytest.RuneFeikris", runeFeikris);
     }
 
     /// <summary>

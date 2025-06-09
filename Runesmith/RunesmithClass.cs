@@ -610,15 +610,15 @@ public static class RunesmithClass
                     "Initial level 1 runes",
                     1,
                     ft =>
-                        ft is RuneFeat, 4)
+                        ft is RuneFeat { Rune.BaseLevel: <= 1 }, 4)
                     .WithIsOptional());
                 for (int i=3; i<=7; i=i+2) // Gain a new Rune every other level.
                 {
-                    values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 1 rune", i, ft => ft is RuneFeat).WithIsOptional());
+                    values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 1 rune", i, ft => ft is RuneFeat { Rune.BaseLevel: <= 8 }).WithIsOptional());
                 }
                 for (int i=9; i<=15; i=i+2) // Gain a new Rune every other level.
                 {
-                    values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 9 rune", i, ft => ft is RuneFeat).WithIsOptional());
+                    values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 9 rune", i, ft => ft is RuneFeat { Rune.BaseLevel: <= 16 }).WithIsOptional());
                 }
                 for (int i=17; i<=19; i=i+2) // Gain a new Rune every other level.
                 {

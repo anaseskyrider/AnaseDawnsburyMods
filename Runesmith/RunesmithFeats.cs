@@ -1429,6 +1429,18 @@ public static class RunesmithFeats
                 };
             });
         ModManager.AddFeat(drawnInRed);
+
+        Feat earlyAccess = new TrueFeat(
+            ModData.FeatNames.EarlyAccess,
+            8,
+            "Through intense dedication, you've gained knowledge heretofore unseen at your stage of academic acumen.",
+            "Add a level 9 Rune to your runic repertoire.",
+            [ModData.Traits.Runesmith])
+            .WithOnSheet(values =>
+            {
+                values.AddSelectionOptionRightNow(new SingleFeatSelectionOption("earlyAccessRune", "Level 9 rune", 8, ft => ft is RuneFeat { Rune.BaseLevel: 9 }));
+            });
+        ModManager.AddFeat(earlyAccess);
         
         // TODO: item tooltips
         Feat elementalRevision = new TrueFeat(
