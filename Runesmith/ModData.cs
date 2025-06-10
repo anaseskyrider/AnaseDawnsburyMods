@@ -116,7 +116,10 @@ public static class ModData
         public static readonly Trait Zohk = ModManager.RegisterTrait("Zohk",
             new TraitProperties("Zohk", false));
         
-        // Level 9 rune traits, for a future update.
+        // Level 9 rune traits.
+        public static readonly Trait En = ModManager.RegisterTrait("En-",
+            new TraitProperties("En-", false));
+        
         public static readonly Trait Feikris = ModManager.RegisterTrait("Feikris",
             new TraitProperties("Feikris", false));
         
