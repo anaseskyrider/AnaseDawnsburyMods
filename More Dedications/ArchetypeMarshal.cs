@@ -108,7 +108,7 @@ public static class ArchetypeMarshal
                             qfThis.Owner,
                             ModData.Illustrations.DreadMarshalStance,
                             "Dread Marshal Stance",
-                            [Trait.Archetype, Trait.Open, Trait.Stance],
+                            [Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
                             "{i}Putting on a grim face for the battle ahead, you encourage your allies to strike fear into their foes with vicious attacks.{/i}\n\n"
                             + $"Attempt a {ModData.Tooltips.LeveledDC("DC " + Checks.LevelBasedDC(qfThis.Owner.Level))} Intimidation check." +
                             S.FourDegreesOfSuccess(
@@ -216,7 +216,7 @@ public static class ArchetypeMarshal
                             qfThis.Owner,
                             ModData.Illustrations.InspiringMarshalStance,
                             "Inspiring Marshal Stance",
-                            [Trait.Archetype, Trait.Open, Trait.Stance],
+                            [Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
                             "{i}You become a brilliant example of dedication and poise in battle, encouraging your allies to follow suit.{/i}\n\n"
                             + $"Attempt a {ModData.Tooltips.LeveledDC("DC " + Checks.LevelBasedDC(qfThis.Owner.Level))} Diplomacy check." +
                             S.FourDegreesOfSuccess(
@@ -313,7 +313,7 @@ public static class ArchetypeMarshal
                             qfThis.Owner,
                             ModData.Illustrations.SteelYourself,
                             "Steel Yourself",
-                            [Trait.Auditory, Trait.Emotion, Trait.Mental],
+                            [Trait.Auditory, Trait.Emotion, Trait.Mental, Trait.Basic],
                             "{i}You encourage an ally to toughen up, giving them a fighting chance.{/i}\n\n" +
                             $"Choose one ally within your marshal's aura. The ally gains {{b}}+{qfThis.Owner.Abilities.Charisma}{{/b}} temporary Hit Points, as well as a +2 circumstance bonus to Fortitude saves which lasts until the start of your next turn.",
                             Target.RangedFriend(GetMarshalAuraRange(qfThis.Owner))
@@ -355,7 +355,7 @@ public static class ArchetypeMarshal
                 [Trait.Open, Trait.Visual])
             .WithActionCost(2)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
-            .WithPermanentQEffect("", qfFeat =>
+            .WithPermanentQEffect("Stride and then make a melee Strike, granting temp HP to allies within 60 feet.", qfFeat =>
             {
                 qfFeat.ProvideMainAction = qfThis =>
                 {
@@ -363,7 +363,7 @@ public static class ArchetypeMarshal
                             qfThis.Owner,
                             ModData.Illustrations.RallyingCharge,
                             "Rallying Charge",
-                            [Trait.Open, Trait.Visual],
+                            [Trait.Open, Trait.Visual, Trait.Basic],
                             "{/i}Your fearless charge into battle reinvigorates your allies to carry on the fight.{/i}\n\nYou Stride up to your Speed and make a melee Strike. If your Strike hits and damages an enemy, each ally within 60 feet"/*+" who saw you hit"*/+$" gains {{b}}+{qfThis.Owner.Abilities.Charisma}{{/b}} temporary Hit Points."/*+" These temporary Hit Points last until the start of your next turn."*/,
                             Target.Self())
                         .WithActionCost(2)
@@ -429,7 +429,7 @@ public static class ArchetypeMarshal
             [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Flourish])
             .WithActionCost(-3)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
-            .WithPermanentQEffect("", qfFeat =>
+            .WithPermanentQEffect("Choose an ally, who will use their reaction to Stride or Strike.", qfFeat =>
             {
                 qfFeat.ProvideMainAction = qfThis =>
                 {
@@ -437,7 +437,7 @@ public static class ArchetypeMarshal
                         qfThis.Owner,
                         ModData.Illustrations.ToBattle,
                         "To Battle!",
-                        [Trait.Auditory, Trait.Flourish],
+                        [Trait.Auditory, Trait.Flourish, Trait.Basic],
                         "{i}With a resounding cry, you rally your ally to the offensive.{/i}\n\nChoose one ally within your marshal's aura who has a reaction available. If you spend 1 action, that ally can use their reaction to immediately Stride. If you spend 2 actions, that ally can use their reaction to immediately Strike.",
                         Target.DependsOnActionsSpent(
                             Target.RangedFriend(GetMarshalAuraRange(qfThis.Owner))
