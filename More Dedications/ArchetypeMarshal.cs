@@ -302,6 +302,7 @@ public static class ArchetypeMarshal
                 "You encourage an ally to toughen up, giving them a fighting chance.",
                 "Choose one ally within your marshal's aura. The ally gains temporary Hit Points equal to your Charisma modifier, as well as a +2 circumstance bonus to Fortitude saves which lasts until the start of your next turn."/*"The ally gains temporary Hit Points equal to your Charisma modifier and a +2 circumstance bonus to Fortitude saves. Both benefits last until the start of your next turn."*/, // PETR: Temp HP rework?
                 [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Emotion, Trait.Mental])
+            .WithActionCost(1)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
             .WithPermanentQEffect("You give temporary HP and bonuses to Fortitude saves to an ally in your marshal's aura.",
                 qfFeat =>
