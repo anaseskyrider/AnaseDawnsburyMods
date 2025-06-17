@@ -39,7 +39,7 @@ public static class RunesmithClass
         Feat traceRune = new Feat(
                 ModData.FeatNames.TraceRune,
                 "Your fingers dance, glowing light leaving behind the image of a rune.",
-                "You apply one rune to an adjacent target matching the rune’s Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.",
+                "You apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.",
                 [Trait.Concentrate, Trait.Magical, Trait.Manipulate],
                 null)
             .WithPermanentQEffect("You apply one rune to an adjacent target as an action, or to within 30 feet as two actions.", qfFeat =>
@@ -61,14 +61,14 @@ public static class RunesmithClass
                         bool hasRuneSinger = qfThis.Owner.HasEffect(ModData.QEffectIds.RuneSinger);
                         if (!hasRuneSinger)
                         {
-                            CombatAction oneActionTraceRune = rune.CreateTraceAction(qfThis.Owner, 1);
+                            CombatAction oneActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 1);
                             oneActionTraceRune.ContextMenuName = "{icon:Action} " + oneActionTraceRune.Name;
                             ActionPossibility traceRunePossibility1 = new ActionPossibility(oneActionTraceRune)
                                 { Caption = "Touch", Illustration = IllustrationName.Action };
                             specificRunePossibilities.Add(traceRunePossibility1);
                         }
                         
-                        CombatAction twoActionTraceRune = rune.CreateTraceAction(qfThis.Owner, 2);
+                        CombatAction twoActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 2);
                         twoActionTraceRune.ContextMenuName = RulesBlock.GetIconTextFromNumberOfActions(twoActionTraceRune.ActionCost) + " " + twoActionTraceRune.Name;
                         ActionPossibility traceRunePossibility2 = new ActionPossibility(twoActionTraceRune)
                         {
@@ -87,7 +87,7 @@ public static class RunesmithClass
                             rune.Name,
                             PossibilitySize.Half)
                         {
-                            SpellIfAny = rune.CreateTraceAction(qfThis.Owner, -3), // variable action trace rune
+                            SpellIfAny = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, -3), // variable action trace rune
                             Subsections =
                             {
                                 new PossibilitySection(rune.Name) // rune.Name is how features like Drawn In Red find these sections.
@@ -132,7 +132,7 @@ public static class RunesmithClass
                         
                         // BUG: Quickened action from Tracing Trance not usable on the basic Trace actions with insufficient regular actions.
                         
-                        CombatAction drawRuneAction = rune.CreateTraceAction(qfThis.Owner, -3);
+                        CombatAction drawRuneAction = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, -3);
                         
                         List<Possibility> drawRuneActionPossibilities = 
                         [
@@ -194,7 +194,7 @@ public static class RunesmithClass
         Feat invokeRune = new Feat(
                 ModData.FeatNames.InvokeRune,
                 "",
-                "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed. You can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are affected only once, as normal for duplicate effects.",
+                "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed.\n\nYou can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are {Red}affected only once{/Red}, as normal for duplicate effects.",
                 [ModData.Traits.Invocation, Trait.Magical],
                 null)
             .WithPermanentQEffect("You invoke any number of runes within 30 feet.", qfFeat =>
@@ -208,158 +208,92 @@ public static class RunesmithClass
                     ModData.Illustrations.InvokeRune,
                     "Invoke Rune", 
                     [ModData.Traits.Invocation, Trait.Magical, ModData.Traits.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment],
-                    "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed. You can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are affected only once, as normal for duplicate effects.",
-                    Target.Self().WithAdditionalRestriction(caster =>
-                    {
-                        // PETR: Can't use if Silenced. Deafened does not DC5-check spellcasting in Dawnsbury, so it does not here.
-                        //bool cannotSpeak = caster.HasEffect(QEffectId.) != null;
-                        //if (cannotSpeak)
-                        //  return "Cannot speak in a strong voice";
-                        
-                        foreach (Creature cr in caster.Battle.AllCreatures)
+                    "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed.\n\nYou can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are {Red}affected only once{/Red}, as normal for duplicate effects.",
+                    Target.Self()
+                        .WithAdditionalRestriction(caster =>
                         {
-                            if (caster.DistanceTo(cr) <= 6 && // Make sure creatures are in range.
-                                cr.QEffects.FirstOrDefault( // Find a Qf-
-                                    qfToFind => 
-                                        qfToFind is DrawnRune dr // -that is a DrawnRune,
-                                        && dr.Source == caster // that is created by us,
-                                        && dr.Traits.Contains(ModData.Traits.Rune) // with the rune trait,
-                                        && !dr.Traits.Contains(ModData.Traits.Invocation) // but not the invocation trait.
-                                        && !dr.Disabled
-                                    ) != null
-                                )
+                            // PETR: Can't use if Silenced. Deafened does not DC5-check spellcasting in Dawnsbury, so it does not here.
+                            //bool cannotSpeak = caster.HasEffect(QEffectId.) != null;
+                            //if (cannotSpeak)
+                            //  return "Cannot speak in a strong voice";
+                            
+                            foreach (Creature cr in caster.Battle.AllCreatures)
                             {
-                                return null;
+                                if (caster.DistanceTo(cr) <= 6 && // Make sure creatures are in range.
+                                    cr.QEffects.FirstOrDefault( // Find a Qf-
+                                        qfToFind => 
+                                            qfToFind is DrawnRune dr // -that is a DrawnRune,
+                                            && dr.Source == caster // that is created by us,
+                                            && dr.Traits.Contains(ModData.Traits.Rune) // with the rune trait,
+                                            && !dr.Traits.Contains(ModData.Traits.Invocation) // but not the invocation trait.
+                                            && !dr.Disabled
+                                        ) != null
+                                    )
+                                {
+                                    return null;
+                                }
                             }
-                        }
 
-                        return "No rune-bearers within range";
-                    }))
+                            return "No rune-bearers within range";
+                        }))
                     .WithActionCost(1)
                     .WithEffectOnEachTarget(async (flurryOfInvokes, self, target, irrelevantResult) =>
                     {   
-                        // See Monk.cs, line 106
-                        
-                        // TODO: try with implementing the Rune.PickARuneToInvokeOnTarget() function I made for Terrifying Invocation
-                        
-                        /*
-                         * Find all the runes in play.
-                         */
                         int numberOfRunes = 0; // Number of runes on the field.
-                        self.Battle.AllCreatures.ForEach( cr =>  // Loop through all the creatures in combat.
-                        {
-                            if (self.DistanceTo(cr) <= 6) // If the creature is in range,
+                        self.Battle.AllCreatures
+                            .Where(cr => self.DistanceTo(cr) <= 6) // Must be within range.
+                            .ForEach( cr =>  // Loop through all the creatures in combat.
                             {
-                                cr.QEffects.ForEach(qfOnCreature => // then loop through its QFs.
-                                {
-                                    if (qfOnCreature is DrawnRune dr // If valid QF,
-                                        && dr.Source == self
-                                        && dr.Traits.Contains(ModData.Traits.Rune)
-                                        && !dr.Traits.Contains(ModData.Traits.Invocation)
-                                        && !dr.Disabled)
-                                        numberOfRunes++; // then count it.
-                                });
-                            }
-                        });
+                                List<DrawnRune> creatureRunes = DrawnRune.GetDrawnRunes(self, cr)
+                                    .Where(dr => !dr.Disabled)
+                                    .ToList();
+                                numberOfRunes += creatureRunes.Count;
+                            });
                         
                         /*
                          * For each valid rune in play, attempt to take an invoke action, up to all our runes.
-                         * We'll do a lot of state-check-like behavior each time we go, in case the field changes
-                         * between loops (such as a creature dying, or all instances of a rune-type being invoked).
                          */
-                        //List<Creature> chosenCreatures = []; // Unused, but kept in case it's useful later.
-                        int i = 0; // In case it screws up.
-                        while (numberOfRunes > 0 && i < 100)
+                        int whileLoopProtection = 0;
+                        while (numberOfRunes > 0 && whileLoopProtection < 100)
                         {
                             await self.Battle.GameLoop.StateCheck(); // Idk why but they all do this so keep it.
                             
                             /*
                              * Regenerate the list of creatures with runes left, in case the field changes too much
-                             * between each invocation. E.g. dead creatures, depleted QFs, position changes due to
-                             * reaction with forced movement, etc.
-                             */
+                             * between each invocation.
+                             * */
                             numberOfRunes = 0;
-                            Dictionary<Creature, List<DrawnRune>> creaturesWithRunes = new Dictionary<Creature, List<DrawnRune>>(); // Reset.
-                            self.Battle.AllCreatures.ForEach( (Creature cr) =>
-                            {
-                                List<DrawnRune> creatureRunes = new List<DrawnRune>();
-                                cr.QEffects.ForEach(
-                                    qfToFind =>
-                                    {
-                                        if (qfToFind is DrawnRune drawnRune &&
-                                            drawnRune.Source == self &&
-                                            drawnRune.Traits.Contains(ModData.Traits.Rune) &&
-                                            !drawnRune.Traits.Contains(ModData.Traits.Invocation))
-                                        {
-                                            creatureRunes.Add(drawnRune);
-                                        }
-                                    });
-                                if (creatureRunes.Count > 0 && self.DistanceTo(cr) <= 6)
+                            self.Battle.AllCreatures
+                                .Where(cr => self.DistanceTo(cr) <= 6)
+                                .ForEach(cr =>
                                 {
-                                    creaturesWithRunes[cr] = creatureRunes;
-                                    numberOfRunes++;
-                                }
-                            });
-                            
-                            /*
-                             * Go through every rune-bearer to create an action option usable against their rune.
-                             */
-                            List<Option> options = new List<Option>(); // List of options to check against every creature.
-                            foreach (var crWithRune in creaturesWithRunes) // Loop through all the rune-bearers
+                                    List<DrawnRune> creatureRunes = DrawnRune.GetDrawnRunes(self, cr)
+                                        .Where(dr => !dr.Disabled)
+                                        .ToList();
+                                    numberOfRunes += creatureRunes.Count;
+                                });
+
+                            if (!await CommonRuneRules.PickARuneToInvokeOnTarget(
+                                    flurryOfInvokes,
+                                    self,
+                                    null,
+                                    null,
+                                    whileLoopProtection == 0,
+                                    " Confirm no additional runes ",
+                                    $" You should avoid invoking the same rune on the same creature more than once. (Runes: {numberOfRunes})"))
                             {
-                                foreach (DrawnRune runeQf in crWithRune.Value) // Loop through all the runes one of them bears
-                                {
-                                    Rune thisRune = runeQf.Rune;
-                                    CombatAction? invokeThisRune = thisRune.CreateInvokeAction(flurryOfInvokes, self, runeQf);
-                                    if (invokeThisRune != null)
-                                    {
-                                        GameLoop.AddDirectUsageOnCreatureOptions(invokeThisRune, options, false);
-                                    }
-                                }
+                                return;
                             }
                             
-                            if (options.Count <= 0) continue; // Go to next loop if no options.
-                            
-                            if (i == 0) // If at the beginning of the action,
-                                options.Add(new CancelOption(true)); // allow us to cancel it.
-                            
-                            options.Add(new PassViaButtonOption(" Confirm no additional runes "));
-                            
-                            // Await which option (even if just 1) to take.
-                            Option chosenOption = (await self.Battle.SendRequest( // Send a request to pick an option
-                                new AdvancedRequest(self, "Choose a rune to invoke.", options)
-                                {
-                                    TopBarText = "Choose a rune to invoke" + (i==0 ? " or right-click to cancel" : null) + $". (Runes: {numberOfRunes})",
-                                    TopBarIcon = flurryOfInvokes.Illustration,
-                                })).ChosenOption;
-
-                            switch (chosenOption)
-                            {
-                                /*case CreatureOption creatureOption:
-                                {
-                                    chosenCreatures.Add(creatureOption.Creature);
-                                    break;
-                                }*/
-                                case CancelOption:
-                                    flurryOfInvokes.RevertRequested = true;
-                                    return;
-                                case PassViaButtonOption:
-                                    return;
-                            }
-
-                            await chosenOption.Action();
-                            
-                            i++;
+                            whileLoopProtection++;
                         }
-
-                        //chosenCreatures = null;
                     })
                     .WithEffectOnChosenTargets(async (caster, targets) =>
                     {
-                        foreach (Creature cr in caster.Battle.AllCreatures)
+                        caster.Battle.AllCreatures.ForEach(cr =>
                         {
-                            Rune.RemoveAllImmunities(cr);
-                        }
+                            CommonRuneRules.RemoveAllImmunities(cr);
+                        });
                     });
                     
                     return new ActionPossibility(invokeRuneAction);
@@ -371,7 +305,7 @@ public static class RunesmithClass
         Feat etchRune = new Feat(
                 ModData.FeatNames.EtchRune,
                 "An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.",
-                "At the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they’re expended or removed. You can etch up to 2 runes, and you can etch an additional rune at levels 5, 9, 13, and 17.",
+                "At the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to 2 runes, and you can etch an additional rune at levels 5, 9, 13, and 17.",
                 [], // No traits, we don't want anything inside the encounter to try to interact with this action at the start of combat.
                 null)
             /*.WithOnSheet(values =>
@@ -405,15 +339,24 @@ public static class RunesmithClass
                     
                     List<Rune> runesKnown = repertoire.GetRunesKnown(qfFeat.Owner);
                     int etchLimit = repertoire.GetEtchLimit(qfThis.Owner.Level);
+                    
+                    qfThis.Owner.Occupies.Overhead(
+                        "Etching Runes",
+                        Color.Black,
+                        $"{qfThis.Owner.Name} begins {{b}}Etching Runes{{/b}}.",
+                        "Etch Rune",
+                        $"{{i}}An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.{{/i}}\n\nAt the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to {etchLimit} runes.",
+                        true,
+                        new Traits([Trait.Manipulate, Trait.DoesNotProvoke, ModData.Traits.Runesmith]));
 
                     for (int i = 0; i < etchLimit; i++)
                     {
                         await qfThis.Owner.Battle.GameLoop.StateCheck();
                         
-                        List<Option> options = new List<Option>();
+                        List<Option> options = [];
                         foreach (Rune rune in runesKnown)
                         {
-                            CombatAction etchThisRune = rune.CreateEtchAction(qfThis.Owner);
+                            CombatAction etchThisRune = CommonRuneRules.CreateEtchAction(qfThis.Owner, rune);
                             etchThisRune.Traits.Add(Trait.DoNotShowOverheadOfActionName);
                             GameLoop.AddDirectUsageOnCreatureOptions(etchThisRune, options);
                         }
@@ -433,7 +376,7 @@ public static class RunesmithClass
                         
                         switch (chosenOption)
                         {
-                            case CreatureOption creatureOption:
+                            case CreatureOption:
                                 break;
                             case PassViaButtonOption:
                                 return;
@@ -743,15 +686,16 @@ public static class RunesmithClass
                || runesmith.HeldItems.Any(item => item.HasTrait(ModData.Traits.CountsAsRunesmithFreeHand))
                || runesmith.HasEffect(ModData.QEffectIds.RuneSinger);
     }
-    
+
     /// <summary>
     /// Asynchronously gets a user selected tile that is closer to an enemy
     /// </summary>
-    /// <param name="self">The creature being used to compare distance</param>
+    /// <param name="self">The creature being used to compare distance.</param>
+    /// <param name="fromStart">(nullable) Tile to measure distances from.</param>
     /// <param name="enemy">(nullable) The creature, if any, to get closer to. Overrides checking if the creature is an enemy of self.</param>
-    /// <param name="messageString">The user prompt message</param>
+    /// <param name="messageString">The user prompt message.</param>
     /// <returns>The selected tile or null</returns>
-    public static async Task<bool> StrideCloserToEnemyAsync(Creature self, Creature? enemy, string messageString)
+    public static async Task<bool> StrideCloserToEnemyAsync(Creature self, Tile? fromStart, Creature? enemy, string messageString)
     {
         self.Actions.NextStrideIsFree = true;
         self.RegeneratePossibilities();
@@ -763,7 +707,7 @@ public static class RunesmithClass
         }
         
         // Determines the starting tile, all enemy tiles and initatlizes the options list
-        Tile startingTile = self.Occupies;
+        Tile startingTile = fromStart ?? self.Occupies;
         List<Tile> enemyTiles;
         if (enemy != null)
         {
@@ -780,7 +724,7 @@ public static class RunesmithClass
                 .ToList();
         }
         
-        List<Option> options = new List<Option>();
+        List<Option> options = [];
         
         IList<Tile> floodFill = Pathfinding.Floodfill(self, self.Battle, new PathfindingDescription()
         {

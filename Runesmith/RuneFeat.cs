@@ -17,8 +17,8 @@ public class RuneFeat : Feat
         : base(
             featName,
             rune.FlavorText,
-            rune.GetFormattedFeatDescription(false),
-            new List<Trait>(rune.Traits),
+            CommonRuneRules.GetFormattedFeatDescription(rune, false),
+            [..rune.Traits],
             null)
     {
         this.Rune = rune;

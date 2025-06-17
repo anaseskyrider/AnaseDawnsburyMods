@@ -1,4 +1,5 @@
 using Dawnsbury.Core;
+using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
@@ -125,15 +126,17 @@ public class DrawnRune : QEffect
     /// Happens before any DrawnRune is invoked.
     /// </summary>
     /// <param name="DrawnRune">The DrawnRune this lambda is being called on.</param>
+    /// <param name="CombatAction">The CombatAction invoking the rune.</param>
     /// <param name="DrawnRune">The DrawnRune that is about to be invoked.</param>
-    public Func<DrawnRune, DrawnRune, Task>? BeforeInvokingRune { get; set; }
+    public Func<DrawnRune, CombatAction, DrawnRune, Task>? BeforeInvokingRune { get; set; }
     
     /// <summary>
     /// Happens after any DrawnRune is invoked.
     /// </summary>
     /// <param name="DrawnRune">The DrawnRune this lambda is being called on.</param>
+    /// <param name="CombatAction">The CombatAction that invoked the rune.</param>
     /// <param name="DrawnRune">The DrawnRune that was just invoked.</param>
-    public Func<DrawnRune, DrawnRune, Task>? AfterInvokingRune { get; set; }
+    public Func<DrawnRune, CombatAction, DrawnRune, Task>? AfterInvokingRune { get; set; }
     #endregion
     
     #region Property Methods
@@ -301,7 +304,7 @@ public class DrawnRune : QEffect
             else
                 this.DisableRune(false);
         };
-        this.AfterInvokingRune += async (drThis, drInvoked) =>
+        this.AfterInvokingRune += async (drThis, sourceAction, drInvoked) =>
         {
             if (drInvoked == drThis.DrawnOn)
             {
@@ -462,11 +465,14 @@ public class DrawnRune : QEffect
     /// <returns></returns>
     public static List<DrawnRune> GetDrawnRunes(Creature? caster, Creature runeBearer)
     {
-        List<DrawnRune> drawnRunes = runeBearer.QEffects.Where(
-            qf => (qf is DrawnRune && 
-                   ((caster != null && qf.Source == caster) || true) &&
-                   qf.Traits.Contains(ModData.Traits.Rune) &&
-                   !qf.Traits.Contains(ModData.Traits.Invocation))).Cast<DrawnRune>().ToList();
+        List<DrawnRune> drawnRunes = runeBearer.QEffects
+            .Where(qf =>
+                qf is DrawnRune dr && 
+                ((caster != null && dr.Source == caster) || caster == null) &&
+                dr.Traits.Contains(ModData.Traits.Rune) &&
+                !dr.Traits.Contains(ModData.Traits.Invocation))
+            .Cast<DrawnRune>()
+            .ToList();
         return drawnRunes;
     }
     #endregion

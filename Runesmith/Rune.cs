@@ -23,25 +23,16 @@ namespace Dawnsbury.Mods.RunesmithPlaytest;
 public class Rune
 {
     #region Core Properties
-    
-    /// <summary>
-    /// The unique trait which corresponds to instances of this particular kind of rune, such as Atryl, Rune of Fire.
-    /// </summary>
+    /// <summary>The unique trait which corresponds to instances of this particular kind of rune, such as Atryl, Rune of Fire.</summary>
     public Trait RuneId { get; set; }
     
-    /// <summary>
-    /// The original level of the Rune, before it increases with character level. This corresponds to the CHARACTER LEVEL required to learn the Rune. 
-    /// </summary>
+    /// <summary> The original level of the Rune, before it increases with character level. This corresponds to the CHARACTER LEVEL required to learn the Rune.</summary>
     public int BaseLevel  { get; set; }
     
-    /// <summary>
-    /// The Rune's icon.
-    /// </summary>
+    /// <summary>The Rune's icon.</summary>
     public Illustration Illustration { get; set; }
     
-    /// <summary>
-    /// The traits associated with the rune. By default, all runes have at least the Rune, Runesmith, and Magical traits.
-    /// </summary>
+    /// <summary>The traits associated with the rune. By default, all runes have at least the Rune, Runesmith, and Magical traits.</summary>
     public List<Trait> Traits { get; set; } = [ModData.Traits.Rune, ModData.Traits.Runesmith, Trait.Magical];
 
     /// <summary>
@@ -79,7 +70,7 @@ public class Rune
     /// <param name="Creature">The TARGET which will bear the Rune's DrawnRune.</param>
     /// <param name="Rune">The Rune representing this DrawnRune.</param>
     /// <returns>(DrawnRune) The DrawnRune this lambda generates.</returns>
-    public Func<CombatAction?, Creature?, Creature, Rune, Task<DrawnRune?>>? NewDrawnRune { get; set; }
+    public Func<CombatAction, Creature, Creature, Rune, Task<DrawnRune?>>? NewDrawnRune { get; set; }
     
     /// <summary>
     /// <para>An asynchronous lambda that executes the logic of a Rune's invocation effects. Each type of Rune should have its own InvocationBehavior set, such as the Atryl instance of Rune, whose InvocationBehavior forces a target to make a basic Fortitude save against Fire damage. CombatActions and other code which executes InvocationBehavior figure out the other nuances.</para>
@@ -92,62 +83,35 @@ public class Rune
     /// <param name="Creature">The TARGET <see cref="Creature"/> of the INVOCATION.</param>
     /// <param name="DrawnRune">The <see cref="DrawnRune"/> representing the rune being INVOKED.</param>
     public Func<CombatAction, Rune, Creature, Creature, DrawnRune, Task>? InvocationBehavior { get; set; }
-    
     #endregion
     
     #region String Properties
-    
-    /// <summary>
-    /// The name of the rune.
-    /// <code>
-    /// newRune.Name = "Atryl, Rune of Fire"
-    /// </code>
-    /// </summary>
+    /// <summary>The name of the rune, such as "Atryl, Rune of Fire".</summary>
     public string Name { get; set; }
 
-    /// <summary>The base name of the rune, such as "Atryl".</summary>
+    /// <summary>Returns the base name of the rune, such as "Atryl".</summary>
     public string BaseName => this.RuneId.ToStringOrTechnical();
 
-    /// <summary>
-    /// The unformatted text describing the usage of the rune.
-    /// <code>
-    /// newRune.UsageText = "drawn on a shield"
-    /// </code>
-    /// </summary>
+    /// <summary>The unformatted text describing the usage of the rune, such as "drawn on a shield".</summary>
     public string UsageText { get; set; }
 
-    /// <summary>
-    /// Gets the rune's <see cref="UsageText"/> with bolded formatting.
-    /// </summary>
+    /// <summary>Gets the rune's <see cref="UsageText"/> with bolded formatting.</summary>
     /// <returns>(string) The original text prepended with "{b}Usage{/b} ".</returns>
     public string WithUsageTextFormatting(string? text = null)
     {
         return "{b}Usage{/b} " + (text ?? this.UsageText);
     }
     
-    /// <summary>
-    /// The unformatted flavor text of the rune.
-    /// <code>
-    /// newRune.FlavorText = "This serrated rune, when placed on a blade, ensures it will never go dull."
-    /// </code>
-    /// </summary>
+    /// <summary>The unformatted flavor text of the rune, such as "This serrated rune, when placed on a blade, ensures it will never go dull."</summary>
     public string? FlavorText { get; set; }
 
-    /// <summary>
-    /// Gets the rune's <see cref="FlavorText"/> with italics formatting.
-    /// </summary>
-    /// <returns>(string) The original text surrounded with "{i}" and "{/i}".</returns>
+    /// <summary>Gets the rune's <see cref="FlavorText"/> with italics formatting.</summary>
     public string WithFlavorTextFormatting(string? text = null)
     {
         return "{i}" + (text ?? this.FlavorText) + "{/i}";
     }
     
-    /// <summary>
-    /// The text describing the passive behavior of the rune.
-    /// <code>
-    /// newRune.PassiveText = "A shield bearing this rune increases its circumstance bonus to AC by 1."
-    /// </code>
-    /// </summary>
+    /// <summary>The text describing the passive behavior of the rune, such as "A shield bearing this rune increases its circumstance bonus to AC by 1."</summary>
     public string PassiveText { get; set; }
     
     /// <summary>
@@ -196,9 +160,7 @@ public class Rune
     /// </summary>
     public string? LevelText { get; set; }
     
-    /// <summary>
-    /// The numeric part of the formatted level-up text. E.g. "+2" or "17th". Don't use any parentheses.
-    /// </summary>
+    /// <summary>The numeric part of the formatted level-up text. E.g. "+2" or "17th". Don't use any parentheses.</summary>
     public string? LevelFormat { get; set; }
     
     /// <summary>
@@ -210,67 +172,18 @@ public class Rune
         string? levelText = text ?? (this.LevelText ?? null);
         return levelText != null ? "{b}Level (" + this.LevelFormat + "){/b} " + levelText : null;
     }
-
-    /// <summary>
-    /// Generates a description block for this rune's Trace actions.
-    /// </summary>
-    /// <param name="traceAction">The CombatAction to check against. Used for owner level.</param>
-    /// <param name="withFlavorText">Whether to include flavor text in the description (typically false for dropdown options).</param>
-    /// <param name="prologueText">The paragraph to add at the top of the description (includes one line-break after).</param>
-    /// <param name="afterFlavorText">The text to add at the end of the flavor text paragraph.</param>
-    /// <param name="afterUsageText">The text to add at the end of the usage text paragraph.</param>
-    /// <param name="afterPassiveText">The text to add at the end of the passive text paragraph.</param>
-    /// <param name="afterInvocationText">The text to add at the end of the invocation text paragraph.</param>
-    /// <param name="epilogueText">The paragraph to add at the bottom of the description (includes one line-break before).</param>
-    /// <returns></returns>
-    public string CreateTraceActionDescription(
-        CombatAction traceAction,
-        bool withFlavorText = true,
-        string? prologueText = null,
-        string? afterFlavorText = null,
-        string? afterUsageText = null,
-        string? afterPassiveText = null,
-        string? afterInvocationText = null,
-        string? epilogueText = null)
-    {
-        int lvl = traceAction.Owner.Level;
-        string usageText = this.WithUsageTextFormatting() + afterUsageText;
-        string? flavorText = (withFlavorText ? this.WithFlavorTextFormatting() : null) + afterFlavorText;
-        string passiveText = this.PassiveTextWithHeightening(this, lvl) + afterPassiveText;
-        string? invocationText = this.WithInvocationTextFormatting(this.InvocationTextWithHeightening(this, lvl)) + afterInvocationText;
-        //string? levelText = this.WithLevelTextFormatting(); // Should have heightening, so this shouldn't be necessary.
-        return (!string.IsNullOrEmpty(prologueText) ? $"{prologueText}\n" : null)
-               + (!string.IsNullOrEmpty(flavorText) ? $"{flavorText}\n\n": null)
-               + $"{usageText}\n\n{passiveText}"
-               + (!string.IsNullOrEmpty(invocationText) ? $"\n\n{invocationText}" : null)
-               + (!string.IsNullOrEmpty(epilogueText) ? $"\n{epilogueText}" : null);
-               //+ (levelText != null ? $"\n\n{levelText}" : null);
-    }
-    
-    /// <summary>
-    /// Gets the full description block for the Rune with formatting, optionally with the flavor text.
-    /// </summary>
-    /// <param name="withFlavorText">Whether to include <see cref="WithFlavorTextFormatting"/> in the return.</param>
-    /// <returns>(string) The full description with formatting.</returns>
-    public string GetFormattedFeatDescription(bool withFlavorText = true)
-    {
-        string description = 
-            (withFlavorText ? this.WithFlavorTextFormatting() + "\n\n" : null) +
-            this.WithUsageTextFormatting() + "\n\n" +
-            this.PassiveText +
-            (this.WithInvocationTextFormatting() != null ? "\n\n" + this.WithInvocationTextFormatting() : null) +
-            (this.WithLevelTextFormatting() != null ? "\n\n" + this.WithLevelTextFormatting() : null);
-        return description;
-    }
-    
     #endregion
 
-    #region Instance Property Methods
-
-    /// <summary>
-    /// Overrides the default <see cref="Traits"/> expected of a Rune to the list given. (Such as if for some reason you need a Rune without the Rune trait.)
-    /// </summary>
-    /// <returns>The Rune being modified.</returns>
+    #region Methods
+    /// <summary>Checks whether a Trait is listed among the Rune's Traits. This searches both its Traits field and its RuneId field.</summary>
+    /// <param name="trait">The Trait to find.</param>
+    /// <returns>(bool) Returns true if the trait was found.</returns>
+    public bool HasTrait(Trait trait)
+    {
+        return this.Traits.Contains(trait) || trait == this.RuneId;
+    }
+    
+    /// <summary>Overrides the default <see cref="Traits"/> expected of a Rune to the list given. (Such as if for some reason you need a Rune without the Rune trait.)</summary>
     public Rune WithOverrideTraits(List<Trait> newTraits)
     {
         this.Traits = newTraits;
@@ -281,20 +194,8 @@ public class Rune
     /// A helper function that sets <see cref="UsageCondition"/> on the Rune instance.
     /// </summary>
     /// <param name="condition"></param>
-    /// <returns>The Rune being modified.</returns>
     public Rune WithUsageCondition(Func<Creature, Creature, Usability> condition)
     {
-        this.UsageCondition = condition;
-        return this;
-    }
-
-    /// <summary>
-    /// A helper function that sets <see cref="UsageCondition"/> on the Rune instance with a lambda that always returns Usability.Usable when called.
-    /// </summary>
-    /// <returns>The Rune being modified.</returns>
-    public Rune WithAlwaysUsableCondition()
-    {
-        Func<Creature, Creature, Usability> condition = (Creature attacker, Creature defender) => Usability.Usable;
         this.UsageCondition = condition;
         return this;
     }
@@ -303,7 +204,7 @@ public class Rune
     /// A helper function that sets <see cref="NewDrawnRune"/> on the Rune instance.
     /// </summary>
     /// <returns>The Rune being modified.</returns>
-    public Rune WithNewDrawnRune(Func<CombatAction?, Creature?, Creature, Rune, Task<DrawnRune?>> drawRuneLambda)
+    public Rune WithNewDrawnRune(Func<CombatAction, Creature, Creature, Rune, Task<DrawnRune?>> drawRuneLambda)
     {
         this.NewDrawnRune = drawRuneLambda;
         return this;
@@ -313,47 +214,44 @@ public class Rune
     /// A helper function that sets <see cref="InvocationBehavior"/> on the Rune instance.
     /// </summary>
     /// <returns>The Rune being modified.</returns>
-    public Rune WithInvocationBehavior(Func<CombatAction, Rune, Creature, Creature, DrawnRune, Task> newInvocationBehavior )
+    public Rune WithInvocationBehavior(Func<CombatAction, Rune, Creature, Creature, DrawnRune, Task>? newInvocationBehavior )
     {
         this.InvocationBehavior = newInvocationBehavior;
         return this;
     }
 
-    /// <summary>
-    /// Adds Trait.Shield to DrawTechnicalTraits, which indicates to other parts of the mod that the rune is drawn onto a shield.
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>Adds Trait.Shield to DrawTechnicalTraits, which indicates to other parts of the mod that the rune is drawn onto a shield.</summary>
     public Rune WithDrawnOnShieldTechnical()
     {
         this.DrawTechnicalTraits = this.DrawTechnicalTraits.Concat([Trait.Shield]).ToList();
         return this;
     }
     
-    /// <summary>
-    /// Adds Enums.Traits.Rune to DrawTechnicalTraits, which indicates to other parts of the mod that the rune is drawn onto a rune.
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>Adds Enums.Traits.Rune to DrawTechnicalTraits, which indicates to other parts of the mod that the rune is drawn onto a rune.</summary>
     public Rune WithDrawnOnRuneTechnical()
     {
         this.DrawTechnicalTraits = this.DrawTechnicalTraits.Concat([ModData.Traits.Rune]).ToList();
         return this;
     }
 
-    /// <summary>
-    /// Adds Trait.IsHostile to DrawTechnicalTraits, which indicates to other parts of the mod that the passive is detrimental to the bearer.
-    /// </summary>
+    /// <summary>Adds Trait.IsHostile to DrawTechnicalTraits, which indicates to other parts of the mod that the passive is detrimental to the bearer.</summary>
     public Rune WithDetrimentalPassiveTechnical()
     {
         this.DrawTechnicalTraits = this.DrawTechnicalTraits.Concat([Trait.IsHostile]).ToList();
         return this;
     }
     
-    /// <summary>
-    /// Adds Trait.IsHostile to InvokeTechnicalTraits, which indicates to other parts of the mod that the invocation deals damage when invoked.
-    /// </summary>
+    /// <summary>Adds Trait.IsHostile to InvokeTechnicalTraits, which indicates to other parts of the mod that the invocation deals damage when invoked.</summary>
     public Rune WithDamagingInvocationTechnical()
     {
         this.InvokeTechnicalTraits = this.InvokeTechnicalTraits.Concat([Trait.IsHostile]).ToList();
+        return this;
+    }
+    
+    /// <summary>Adds Trait.Splash to InvokeTechnicalTraits, which indicates to other parts of the mod that the invocation deals damage in an area when invoked.</summary>
+    public Rune WithDamagingAreaInvocationTechnical()
+    {
+        this.InvokeTechnicalTraits = this.InvokeTechnicalTraits.Concat([Trait.Splash]).ToList();
         return this;
     }
 
@@ -383,743 +281,9 @@ public class Rune
         this.InvokeTechnicalTraits = this.InvokeTechnicalTraits.Concat([Trait.DoesNotRequireAttackRollOrSavingThrow]).ToList();
         return this;
     }
-    
-    #endregion
-    
-    #region Instance Methods
-    
-    /// <summary>
-    /// Checks whether a Trait is listed among the Rune's Traits. This searches both its Traits field and its RuneId field.
-    /// </summary>
-    /// <param name="trait">The Trait to find.</param>
-    /// <returns>(bool) Returns true if the trait was found.</returns>
-    public bool HasTrait(Trait trait)
-    {
-        return this.Traits.Contains(trait) || trait == this.RuneId;
-    }
-
-    /// <summary>
-    /// Creates and applies an immunity against this rune's invocation effects to a given creature. This QEffect needs to be removed manually with <see cref="RemoveAllImmunities"/> at the end of any activity with subsidiary invocation actions.
-    /// </summary>
-    /// <param name="invokeTarget">The <see cref="Creature"/> to become immune to this rune's invocation.</param>
-    /// <returns>(<see cref="QEffect"/>) The immunity which was applied to the target.</returns>
-    public QEffect ApplyImmunity(Creature invokeTarget)
-    {
-        QEffect runeInvocationImmunity = new QEffect()
-        {
-            Name = "Invocation Immunity: " + this.Name,
-            Description = "Cannot be affected by another instance of this invocation until the end of this action.",
-            Illustration = new SuperimposedIllustration(this.Illustration, ModData.Illustrations.NoSymbol),
-            Tag = this,
-            Traits = [ModData.Traits.InvocationImmunity, this.RuneId], // ImmunityQFs are identified by these traits.
-            ExpiresAt = ExpirationCondition.ExpiresAtEndOfAnyTurn, // This QF is supposed to be removed when the activity making invokeActions completes. This is a back-up safety for developer-error.
-            DoNotShowUpOverhead = true,
-        };
-        invokeTarget.AddQEffect(runeInvocationImmunity);
-        return runeInvocationImmunity;
-    }
-    
-    /// <summary>
-    /// Determines whether a TARGET Creature is immune to the invocation effects of this Rune by searching for a QEffect with the <see cref="ModData.Traits.InvocationImmunity"/> trait and a trait matching this Rune's <see cref="RuneId"/>.
-    /// </summary>
-    /// <param name="target">The CREATURE to check.</param>
-    /// <returns>(bool) Returns true if the immunity QEffect is present on the TARGET.</returns>
-    public bool IsImmuneToThisInvocation(Creature target)
-    {
-        QEffect? thisRunesImmunity = target.QEffects.FirstOrDefault(qfToFind =>
-            qfToFind.Traits.Contains(ModData.Traits.InvocationImmunity) &&
-            qfToFind.Traits.Contains(this.RuneId));
-        return thisRunesImmunity != null;
-    }
-
-    /// <summary>
-    /// Removes a given DrawnRune from its owner, if it corresponds to a DrawnRune created by an instance of this Rune.
-    /// </summary>
-    /// <param name="runeToRemove">The DrawnRune to be removed from its Owner.</param>
-    /// <returns>(bool) True if the DrawnRune was removed, false otherwise.</returns>
-    public bool RemoveDrawnRune(DrawnRune runeToRemove)
-    {
-        int removals = runeToRemove.Owner.RemoveAllQEffects(
-            qfToRemove =>
-            {
-                if (qfToRemove != runeToRemove || runeToRemove.Rune != this)
-                    return false;
-                
-                runeToRemove.DrawnOn = null;
-                return true;
-            });
-        return (removals > 0);
-    }
-    
-    /// <summary>
-    /// The CASTER uses an ACTION to apply the RUNE's <see cref="NewDrawnRune"/> to the TARGET, which might IGNORE targeting restrictions.
-    /// </summary>
-    /// <param name="sourceAction">The CombatAction which is applying the rune. This action should have either the <see cref="ModData.Traits.Traced"/> or the <see cref="ModData.Traits.Etched"/> traits to determine the duration of the effect being applied.</param>
-    /// <param name="caster">The Creature applying the rune.</param>
-    /// <param name="target">The Creature the rune is applying to.</param>
-    /// <param name="ignoreUsageRequirements">(Default: false) If false, then the DrawnRune is applied only when its Rune's <see cref="UsageCondition"/> is valid for the target. This is true for cases like the Runic Reprisal feat which allows a Runesmith to apply any damaging rune to their shield, taking none of the passive effects, but allowing it to be invoked on a creature when they Shield Block.</param>
-    /// <returns>(bool) True if the effect was successfully applied to the target, false otherwise.</returns>
-    public async Task<DrawnRune?> DrawRuneOnTarget(
-        CombatAction sourceAction,
-        Creature caster,
-        Creature target,
-        bool ignoreUsageRequirements = false)
-    {
-        // Apply the QF if "ignoreTargetRestrictions is True", or "UsageCondition isn't null, and it returns Usable on the target".
-        if (!ignoreUsageRequirements &&
-            (this.UsageCondition == null || this.UsageCondition.Invoke(caster, target) != Usability.Usable)) 
-            return null;
-
-        DrawnRune? qfToApply = null;
-        if (this.NewDrawnRune != null)
-            qfToApply = await this.NewDrawnRune.Invoke(sourceAction, caster, target, this);
-
-        if (qfToApply == null)
-            return null;
-        
-        /*// Event callback
-        foreach (Creature cr in caster.Battle.AllCreatures)
-        {
-            foreach (QEffect qf in cr.QEffects)
-            {
-                if (qf is DrawnRune drawnRune)
-                {
-                    qfToApply.BeforeApplyingDrawnRune.Invoke();
-                }
-            }
-        }*/
-        
-        // Determine the way the rune is being applied.
-        if (sourceAction.HasTrait(ModData.Traits.Etched))
-            qfToApply = qfToApply.WithIsEtched();
-        else if (sourceAction.HasTrait(ModData.Traits.Traced))
-            qfToApply = qfToApply.WithIsTraced();
-        
-        target.AddQEffect(qfToApply);
-
-        return qfToApply;
-    }
-
-    /// <summary>
-    /// Creates a generic CombatAction which when executed, calls <see cref="DrawRuneOnTarget"/> on each target using this Rune. This action inherits the mechanics of Tracing a Rune, such as the <see cref="ModData.Traits.Traced"/> and Manipulate traits.
-    /// </summary>
-    /// <param name="owner">The creature (Runesmith) who is using this action.</param>
-    /// <param name="actions">The number of actions for this variant. If actions==-3, a 1-2 action variable target is used. If actions==1, an adjacent target is used. If actions==2, a ranged target is used (6 tiles). Otherwise, a Self target is used. The action cost can still be altered afterward (such as for use in subsidiary actions).</param>
-    /// <param name="range">The range (in tiles) to use for the 2-action version. Default is 6.</param>
-    /// <returns>(CombatAction) The action which traces the given rune on the target.</returns>
-    public CombatAction CreateTraceAction(
-        Creature owner,
-        int actions = 0,
-        int? range = 6)
-    {
-        bool hasRuneSinger = owner.HasEffect(ModData.QEffectIds.RuneSinger);
-        
-        if (hasRuneSinger && actions == 1)
-            actions = 2; // Make it the 2-action version instead
-        
-        // Determine range to target (logic maybe expanded later)
-        int rangeToTarget = range ?? 6;
-
-        // Determine Target Properties
-        CreatureTarget adjacentTarget = Target.AdjacentCreatureOrSelf();
-        CreatureTarget rangedTarget = Target.RangedCreature(rangeToTarget);
-        DependsOnActionsSpentTarget varyTarget = Target.DependsOnActionsSpent(
-            adjacentTarget,
-            rangedTarget,
-            null! /*This shouldn't be possible, so this should ideally throw some kind of exception*/);
-
-        // Add extra usage requirements
-        foreach (Target tar in varyTarget.Targets)
-        {
-            if (tar is not CreatureTarget crTar)
-                continue;
-            crTar.WithAdditionalConditionOnTargetCreature( // Free hand
-                (attacker, defender) =>
-                    RunesmithClass.IsRunesmithHandFree(attacker)
-                        ? Usability.Usable
-                        : Usability.NotUsable("You must have a free hand to trace a rune"));
-            if (this.UsageCondition != null)
-                crTar.WithAdditionalConditionOnTargetCreature(this.UsageCondition); // UsageCondition
-        }
-        
-        // Determine traits
-        Trait[] traits = this.Traits.ToArray().Concat([
-                Trait.Concentrate,
-                Trait.Magical,
-                Trait.Manipulate,
-                ModData.Traits.Traced,
-                Trait.Spell // <- Should apply magic immunity.
-            ]).ToArray();
-        
-        // Create action
-        CombatAction drawRuneAction = new CombatAction(
-                owner,
-                this.Illustration ?? IllustrationName.None,
-                "Trace " + this.Name,
-                traits,
-                "ERROR: INCOMPLETE DESCRIPTION",
-                actions switch
-                {
-                    2 => rangedTarget,
-                    1 => adjacentTarget,
-                    -3 => varyTarget,
-                    _ => Target.Self().WithAdditionalRestriction(self =>
-                        RunesmithClass.IsRunesmithHandFree(self) ? null : "You must have a free hand to trace a rune")
-                })
-            {
-                Tag = this,
-            }
-            .WithActionCost(actions)
-            .WithSoundEffect(ModData.SfxNames.TraceRune)
-            .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
-            {
-                Rune actionRune = (thisAction.Tag as Rune)!;
-                if (await actionRune.DrawRuneOnTarget(thisAction, caster, target) == null)
-                    thisAction.RevertRequested = true;
-            });
-
-        if (actions != 1) // Isn't the melee one
-            drawRuneAction.WithProjectileCone(VfxStyle.BasicProjectileCone(this.Illustration ?? IllustrationName.None));
-        
-        if (actions == -3)
-            drawRuneAction.WithCreateVariantDescription((actions, spellVariant) =>
-            { // Just having this gives the variant range information.
-                return actions switch
-                {
-                    //1 => this.CreateTraceActionDescription(drawRuneAction, withFlavorText:false),
-                    //2 => this.CreateTraceActionDescription(drawRuneAction, withFlavorText:false),
-                    _ => this.CreateTraceActionDescription(drawRuneAction, withFlavorText:false)
-                };
-            });
-        
-        // Determine description based on actions preset
-        switch (actions)
-        {
-            case -3:
-                drawRuneAction.Description = this.CreateTraceActionDescription(drawRuneAction, afterUsageText:$"\n\n{{icon:Action}} The range is touch.\n{{icon:TwoActions}} The range is {rangeToTarget*5} feet.");
-                break;
-            case 1:
-                drawRuneAction.Description = this.CreateTraceActionDescription(drawRuneAction, prologueText:"{b}Range{/b} touch\n");
-                break;
-            case 2:
-                drawRuneAction.Description = this.CreateTraceActionDescription(drawRuneAction, prologueText:$"{{b}}Range{{/b}} {rangeToTarget*5} feet\n");
-                break;
-            default:
-                drawRuneAction.Description = this.CreateTraceActionDescription(drawRuneAction, prologueText:"{b}Range{/b} self\n");
-                break;
-        }
-
-        // Modify according to Rune-Singer
-        if (hasRuneSinger)
-        {
-            drawRuneAction = drawRuneAction
-                .WithActionCost(actions == 0 ? 0 : 1)
-                .WithSoundEffect(ModData.SfxNames.SingRune)
-                .WithEffectOnSelf(self =>
-                {
-                    self.RemoveAllQEffects(qf => qf.Id == ModData.QEffectIds.RuneSinger || qf.Id == ModData.QEffectIds.RuneSingerCreator);
-                });
-            drawRuneAction.Name = drawRuneAction.Name.Replace("Trace", "Sing");
-            drawRuneAction.Description = drawRuneAction.Description.Replace("30 feet", "{Blue}30 feet{/Blue}");
-            //drawRuneAction.Illustration = new SideBySideIllustration(drawRuneAction.Illustration, ModData.Illustrations.RuneSinger);
-            drawRuneAction.Traits.Remove(Trait.Manipulate);
-        }
-        
-        return drawRuneAction;
-    }
-
-    /// <summary>
-    /// Creates a variant of <see cref="CreateTraceAction"/> that inherits the mechanics of Etching a Rune, such as the <see cref="ModData.Traits.Etched"/> trait and a map-sized range limit, and only applying runes to allies.
-    /// </summary>
-    /// <param name="owner">The creature (Runesmith) who is using this action.</param>
-    /// <returns>(CombatAction) The action which etches the given rune on the target.</returns>
-    public CombatAction CreateEtchAction(
-        Creature owner)
-    {
-        CombatAction etchAction = this.CreateTraceAction(owner, 2)
-            .WithActionCost(0)
-            .WithSoundEffect(ModData.SfxNames.EtchRune);
-        etchAction.Name = $"Etch {this.Name}";
-        etchAction.Description = this.CreateTraceActionDescription(etchAction, false, prologueText:"{Blue}Etched: lasts until the end of combat.{/Blue}\n");
-        etchAction.Traits.Remove(ModData.Traits.Traced);
-        etchAction.Traits.Remove(Trait.Manipulate); // Just in case this might provoke a reaction.
-        etchAction.Traits.Remove(Trait.Concentrate); // Just in case this might provoke a reaction.
-        etchAction.Traits.Add(ModData.Traits.Etched);
-        
-        // Usable across the whole map
-        etchAction.Target = Target.RangedFriend(99); // BUG: Is blocked by line of effect. I don't currently know a way around this.
-        if (this.UsageCondition != null) // Do this again since we just replaced the target.
-            (etchAction.Target as CreatureTarget)!.WithAdditionalConditionOnTargetCreature(this.UsageCondition);
-            // Don't add a free hand requirement; this "technically" happened "before" combat.
-        
-        // Remove tedious animations
-        etchAction.ProjectileIllustration = null;
-        etchAction.ProjectileCount = 0;
-        etchAction.ProjectileKind = ProjectileKind.None;
-        
-        return etchAction;
-    }
-
-    /// <summary>
-    /// Creates and returns the CombatAction wrapper which executes the InvocationBehavior of the given runeTarget.
-    /// </summary>
-    /// <param name="sourceAction">The CombatAction which executes this internal action.</param>
-    /// <param name="caster">The Creature invoking the rune.</param>
-    /// <param name="runeTarget">The DrawnRune to be invoked.</param>
-    /// <param name="range">The range to the creature target. If no range is specified, the range is 30 feet.</param>
-    /// <param name="immediatelyRemoveImmunity">If true, then <see cref="WithImmediatelyRemovesImmunity"/> is called on the new CombatAction.</param>
-    /// <param name="requiresTargetHasDrawnRune">If true, this action can only be used against creatures who own the supplied runeTarget.</param>
-    /// <returns></returns>
-    public CombatAction? CreateInvokeAction(
-        CombatAction? sourceAction,
-        Creature caster,
-        DrawnRune runeTarget,
-        int range = 6,
-        bool immediatelyRemoveImmunity = false,
-        bool requiresTargetHasDrawnRune = true)
-    {
-        if (this.InvocationBehavior == null)
-            return null;
-
-        Trait drawTrait = runeTarget.DrawTrait ?? Trait.None;
-        string initialDescription = $"{{b}}{runeTarget.Name}{{/b}}\n"
-                                    + (runeTarget.Description!.Contains("Tattoo") 
-                                        ? "{i}Tattooed{/i}\n" 
-                                        : $"{{i}}{drawTrait.ToStringOrTechnical()}{{/i}}\n");
-
-        Trait[] traits = this.Traits.ToArray().Concat(
-            [
-                ModData.Traits.Invocation,
-                Trait.UnaffectedByConcealment,
-                Trait.Spell, // <- Should apply magic immunity.
-            ])
-            .ToArray();
-        
-        CreatureTarget invokeTarget = Target.RangedCreature(range);
-        if (requiresTargetHasDrawnRune)
-            invokeTarget.WithAdditionalConditionOnTargetCreature((attacker, defender) =>
-            {
-                QEffect? foundQf = defender.QEffects.FirstOrDefault(
-                    qfToFind => qfToFind == runeTarget);
-                return foundQf != null
-                    ? Usability.Usable
-                    : Usability.NotUsableOnThisCreature($"{this.Name} not applied");
-            });
-        
-        CombatAction invokeThisRune = new CombatAction(
-            caster,
-            this.Illustration,
-            "Invoke " + this.Name,
-            traits,
-            initialDescription + (this.InvocationTextWithHeightening(this, caster.Level) ?? "[No invocation entry]"),
-            invokeTarget)
-            {
-                Tag = this,
-            }
-            .WithActionCost(0)
-            .WithProjectileCone(VfxStyle.BasicProjectileCone(this.Illustration))
-            .WithSoundEffect(ModData.SfxNames.InvokeRune)
-            .WithEffectOnEachTarget(async (thisInvokeAction, caster, target, result) =>
-            {
-                await Rune.InvokeDrawnRune(thisInvokeAction, caster, target, runeTarget);
-            });
-
-        // Saving Throw Tooltip Creator
-        Trait saveTrait =
-            this.InvokeTechnicalTraits.FirstOrDefault(trait => trait is Trait.Reflex or Trait.Fortitude or Trait.Will);
-        if (!this.InvokeTechnicalTraits.Contains(Trait.DoesNotRequireAttackRollOrSavingThrow) && saveTrait != Trait.None)
-        {
-            Defense def = saveTrait switch
-            {
-                Trait.Reflex => Defense.Reflex,
-                Trait.Fortitude => Defense.Fortitude,
-                Trait.Will => Defense.Will,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-            invokeThisRune.WithTargetingTooltip((thisInvokeAction, target, index) =>
-            {
-                string tooltip = CombatActionExecution.BreakdownSavingThrowForTooltip(thisInvokeAction, target,
-                    new SavingThrow(def, RunesmithClass.RunesmithDC(caster))).TooltipDescription;
-                return initialDescription
-                       + this.WithInvocationTextFormatting(this.InvocationTextWithHeightening(this, caster.Level))
-                       + "\n" + tooltip;
-            });
-        }
-
-        if (immediatelyRemoveImmunity)
-        {
-            invokeThisRune = WithImmediatelyRemovesImmunity(invokeThisRune);
-        }
-
-        return invokeThisRune;
-    }
-    #endregion
-
-    #region Static Methods
-
-    /// <summary>
-    /// Removes all invocation immunities from a creature.
-    /// </summary>
-    /// <param name="cr">The <see cref="Creature"/> whose QEffects will be searched.</param>
-    /// <returns>(bool) True if at least one QEffect with the <see cref="ModData.Traits.InvocationImmunity"/> trait was removed, false otherwise.</returns>
-    public static bool RemoveAllImmunities(Creature cr)
-    {
-        int removals = cr.RemoveAllQEffects(
-            qf =>
-                qf.Traits.Contains(ModData.Traits.InvocationImmunity)
-        );
-        return (removals > 0);
-    }
-
-    public static async Task InvokeDrawnRune(
-        CombatAction sourceAction,
-        Creature caster,
-        Creature runeBearer,
-        DrawnRune runeToInvoke
-        )
-    {
-        Rune thisRune = runeToInvoke.Rune;
-        
-        if (thisRune.InvocationBehavior == null || runeToInvoke.Hidden)
-            return;
-        
-        foreach (Creature cr in caster.Battle.AllCreatures)
-        {
-            List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(null, cr);
-            foreach (DrawnRune dr in drawnRunes)
-            {
-                if (dr.BeforeInvokingRune != null)
-                    await dr.BeforeInvokingRune.Invoke(dr, runeToInvoke);
-            }
-        }
-        
-        await thisRune.InvocationBehavior.Invoke(sourceAction, thisRune, caster, runeBearer, runeToInvoke);
-        
-        foreach (Creature cr in caster.Battle.AllCreatures)
-        {
-            List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(null, cr);
-            foreach (DrawnRune dr in drawnRunes)
-            {
-                if (dr.AfterInvokingRune != null)
-                    await dr.AfterInvokingRune.Invoke(dr, runeToInvoke);
-            }
-        }
-    }
-
-    /// <summary>
-    /// The CASTING creature uses the SOURCE combat action to attempt to DRAW a rune on a CREATURE.
-    /// </summary>
-    /// <param name="sourceAction">The <see cref="CombatAction"/> which is attempting to draw the rune.</param>
-    /// <param name="caster">The <see cref="Creature"/> drawing the rune.</param>
-    /// <param name="targetFilter">(nullable) A lambda which returns true if the Creature is a valid option to target.</param>
-    /// <param name="range">(default: 6) if a target is not provided, this range is used for tracing a rune.</param>
-    /// <param name="runeFilter">(nullable) A lambda which returns true if the Rune is a valid option to draw.</param>
-    /// <param name="canBeCanceled">Whether the attempt to draw the rune can be canceled.</param>
-    public static async Task PickACreatureAndDrawARune(
-        CombatAction? sourceAction,
-        Creature caster,
-        Func<Creature, bool>? targetFilter = null,
-        int? range = 6,
-        Func<Rune, bool>? runeFilter = null,
-        bool? canBeCanceled = false)
-    {
-        // Get available runes
-        RunicRepertoireFeat? repertoireFeat = RunicRepertoireFeat.GetRepertoireOnCreature(caster);
-        if (repertoireFeat == null)
-            return;
-        
-        // Generate options
-        List<Option> options = [];
-        foreach (Rune rune in repertoireFeat.GetRunesKnown(caster))
-        {
-            if (runeFilter == null || runeFilter.Invoke(rune) == true)
-            {
-                CombatAction traceThisRuneAction = rune.CreateTraceAction(caster, 2, range).WithActionCost(0);
-                traceThisRuneAction.Description = rune.CreateTraceActionDescription(traceThisRuneAction, withFlavorText:false);
-                GameLoop.AddDirectUsageOnCreatureOptions(
-                    traceThisRuneAction, // Use at normal range.
-                    options,
-                    false);
-            }
-        }
-        
-        // Remove options if a target is specified
-        if (targetFilter != null)
-            options.RemoveAll(
-                option => option is CreatureOption crOpt && !targetFilter.Invoke(crOpt.Creature));
-        
-        // Add bells and whistles to options
-        if (options.Count <= 0)
-            return;
-        if (canBeCanceled == true)
-            options.Add(new CancelOption(true));
-        options.Add(new PassViaButtonOption(" Confirm no trace action "));
-        
-        // Pick a target
-        string topBarText = "Choose a rune to Trace"
-                            //+ (target != null ? $" on {target.Name}" : null)
-                            + (canBeCanceled == true ? " or right-click to cancel" : null)
-                            + ".";
-        Option chosenOption = (await caster.Battle.SendRequest( // Send a request to pick an option
-            new AdvancedRequest(caster, "Choose a rune to Trace.", options)
-            {
-                TopBarText = topBarText,
-                TopBarIcon = ModData.Illustrations.TraceRune,
-            })).ChosenOption;
-        
-        // Do stuff based on specific type of choice
-        switch (chosenOption)
-        {
-            case CreatureOption creatureOption:
-            {
-                break;
-            }
-            case CancelOption:
-                if (sourceAction != null)
-                    sourceAction.RevertRequested = true;
-                return;
-            case PassViaButtonOption:
-                return;
-        }
-        
-        // Execute chosen option
-        await chosenOption.Action();
-    }
-
-    public static async Task<DrawnRune?> PickARuneToDrawOnCreature(
-        CombatAction? sourceAction,
-        Creature caster,
-        Creature target,
-        int? range = 6,
-        Func<Rune, bool>? runeFilter = null,
-        bool? canBeCanceled = false
-        )
-    {
-        // Get available runes
-        RunicRepertoireFeat? repertoireFeat = RunicRepertoireFeat.GetRepertoireOnCreature(caster);
-        if (repertoireFeat == null)
-            return null;
-        
-        // Generate options
-        List<Option> options = [];
-        foreach (Rune rune in repertoireFeat.GetRunesKnown(caster))
-        {
-            if (runeFilter == null || runeFilter.Invoke(rune) == true)
-            {
-                CombatAction traceThisRuneAction = rune.CreateTraceAction(caster, 2, range).WithActionCost(0);
-                traceThisRuneAction.Description = rune.CreateTraceActionDescription(traceThisRuneAction, withFlavorText:false);
-                GameLoop.AddDirectUsageOnCreatureOptions(
-                    traceThisRuneAction, // Use at normal range.
-                    options,
-                    false);
-            }
-        }
-        
-        // Remove options not on the target
-            options.RemoveAll(option => 
-                option is CreatureOption crOpt && crOpt.Creature != target);
-        
-        // Add bells and whistles to options
-        if (options.Count <= 0)
-            return null;
-        if (canBeCanceled == true)
-            options.Add(new CancelOption(true));
-        options.Add(new PassViaButtonOption(" Confirm no trace action "));
-        
-        // Pick a target
-        string topBarText = "Choose a rune to Trace"
-                            + $" on {target.Name}"
-                            + (canBeCanceled == true ? " or right-click to cancel" : null)
-                            + ".";
-        Option chosenOption = (await caster.Battle.SendRequest( // Send a request to pick an option
-            new AdvancedRequest(caster, "Choose a rune to Trace.", options)
-            {
-                TopBarText = topBarText,
-                TopBarIcon = ModData.Illustrations.TraceRune,
-            })).ChosenOption;
-        
-        // Do stuff based on specific type of choice
-        switch (chosenOption)
-        {
-            case CreatureOption creatureOption:
-            {
-                break;
-            }
-            case CancelOption:
-                if (sourceAction != null)
-                    sourceAction.RevertRequested = true;
-                return null;
-            case PassViaButtonOption:
-                return null;
-        }
-        
-        // Execute chosen option
-        if (await chosenOption.Action())
-        {
-            
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// The CASTING creature uses the SOURCE combat action to INVOKE a DrawnRune on the TARGET creature.
-    /// </summary>
-    /// <param name="sourceAction">The CombatAction which invoked the rune.</param>
-    /// <param name="caster">The Creature invoking the DrawnRune.</param>
-    /// <param name="target">The Creature whose DrawnRune will be invoked. If null, you'll be asked to select a Creature with a DrawnRune.</param>
-    /// <param name="runeFilter">(nullable) A lambda which returns true if the Rune is a valid option to invoke.</param>
-    /// <param name="canBeCanceled">Whether the attempt to invoke the rune can be canceled.</param>
-    public static async Task PickARuneToInvokeOnTarget(
-        CombatAction sourceAction,
-        Creature caster,
-        Creature? target = null,
-        Func<Rune, bool>? runeFilter = null,
-        bool? canBeCanceled = false)
-    {
-        // Get available runes
-        RunicRepertoireFeat? repertoireFeat = RunicRepertoireFeat.GetRepertoireOnCreature(caster);
-        if (repertoireFeat == null)
-            return;
-        
-        // Generate options
-        List<Option> options = [];
-        foreach (Creature cr in caster.Battle.AllCreatures)
-        {
-            foreach (QEffect qf in cr.QEffects)
-            {
-                if (qf is not DrawnRune dRune)
-                    continue;
-                if (dRune.Source != caster
-                    || !dRune.Traits.Contains(ModData.Traits.Rune)
-                    || dRune.Traits.Contains(ModData.Traits.Invocation))
-                    continue;
-                
-            }
-        }
-        
-        foreach (Rune rune in repertoireFeat.GetRunesKnown(caster))
-        {
-            if (runeFilter == null || runeFilter.Invoke(rune) == true)
-                foreach (Creature cr in caster.Battle.AllCreatures)
-                {
-                    foreach (QEffect runeQf in cr.QEffects.Where(qf =>
-                                 qf is DrawnRune dRune 
-                                 && dRune.Rune == rune
-                                 && dRune.Source == caster
-                                 && dRune.Traits.Contains(ModData.Traits.Rune)
-                                 && !dRune.Traits.Contains(ModData.Traits.Invocation)))
-                    {
-                        if (runeQf is not DrawnRune dRune)
-                            continue;
-                        CombatAction? newInvokeAction =
-                            rune.CreateInvokeAction(sourceAction, caster, dRune)
-                                ?.WithActionCost(0); // Use at normal range.
-                        if (newInvokeAction != null)
-                            GameLoop.AddDirectUsageOnCreatureOptions(
-                                newInvokeAction,
-                                options,
-                                false);
-                    }
-                }
-        }
-        
-        // Remove options if a target is specified
-        if (target != null)
-            options.RemoveAll(
-                option => option is CreatureOption crOpt && crOpt.Creature != target);
-        
-        // Add bells and whistles to options
-        if (options.Count <= 0)
-            return;
-        if (canBeCanceled == true)
-            options.Add(new CancelOption(true));
-        options.Add(new PassViaButtonOption(" Confirm no trace action "));
-        
-        // Pick a target
-        string topBarText = "Choose a rune to Invoke"
-                            + (target != null ? $" on {target.Name}" : null)
-                            + (canBeCanceled == true ? " or right-click to cancel" : null)
-                            + ".";
-        Option chosenOption = (await caster.Battle.SendRequest( // Send a request to pick an option
-            new AdvancedRequest(caster, "Choose a rune to Invoke.", options)
-            {
-                TopBarText = topBarText,
-                TopBarIcon = ModData.Illustrations.TraceRune,
-            })).ChosenOption;
-        
-        // Do stuff based on specific type of choice
-        switch (chosenOption)
-        {
-            case CreatureOption creatureOption:
-            {
-                break;
-            }
-            case CancelOption:
-                if (sourceAction != null)
-                    sourceAction.RevertRequested = true;
-                return;
-            case PassViaButtonOption:
-                return;
-        }
-        
-        // Execute chosen option
-        await chosenOption.Action();
-        
-        /*if (targetMustHaveRune == true &&
-            target.QEffects.FirstOrDefault(qfToFind => qfToFind == runeTarget) == null) 
-            return;
-
-        if (!this.IsImmuneToThisInvocation(target))
-        {
-            await runeTarget.Rune.InvocationBehavior?.Invoke(sourceAction, runeTarget.Rune, caster, target, runeTarget)!;
-        }
-        
-        // Remove drawn rune after invoking it
-        runeTarget.Rune.RemoveDrawnRune(runeTarget);
-        // Apply immunity to the creature it was invoked on
-        runeTarget.Rune.ApplyImmunity(target); // THIS WILL NOT WORK. SOME RUNES HAVE SUBSIDIARY BEHAVIOR THAT INVOKES ON ANOTHER CREATURE.*/
-    }
-
-    /// <summary>
-    /// Adds (or replaces, if it already exists) the WithEffectOnChosenTargets behavior of the given CombatAction with a function that removes immunity from simultaneous invocations at the end of the action.
-    /// </summary>
-    /// <param name="anyCombatAction"></param>
-    /// <returns>(CombatAction) the anyCombatAction that was passed, with the new WithEffectOnChosenTargets.</returns>
-    public static CombatAction WithImmediatelyRemovesImmunity(CombatAction anyCombatAction)
-    {
-        anyCombatAction.WithEffectOnChosenTargets(async (caster, targets) =>
-        {
-            foreach (Creature cr in caster.Battle.AllCreatures)
-            {
-                Rune.RemoveAllImmunities(cr);
-            }
-        });
-        
-        return anyCombatAction;
-    }
-
-    public static Skill? GetSkillFromTraditionTrait(Trait traditionTrait)
-    {
-        switch (traditionTrait)
-        {
-            case Trait.Arcane:
-                return Skill.Arcana;
-            case Trait.Divine:
-                return Skill.Religion;
-            case Trait.Occultism:
-                return Skill.Occultism;
-            case Trait.Primal:
-                return Skill.Nature;
-            default:
-                return null;
-        }
-    }
-
     #endregion
 
     #region Initializers
-
     /// <summary>
     /// Initializes a new Rune object.
     /// </summary>
@@ -1158,6 +322,5 @@ public class Rune
             this.Traits = this.Traits.Concat(additionalTraits).ToList();
         Traits.Add(runeId);
     }
-
     #endregion
 }

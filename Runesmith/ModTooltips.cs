@@ -34,15 +34,15 @@ public class ModTooltips
         /////////////
         ModManager.RegisterInlineTooltip(
             "Runesmith.Action.TraceRune",
-            "{b}Trace Rune {icon:Action}–{icon:TwoActions}{/b}\n{i}Concentrate, Magical, Manipulate{i}\n(Requires a free hand)\nYou apply one rune to an adjacent target matching the rune’s Usage description. The rune remains until the end of your next turn. If you spend {icon:TwoActions} two actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.");
+            "{b}Trace Rune {icon:Action}–{icon:TwoActions}{/b}\n{i}Concentrate, Magical, Manipulate{i}\n(Requires a free hand)\nYou apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend {icon:TwoActions} two actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.");
         
         ModManager.RegisterInlineTooltip(
             "Runesmith.Action.InvokeRune",
-            "{b}Invoke Rune {icon:Action}{/b}\n{i}Invocation, Magical{i}\nYou utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed. You can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are affected only once, as normal for duplicate effects.");
+            "{b}Invoke Rune {icon:Action}{/b}\n{i}Invocation, Magical{i}\nYou utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed.\n\nYou can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are {Red}affected only once{/Red}, as normal for duplicate effects.");
         
         ModManager.RegisterInlineTooltip(
             "Runesmith.Action.EtchRune",
-            "{b}Etch Rune{/b}\n{i}Out of combat ability{/i}\nAt the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they’re expended or removed. You can etch up to 2 runes, and you can etch an additional rune at levels 5, 9, 13, and 17.");
+            "{b}Etch Rune{/b}\n{i}Out of combat ability{/i}\nAt the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to 2 runes, and you can etch an additional rune at levels 5, 9, 13, and 17.");
         
         ////////////////////
         // Class Features //
@@ -73,5 +73,11 @@ public class ModTooltips
         ModManager.RegisterInlineTooltip(
             "Runesmith.Feats.WordsFlyFree",
             "{b}Words, Fly Free {icon:Action}{/b}\n{i}Manipulate, Runesmith{/i}\n(Requires your Runic Tattoo isn't faced)\nYou fling your hand out, the rune from your Runic Tattoo flowing down it and flying through the air in a crescent. You trace the rune onto all creatures or objects within a 15-foot cone that match the rune's usage requirement. The rune then returns to you, faded.");
+        
+        //////////
+        // Misc //
+        //////////
+        ModManager.RegisterInlineTooltip("Runesmith.Misc.AllAroundVision",
+            "{b}All-Around Vision{/b}\n{i}(Monster Ability){/i}\nThis monster can see in all directions simultaneously and therefore can't be flanked.");
     }
 }

@@ -117,7 +117,7 @@ public static class ModData
             new TraitProperties("Zohk", false));
         
         // Level 9 rune traits.
-        public static readonly Trait En = ModManager.RegisterTrait("En-",
+        public static readonly Trait EnDiacritic = ModManager.RegisterTrait("En-",
             new TraitProperties("En-", false));
         
         public static readonly Trait Feikris = ModManager.RegisterTrait("Feikris",
@@ -184,6 +184,7 @@ public static class ModData
     {
         public static readonly QEffectId RuneSinger = ModManager.RegisterEnumMember<QEffectId>("Rune-Singer");
         public static readonly QEffectId RuneSingerCreator = ModManager.RegisterEnumMember<QEffectId>("RuneSingerCreator");
+        public static readonly QEffectId JurrozDamageTracker = ModManager.RegisterEnumMember<QEffectId>("JurrozDamageTracker");
     }
 
     public static class ActionIds
@@ -242,6 +243,9 @@ public static class ModData
         public const SfxName InvokedSun = SfxName.AuraExpansion;
         public const SfxName InvokedZohk = SfxName.PhaseBolt;
         public const SfxName InvokedFeikris = SfxName.PhaseBolt;
+        public const SfxName InvokedIchelsu = SfxName.MinorAbjuration;
+        public const SfxName InvokedJurroz = SfxName.AirSpell;
+        public const SfxName InvokedKojastri = SfxName.BoneSpray;
         public const SfxName ToggleRuneSinger = SfxName.OminousActivation; //SfxName.AuraExpansion;
         public const SfxName SingRune = SfxName.Choir;
         public const SfxName TransposeEtchingStart = SfxName.OminousActivation;
