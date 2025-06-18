@@ -871,119 +871,55 @@ public static class RunesmithFeats
                         "Transpose Etching",
                         [Trait.Manipulate, ModData.Traits.Runesmith, Trait.Spell, Trait.Basic],
                         "You move any one of your runes within 30 feet to a different target within 30 feet.",
-                        Target.RangedCreature(6)
-                            .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
+                        Target.Self()
+                            .WithAdditionalRestriction(self =>
                             {
-                                return defender.QEffects.FirstOrDefault(qfFind => qfFind is DrawnRune && qfFind.Source == attacker) != null ?
-                                        Usability.Usable : Usability.NotUsableOnThisCreature("Doesn't bear one of your runes");
+                                return self.Battle.AllCreatures.Any(cr =>
+                                    DrawnRune.GetDrawnRunes(self, cr).Where(dr => dr.Description != null && !dr.Description.Contains("Tattooed") && !dr.Description.Contains("Runic Reprisal")).ToList().Count > 0)
+                                    ? null
+                                    : "No rune-bearers";
                             }))
                         .WithActionCost(1)
                         .WithSoundEffect(ModData.SfxNames.TransposeEtchingStart)
-                        .WithEffectOnEachTarget(async (transposeAction, caster, transposeFrom, result) =>
+                        .WithEffectOnEachTarget(async (transposeAction, caster, _,_) =>
+                        {
+                            List<Creature> possiblePickups = caster.Battle.AllCreatures
+                                .Where(cr => cr.DistanceTo(caster) <= 6 && cr.QEffects.Any(qf => qf is DrawnRune))
+                                .ToList();
+                            DrawnRune? chosenRune = await CommonRuneRules.AskToChooseADrawnRune(
+                                caster,
+                                possiblePickups,
+                                transposeAction.Illustration,
+                                "Choose one of your runes to move to another creature within 30 feet or right-click to cancel.",
+                                "Cancel choosing a rune",
+                                true,
+                                dr => dr.Source == caster && dr.Description != null && !(dr.Description.Contains("Tattooed") ||
+                                    dr.Description.Contains("Runic Reprisal")));
+                            if (chosenRune != null)
                             {
-                                /*
-                                 * Go through every rune on the target to create an action option usable against their rune.
-                                 */
-                                List<Option> options = [];
-                                foreach (DrawnRune? runeQf in (transposeFrom.QEffects.Where(qfFind => qfFind is DrawnRune && qfFind.Source == caster)).Select(qf => qf as DrawnRune)) // Loop through all the runes the target bears
+                                List<Creature> possibleDropoffs = caster.Battle.AllCreatures
+                                    .Where(cr =>
+                                        chosenRune.Rune.UsageCondition!.Invoke(caster, cr) == Usability.Usable) // TODO: Get around to removing null checks for UsageCondition. It has a default always-usable function now.
+                                    .ToList();
+                                Creature? chosenCreature = await caster.Battle.AskToChooseACreature(
+                                    caster,
+                                    possibleDropoffs,
+                                    transposeAction.Illustration,
+                                    $"Choose a creature to bear {{Blue}}{chosenRune.Rune.Name}{{/Blue}}",
+                                    $"Move {{Blue}}{chosenRune.Rune.Name}{{/Blue}} to this creature.",
+                                    "Cancel moving rune");
+                                if (chosenCreature != null)
                                 {
-                                    Rune thisRune = runeQf!.Rune;
-                                    
-                                    CombatAction transposeThisRune = new CombatAction( // Create an action for that rune
-                                        caster,
-                                        thisRune.Illustration!,
-                                        "Transpose " + thisRune.Name,
-                                        [Trait.Manipulate, ModData.Traits.Runesmith, Trait.Basic, Trait.DoNotShowInCombatLog],
-                                        "You move any one of your runes within 30 feet to a different target within 30 feet.",
-                                        Target.RangedCreature(6).WithAdditionalConditionOnTargetCreature( 
-                                            (attacker, defender) =>
-                                            {
-                                                QEffect? foundQf = defender.QEffects.FirstOrDefault(
-                                                    qfToFind => qfToFind == runeQf); // The target of this action must have this specific drawn rune
-                                                return foundQf != null ? Usability.Usable : Usability.NotUsableOnThisCreature($"Does not have {thisRune.Name} applied");
-                                            }))
-                                        {
-                                            Tag = thisRune,
-                                        }
-                                        .WithActionCost(0)
-                                        .WithEffectOnEachTarget(async (thisTransposeAction, caster, transposeFrom, result) =>
-                                        {
-                                            List<Option> transposeToOptions = new List<Option>();
-                                            foreach (Creature transposeTo in caster.Battle.AllCreatures)
-                                            {
-                                                if (thisRune.UsageCondition == null ||
-                                                    thisRune.UsageCondition.Invoke(caster, transposeTo) != Usability.Usable)
-                                                    continue;
-                                                Option transposeOption = Option.ChooseCreature(
-                                                    $"Apply {thisRune.Name}",
-                                                    transposeTo,
-                                                    async () =>
-                                                    {
-                                                        // Call NewDrawnRune in case it prompts for a selection, such as if the rune applies to an item, so we can move this rune to that creature AND its item.
-                                                        DrawnRune pretendNewRune = (await thisRune.NewDrawnRune!.Invoke(thisTransposeAction, caster, transposeTo, thisRune))!;
-                                                        /*await*/ runeQf.MoveRuneToTarget(transposeTo, pretendNewRune.DrawnOn);
-                                                        Sfxs.Play(ModData.SfxNames.TransposeEtchingEnd);
-
-                                                    })
-                                                    .WithIllustration(thisRune.Illustration!);
-                                                transposeToOptions.Add(transposeOption);
-                                            }
-                            
-                                            if (transposeToOptions.Count <= 0)
-                                                return; // End if no options.
-                                            transposeToOptions.Add(new CancelOption(true)); // allow us to cancel it.
-                                            transposeToOptions.Add(new PassViaButtonOption(" Confirm no transposition "));
-                        
-                                            // Await which option to take.
-                                            Option chosenOption = (await caster.Battle.SendRequest( // Send a request to pick an option
-                                                new AdvancedRequest(caster, "Choose a rune to transpose.", transposeToOptions)
-                                                {
-                                                    TopBarText = "Choose target to transpose this rune to, or right-click to cancel.",
-                                                    TopBarIcon = thisTransposeAction.Illustration,
-                                                })).ChosenOption;
-
-                                            switch (chosenOption)
-                                            {
-                                                case CreatureOption creatureOption:
-                                                    break;
-                                                case CancelOption:
-                                                    thisTransposeAction.RevertRequested = true;
-                                                    return;
-                                                case PassViaButtonOption:
-                                                    return;
-                                            }
-
-                                            await chosenOption.Action();
-                                        });
-                                    GameLoop.AddDirectUsageOnCreatureOptions(transposeThisRune, options);
+                                    DrawnRune pretendNewRune = (await chosenRune.Rune.NewDrawnRune!.Invoke(transposeAction, caster, chosenCreature, chosenRune.Rune))!;
+                                    Sfxs.Play(ModData.SfxNames.TransposeEtchingEnd);
+                                    /*await*/ chosenRune.MoveRuneToTarget(chosenCreature, pretendNewRune.DrawnOn);
                                 }
-                                
-                                if (options.Count <= 0)
-                                    return; // End if no options.
-                                options.Add(new CancelOption(true)); // allow us to cancel it.
-                                options.Add(new PassViaButtonOption(" Confirm no transposition "));
-                            
-                                // Await which option to take.
-                                Option chosenOption = (await caster.Battle.SendRequest( // Send a request to pick an option
-                                    new AdvancedRequest(caster, "Choose a rune to transpose.", options)
-                                    {
-                                        TopBarText = "Choose a rune to transpose, or right-click to cancel.",
-                                        TopBarIcon = transposeAction.Illustration,
-                                    })).ChosenOption;
-
-                                switch (chosenOption)
-                                {
-                                    case CreatureOption creatureOption:
-                                        break;
-                                    case CancelOption:
-                                        transposeAction.RevertRequested = true;
-                                        return;
-                                    case PassViaButtonOption:
-                                        return;
-                                }
-
-                                await chosenOption.Action();
-                            });
+                                else
+                                    transposeAction.RevertRequested = true;
+                            }
+                            else
+                                transposeAction.RevertRequested = true;
+                        });
                 }
             });
         ModManager.AddFeat(transposeEtching);

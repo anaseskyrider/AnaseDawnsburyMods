@@ -790,6 +790,64 @@ public static class CommonRuneRules
     #endregion
 
     #region Misc
+
+    /// <summary>
+    /// Decider attempts to select drawn runes on any creatures in battle. Does not require that the decider owns the runes.
+    /// </summary>
+    /// <param name="decider">The creature deciding which drawn rune to select.</param>
+    /// <param name="possibleTargets">The list of creatures that can be chosen from.</param>
+    /// <param name="illustration">The top-bar icon.</param>
+    /// <param name="question">The top-bar string.</param>
+    /// <param name="passButtonCaption"></param>
+    /// <param name="canBeCanceled">Whether you can right-click to cancel the request.</param>
+    /// <param name="runeFilter">A function which filters out valid choices (such as drawn runes the decider owns, or preventing Transpose Etching from selecting a tattoo or runic reprisal trap).</param>
+    /// <returns></returns>
+    public static async Task<DrawnRune?> AskToChooseADrawnRune(
+        Creature decider,
+        IEnumerable<Creature> possibleTargets,
+        Illustration illustration,
+        string question,
+        string passButtonCaption = "Pass",
+        bool canBeCanceled = false,
+        Func<DrawnRune, bool>? runeFilter = null)
+    {
+        DrawnRune? chosenRune = null;
+        List<Option> options = [new PassViaButtonOption(passButtonCaption)];
+        if (canBeCanceled)
+            options.Add(new CancelOption(true));
+        possibleTargets.ForEach(cr =>
+        {
+            List<DrawnRune> runes = DrawnRune.GetDrawnRunes(null, cr);
+            if (runeFilter != null)
+                runes = runes.Where(runeFilter).ToList();
+            runes.ForEach(dr =>
+            {
+                options.Add(new CreatureOption(
+                    cr,
+                    $"Pick up {{Blue}}{dr.Rune.Name}{{/Blue}}",
+                    async () => chosenRune = dr,
+                    int.MinValue,
+                    false)
+                {
+                    Illustration = dr.Illustration,
+                    ContextMenuText = dr.Rune.Name,
+                });
+            });
+        });
+        RequestResult requestResult = await decider.Battle.SendRequest(new AdvancedRequest(
+            decider,
+            question,
+            options)
+        {
+            TopBarIcon = illustration,
+            TopBarText = question,
+        });
+        if (requestResult.ChosenOption is PassViaButtonOption or CancelOption)
+            return null;
+        await requestResult.ChosenOption.Action();
+        return chosenRune;
+
+    }
     public static Skill? GetSkillFromTraditionTrait(Trait traditionTrait)
     {
         switch (traditionTrait)
