@@ -252,7 +252,7 @@ public static class CommonRuneRules
                     self.RemoveAllQEffects(qf => qf.Id == ModData.QEffectIds.RuneSinger || qf.Id == ModData.QEffectIds.RuneSingerCreator);
                 });
             drawRuneAction.Name = drawRuneAction.Name.Replace("Trace", "Sing");
-            drawRuneAction.Description = drawRuneAction.Description.Replace("30 feet", "{Blue}30 feet{/Blue}");
+            drawRuneAction.Description = drawRuneAction.Description.Replace("{b}Range{/b} 30 feet", "{Blue}{b}Range{/b} 30 feet{/Blue}\n{Blue}{b}Frequency{/b} Once per combat{/Blue}");
             //drawRuneAction.Illustration = new SideBySideIllustration(drawRuneAction.Illustration, ModData.Illustrations.RuneSinger);
             drawRuneAction.Traits.Remove(Trait.Manipulate);
         }

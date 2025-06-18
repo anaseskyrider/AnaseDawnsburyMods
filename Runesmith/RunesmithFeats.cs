@@ -1333,6 +1333,7 @@ public static class RunesmithFeats
                                 IllustrationName.BloodVendetta)
                             {
                                 Tag = bloodTarget,
+                                Id = ModData.QEffectIds.DrawnInRed,
                             };
 
                             caster.AddQEffect(drawnInRedEffect);
@@ -1369,14 +1370,15 @@ public static class RunesmithFeats
                                 ? Usability.Usable
                                 : Usability.NotUsableOnThisCreature("not Drawn In Blood target"));
                         bloodTrace.Name = bloodTrace.Name
-                            .Remove(0, "Trace".Length)
-                            .Insert(0, "Draw");
+                            .Replace("Trace", "Draw")
+                            .Replace("Sing", "Draw & Sing");
                         bloodTrace.Description = CommonRuneRules.CreateTraceActionDescription(
                             bloodTrace,
                             foundRune,
-                            prologueText:"{Blue}{b}Range{/b} 60 feet{/Blue}\n",
-                            withFlavorText: false,
+                            prologueText:"{Blue}{b}Range{/b} 60 feet{/Blue}\n" + (qfThis.Owner.HasEffect(ModData.QEffectIds.RuneSinger) ? "{Blue}{b}Frequency{/b} Once per combat (Rune-Singer){/Blue}\n" : null),
+                            withFlavorText: true,
                             afterUsageText:$" {{Blue}}(only against {bloodTarget.Name}){{/Blue}}");
+                        bloodTrace.ContextMenuName = "{icon:Action} " + bloodTrace.Name;
                         ActionPossibility bloodPossibility = new ActionPossibility(bloodTrace)
                         {
                             Caption = "Drawn In Red",
@@ -1394,8 +1396,8 @@ public static class RunesmithFeats
             ModData.FeatNames.EarlyAccess,
             8,
             "Through intense dedication, you've gained knowledge heretofore unseen at your stage of academic acumen.",
-            "Add a level 9 Rune to your runic repertoire.",
-            [ModData.Traits.Runesmith])
+            "Add a level 9 Rune to your runic repertoire, without needing to meet the level requirement.",
+            [Trait.Homebrew, ModData.Traits.Runesmith])
             .WithOnSheet(values =>
             {
                 values.AddSelectionOptionRightNow(new SingleFeatSelectionOption("earlyAccessRune", "Level 9 rune", 8, ft => ft is RuneFeat { Rune.BaseLevel: 9 }));

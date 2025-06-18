@@ -184,6 +184,7 @@ public static class ModData
     {
         public static readonly QEffectId RuneSinger = ModManager.RegisterEnumMember<QEffectId>("Rune-Singer");
         public static readonly QEffectId RuneSingerCreator = ModManager.RegisterEnumMember<QEffectId>("RuneSingerCreator");
+        public static readonly QEffectId DrawnInRed = ModManager.RegisterEnumMember<QEffectId>("Drawn in Red");
         public static readonly QEffectId JurrozDamageTracker = ModManager.RegisterEnumMember<QEffectId>("JurrozDamageTracker");
     }
 

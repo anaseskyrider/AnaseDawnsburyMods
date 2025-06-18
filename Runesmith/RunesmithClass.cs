@@ -13,6 +13,7 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
@@ -63,13 +64,32 @@ public static class RunesmithClass
                         {
                             CombatAction oneActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 1);
                             oneActionTraceRune.ContextMenuName = "{icon:Action} " + oneActionTraceRune.Name;
+                            (oneActionTraceRune.Target as CreatureTarget)!
+                                .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
+                                    attacker.FindQEffect(ModData.QEffectIds.DrawnInRed)?.Tag == defender
+                                        ? Usability.NotUsableOnThisCreature("use Drawn in Red")
+                                        : Usability.Usable);
                             ActionPossibility traceRunePossibility1 = new ActionPossibility(oneActionTraceRune)
                                 { Caption = "Touch", Illustration = IllustrationName.Action };
                             specificRunePossibilities.Add(traceRunePossibility1);
                         }
                         
                         CombatAction twoActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 2);
+                        if (!hasRuneSinger)
+                        {
+                            // Declutter your options by removing the ranged option while in melee.
+                            (twoActionTraceRune.Target as CreatureTarget)!
+                                .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
+                                    attacker.IsAdjacentTo(defender)
+                                        ? Usability.NotUsableOnThisCreature("use the 1-action version")
+                                        : Usability.Usable);
+                        }
                         twoActionTraceRune.ContextMenuName = RulesBlock.GetIconTextFromNumberOfActions(twoActionTraceRune.ActionCost) + " " + twoActionTraceRune.Name;
+                        (twoActionTraceRune.Target as CreatureTarget)!
+                            .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
+                                attacker.FindQEffect(ModData.QEffectIds.DrawnInRed)?.Tag == defender
+                                    ? Usability.NotUsableOnThisCreature("use Drawn in Red")
+                                    : Usability.Usable);
                         ActionPossibility traceRunePossibility2 = new ActionPossibility(twoActionTraceRune)
                         {
                             Caption = "30 feet",
@@ -78,9 +98,6 @@ public static class RunesmithClass
                                 : IllustrationName.TwoActions
                         };
                         specificRunePossibilities.Add(traceRunePossibility2);
-                        // Disabled. Affects the UI menu buttons, when I wanted it to only affect the context menu.
-                        /*(twoActionTraceRune.Target as CreatureTarget)!.WithAdditionalConditionOnTargetCreature((attacker, defender) =>
-                        attacker.IsAdjacentTo(defender) ? Usability.NotUsableOnThisCreature("QOL: use 1-action variant instead") : Usability.Usable);*/
 
                         SubmenuPossibility specificRuneMenu = new SubmenuPossibility(
                             rune.Illustration,
@@ -113,81 +130,6 @@ public static class RunesmithClass
                     };
                     return traceRuneMenu;
                 };
-                // Old code held onto for the time-being.
-                /*qfFeat.ProvideMainAction = (qfThis) =>
-                {
-                    List<Possibility> traceActionSections = [];
-                    RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(qfThis.Owner);
-                    if (repertoire == null)
-                        return null;
-                    foreach (Rune rune in repertoire.GetRunesKnown(qfThis.Owner))
-                    {
-                        /*bool CanPayForCombatAction(CombatAction theAction, int actionCost)
-                        {
-                            Actions ownerActions = theAction.Owner.Actions;
-                            if (ownerActions.ActionsLeft >= actionCost)
-                                return true;
-                            return !ownerActions.UsedQuickenedAction && ownerActions.QuickenedForActions != null && ownerActions.QuickenedForActions.Invoke(theAction) && ownerActions.ActionsLeft + 1 >= actionCost;
-                        }#1#
-                        
-                        // BUG: Quickened action from Tracing Trance not usable on the basic Trace actions with insufficient regular actions.
-                        
-                        CombatAction drawRuneAction = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, -3);
-                        
-                        List<Possibility> drawRuneActionPossibilities = 
-                        [
-                            new ChooseActionCostThenActionPossibility(
-                                drawRuneAction,
-                                IllustrationName.Action,
-                                "One Action",
-                                1,
-                                /*!CanPayForCombatAction(drawRuneAction, 1) ? Usability.CommonReasons.NoActions :#1# drawRuneAction.Owner.Actions.ActionsLeft < 1 ?
-                                    Usability.CommonReasons.NoActions :
-                                    (drawRuneAction.Target is DependsOnActionsSpentTarget target1 ?
-                                        target1.TargetFromActionCount(1).CanBeginToUse(drawRuneAction.Owner) :
-                                        drawRuneAction.Target.CanBeginToUse(drawRuneAction.Owner)),
-                                PossibilitySize.Full),
-                                
-                            new ChooseActionCostThenActionPossibility(
-                                drawRuneAction,
-                                IllustrationName.TwoActions,
-                                "Two Actions",
-                                2,
-                                /*!CanPayForCombatAction(drawRuneAction, 2) ? Usability.CommonReasons.NoActions :#1# drawRuneAction.Owner.Actions.ActionsLeft < 2 ?
-                                    Usability.CommonReasons.NoActions : 
-                                    (drawRuneAction.Target is DependsOnActionsSpentTarget target2 ?
-                                        target2.TargetFromActionCount(2).CanBeginToUse(drawRuneAction.Owner) :
-                                        drawRuneAction.Target.CanBeginToUse(drawRuneAction.Owner)),
-                                PossibilitySize.Full),
-                        ];
-                        
-                        SubmenuPossibility runeSubmenu = new SubmenuPossibility(rune.Illustration, rune.Name, PossibilitySize.Half)
-                        {
-                            SpellIfAny = drawRuneAction,
-                            Subsections =
-                            {
-                                new PossibilitySection(rune.Name) // rune.Name is how features like Drawn In Red find these sections.
-                                {
-                                    Possibilities = drawRuneActionPossibilities
-                                }
-                            }
-                        };
-                        
-                        traceActionSections.Add(runeSubmenu);
-                    }
-
-                    SubmenuPossibility traceMenu = new SubmenuPossibility(
-                        Enums.Illustrations.TraceRune,
-                        "Trace Rune")
-                    {
-                        SpellIfAny = new CombatAction(qfThis.Owner, Enums.Illustrations.TraceRune, "Trace Rune", [Trait.Concentrate, Trait.Magical, Trait.Manipulate, Enums.Traits.Runesmith], "{b}Requirements{b} You have a hand free.\n\nYour fingers dance, glowing light leaving behind the image of a rune. You apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.", Target.Self()).WithActionCost(-3), // This doesn't DO anything, it's just to provide description to the menu.
-                        Subsections = { new PossibilitySection("Trace Rune")
-                        {
-                            Possibilities = traceActionSections,
-                        }}
-                    };
-                    return traceMenu;
-                };*/
             });
         ModManager.AddFeat(traceRune);
 
