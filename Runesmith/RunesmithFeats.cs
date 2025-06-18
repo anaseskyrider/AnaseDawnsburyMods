@@ -566,7 +566,7 @@ public static class RunesmithFeats
                                 runesmith,
                                 runesmith,
                                 runeFeat.Rune,
-                                true); //runesmith.Battle.GameLoop.FullCast(etchTattoo, ChosenTargets.CreateSingleTarget(runesmith));
+                                true);
 
                             if (appliedRune != null)
                             {

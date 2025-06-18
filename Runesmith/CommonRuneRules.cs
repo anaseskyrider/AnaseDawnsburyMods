@@ -1,6 +1,8 @@
+using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Coroutines;
 using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
@@ -640,8 +642,17 @@ public static class CommonRuneRules
             List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(null, cr);
             foreach (DrawnRune dr in drawnRunes)
             {
-                if (dr.BeforeInvokingRune != null)
-                    await dr.BeforeInvokingRune.Invoke(dr, sourceAction, runeToInvoke);
+                if (dr.BeforeInvokingRune == null)
+                    continue;
+                var tasks = dr.BeforeInvokingRune.GetInvocationList()
+                    .Cast<Func<DrawnRune, CombatAction, DrawnRune, Task>>()
+                    .Select(d =>
+                        d.Invoke(dr, sourceAction, runeToInvoke));
+                await Task.WhenAll(tasks);
+                    
+                /*foreach (Func<DrawnRune, CombatAction, DrawnRune, Task>? func in dr.BeforeInvokingRune
+                             .GetInvocationList())
+                    await func.Invoke(dr, sourceAction, runeToInvoke);*/
             }
         }
 
@@ -650,13 +661,28 @@ public static class CommonRuneRules
         
         await thisRune.InvocationBehavior.Invoke(sourceAction, thisRune, caster, runeBearer, runeToInvoke);
         
+        // Called manually since it's just been removed from all creatures
+        if (runeToInvoke.AfterInvokingRune != null)
+        {
+            var tasks = runeToInvoke.AfterInvokingRune.GetInvocationList()
+                .Cast<Func<DrawnRune, CombatAction, DrawnRune, Task>>()
+                .Select(d =>
+                    d.Invoke(runeToInvoke, sourceAction, runeToInvoke));
+            await Task.WhenAll(tasks);
+        }
+        
         foreach (Creature cr in caster.Battle.AllCreatures)
         {
             List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(null, cr);
             foreach (DrawnRune dr in drawnRunes)
             {
-                if (dr.AfterInvokingRune != null)
-                    await dr.AfterInvokingRune.Invoke(dr, sourceAction, runeToInvoke);
+                if (dr.AfterInvokingRune == null)
+                    continue;
+                var tasks = dr.AfterInvokingRune.GetInvocationList()
+                    .Cast<Func<DrawnRune, CombatAction, DrawnRune, Task>>()
+                    .Select(d =>
+                        d.Invoke(dr, sourceAction, runeToInvoke));
+                await Task.WhenAll(tasks);
             }
         }
     }
