@@ -1270,7 +1270,7 @@ public static class RunesmithRunes
                     if (DrawnRune.GetDrawnRunes(null, defender) is { } drawnRunes)
                         if (drawnRunes.Count == 0)
                             return Usability.NotUsableOnThisCreature("not a rune-bearer");
-                        else if (drawnRunes.Any(dr => dr.AttachedDiacritic == null))
+                        else if (drawnRunes.Any(dr => dr.AttachedDiacritic == null && !dr.Traits.Contains(ModData.Traits.Diacritic)))
                             return Usability.Usable;
                         else
                             return Usability.NotUsableOnThisCreature("no valid runes");
