@@ -398,8 +398,8 @@ public static class CommonRuneRules
     {
         anyCombatAction.WithEffectOnChosenTargets(async (caster, targets) =>
         {
-            foreach (Creature cr in caster.Battle.AllCreatures)
-                CommonRuneRules.RemoveAllImmunities(cr);
+            caster.Battle.AllCreatures.ForEach(cr =>
+                CommonRuneRules.RemoveAllImmunities(cr));
         });
         
         return anyCombatAction;

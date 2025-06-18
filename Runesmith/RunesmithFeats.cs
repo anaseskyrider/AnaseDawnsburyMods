@@ -1280,7 +1280,6 @@ public static class RunesmithFeats
         /////////////////////
         // 8th Level Feats //
         /////////////////////
-        // BUG: Fix bugs with subsidiary strikes.
         Feat drawnInRed = new TrueFeat(
                 ModData.FeatNames.DrawnInRed,
                 8,

@@ -204,98 +204,69 @@ public static class RunesmithClass
                 qfFeat.ProvideMainAction = qfThis =>
                 {
                     CombatAction invokeRuneAction = new CombatAction(
-                    qfThis.Owner, 
-                    ModData.Illustrations.InvokeRune,
-                    "Invoke Rune", 
-                    [ModData.Traits.Invocation, Trait.Magical, ModData.Traits.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment],
-                    "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed.\n\nYou can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are {Red}affected only once{/Red}, as normal for duplicate effects.",
-                    Target.Self()
-                        .WithAdditionalRestriction(caster =>
-                        {
-                            // PETR: Can't use if Silenced. Deafened does not DC5-check spellcasting in Dawnsbury, so it does not here.
-                            //bool cannotSpeak = caster.HasEffect(QEffectId.) != null;
-                            //if (cannotSpeak)
-                            //  return "Cannot speak in a strong voice";
-                            
-                            foreach (Creature cr in caster.Battle.AllCreatures)
-                            {
-                                if (caster.DistanceTo(cr) <= 6 && // Make sure creatures are in range.
-                                    cr.QEffects.FirstOrDefault( // Find a Qf-
-                                        qfToFind => 
-                                            qfToFind is DrawnRune dr // -that is a DrawnRune,
-                                            && dr.Source == caster // that is created by us,
-                                            && dr.Traits.Contains(ModData.Traits.Rune) // with the rune trait,
-                                            && !dr.Traits.Contains(ModData.Traits.Invocation) // but not the invocation trait.
-                                            && !dr.Disabled
-                                        ) != null
-                                    )
+                            qfThis.Owner,
+                            ModData.Illustrations.InvokeRune,
+                            "Invoke Rune",
+                            [ModData.Traits.Invocation, Trait.Magical, ModData.Traits.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment],
+                            "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed.\n\nYou can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are {Red}affected only once{/Red}, as normal for duplicate effects.",
+                            Target.Self()
+                                .WithAdditionalRestriction(caster =>
                                 {
-                                    return null;
-                                }
-                            }
+                                    // PETR: Can't use if Silenced. Deafened does not DC5-check spellcasting in Dawnsbury, so it does not here.
+                                    //bool cannotSpeak = caster.HasEffect(QEffectId.) != null;
+                                    //if (cannotSpeak)
+                                    //  return "Cannot speak in a strong voice";
 
-                            return "No rune-bearers within range";
-                        }))
-                    .WithActionCost(1)
-                    .WithEffectOnEachTarget(async (flurryOfInvokes, self, target, irrelevantResult) =>
-                    {   
-                        int numberOfRunes = 0; // Number of runes on the field.
-                        self.Battle.AllCreatures
-                            .Where(cr => self.DistanceTo(cr) <= 6) // Must be within range.
-                            .ForEach( cr =>  // Loop through all the creatures in combat.
-                            {
-                                List<DrawnRune> creatureRunes = DrawnRune.GetDrawnRunes(self, cr)
-                                    .Where(dr => !dr.Disabled)
-                                    .ToList();
-                                numberOfRunes += creatureRunes.Count;
-                            });
-                        
-                        /*
-                         * For each valid rune in play, attempt to take an invoke action, up to all our runes.
-                         */
-                        int whileLoopProtection = 0;
-                        while (numberOfRunes > 0 && whileLoopProtection < 100)
-                        {
-                            await self.Battle.GameLoop.StateCheck(); // Idk why but they all do this so keep it.
-                            
-                            /*
-                             * Regenerate the list of creatures with runes left, in case the field changes too much
-                             * between each invocation.
-                             * */
-                            numberOfRunes = 0;
-                            self.Battle.AllCreatures
-                                .Where(cr => self.DistanceTo(cr) <= 6)
-                                .ForEach(cr =>
-                                {
-                                    List<DrawnRune> creatureRunes = DrawnRune.GetDrawnRunes(self, cr)
-                                        .Where(dr => !dr.Disabled)
-                                        .ToList();
-                                    numberOfRunes += creatureRunes.Count;
-                                });
+                                    foreach (Creature cr in caster.Battle.AllCreatures)
+                                    {
+                                        if (caster.DistanceTo(cr) <= 6 && // Make sure creatures are in range.
+                                            cr.QEffects.FirstOrDefault( // Find a Qf-
+                                                qfToFind =>
+                                                    qfToFind is DrawnRune dr // -that is a DrawnRune,
+                                                    && dr.Source == caster // that is created by us,
+                                                    && dr.Traits.Contains(ModData.Traits.Rune) // with the rune trait,
+                                                    && !dr.Traits.Contains(ModData.Traits
+                                                        .Invocation) // but not the invocation trait.
+                                                    && !dr.Disabled
+                                            ) != null
+                                           )
+                                        {
+                                            return null;
+                                        }
+                                    }
 
-                            if (!await CommonRuneRules.PickARuneToInvokeOnTarget(
-                                    flurryOfInvokes,
-                                    self,
-                                    null,
-                                    null,
-                                    whileLoopProtection == 0,
-                                    " Confirm no additional runes ",
-                                    $" You should avoid invoking the same rune on the same creature more than once. (Runes: {numberOfRunes})"))
-                            {
-                                return;
-                            }
-                            
-                            whileLoopProtection++;
-                        }
-                    })
-                    .WithEffectOnChosenTargets(async (caster, targets) =>
-                    {
-                        caster.Battle.AllCreatures.ForEach(cr =>
+                                    return "No rune-bearers within range";
+                                }))
+                        .WithActionCost(1)
+                        .WithEffectOnEachTarget(async (thisAction, self, _,_) =>
                         {
-                            CommonRuneRules.RemoveAllImmunities(cr);
+                            // Number of runes on the field.
+                            int numberOfRunes = GetRunesInRange(self);
+
+                            // For each valid rune in play, attempt to take an invoke action, up to all our runes.
+                            int whileProtection = 0;
+                            while (numberOfRunes > 0 && whileProtection < 100)
+                            {
+                                await self.Battle.GameLoop.StateCheck(); // Idk why but they all do this so keep it.
+                                numberOfRunes = GetRunesInRange(self); // Regenerate the list of creatures with runes left.
+                                if (!await CommonRuneRules.PickARuneToInvokeOnTarget(
+                                        thisAction, self, null, null,
+                                        whileProtection == 0,
+                                        " Confirm no additional runes ",
+                                        $" You should avoid invoking the same rune on the same creature more than once. (Runes: {numberOfRunes})"))
+                                    return; // Task handles `RevertRequested = true;`.
+                                whileProtection++;
+                            }
+                            return;
+
+                            int GetRunesInRange(Creature caster)
+                            {
+                                return caster.Battle.AllCreatures
+                                    .Where(cr => caster.DistanceTo(cr) <= 6) // Must be within range.
+                                    .Sum(cr => DrawnRune.GetDrawnRunes(caster, cr).Count(dr => !dr.Disabled));
+                            }
                         });
-                    });
-                    
+                        CommonRuneRules.WithImmediatelyRemovesImmunity(invokeRuneAction);
                     return new ActionPossibility(invokeRuneAction);
                 };
             });
