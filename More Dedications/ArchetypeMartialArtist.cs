@@ -284,7 +284,7 @@ public static class ArchetypeMartialArtist
             .WithAvailableAsArchetypeFeat(ModData.Traits.MartialArtistArchetype)
             .WithPermanentQEffect("Make an unarmed Strike with your last multiple attack penalty step.", qfFeat =>
             {
-                qfFeat.AfterYouTakeAction = async (qfThis, action) =>
+                qfFeat.YouBeginAction = async (qfThis, action) =>
                 {
                     qfThis.Tag = action;
                 };
