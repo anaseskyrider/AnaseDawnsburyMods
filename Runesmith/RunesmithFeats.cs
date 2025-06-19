@@ -859,7 +859,7 @@ public static class RunesmithFeats
                                 CreateTransposeAction(qfFeat).WithActionCost(0),
                                 ChosenTargets.CreateSingleTarget(qfTech2.Owner));
                             qfTech2.Owner.DeathScheduledForNextStateCheck = true;
-                            await qfTech2.Owner.Battle.GameLoop.StateCheck();
+                            //await qfTech2.Owner.Battle.GameLoop.StateCheck();
                         };
                     });
                 return;
