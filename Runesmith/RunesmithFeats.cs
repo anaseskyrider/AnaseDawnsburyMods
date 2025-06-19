@@ -152,9 +152,6 @@ public static class RunesmithFeats
             .WithActionCost(1)
             .WithPermanentQEffect("Make a ranged Strike. On a hit, invokes all runes on the target. On a crit, it also takes a -1 circumstance penalty to its saving throws against these invocations.", qfFeat =>
             {
-                Illustration remoteDetIllustration = new SideBySideIllustration(IllustrationName.LooseTimesArrow,
-                    ModData.Illustrations.InvokeRune);
-
                 qfFeat.ProvideStrikeModifier = item =>
                 {
                     if (!item.HasTrait(Trait.Weapon) || !item.HasTrait(Trait.Ranged) || item.WeaponProperties == null || item.WeaponProperties.RangeIncrement == -1)
@@ -167,14 +164,16 @@ public static class RunesmithFeats
                     remoteDet.Traits.Add(ModData.Traits.Invocation);
                     remoteDet.Traits.Add(ModData.Traits.Runesmith);
                     remoteDet.Description =
-                        StrikeRules.CreateBasicStrikeDescription4(remoteDet.StrikeModifiers, prologueText:"{b}Frequency{/b} once per round", additionalSuccessText: " Invoke all runes on the target.", additionalCriticalSuccessText: " The target also has a -1 circumstance penalty to any saving throws against these invocations.");
+                        StrikeRules.CreateBasicStrikeDescription4(remoteDet.StrikeModifiers, prologueText:"{b}Frequency{/b} once per round", additionalSuccessText: " Invoke all of your runes on the target.", additionalCriticalSuccessText: " The target also has a -1 circumstance penalty to any saving throws against these invocations.");
                     (remoteDet.Target as CreatureTarget)!.WithAdditionalConditionOnTargetCreature((attacker, defender) =>
                     {
                         if (qfFeat.UsedThisTurn)
                             return Usability.CommonReasons.AlreadyUsedThisAbilityThisTurn;
-                        if (attacker.DistanceTo(defender) <= item.WeaponProperties.RangeIncrement)
-                            return Usability.Usable;
-                        return Usability.CommonReasons.TargetOutOfRange;
+                        if (DrawnRune.GetDrawnRunes(attacker, defender).Count == 0)
+                            return Usability.NotUsableOnThisCreature("not a rune-bearer");
+                        if (attacker.DistanceTo(defender) > item.WeaponProperties.RangeIncrement)
+                            return Usability.CommonReasons.TargetOutOfRange;
+                        return Usability.Usable;
                     });
                     remoteDet.WithEffectOnEachTarget(async (remoteDetAction, caster, target, result) =>
                     {
@@ -205,8 +204,8 @@ public static class RunesmithFeats
                             
                             target.AddQEffect(detPenalty);
                         }
-                        
-                        DrawnRune.GetDrawnRunes(caster, target).ForEach(async void (dr) =>
+
+                        foreach (DrawnRune dr in DrawnRune.GetDrawnRunes(caster, target))
                         {
                             CombatAction? invokeThisRune = CommonRuneRules.CreateInvokeAction(
                                 remoteDetAction,
@@ -216,12 +215,12 @@ public static class RunesmithFeats
                                 item.WeaponProperties.RangeIncrement);
                             if (invokeThisRune != null)
                                 await caster.Battle.GameLoop.FullCast(invokeThisRune, ChosenTargets.CreateSingleTarget(target));
-                        });
+                        }
 
                         target.RemoveAllQEffects(qf => qf.Name == "Remote Detonation Critical Success");
                     });
 
-                    CommonRuneRules.WithImmediatelyRemovesImmunity(remoteDet);
+                    remoteDet = CommonRuneRules.WithImmediatelyRemovesImmunity(remoteDet);
 
                     return remoteDet;
                 };
@@ -860,6 +859,7 @@ public static class RunesmithFeats
                                 CreateTransposeAction(qfFeat).WithActionCost(0),
                                 ChosenTargets.CreateSingleTarget(qfTech2.Owner));
                             qfTech2.Owner.DeathScheduledForNextStateCheck = true;
+                            await qfTech2.Owner.Battle.GameLoop.StateCheck();
                         };
                     });
                 return;
