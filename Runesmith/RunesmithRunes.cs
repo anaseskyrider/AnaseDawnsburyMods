@@ -1981,7 +1981,7 @@ public static class RunesmithRunes
                         }
                     },
                 };
-                kojastriPassive.Traits.Add(chosenTrait); // TODO: Go remove the [..Traits]s from the other runes. It's already part of the constructor (i forgor).
+                kojastriPassive.Traits.Add(chosenTrait);
                 return kojastriPassive;
 
                 // Local functions

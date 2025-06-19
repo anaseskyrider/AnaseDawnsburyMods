@@ -911,7 +911,7 @@ public static class RunesmithFeats
                             {
                                 List<Creature> possibleDropoffs = caster.Battle.AllCreatures
                                     .Where(cr =>
-                                        chosenRune.Rune.UsageCondition!.Invoke(caster, cr) == Usability.Usable) // TODO: Get around to removing null checks for UsageCondition. It has a default always-usable function now.
+                                        chosenRune.Rune.UsageCondition.Invoke(caster, cr) == Usability.Usable)
                                     .ToList();
                                 Creature? chosenCreature = await caster.Battle.AskToChooseACreature(
                                     caster,
@@ -1372,7 +1372,7 @@ public static class RunesmithFeats
                     if (foundRune is null)
                         return null;
 
-                    if (foundRune.UsageCondition?.Invoke(qfFeat.Owner, bloodTarget) == Usability.Usable)
+                    if (foundRune.UsageCondition.Invoke(qfFeat.Owner, bloodTarget) == Usability.Usable)
                     {
                         CombatAction bloodTrace = CommonRuneRules.CreateTraceAction(qfThis.Owner, foundRune, 2, 12)
                             .WithActionCost(1)

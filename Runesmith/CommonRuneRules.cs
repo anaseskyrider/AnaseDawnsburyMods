@@ -170,8 +170,7 @@ public static class CommonRuneRules
                     RunesmithClass.IsRunesmithHandFree(attacker)
                         ? Usability.Usable
                         : Usability.NotUsable("You must have a free hand to trace a rune"));
-            if (rune.UsageCondition != null)
-                crTar.WithAdditionalConditionOnTargetCreature(rune.UsageCondition); // UsageCondition
+            crTar.WithAdditionalConditionOnTargetCreature(rune.UsageCondition);
         }
         
         // Determine traits
@@ -282,9 +281,9 @@ public static class CommonRuneRules
         
         // Usable across the whole map
         etchAction.Target = Target.RangedFriend(99); // BUG: Is blocked by line of effect. I don't currently know a way around this.
-        if (rune.UsageCondition != null) // Do this again since we just replaced the target.
-            (etchAction.Target as CreatureTarget)!.WithAdditionalConditionOnTargetCreature(rune.UsageCondition);
-            // Don't add a free hand requirement; this "technically" happened "before" combat.
+        // Do this again since we just replaced the target.
+        (etchAction.Target as CreatureTarget)!.WithAdditionalConditionOnTargetCreature(rune.UsageCondition);
+        // Don't add a free hand requirement; this "technically" happened "before" combat.
         
         // Remove tedious animations
         etchAction.ProjectileIllustration = null;
@@ -424,7 +423,7 @@ public static class CommonRuneRules
     {
         // Apply the QF if "ignoreTargetRestrictions is True", or "UsageCondition isn't null, and it returns Usable on the target".
         if (!ignoreUsageRequirements &&
-            (rune.UsageCondition == null || rune.UsageCondition.Invoke(caster, target) != Usability.Usable)) 
+            (rune.UsageCondition.Invoke(caster, target) != Usability.Usable)) 
             return null;
 
         DrawnRune? qfToApply = null;
