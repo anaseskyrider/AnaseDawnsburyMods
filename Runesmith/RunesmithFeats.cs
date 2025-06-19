@@ -862,7 +862,6 @@ public static class RunesmithFeats
                     });
                 return;
 
-                // TODO: Less clicky implementation
                 CombatAction CreateTransposeAction(QEffect qfThis)
                 {
                     return new CombatAction(
@@ -874,17 +873,28 @@ public static class RunesmithFeats
                         Target.Self()
                             .WithAdditionalRestriction(self =>
                             {
-                                return self.Battle.AllCreatures.Any(cr =>
-                                    DrawnRune.GetDrawnRunes(self, cr).Where(dr => dr.Description != null && !dr.Description.Contains("Tattooed") && !dr.Description.Contains("Runic Reprisal")).ToList().Count > 0)
-                                    ? null
-                                    : "No rune-bearers";
+                                List<Creature> creatures = self.Battle.AllCreatures;
+                                var runeBearers = creatures
+                                    .Where(cr => DrawnRune.GetDrawnRunes(self, cr).Count > 0)
+                                    .ToList();
+                                if (!runeBearers.Any())
+                                    return "no rune-bearers";
+                                var validBearers = runeBearers
+                                    .Where(cr => DrawnRune.GetDrawnRunes(self, cr)
+                                        .Any(dr => dr.Description != null && !dr.Description.Contains("Tattooed") && !dr.Description.Contains("Runic Reprisal")))
+                                    .ToList();
+                                if (!validBearers.Any())
+                                    return "no valid runes";
+                                if (!validBearers.Any(cr => cr.DistanceTo(self) <= 6))
+                                    return "none in range";
+                                return null;
                             }))
                         .WithActionCost(1)
                         .WithSoundEffect(ModData.SfxNames.TransposeEtchingStart)
                         .WithEffectOnEachTarget(async (transposeAction, caster, _,_) =>
                         {
                             List<Creature> possiblePickups = caster.Battle.AllCreatures
-                                .Where(cr => cr.DistanceTo(caster) <= 6 && cr.QEffects.Any(qf => qf is DrawnRune))
+                                .Where(cr => cr.DistanceTo(caster) <= 6 && DrawnRune.GetDrawnRunes(caster, cr).Count != 0)
                                 .ToList();
                             DrawnRune? chosenRune = await CommonRuneRules.AskToChooseADrawnRune(
                                 caster,
@@ -893,7 +903,7 @@ public static class RunesmithFeats
                                 "Choose one of your runes to move to another creature within 30 feet or right-click to cancel.",
                                 "Cancel choosing a rune",
                                 true,
-                                dr => dr.Source == caster && dr.Description != null && !(dr.Description.Contains("Tattooed") ||
+                                dr => dr.Description != null && !(dr.Description.Contains("Tattooed") ||
                                     dr.Description.Contains("Runic Reprisal")));
                             if (chosenRune != null)
                             {
