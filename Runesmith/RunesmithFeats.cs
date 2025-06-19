@@ -147,7 +147,7 @@ public static class RunesmithFeats
                 ModData.FeatNames.RemoteDetonation,
                 1,
                 "You whisper an invocation over an arrow or sling bullet as you fire it, and the hissing of the missile through the air sounds just like your murmured voice.",
-                "{b}Frequency{/b} once per round\n{b}Requirements{/b} You are wielding a ranged weapon\n\nMake a ranged Strike against a target within the weapon's first range increment" /*+ " using physical ammunition"*/ + ". On a success, you invoke all the runes on the target as the missile's whispering sets off the runes. On a critical success, the target also takes a –1 circumstance penalty on any saving throws against the runes invoked by your Remote Detonation.",
+                "{b}Frequency{/b} once per round\n{b}Requirements{/b} You are wielding a ranged weapon\n\nMake a ranged Strike against a target within the weapon's first range increment" /*+ " using physical ammunition"*/ + ". On a success, you invoke all of your runes on the target as the missile's whispering sets them off. On a critical success, the target also takes a –1 circumstance penalty on any saving throws against the runes invoked by your Remote Detonation.",
                 [ModData.Traits.Invocation, ModData.Traits.Runesmith, Trait.Spell])
             .WithActionCost(1)
             .WithPermanentQEffect("Make a ranged Strike. On a hit, invokes all runes on the target. On a crit, it also takes a -1 circumstance penalty to its saving throws against these invocations.", qfFeat =>
@@ -176,7 +176,7 @@ public static class RunesmithFeats
                             return Usability.Usable;
                         return Usability.CommonReasons.TargetOutOfRange;
                     });
-                    remoteDet.WithEffectOnEachTarget( async (remoteDetAction, caster, target, result) =>
+                    remoteDet.WithEffectOnEachTarget(async (remoteDetAction, caster, target, result) =>
                     {
                         qfFeat.UsedThisTurn = true;
 
@@ -205,16 +205,18 @@ public static class RunesmithFeats
                             
                             target.AddQEffect(detPenalty);
                         }
-
-                        List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(caster, target);
-                        foreach (DrawnRune drawnRune in drawnRunes)
+                        
+                        DrawnRune.GetDrawnRunes(caster, target).ForEach(async void (dr) =>
                         {
-                            CombatAction? invokeThisRune = CommonRuneRules.CreateInvokeAction(remoteDetAction, caster, drawnRune, drawnRune.Rune, (int)item.WeaponProperties.RangeIncrement);
+                            CombatAction? invokeThisRune = CommonRuneRules.CreateInvokeAction(
+                                remoteDetAction,
+                                caster,
+                                dr,
+                                dr.Rune,
+                                item.WeaponProperties.RangeIncrement);
                             if (invokeThisRune != null)
                                 await caster.Battle.GameLoop.FullCast(invokeThisRune, ChosenTargets.CreateSingleTarget(target));
-                        }
-                        
-                        //Rune.RemoveAllImmunities(target);
+                        });
 
                         target.RemoveAllQEffects(qf => qf.Name == "Remote Detonation Critical Success");
                     });

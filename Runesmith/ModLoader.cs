@@ -10,14 +10,10 @@ public static class ModLoader
         /////////////////
         // Mod Options //
         /////////////////
-        ModManager.RegisterBooleanSettingsOption(ModData.BooleanOptions.EsvadirOnEnemies,
-            "Runesmith: Allow Tracing Esvadir On Enemies",
-            "In Dawnsbury Days, the rune \"Esvadir, Rune of Whetstones\" is normally only traceable on allies because its passive effect increases the bearer's damage. Enabling this option allows you to trace Esvadir onto enemies anyway, for when you want to be able to immediately invoke the rune onto a second adjacent enemy before the end of your turn.",
-            false);
-        ModManager.RegisterBooleanSettingsOption(ModData.BooleanOptions.OljinexOnEnemies,
-            "Runesmith: Allow Tracing Oljinex On Enemies",
-            "In Dawnsbury Days, the rune \"Oljinex, Rune of Cowards' Bane\" is normally only traceable on allies because its passive effect increases the bearer's defenses. Enabling this option allows you to trace Oljinex onto enemies anyway, for when you want to penalize the movemenet of the creatures around a shield-using enemy.",
-            false);
+        ModManager.RegisterBooleanSettingsOption(ModData.BooleanOptions.UnrestrictedTrace,
+            "Runesmith: Less Restrictive Rune Tracing",
+            "Enabling this option removes protections against \"bad decisions\" with tracing certain runes on certain targets.\n\nThe Runesmith is a class on the more advanced end of tactics and creativity. For example, you might want to trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy. Or you might trace Atryl on yourself as a 3rd action so that you can move it with Transpose Etching (just 1 action) on your next turn, because you're a ranged build.\n\nThis option is for those players.",
+            true);
         
         ////////////////
         // Load Calls //

@@ -13,6 +13,7 @@ using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
+using Dawnsbury.IO;
 using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
@@ -22,6 +23,93 @@ namespace Dawnsbury.Mods.RunesmithPlaytest;
 
 public class Rune
 {
+    public static class UsabilityConditions
+    {
+        /// <summary>Returns a <see cref="UsageCondition"/> function which returns the FIRST_CONDITION if it's not usable, or returns the SECOND_CONDITION if it's not usable.</summary>
+        public static Func<Creature, Creature, Usability> CombinedUsability(
+            Func<Creature, Creature, Usability> firstCondition,
+            Func<Creature, Creature, Usability> secondCondition)
+        {
+            return (atk, def) =>
+            {
+                Usability first = firstCondition(atk, def);
+                Usability second = secondCondition(atk, def);
+                return first == Usability.Usable ? second : first;
+            };
+        }
+        
+        /// <summary>Returns a <see cref="UsageCondition"/> function which is always usable.</summary>
+        public static Func<Creature, Creature, Usability> AlwaysUsable()
+        {
+            return (_, _) => Usability.Usable;
+        }
+        
+        /// <summary>Returns a <see cref="UsageCondition"/> function which is only usable on enemy creatures.</summary>
+        public static Func<Creature, Creature, Usability> UsableOnEnemies()
+        {
+            return (atk, def) =>
+            {
+                if (PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.UnrestrictedTrace))
+                    return Usability.Usable;
+                return def.EnemyOf(atk)
+                    ? Usability.Usable
+                    : Usability.NotUsableOnThisCreature("not an enemy");
+            };
+        }
+        
+        /// <summary>Returns a <see cref="UsageCondition"/> function which is only usable on ally creatures.</summary>
+        public static Func<Creature, Creature, Usability> UsableOnAllies()
+        {
+            return (atk, def) =>
+            {
+                if (PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.UnrestrictedTrace))
+                    return Usability.Usable;
+                return def.FriendOf(atk)
+                    ? Usability.Usable
+                    : Usability.NotUsableOnThisCreature("not an ally");
+            };
+        }
+
+        /// <summary>Returns a <see cref="UsageCondition"/> function which is only usable on ally creatures wielding specific items.</summary>
+        /// <param name="itemTest">Lambda expression which returns whether the given item is valid for the rune.</param>
+        /// <param name="noItemReason">(string) The reason the item can't be used, such as "no shield equipped"</param>
+        public static Func<Creature, Creature, Usability> UsableOnAllyItems(Func<Item, bool> itemTest, string noItemReason)
+        {
+            return (atk, def) =>
+            {
+                bool hasItem = def.HeldItems.Any(itemTest);
+                if (hasItem)
+                {
+                    if (PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.UnrestrictedTrace))
+                        return Usability.Usable;
+                    return def.FriendOf(atk)
+                        ? Usability.Usable
+                        : Usability.NotUsableOnThisCreature("not an ally");
+                }
+                return Usability.NotUsableOnThisCreature(noItemReason);
+            };
+        }
+        
+        /// <summary>Returns a <see cref="UsageCondition"/> function which is only usable on other runes (including other runesmiths).</summary>
+        /// <param name="additionalRuneRequirement">Additional condition for whether any drawn rune is valid for the diacritic. Returns true if the rune is a legal target.</param>
+        public static Func<Creature, Creature, Usability> UsableOnDiacritics(Func<DrawnRune, bool>? additionalRuneRequirement = null)
+        {
+            additionalRuneRequirement ??= _ => true; // If no additional test, then return true.
+            return (atk, def) =>
+            {
+                if (DrawnRune.GetDrawnRunes(null, def) is { } drawnRunes)
+                    if (drawnRunes.Count == 0)
+                        return Usability.NotUsableOnThisCreature("not a rune-bearer");
+                    else if (drawnRunes.Any(dr =>
+                                 additionalRuneRequirement(dr) && dr.AttachedDiacritic == null))
+                        return Usability.Usable;
+                    else
+                        return Usability.NotUsableOnThisCreature("no valid runes");
+                return Usability.Usable;
+            };
+        }
+    }
+    
     #region Core Properties
     /// <summary>The unique trait which corresponds to instances of this particular kind of rune, such as Atryl, Rune of Fire.</summary>
     public Trait RuneId { get; set; }
@@ -60,7 +148,7 @@ public class Rune
     /// <param name="Creature">This is the CASTER of the Rune.</param>
     /// <param name="Creature">This is the TARGET of the Rune.</param>
     /// <returns> (Usability) The Usability outcomes.</returns>
-    public Func<Creature, Creature, Usability>? UsageCondition { get; set; } = (_, _) => Usability.Usable;
+    public Func<Creature, Creature, Usability> UsageCondition { get; set; } = Rune.UsabilityConditions.AlwaysUsable();
     
     /// <summary>
     /// A lambda that creates and returns a new <see cref="DrawnRune"/>, usually the passive effects on a rune-bearer. This is called by actions to get the DrawnRune representing the effects of a rune being placed.
@@ -122,7 +210,7 @@ public class Rune
     /// <returns>(string) The PassiveText with heightened behavior.</returns>
     /// <seealso cref="Dawnsbury.Display.Text.S"/>
     public Func<Rune, int, string> PassiveTextWithHeightening { get; set; } =
-        (thisRune, level) => thisRune.PassiveText;
+        (thisRune, _) => thisRune.PassiveText;
     
     /// <summary>
     /// The unformatted text describing the invocation behavior of the rune.
@@ -191,20 +279,31 @@ public class Rune
     }
 
     /// <summary>
-    /// A helper function that sets <see cref="UsageCondition"/> on the Rune instance.
+    /// Sets the heightened text behavior of the rune, if any. If the parameters are null, then it resets to its default value.
     /// </summary>
-    /// <param name="condition"></param>
+    /// <param name="passiveText">The lambda expression to give to <see cref="PassiveTextWithHeightening"/></param>
+    /// <param name="invocationText">The lambda expression to give to <see cref="InvocationTextWithHeightening"/></param>
+    /// <param name="levelFormat">The <see cref="LevelFormat"/> of the rune.</param>
+    public Rune WithHeightenedText(
+        Func<Rune, int, string>? passiveText = null,
+        Func<Rune, int, string>? invocationText = null,
+        string? levelFormat = null)
+    {
+        this.PassiveTextWithHeightening = passiveText ??= (thisRune, _) => thisRune.PassiveText;
+        this.InvocationTextWithHeightening = invocationText ??= (thisRune, _) => thisRune.PassiveText;
+        return this;
+    }
+
+    /// <summary> A helper function that sets <see cref="UsageCondition"/> on the Rune instance. </summary>
+    /// <param name="condition">(Lambda expression) The usability test to set it to.</param>
     public Rune WithUsageCondition(Func<Creature, Creature, Usability> condition)
     {
         this.UsageCondition = condition;
         return this;
     }
 
-    /// <summary>
-    /// A helper function that sets <see cref="NewDrawnRune"/> on the Rune instance.
-    /// </summary>
-    /// <returns>The Rune being modified.</returns>
-    public Rune WithNewDrawnRune(Func<CombatAction, Creature, Creature, Rune, Task<DrawnRune?>> drawRuneLambda)
+    /// <summary>A helper function that sets <see cref="NewDrawnRune"/> on the Rune instance.</summary>
+    public Rune WithDrawnRuneCreator(Func<CombatAction, Creature, Creature, Rune, Task<DrawnRune?>> drawRuneLambda)
     {
         this.NewDrawnRune = drawRuneLambda;
         return this;
@@ -220,6 +319,7 @@ public class Rune
         return this;
     }
 
+    #region Trait Technicals
     /// <summary>Adds Trait.Shield to DrawTechnicalTraits, which indicates to other parts of the mod that the rune is drawn onto a shield.</summary>
     public Rune WithDrawnOnShieldTechnical()
     {
@@ -281,6 +381,7 @@ public class Rune
         this.InvokeTechnicalTraits = this.InvokeTechnicalTraits.Concat([Trait.DoesNotRequireAttackRollOrSavingThrow]).ToList();
         return this;
     }
+    #endregion
     #endregion
 
     #region Initializers

@@ -300,6 +300,7 @@ public static class CommonRuneRules
     /// <param name="sourceAction">The CombatAction which executes this internal action.</param>
     /// <param name="caster">The Creature invoking the rune.</param>
     /// <param name="runeTarget">The DrawnRune to be invoked.</param>
+    /// <param name="rune">The rune representing the drawn rune.</param>
     /// <param name="range">The range to the creature target. If no range is specified, the range is 30 feet.</param>
     /// <param name="immediatelyRemoveImmunity">If true, then <see cref="WithImmediatelyRemovesImmunity"/> is called on the new CombatAction.</param>
     /// <param name="requiresTargetHasDrawnRune">If true, this action can only be used against creatures who own the supplied runeTarget.</param>
@@ -342,15 +343,13 @@ public static class CommonRuneRules
             });
         
         CombatAction invokeThisRune = new CombatAction(
-            caster,
-            rune.Illustration,
-            "Invoke " + rune.Name,
-            traits,
-            initialDescription + (rune.InvocationTextWithHeightening(rune, caster.Level) ?? "[No invocation entry]"),
-            invokeTarget)
-            {
-                Tag = rune,
-            }
+                caster,
+                rune.Illustration,
+                "Invoke " + rune.Name,
+                traits,
+                initialDescription + (rune.InvocationTextWithHeightening(rune, caster.Level) ?? "[No invocation entry]"),
+                invokeTarget)
+            .WithTag(rune)
             .WithActionCost(0)
             .WithProjectileCone(VfxStyle.BasicProjectileCone(rune.Illustration))
             .WithSoundEffect(ModData.SfxNames.InvokeRune)

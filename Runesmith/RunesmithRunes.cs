@@ -42,6 +42,8 @@ public static class RunesmithRunes
          * WithOnCreatureWhenWorn
          * StateCheckWhenWielded
          */
+        
+        // TODO: Consolidate item-targeting routines with task functions in CommonRuneRules
 
         // Level 1 Runes
         Rune runeAtryl = new Rune(
@@ -55,9 +57,8 @@ public static class RunesmithRunes
                 "The bearer takes 2d6 fire damage, with a basic Fortitude save; on a critical failure, they are dazzled for 1 round.",
                 "The reduction in fire resistance increases by 1, and the damage of the invocation increases by 2d6.",
                 [Trait.Fire, Trait.Primal])
-            {
-                LevelFormat = "+2",
-                PassiveTextWithHeightening = (thisRune, level) =>
+            .WithHeightenedText(
+                (thisRune, level) =>
                 {
                     const int baseValue = 6;
                     int bonusValue = (level - thisRune.BaseLevel) / 2; // Increase by 1 every 2 character levels
@@ -65,7 +66,7 @@ public static class RunesmithRunes
                     string heightenedVar = S.HeightenedVariable(totalValue, baseValue);
                     return $"The bearer's fire resistance, if any, is reduced by {heightenedVar}. Its immunities are unaffected.";
                 },
-                InvocationTextWithHeightening = (thisRune, level) =>
+                (thisRune, level) =>
                 {
                     const int baseValue = 2;
                     int roundHalfLevel = ((level - thisRune.BaseLevel) / 2);
@@ -73,71 +74,67 @@ public static class RunesmithRunes
                     string heightenedVar = S.HeightenedVariable(damageAmount, baseValue);
                     return $"The bearer takes {heightenedVar}d6 fire damage, with a basic Fortitude save; on a critical failure, they are dazzled for 1 round.";
                 },
-                UsageCondition = (attacker, defender) =>
+                "+2")
+            .WithUsageCondition(Rune.UsabilityConditions.UsableOnEnemies())
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
+            {
+                int resistReductionAmount = 6 + (caster.Level - thisRune.BaseLevel) / 2;
+                DrawnRune atrylPassive = new DrawnRune(thisRune, thisRune.Name,
+                    "Fire resistance reduced by " + resistReductionAmount + ".")
                 {
-                    return defender.EnemyOf(attacker)
-                        ? Usability.Usable
-                        : Usability.NotUsableOnThisCreature("not an enemy");
-                },
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
-                {
-                    int resistReductionAmount = 6 + (caster != null ? ((caster.Level - thisRune.BaseLevel) / 2) : 0);
-                    DrawnRune atrylPassive = new DrawnRune(thisRune, thisRune.Name,
-                        "Fire resistance reduced by " + resistReductionAmount + ".")
+                    Illustration = thisRune.Illustration,
+                    Source = caster,
+                    Value = resistReductionAmount, // Value might be an unnecessary field, aesthetically. // TODO: use Key field?
+                    Traits = [..thisRune.Traits],
+                    StateCheck = qfSelf =>
                     {
-                        Illustration = thisRune.Illustration,
-                        Source = caster,
-                        Value = resistReductionAmount, // Value might be an unnecessary field, aesthetically. // TODO: use Key field?
-                        Traits = [..thisRune.Traits],
-                        StateCheck = qfSelf =>
+                        if ((qfSelf as DrawnRune)!.Disabled)
+                            return;
+
+                        Resistance? fireResist =
+                            qfSelf.Owner.WeaknessAndResistance.Resistances.FirstOrDefault(res =>
+                                res.DamageKind == DamageKind.Fire);
+                        if (fireResist != null && fireResist.Value > 0)
                         {
-                            if ((qfSelf as DrawnRune)!.Disabled)
+                            QEffect? existingAtryl = qfSelf.Owner.QEffects.FirstOrDefault(qfSearch =>
+                                qfSearch.Name == "Atryl, Rune of Fire" && qfSearch != qfSelf);
+                            if (existingAtryl != null && existingAtryl.Value >= qfSelf.Value &&
+                                existingAtryl.AppliedThisStateCheck)
                                 return;
-
-                            Resistance? fireResist =
-                                qfSelf.Owner.WeaknessAndResistance.Resistances.FirstOrDefault(res =>
-                                    res.DamageKind == DamageKind.Fire);
-                            if (fireResist != null && fireResist.Value > 0)
-                            {
-                                QEffect? existingAtryl = qfSelf.Owner.QEffects.FirstOrDefault(qfSearch =>
-                                        qfSearch.Name == "Atryl, Rune of Fire" && qfSearch != qfSelf);
-                                if (existingAtryl != null && existingAtryl.Value >= qfSelf.Value &&
-                                    existingAtryl.AppliedThisStateCheck)
-                                    return;
-                                fireResist.Value = Math.Max(0, fireResist.Value - qfSelf.Value);
-                            }
-                        },
-                    };
-                    return atrylPassive;
-                },
-                InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
-                {
-                    if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
-                    {
-                        int roundHalfLevel = ((caster.Level - 1) / 2);
-                        int damageAmount = 2 + roundHalfLevel * 2;
-                        CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude,
-                            RunesmithClass.RunesmithDC(caster));
-                        await CommonSpellEffects.DealBasicDamage(sourceAction, caster, target, result,
-                            damageAmount + "d6", DamageKind.Fire);
-                        Sfxs.Play(ModData.SfxNames.InvokedAtryl);
-                        if (result == CheckResult.CriticalFailure)
-                        {
-                            target.AddQEffect(QEffect.Dazzled()
-                                .WithExpirationOneRoundOrRestOfTheEncounter(caster, false));
+                            fireResist.Value = Math.Max(0, fireResist.Value - qfSelf.Value);
                         }
+                    },
+                };
+                return atrylPassive;
+            })
+            .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
+            {
+                if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
+                {
+                    int roundHalfLevel = ((caster.Level - 1) / 2);
+                    int damageAmount = 2 + roundHalfLevel * 2;
+                    CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude,
+                        RunesmithClass.RunesmithDC(caster));
+                    await CommonSpellEffects.DealBasicDamage(sourceAction, caster, target, result,
+                        damageAmount + "d6", DamageKind.Fire);
+                    Sfxs.Play(ModData.SfxNames.InvokedAtryl);
+                    if (result == CheckResult.CriticalFailure)
+                    {
+                        target.AddQEffect(QEffect.Dazzled()
+                            .WithExpirationOneRoundOrRestOfTheEncounter(caster, false));
                     }
+                }
 
-                    CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
-                    CommonRuneRules.ApplyImmunity(target, thisRune);
-                },
-            }
+                CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
+                CommonRuneRules.ApplyImmunity(target, thisRune);
+            })
             .WithDetrimentalPassiveTechnical()
             .WithDamagingInvocationTechnical()
             .WithFortitudeSaveInvocationTechnical();
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneAtryl", runeAtryl);
 
         // BUG: Add ignores concealment to the invocation... or should I?
+        // BUG: Invoking the rune doesn't remove the rune if it misses due to concealment.
         Rune runeEsvadir = new Rune(
                 "Esvadir, Rune of Whetstones",
                 ModData.Traits.Esvadir,
@@ -148,209 +145,199 @@ public static class RunesmithRunes
                 "On a successful Strike, the weapon deals an additional 2 persistent bleed damage per weapon damage die.",
                 "The essence of sharpness is released outwards from the rune, dealing 2d6 slashing damage to a creature adjacent to the rune-bearer, with a basic Fortitude save.",
                 "The damage of the invocation increases by 2d6.")
-            {
-                InvocationTextWithHeightening = (thisRune, level) =>
+            .WithHeightenedText(
+                null,
+                (thisRune, level) =>
                 {
                     const int baseValue = 2;
-                    int roundHalfLevel = ((level - thisRune.BaseLevel) / 2);
+                    int roundHalfLevel = (level - thisRune.BaseLevel) / 2;
                     int damageAmount = 2 + roundHalfLevel * 2;
                     string heightenedVar = S.HeightenedVariable(damageAmount, baseValue);
                     return $"The essence of sharpness is released outwards from the rune, dealing {heightenedVar}d6 slashing damage to a creature adjacent to the rune-bearer, with a basic Fortitude save.";
                 },
-                LevelFormat = "+2",
-                UsageCondition = (attacker, defender) =>
+                "+2")
+            .WithUsageCondition(Rune.UsabilityConditions.UsableOnAllies())
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
+            {
+                DrawnRune? MakeEsvadirPassive(Item targetItem)
                 {
-                    if (PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.EsvadirOnEnemies))
-                        return Usability.Usable;
-                    bool isAlly = defender.FriendOf(attacker);
-                    Usability allyNotUsable = Usability.NotUsableOnThisCreature("enemy creature");
-                    return isAlly
-                        ? Usability.Usable
-                        : allyNotUsable; // Can always do Unarmed Strikes, so always drawable.
-                },
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
-                {
-                    DrawnRune? MakeEsvadirPassive(Item targetItem)
-                    {
-                        DrawnRune esvadirPassive = new DrawnRune(
-                                thisRune,
-                                $"{thisRune.Name} ({targetItem.Name})",
-                                $"The target item or piercing and slashing unarmed strikes deal 2 persistent bleed damage per weapon damage die.",
-                                ExpirationCondition.Ephemeral,
-                                caster,
-                                thisRune.Illustration)
-                            {
-                                Source = caster,
-                                Traits = [..thisRune.Traits], //[..thisRune.Traits],
-                                AfterYouTakeAction = async (QEffect qfSelf, CombatAction action) => // Add bleed
-                                {
-                                    if ((qfSelf as DrawnRune)!.Disabled)
-                                        return;
-
-                                    Item? qfItem = (qfSelf as DrawnRune)?.DrawnOn as Item;
-                                    Item? actionItem = action.Item;
-
-                                    // This many complex conditionals is really hard to work out so I did it the long way.
-                                    // Fail to bleed if,
-                                    if (actionItem == null || qfItem == null || // either item is blank
-                                        !action.HasTrait(Trait.Strike) || // or the action isn't a strike
-                                        action.ChosenTargets.ChosenCreature == null || // or null targets
-                                        action.ChosenTargets.ChosenCreature ==
-                                        qfSelf.Owner || // or I'm my target for any reason
-                                        !(actionItem.DetermineDamageKinds().Contains(DamageKind.Piercing) ||
-                                          actionItem.DetermineDamageKinds()
-                                              .Contains(DamageKind
-                                                  .Slashing))) // or it's not piercing or slashing damage
-                                        return;
-                                    // Fail to bleed if,
-                                    if (actionItem.HasTrait(Trait.Unarmed)) // attacking with an unarmed,
-                                    {
-                                        if (!qfItem.HasTrait(Trait.Unarmed)) // that is unbuffed.
-                                            return;
-                                    }
-                                    else // attacking with a regular weapon,
-                                    {
-                                        if (actionItem != qfItem) // that is unbuffed.
-                                            return;
-                                    }
-
-
-                                    // Determine weapon damage dice count
-                                    string weaponDamageDiceCount =
-                                        actionItem.WeaponProperties!.DamageDieCount.ToString();
-                                    ;
-                                    if (action.TrueDamageFormula is { } trueDamage)
-                                    {
-                                        Capture diceCountCapture =
-                                            Regex.Match(trueDamage.ToString(), @"(\d+)d\d+").Groups[1];
-                                        if (diceCountCapture.Value != "")
-                                            weaponDamageDiceCount = diceCountCapture.Value;
-                                    }
-
-                                    DiceFormula bleedAmount = DiceFormula.FromText(
-                                        (2 * int.Parse(weaponDamageDiceCount) *
-                                         (action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1)).ToString(),
-                                        thisRune.Name);
-
-                                    //DiceFormula bleedAmount = DiceFormula.FromText(
-                                    //((action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1) * 2 * actionItem.WeaponProperties!.DamageDieCount).ToString(),
-                                    //thisRune.Name);
-
-                                    if (action.CheckResult >= CheckResult.Success)
-                                    {
-                                        action.ChosenTargets.ChosenCreature.AddQEffect(
-                                            QEffect.PersistentDamage(bleedAmount, DamageKind.Bleed));
-                                    }
-                                },
-                            }
-                            .WithItemOrUnarmedRegulator(targetItem);
-
-                        return esvadirPassive;
-                    }
-
-                    // Target a specific item
-                    List<string> validItemsString = [];
-                    List<Item> validItems = [];
-                    foreach (Item item in target.HeldItems.Where(item =>
-                                 item.WeaponProperties != null && item.WeaponProperties.DamageKind != null &&
-                                 (item.DetermineDamageKinds().Contains(DamageKind.Piercing) ||
-                                  item.DetermineDamageKinds().Contains(DamageKind.Slashing))))
-                    {
-                        validItemsString.Add(item.Name);
-                        validItems.Add(item);
-                    }
-
-                    validItems.Add(target.UnarmedStrike);
-                    validItemsString.Add("unarmed strikes");
-
-                    if (sourceAction?.Target is AreaTarget)
-                    {
-                        foreach (DrawnRune? esvadirPassive in validItems.Select(MakeEsvadirPassive))
+                    DrawnRune esvadirPassive = new DrawnRune(
+                            thisRune,
+                            $"{thisRune.Name} ({targetItem.Name})",
+                            $"The target item or piercing and slashing unarmed strikes deal 2 persistent bleed damage per weapon damage die.",
+                            ExpirationCondition.Ephemeral,
+                            caster,
+                            thisRune.Illustration)
                         {
-                            if (esvadirPassive == null)
-                                continue;
-                            
-                            // Determine the way the rune is being applied.
-                            if (sourceAction.HasTrait(ModData.Traits.Etched))
-                                esvadirPassive.WithIsEtched();
-                            else if (sourceAction.HasTrait(ModData.Traits.Traced))
-                                esvadirPassive.WithIsTraced();
+                            Source = caster,
+                            Traits = [..thisRune.Traits], //[..thisRune.Traits],
+                            AfterYouTakeAction = async (QEffect qfSelf, CombatAction action) => // Add bleed
+                            {
+                                if ((qfSelf as DrawnRune)!.Disabled)
+                                    return;
 
-                            target.AddQEffect(esvadirPassive);
+                                Item? qfItem = (qfSelf as DrawnRune)?.DrawnOn as Item;
+                                Item? actionItem = action.Item;
+
+                                // This many complex conditionals is really hard to work out so I did it the long way.
+                                // Fail to bleed if,
+                                if (actionItem == null || qfItem == null || // either item is blank
+                                    !action.HasTrait(Trait.Strike) || // or the action isn't a strike
+                                    action.ChosenTargets.ChosenCreature == null || // or null targets
+                                    action.ChosenTargets.ChosenCreature ==
+                                    qfSelf.Owner || // or I'm my target for any reason
+                                    !(actionItem.DetermineDamageKinds().Contains(DamageKind.Piercing) ||
+                                      actionItem.DetermineDamageKinds()
+                                          .Contains(DamageKind
+                                              .Slashing))) // or it's not piercing or slashing damage
+                                    return;
+                                // Fail to bleed if,
+                                if (actionItem.HasTrait(Trait.Unarmed)) // attacking with an unarmed,
+                                {
+                                    if (!qfItem.HasTrait(Trait.Unarmed)) // that is unbuffed.
+                                        return;
+                                }
+                                else // attacking with a regular weapon,
+                                {
+                                    if (actionItem != qfItem) // that is unbuffed.
+                                        return;
+                                }
+
+
+                                // Determine weapon damage dice count
+                                string weaponDamageDiceCount =
+                                    actionItem.WeaponProperties!.DamageDieCount.ToString();
+                                ;
+                                if (action.TrueDamageFormula is { } trueDamage)
+                                {
+                                    Capture diceCountCapture =
+                                        Regex.Match(trueDamage.ToString(), @"(\d+)d\d+").Groups[1];
+                                    if (diceCountCapture.Value != "")
+                                        weaponDamageDiceCount = diceCountCapture.Value;
+                                }
+
+                                DiceFormula bleedAmount = DiceFormula.FromText(
+                                    (2 * int.Parse(weaponDamageDiceCount) *
+                                     (action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1)).ToString(),
+                                    thisRune.Name);
+
+                                //DiceFormula bleedAmount = DiceFormula.FromText(
+                                //((action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1) * 2 * actionItem.WeaponProperties!.DamageDieCount).ToString(),
+                                //thisRune.Name);
+
+                                if (action.CheckResult >= CheckResult.Success)
+                                {
+                                    action.ChosenTargets.ChosenCreature.AddQEffect(
+                                        QEffect.PersistentDamage(bleedAmount, DamageKind.Bleed));
+                                }
+                            },
+                        }
+                        .WithItemOrUnarmedRegulator(targetItem);
+
+                    return esvadirPassive;
+                }
+
+                // Target a specific item
+                List<string> validItemsString = [];
+                List<Item> validItems = [];
+                foreach (Item item in target.HeldItems.Where(item =>
+                             item.WeaponProperties != null && item.WeaponProperties.DamageKind != null &&
+                             (item.DetermineDamageKinds().Contains(DamageKind.Piercing) ||
+                              item.DetermineDamageKinds().Contains(DamageKind.Slashing))))
+                {
+                    validItemsString.Add(item.Name);
+                    validItems.Add(item);
+                }
+
+                validItems.Add(target.UnarmedStrike);
+                validItemsString.Add("unarmed strikes");
+
+                if (sourceAction.Target is AreaTarget)
+                {
+                    foreach (DrawnRune? esvadirPassive in validItems.Select(MakeEsvadirPassive))
+                    {
+                        if (esvadirPassive == null)
+                            continue;
+                        
+                        // Determine the way the rune is being applied.
+                        if (sourceAction.HasTrait(ModData.Traits.Etched))
+                            esvadirPassive.WithIsEtched();
+                        else if (sourceAction.HasTrait(ModData.Traits.Traced))
+                            esvadirPassive.WithIsTraced();
+
+                        target.AddQEffect(esvadirPassive);
+                    }
+
+                    return
+                        new DrawnRune(
+                            thisRune); // Return an ephemeral DrawnRune since we just applied this to a whole batch of items.
+                }
+                
+                ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
+                    thisRune.Illustration,
+                    $"{{b}}{sourceAction?.Name}{{/b}}\nWhich item, or unarmed strikes, would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                    validItemsString.ToArray()
+                );
+
+                Item targetItem = validItems[chosenOption.Index];
+
+                return MakeEsvadirPassive(targetItem);
+            })
+            .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
+            {
+                // Create action wrapper for targeting and roll-inspection of invoking from target to adjacent creature.
+                CombatAction invokeEsvadirOnToAdjacentCreature = new CombatAction(
+                        target, // Get creatures adjacent to the rune, who is the creature with the drawn rune being invoked
+                        thisRune.Illustration,
+                        $"Invoke {thisRune.Name}",
+                        [..thisRune.Traits, Trait.DoNotShowInCombatLog],
+                        thisRune.InvocationTextWithHeightening(thisRune, caster.Level)!,
+                        Target.RangedCreature(1) /*AdjacentCreature()*/
+                            .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
+                            {
+                                bool isEnemy = defender.EnemyOf(caster);
+                                bool isAdjacent = defender.IsAdjacentTo(target);
+                                return isEnemy
+                                    ? (isAdjacent
+                                        ? Usability.Usable
+                                        : Usability.NotUsableOnThisCreature("Not adjacent"))
+                                    : Usability.NotUsableOnThisCreature("Not enemy");
+                            }))
+                    .WithActionCost(0)
+                    //.WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
+                    .WithSoundEffect(ModData.SfxNames.InvokedEsvadir)
+                    .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
+                    .WithEffectOnEachTarget(async (selfAction, caster2, target2, result) =>
+                    {
+                        if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
+                        {
+                            int roundHalfLevel = ((caster.Level - thisRune.BaseLevel) / 2);
+                            int damageAmount = 2 + roundHalfLevel * 2;
+                            await CommonSpellEffects.DealBasicDamage(
+                                sourceAction,
+                                caster2,
+                                target2,
+                                result,
+                                damageAmount + "d6",
+                                DamageKind.Slashing);
                         }
 
-                        return
-                            new DrawnRune(
-                                thisRune); // Return an ephemeral DrawnRune since we just applied this to a whole batch of items.
-                    }
+                        CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
+                        CommonRuneRules.ApplyImmunity(target2, thisRune);
+                    });
 
-                    ArgumentNullException.ThrowIfNull(caster);
-                    ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
-                        thisRune.Illustration,
-                        $"{{b}}{sourceAction?.Name}{{/b}}\nWhich item, or unarmed strikes, would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
-                        validItemsString.ToArray()
-                    );
-
-                    Item targetItem = validItems[chosenOption.Index];
-
-                    return MakeEsvadirPassive(targetItem);
-                },
-                InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
+                if (sourceAction.HasTrait(ModData.Traits.InvokeAgainstGivenTarget))
+                    await caster.Battle.GameLoop.FullCast(invokeEsvadirOnToAdjacentCreature,
+                        ChosenTargets.CreateSingleTarget(target));
+                else
                 {
-                    // Create action wrapper for targeting and roll-inspection of invoking from target to adjacent creature.
-                    CombatAction invokeEsvadirOnToAdjacentCreature = new CombatAction(
-                            target, // Get creatures adjacent to the rune, who is the creature with the drawn rune being invoked
-                            thisRune.Illustration,
-                            $"Invoke {thisRune.Name}",
-                            [..thisRune.Traits, Trait.DoNotShowInCombatLog],
-                            thisRune.InvocationTextWithHeightening(thisRune, caster.Level)!,
-                            Target.RangedCreature(1) /*AdjacentCreature()*/
-                                .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
-                                {
-                                    bool isEnemy = defender.EnemyOf(caster);
-                                    bool isAdjacent = defender.IsAdjacentTo(target);
-                                    return isEnemy
-                                        ? (isAdjacent
-                                            ? Usability.Usable
-                                            : Usability.NotUsableOnThisCreature("Not adjacent"))
-                                        : Usability.NotUsableOnThisCreature("Not enemy");
-                                }))
-                        .WithActionCost(0)
-                        //.WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
-                        .WithSoundEffect(ModData.SfxNames.InvokedEsvadir)
-                        .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
-                        .WithEffectOnEachTarget(async (selfAction, caster2, target2, result) =>
-                        {
-                            if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
-                            {
-                                int roundHalfLevel = ((caster.Level - thisRune.BaseLevel) / 2);
-                                int damageAmount = 2 + roundHalfLevel * 2;
-                                await CommonSpellEffects.DealBasicDamage(
-                                    sourceAction,
-                                    caster2,
-                                    target2,
-                                    result,
-                                    damageAmount + "d6",
-                                    DamageKind.Slashing);
-                            }
-
-                            CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
-                            CommonRuneRules.ApplyImmunity(target2, thisRune);
-                        });
-
-                    if (sourceAction.HasTrait(ModData.Traits.InvokeAgainstGivenTarget))
-                        await caster.Battle.GameLoop.FullCast(invokeEsvadirOnToAdjacentCreature,
-                            ChosenTargets.CreateSingleTarget(target));
-                    else
-                    {
-                        invokeEsvadirOnToAdjacentCreature
-                            .WithProjectileCone(
-                                VfxStyle.BasicProjectileCone(thisRune
-                                    .Illustration)); // Add extra animation when going from A to B.
-                        await caster.Battle.GameLoop.FullCast(invokeEsvadirOnToAdjacentCreature);
-                    }
-                },
-            }
+                    invokeEsvadirOnToAdjacentCreature
+                        .WithProjectileCone(
+                            VfxStyle.BasicProjectileCone(thisRune
+                                .Illustration)); // Add extra animation when going from A to B.
+                    await caster.Battle.GameLoop.FullCast(invokeEsvadirOnToAdjacentCreature);
+                }
+            })
             .WithDamagingInvocationTechnical()
             .WithFortitudeSaveInvocationTechnical()
             .WithTargetDoesNotSaveTechnical();
@@ -366,124 +353,24 @@ public static class RunesmithRunes
                 "A shield bearing this rune increases its circumstance bonus to AC by 1.",
                 "You call the shield to its rightful place. You Raise the Shield bearing the rune, as if the rune-bearer had used Raise a Shield, and the shield retains the increased bonus to AC until the beginning of the creature's next turn.",
                 additionalTraits: [Trait.Dwarf])
+            .WithUsageCondition(Rune.UsabilityConditions.UsableOnAllyItems(item => item.HasTrait(Trait.Shield), "no shield equipped"))
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
-                UsageCondition = (attacker, defender) =>
+                DrawnRune? MakeHoltrikPassive(Item targetItem)
                 {
-                    bool hasShield = defender.HeldItems.Any(item => item.HasTrait(Trait.Shield));
-                    Usability shieldNotUsable = Usability.NotUsableOnThisCreature("doesn't have a shield");
-                    bool isAlly = defender.FriendOf(attacker);
-                    Usability allyNotUsable = Usability.NotUsableOnThisCreature("enemy creature");
-                    return isAlly ? (hasShield ? Usability.Usable : shieldNotUsable) : allyNotUsable;
-                },
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
-                {
-                    DrawnRune? MakeHoltrikPassive(Item targetItem)
+                    DrawnRune drawnHoltrik = new DrawnRune(
+                        thisRune,
+                        $"{thisRune.Name} ({targetItem.Name})",
+                        "The circumstance bonus from Raising a Shield is increased by 1.",
+                        ExpirationCondition.Ephemeral,
+                        caster,
+                        thisRune.Illustration)
                     {
-                        DrawnRune drawnHoltrik = new DrawnRune(
-                            thisRune,
-                            $"{thisRune.Name} ({targetItem.Name})",
-                            "The circumstance bonus from Raising a Shield is increased by 1.",
-                            ExpirationCondition.Ephemeral,
-                            caster,
-                            thisRune.Illustration)
+                        Traits = [..thisRune.Traits], //[..thisRune.Traits],
+                        BonusToDefenses = (qfSelf, attackAction, targetDefense) =>
                         {
-                            Traits = [..thisRune.Traits], //[..thisRune.Traits],
-                            BonusToDefenses = (qfSelf, attackAction, targetDefense) =>
-                            {
-                                if ((qfSelf as DrawnRune)!.Disabled)
-                                    return null;
-                                // Copied from Raise a Shield
-                                if (targetDefense != Defense.AC &&
-                                    (!qfSelf.Owner.HasEffect(QEffectId.SparklingTarge) ||
-                                     !qfSelf.Owner.HasEffect(QEffectId.ArcaneCascade) ||
-                                     !targetDefense.IsSavingThrow() || attackAction == null ||
-                                     !attackAction.HasTrait(Trait.Spell)))
-                                    return null;
-
-                                // If they aren't raising a shield,
-                                if (!qfSelf.Owner.HasEffect(QEffectId.RaisingAShield))
-                                    return null; // no bonus.
-
-                                // If not the first of multiple duplicate effects,
-                                if (qfSelf != qfSelf.Owner.QEffects.First(qf =>
-                                        qf is DrawnRune dr && dr.Rune.RuneId == ModData.Traits.Holtrik))
-                                    return null; // no bonus.
-
-                                return new Bonus(1, BonusType.Untyped, "Holtrik (raised shield)");
-                            },
-                        }.WithItemRegulator(targetItem);
-
-                        return drawnHoltrik;
-                    }
-
-                    // Target a specific item
-                    switch (target.HeldItems.Count(item => item.HasTrait(Trait.Shield)))
-                    {
-                        case 0:
-                            return null;
-                        case 1:
-                            return MakeHoltrikPassive(target.HeldItems.First(item => item.HasTrait(Trait.Shield)));
-                        default:
-                            if (sourceAction?.Target is AreaTarget)
-                            {
-                                foreach (DrawnRune? holtrikPassive in target.HeldItems.Select(MakeHoltrikPassive))
-                                {
-                                    if (holtrikPassive == null)
-                                        continue;
-                                    
-                                    // Determine the way the rune is being applied.
-                                    if (sourceAction.HasTrait(ModData.Traits.Etched))
-                                        holtrikPassive.WithIsEtched();
-                                    else if (sourceAction.HasTrait(ModData.Traits.Traced))
-                                        holtrikPassive.WithIsTraced();
-
-                                    target.AddQEffect(holtrikPassive);
-                                }
-
-                                return
-                                    new DrawnRune(thisRune); // Return an ephemeral DrawnRune since we just applied this to a whole batch of items.
-                            }
-
-                            Item targetItem = await target.Battle.AskForConfirmation(
-                                caster ?? throw new ArgumentNullException(nameof(caster)),
-                                thisRune.Illustration,
-                                $"{{b}}{sourceAction?.Name}{{/b}}\nWhich shield would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
-                                target.HeldItems[0].Name,
-                                target.HeldItems[1].Name)
-                                ? target.HeldItems[0]
-                                : target.HeldItems[1];
-
-                            return MakeHoltrikPassive(targetItem);
-                    }
-                },
-                InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
-                {
-                    if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
-                    {
-                        // Raise their Shield
-                        // Copied from Shielding Strike
-                        Possibilities shieldActions = Possibilities.Create(target)
-                            .Filter(ap =>
-                            {
-                                if (ap.CombatAction.ActionId != ActionId.RaiseShield)
-                                    return false;
-                                ap.CombatAction.ActionCost = 0;
-                                ap.RecalculateUsability();
-                                return true;
-                            });
-                        List<Option> actions = await target.Battle.GameLoop.CreateActions(target, shieldActions, null);
-                        await target.Battle.GameLoop.OfferOptions(target, actions, true);
-
-                        // Adding the QF doesn't let you Shield Block.
-                        //bool hasShieldBlock = target.HasEffect(QEffectId.ShieldBlock) || target.WieldsItem(Trait.AlwaysOfferShieldBlock);
-                        //target.AddQEffect(QEffect.RaisingAShield(hasShieldBlock));
-
-                        // The rune-bearer retains the bonus
-                        QEffect retainedBonus = invokedRune.NewInvocationEffect(
-                            "The circumstance bonus from Raising a Shield is increased by 1.",
-                            ExpirationCondition.ExpiresAtStartOfYourTurn);
-                        retainedBonus.BonusToDefenses = (qfSelf, attackAction, targetDefense) =>
-                        {
+                            if ((qfSelf as DrawnRune)!.Disabled)
+                                return null;
                             // Copied from Raise a Shield
                             if (targetDefense != Defense.AC &&
                                 (!qfSelf.Owner.HasEffect(QEffectId.SparklingTarge) ||
@@ -492,41 +379,126 @@ public static class RunesmithRunes
                                  !attackAction.HasTrait(Trait.Spell)))
                                 return null;
 
-                            if (!qfSelf.Owner.HasEffect(QEffectId.RaisingAShield) || // If they aren't raising a shield,
-                                target.QEffects.FirstOrDefault( // or already have a Holtrik,
-                                    qfSearch => qfSearch.Name == qfSelf.Name && qfSearch != qfSelf) != null)
-                                return null; // No bonus.
+                            // If they aren't raising a shield,
+                            if (!qfSelf.Owner.HasEffect(QEffectId.RaisingAShield))
+                                return null; // no bonus.
+
+                            // If not the first of multiple duplicate effects,
+                            if (qfSelf != qfSelf.Owner.QEffects.First(qf =>
+                                    qf is DrawnRune dr && dr.Rune.RuneId == ModData.Traits.Holtrik))
+                                return null; // no bonus.
 
                             return new Bonus(1, BonusType.Untyped, "Holtrik (raised shield)");
-                        };
-                        target.AddQEffect(retainedBonus);
-                    }
+                        },
+                    }.WithItemRegulator(targetItem);
 
-                    CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
-                    CommonRuneRules.ApplyImmunity(target, thisRune);
-                },
-            }
+                    return drawnHoltrik;
+                }
+
+                // Target a specific item
+                switch (target.HeldItems.Count(item => item.HasTrait(Trait.Shield)))
+                {
+                    case 0:
+                        return null;
+                    case 1:
+                        return MakeHoltrikPassive(target.HeldItems.First(item => item.HasTrait(Trait.Shield)));
+                    default:
+                        if (sourceAction?.Target is AreaTarget)
+                        {
+                            foreach (DrawnRune? holtrikPassive in target.HeldItems.Select(MakeHoltrikPassive))
+                            {
+                                if (holtrikPassive == null)
+                                    continue;
+                                
+                                // Determine the way the rune is being applied.
+                                if (sourceAction.HasTrait(ModData.Traits.Etched))
+                                    holtrikPassive.WithIsEtched();
+                                else if (sourceAction.HasTrait(ModData.Traits.Traced))
+                                    holtrikPassive.WithIsTraced();
+
+                                target.AddQEffect(holtrikPassive);
+                            }
+
+                            return
+                                new DrawnRune(thisRune); // Return an ephemeral DrawnRune since we just applied this to a whole batch of items.
+                        }
+
+                        Item targetItem = await target.Battle.AskForConfirmation(
+                            caster ?? throw new ArgumentNullException(nameof(caster)),
+                            thisRune.Illustration,
+                            $"{{b}}{sourceAction?.Name}{{/b}}\nWhich shield would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                            target.HeldItems[0].Name,
+                            target.HeldItems[1].Name)
+                            ? target.HeldItems[0]
+                            : target.HeldItems[1];
+
+                        return MakeHoltrikPassive(targetItem);
+                }
+            })
+            .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
+            {
+                if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
+                {
+                    // Raise their Shield
+                    // Copied from Shielding Strike
+                    Possibilities shieldActions = Possibilities.Create(target)
+                        .Filter(ap =>
+                        {
+                            if (ap.CombatAction.ActionId != ActionId.RaiseShield)
+                                return false;
+                            ap.CombatAction.ActionCost = 0;
+                            ap.RecalculateUsability();
+                            return true;
+                        });
+                    List<Option> actions = await target.Battle.GameLoop.CreateActions(target, shieldActions, null);
+                    await target.Battle.GameLoop.OfferOptions(target, actions, true);
+
+                    // Adding the QF doesn't let you Shield Block.
+                    //bool hasShieldBlock = target.HasEffect(QEffectId.ShieldBlock) || target.WieldsItem(Trait.AlwaysOfferShieldBlock);
+                    //target.AddQEffect(QEffect.RaisingAShield(hasShieldBlock));
+
+                    // The rune-bearer retains the bonus
+                    QEffect retainedBonus = invokedRune.NewInvocationEffect(
+                        "The circumstance bonus from Raising a Shield is increased by 1.",
+                        ExpirationCondition.ExpiresAtStartOfYourTurn);
+                    retainedBonus.BonusToDefenses = (qfSelf, attackAction, targetDefense) =>
+                    {
+                        // Copied from Raise a Shield
+                        if (targetDefense != Defense.AC &&
+                            (!qfSelf.Owner.HasEffect(QEffectId.SparklingTarge) ||
+                             !qfSelf.Owner.HasEffect(QEffectId.ArcaneCascade) ||
+                             !targetDefense.IsSavingThrow() || attackAction == null ||
+                             !attackAction.HasTrait(Trait.Spell)))
+                            return null;
+
+                        if (!qfSelf.Owner.HasEffect(QEffectId.RaisingAShield) || // If they aren't raising a shield,
+                            target.QEffects.FirstOrDefault( // or already have a Holtrik,
+                                qfSearch => qfSearch.Name == qfSelf.Name && qfSearch != qfSelf) != null)
+                            return null; // No bonus.
+
+                        return new Bonus(1, BonusType.Untyped, "Holtrik (raised shield)");
+                    };
+                    target.AddQEffect(retainedBonus);
+                }
+
+                CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
+                CommonRuneRules.ApplyImmunity(target, thisRune);
+            })
             .WithDrawnOnShieldTechnical();
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneHoltrik", runeHoltrik);
 
         // BUG: Gunslinger's Fakeout triggers splash damage.
         Rune runeMarssyl = new Rune(
-            "Marssyl, Rune of Impact",
-            ModData.Traits.Marssyl,
-            IllustrationName.ThunderingRunestone,
-            1,
-            "drawn on a bludgeoning weapon or unarmed Strike",
-            "This rune magnifies force many times over as it passes through the rune's concentric rings.",
-            "The weapon deals 1 bludgeoning splash damage per weapon damage die. If the weapon is a melee weapon, the rune-bearer is immune to this splash damage.",
-            "The weapon vibrates as power concentrates within it. The next successful Strike made with the weapon before the end of its wielder's next turn deals an additional die of damage and the target must succeed at a Fortitude save against your class DC or be pushed 10 feet in a straight line backwards, or 20 feet on a critical failure.")
-        {
-            UsageCondition = (attacker, defender) =>
-            {
-                bool isAlly = defender.FriendOf(attacker);
-                Usability allyNotUsable = Usability.NotUsableOnThisCreature("enemy creature");
-                return isAlly ? Usability.Usable : allyNotUsable; // Can always do Unarmed Strikes, so always drawable.
-            },
-            NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
+                "Marssyl, Rune of Impact",
+                ModData.Traits.Marssyl,
+                IllustrationName.ThunderingRunestone,
+                1,
+                "drawn on a bludgeoning weapon or unarmed Strike",
+                "This rune magnifies force many times over as it passes through the rune's concentric rings.",
+                "The weapon deals 1 bludgeoning splash damage per weapon damage die. If the weapon is a melee weapon, the rune-bearer is immune to this splash damage.",
+                "The weapon vibrates as power concentrates within it. The next successful Strike made with the weapon before the end of its wielder's next turn deals an additional die of damage and the target must succeed at a Fortitude save against your class DC or be pushed 10 feet in a straight line backwards, or 20 feet on a critical failure.")
+            .WithUsageCondition(Rune.UsabilityConditions.UsableOnAllies()) // Since everyone has unarmed strikes, it only requires the target is an ally.
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
                 DrawnRune? MakeMarssylPassive(Item targetItem)
                 {
@@ -643,7 +615,7 @@ public static class RunesmithRunes
                     {
                         if (marssylPassive == null)
                             continue;
-                        
+
                         if (sourceAction.HasTrait(ModData.Traits.Etched))
                             marssylPassive.WithIsEtched();
                         else if (sourceAction.HasTrait(ModData.Traits.Traced))
@@ -651,11 +623,11 @@ public static class RunesmithRunes
 
                         target.AddQEffect(marssylPassive);
                     }
+
                     // Return an ephemeral DrawnRune since we just applied this to a whole batch of items.
                     return new DrawnRune(thisRune);
                 }
 
-                ArgumentNullException.ThrowIfNull(caster);
                 ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
                     thisRune.Illustration,
                     $"{{b}}{sourceAction?.Name}{{/b}}\nWhich item, or unarmed strikes, would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
@@ -665,8 +637,8 @@ public static class RunesmithRunes
                 Item targetItem = validItems[chosenOption.Index];
 
                 return MakeMarssylPassive(targetItem);
-            },
-            InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
+            })
+            .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
             {
                 if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
                 {
@@ -711,8 +683,7 @@ public static class RunesmithRunes
 
                 CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
                 CommonRuneRules.ApplyImmunity(target, thisRune);
-            },
-        };
+            });
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneMarssyl", runeMarssyl);
 
         Rune runeOljinex = new Rune(
@@ -725,329 +696,318 @@ public static class RunesmithRunes
                 "While the shield is raised, it also grants the bearer a +1 status bonus to AC against physical ranged attacks. {i}(NYI: doesn't check for damage types, works against any ranged attack.){/i}",
                 "(illusion, mental, visual) The rune creates an illusion in the minds of all creatures adjacent to the rune-bearer that lasts for 1 round. The illusion is of a impeding terrain. Creatures affected by this invocation must succeed at a DC 5 flat check when they take a move action or else it's lost. The DC is 11 instead if they attempt to move further away from the rune-bearer. This lasts for 1 round or until they disbelieve the illusion by using a Seek action against your class DC.",
                 additionalTraits: [Trait.Occult])
+            .WithUsageCondition(Rune.UsabilityConditions.UsableOnAllyItems(item => item.HasTrait(Trait.Shield), "no shield equipped"))
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
-                UsageCondition = (attacker, defender) =>
+                DrawnRune? MakeOljinexPassive(Item targetItem)
                 {
-                    bool hasShield = defender.HeldItems.Any(item => item.HasTrait(Trait.Shield));
-                    Usability shieldNotUsable = Usability.NotUsableOnThisCreature("doesn't have a shield");
-                    bool isAlly = defender.FriendOf(attacker);
-                    Usability allyNotUsable = Usability.NotUsableOnThisCreature("enemy creature");
-                    if (PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.OljinexOnEnemies))
-                        return hasShield ? Usability.Usable : shieldNotUsable;
-                    return isAlly ? (hasShield ? Usability.Usable : shieldNotUsable) : allyNotUsable;
-                },
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
-                {
-                    DrawnRune? MakeOljinexPassive(Item targetItem)
+                    DrawnRune drawnOljinex = new DrawnRune(
+                        thisRune,
+                        $"{thisRune.Name} ({targetItem.Name})",
+                        "While the shield is raised, you have a +1 status bonus to AC against physical ranged attacks.",
+                        ExpirationCondition.Ephemeral,
+                        caster,
+                        thisRune.Illustration)
                     {
-                        DrawnRune drawnOljinex = new DrawnRune(
-                            thisRune,
-                            $"{thisRune.Name} ({targetItem.Name})",
-                            "While the shield is raised, you have a +1 status bonus to AC against physical ranged attacks.",
-                            ExpirationCondition.Ephemeral,
-                            caster,
-                            thisRune.Illustration)
+                        Traits = [..thisRune.Traits],
+                        BonusToDefenses = (qfSelf, attackAction, targetDefense) =>
                         {
-                            Traits = [..thisRune.Traits],
-                            BonusToDefenses = (qfSelf, attackAction, targetDefense) =>
-                            {
-                                if ((qfSelf as DrawnRune)!.Disabled)
-                                    return null;
-
-                                // TODO: enforce the physical damage part of ranged physical attacks.
-                                if (targetDefense != Defense.AC ||
-                                    (attackAction != null && !attackAction.HasTrait(Trait.Ranged)) ||
-                                    !qfSelf.Owner.HasEffect(QEffectId.RaisingAShield))
-                                    return null;
-
-                                return new Bonus(1, BonusType.Status, "Oljinex (raised shield)");
-                            },
-                        }.WithItemRegulator(targetItem);
-
-                        return drawnOljinex;
-                    }
-
-                    // Target a specific item
-                    switch (target.HeldItems.Count(item => item.HasTrait(Trait.Shield)))
-                    {
-                        case 0:
-                            return null;
-                        case 1:
-                            return MakeOljinexPassive(target.HeldItems.First(item => item.HasTrait(Trait.Shield)));
-                        default:
-                            if (sourceAction?.Target is AreaTarget)
-                            {
-                                foreach (DrawnRune? oljinexPassive in target.HeldItems.Select(MakeOljinexPassive))
-                                {
-                                    if (oljinexPassive == null)
-                                        continue;
-                                    
-                                    // Determine the way the rune is being applied.
-                                    if (sourceAction.HasTrait(ModData.Traits.Etched))
-                                        oljinexPassive.WithIsEtched();
-                                    else if (sourceAction.HasTrait(ModData.Traits.Traced))
-                                        oljinexPassive.WithIsTraced();
-
-                                    target.AddQEffect(oljinexPassive);
-                                }
-
-                                return
-                                    new DrawnRune(
-                                        thisRune); // Return an ephemeral DrawnRune since we just applied this to a whole batch of items.
-                            }
-
-                            Item targetItem = await target.Battle.AskForConfirmation(
-                                caster ?? throw new ArgumentNullException(nameof(caster)),
-                                IllustrationName.MagicWeapon,
-                                $"{{b}}{sourceAction?.Name}{{/b}}\nWhich shield would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
-                                target.HeldItems[0].Name, target.HeldItems[1].Name)
-                                ? target.HeldItems[0]
-                                : target.HeldItems[1];
-
-                            return MakeOljinexPassive(targetItem);
-                    }
-                },
-                InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
-                {
-                    // Define this in case it needs to change for behavioral logic
-                    Tile cannotMoveAwayFrom = target.Occupies; //invokedRune.Owner.Occupies;
-
-                    foreach (Creature cr in target.Battle.AllCreatures.Where(cr =>
-                                 cr.IsAdjacentTo(target) && !CommonRuneRules.IsImmuneToThisInvocation(target, thisRune)))
-                    {
-                        if (cr.IsImmuneTo(Trait.Illusion) || cr.IsImmuneTo(Trait.Mental) || cr.IsImmuneTo(Trait.Visual))
-                            continue;
-
-                        Sfxs.Play(ModData.SfxNames.InvokedOljinex);
-
-                        QEffect invokedOljinex = invokedRune.NewInvocationEffect(
-                            "INCOMPLETE TEXT. COMPLAIN AT ANASE IF YOU SEE THIS TEXT!",
-                            ExpirationCondition.ExpiresAtStartOfSourcesTurn);
-                        invokedOljinex.CountsAsADebuff = true;
-
-                        /* Oljinex can't reliably work as written. Here's some designs instead. */
-
-                        // Ojinex prevents steps?
-                        /*invokedOljinex.Description = $"You can't Step. You can attempt to disbelieve the illusion.";
-                        invokedOljinex.PreventTakingAction = action => action.ActionId == ActionId.Step ? "Oljinex, Rune of Cowards' Bane" : null;*/
-
-                        // Oljinex prevents steps and fizzles move actions with a flat check?
-                        /*invokedOljinex.Description = $"You can't Step. If you attempt a move action, you must succeed at a DC 5 flat check or it is lost. You can attempt to disbelieve the illusion.";
-                        invokedOljinex.PreventTakingAction = action => action.ActionId == ActionId.Step ? "Oljinex, Rune of Cowards' Bane" : null;
-                        invokedOljinex.FizzleOutgoingActions = async (qfThis, action, stringBuilder) =>
-                        {
-                            if (action.ActionId != ActionId.Stride || !action.HasTrait(Trait.Move))
-                                return false;
-                            var result = Checks.RollFlatCheck(5);
-                            stringBuilder.AppendLine($"Use move action while debuffed: {result.Item2}");
-                            return result.Item1 < CheckResult.Success;
-                        };*/
-
-                        // Oljinex fizzles move actions that target too far away?
-                        /*invokedOljinex.FizzleOutgoingActions = async (qfThis, action, stringBuilder) =>
-                        {
-                            // Define this in case it needs to change for behavioral logic
-                            Tile cannotMoveAwayFrom = invokedRune.Owner.Occupies;//target.Occupies;
-
-                            if (!action.HasTrait(Trait.Move) || action.ChosenTargets.ChosenTile is not { } chosenTile)
-                                return false;
-                            if (cannotMoveAwayFrom.DistanceTo(chosenTile) <= qfThis.Owner.DistanceTo(cannotMoveAwayFrom))
-                                return false;
-                            stringBuilder.AppendLine("Cannot willingly move away");
-                            return true;
-                        };*/
-
-                        // Oljinex actually tries to create ephemeral walls?
-                        /*invokedOljinex.Tag = new Dictionary<Tile,TileKind>(); // Tiles which have been modified
-                        invokedOljinex.StateCheck = qfThis =>
-                        {
-                            foreach (Tile tile in qfThis.Owner.Battle.Map.AllTiles)
-                            {
-                                if (tile.DistanceTo(target.Occupies) >
-                                    qfThis.Owner.Occupies.DistanceTo(target.Occupies))
-                                {
-                                    (qfThis.Tag as Dictionary<Tile,TileKind>)![tile] = tile.Kind;
-                                    tile.Kind = TileKind.Wall;
-                                }
-                            }
-                        };
-                        invokedOljinex.WhenExpires = qfThis =>
-                        {
-                            foreach (var tile in ((qfThis.Tag as Dictionary<Tile,TileKind>)!))
-                            {
-                                tile.Key.Kind = tile.Value;
-                            }
-                        };*/
-
-                        // Oljinex reduces speed and prevents steps?
-                        /*invokedOljinex.PreventTakingAction = action => action.ActionId == ActionId.Step ? "Oljinex, Rune of Cowards' Bane" : null;
-                        invokedOljinex.BonusToAllSpeeds = qfThis =>
-                        {
-                            if (qfThis.Tag is true)
-                                return null; // Prevent infinite recursion
-                            qfThis.Tag = true;
-                            qfThis.Owner.RecalculateLandSpeedAndInitiative();
-                            qfThis.Tag = false;
-                            int penalty = - (qfThis.Owner.Speed - 1);
-                            return new Bonus(penalty, BonusType.Untyped, "Oljinex");
-                        };*/
-
-                        // Oljinex prevents step and normal stride, replaces stride?
-                        /*invokedOljinex.PreventTakingAction = action => /*action.ActionId == ActionId.Step ||#1# (action.ActionId == ActionId.Stride && action.Tag != invokedOljinex) ? "Oljinex, Rune of Cowards' Bane" : null;
-                        invokedOljinex.ProvideActionIntoPossibilitySection = (qfThis, section) =>
-                        {
-                            if (section.Name != "Invisible actions")
+                            if ((qfSelf as DrawnRune)!.Disabled)
                                 return null;
 
-                            // locals
-                            Creature self = qfThis.Owner;
-                            Func<Creature, Tile, Usability> legality = (cr, t) => cr.DistanceTo(t) <= cr.DistanceTo(cannotMoveAwayFrom) ? Usability.Usable : Usability.NotUsable("Oljinex, Rune of Cowards' Bane");
+                            // TODO: enforce the physical damage part of ranged physical attacks.
+                            if (targetDefense != Defense.AC ||
+                                (attackAction != null && !attackAction.HasTrait(Trait.Ranged)) ||
+                                !qfSelf.Owner.HasEffect(QEffectId.RaisingAShield))
+                                return null;
 
-                            // Requires copying the basic Stride.
-                            CombatAction oljinexStride = new CombatAction(
-                                    self,
-                                    IllustrationName.None,
-                                    self.HasEffect(QEffectId.Flying) ? "Fly" : "Stride",
-                                    [Trait.Move, Trait.Basic],
-                                    "Move up to your Speed.",
-                                    Target.Tile(
-                                            (cr, t) => t.LooksFreeTo(cr),
-                                            (_, _) =>
-                                                int.MinValue)
-                                        .WithAdditionalTargetingRequirement(legality)
-                                        .WithPathfindingGuidelines(cr =>
-                                            new PathfindingDescription { Squares = 2, Style = new MovementStyle() {MaximumSquares = 2} })) //cr.Speed }))
-                                .WithActionId(ActionId.Stride)
-                                .WithActionCost(!self.Actions.NextStrideIsFree ? 1 : 0)
-                                .WithEffectOnChosenTargets(async (action, self2, targets) =>
-                                    await self2.MoveToUsingEarlierFloodfill(targets.ChosenTile, action,
-                                        new MovementStyle()
-                                        {
-                                            MaximumSquares = 2, //self2.Speed,
-                                            Shifting = self2.HasEffect(QEffectId.Mobility) && !targets.ChosenTile
-                                                .InIteration.RequiresProvokingAttackOfOpportunity
-                                        }));
-                            oljinexStride.Tag = invokedOljinex;
+                            return new Bonus(1, BonusType.Status, "Oljinex (raised shield)");
+                        },
+                    }.WithItemRegulator(targetItem);
 
-                            return new ActionPossibility(oljinexStride);
-                        };*/
+                    return drawnOljinex;
+                }
 
-                        // Oljinex updates normal moves?
-                        /*invokedOljinex.StateCheck = async qfThis => // StateCheck is run before possibilities are generated.
+                // Target a specific item
+                switch (target.HeldItems.Count(item => item.HasTrait(Trait.Shield)))
+                {
+                    case 0:
+                        return null;
+                    case 1:
+                        return MakeOljinexPassive(target.HeldItems.First(item => item.HasTrait(Trait.Shield)));
+                    default:
+                        if (sourceAction?.Target is AreaTarget)
                         {
-                            (qfThis.Tag as List<CombatAction>)?.Clear(); // Just in case extra garbage collection is needed.
-                            qfThis.Tag = new List<CombatAction>();
-                        };
-                        invokedOljinex.ProvideActionIntoPossibilitySection = (qfThis, section) =>
-                        {
-                            // This gets called after a possibility is generated.
-                            // Gets called multiple times, so make sure not to do too much recursion.
-                            // That's what the StateCheck and .Tag is used for.
-
-                            Creature self = qfThis.Owner;
-                            Func<Creature, Tile, bool> isNotTooFar = (cr, t) => cr.DistanceTo(t) <= cr.DistanceTo(cannotMoveAwayFrom);
-
-                            Possibilities movePossibilities = self.Possibilities.Filter(possibility =>
-                                possibility.CombatAction.HasTrait(Trait.Move) && possibility.CombatAction.Target is TileTarget);
-                            foreach (PossibilitySection allSection in movePossibilities.Sections)
+                            foreach (DrawnRune? oljinexPassive in target.HeldItems.Select(MakeOljinexPassive))
                             {
-                                foreach (ActionPossibility movePossibility in allSection.Possibilities.Where(possibility => possibility is ActionPossibility).Cast<ActionPossibility>())
-                                {
-                                    CombatAction moveAction = movePossibility.CombatAction;
+                                if (oljinexPassive == null)
+                                    continue;
+                                
+                                // Determine the way the rune is being applied.
+                                if (sourceAction.HasTrait(ModData.Traits.Etched))
+                                    oljinexPassive.WithIsEtched();
+                                else if (sourceAction.HasTrait(ModData.Traits.Traced))
+                                    oljinexPassive.WithIsTraced();
 
-                                    List<CombatAction>? alreadyModified = (qfThis.Tag as List<CombatAction>);
-                                    if (alreadyModified == null || alreadyModified.Contains(moveAction))
-                                        continue;
-
-                                    TileTarget oldTarget = (moveAction.Target as TileTarget)!; // Checked during .Filter().
-                                    Func<Creature, Tile, Usability>? oldExtraPrereq =
-                                        oldTarget.AdditionalTargetingRequirement;
-                                    moveAction.Target = oldTarget.WithAdditionalTargetingRequirement(
-                                        (cr, t) =>
-                                        {
-                                            if (oldExtraPrereq != null)
-                                                return oldExtraPrereq.Invoke(cr, t) && isNotTooFar.Invoke(cr, t) ? Usability.Usable : Usability.CommonReasons.NotUsableForComplexReason;
-                                            else
-                                                return isNotTooFar.Invoke(cr, t) ? Usability.Usable : Usability.CommonReasons.NotUsableForComplexReason;
-                                        });
-
-                                    alreadyModified.Add(moveAction);
-                                }
+                                target.AddQEffect(oljinexPassive);
                             }
 
-                            return null;
-                        };*/
+                            return
+                                new DrawnRune(
+                                    thisRune); // Return an ephemeral DrawnRune since we just applied this to a whole batch of items.
+                        }
 
-                        // Oljinex fizzles move actions with a flat check, or greater if that target is too far away?
-                        invokedOljinex.Description =
-                            $"If you attempt a move action, you must succeed at a DC 5 flat check or it is lost. The DC is 11 instead if you attempt to move further away from {{Blue}}{target.Name}{{/Blue}}.";
-                        invokedOljinex.FizzleOutgoingActions = async (qfThis, action, stringBuilder) =>
-                        {
-                            if (!action.HasTrait(Trait.Move))
-                                return false;
+                        Item targetItem = await target.Battle.AskForConfirmation(
+                            caster ?? throw new ArgumentNullException(nameof(caster)),
+                            IllustrationName.MagicWeapon,
+                            $"{{b}}{sourceAction?.Name}{{/b}}\nWhich shield would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                            target.HeldItems[0].Name, target.HeldItems[1].Name)
+                            ? target.HeldItems[0]
+                            : target.HeldItems[1];
 
-                            // Define this in case it needs to change for behavioral logic
-                            Tile cannotMoveFrom = invokedRune.Owner.Occupies; //target.Occupies;
-                            int flatDC = 5;
-                            if (action.ChosenTargets.ChosenTile is { } chosenTile
-                                && cannotMoveFrom.DistanceTo(chosenTile) >
-                                cannotMoveFrom.DistanceTo(qfThis.Owner.Occupies))
-                                flatDC = 11;
-                            (CheckResult, string) result = Checks.RollFlatCheck(flatDC);
-                            stringBuilder.AppendLine($"Moved while debuffed: {result.Item2}" +
-                                                     $"\n\n{{b}}{flatDC} DC breakdown:\n5{{/b}} Flat DC" +
-                                                     (flatDC == 11 ? "\n{b}{Red}+6{/Red}{/b} moved further away" : ""));
+                        return MakeOljinexPassive(targetItem);
+                }
+            })
+            .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
+            {
+                // Define this in case it needs to change for behavioral logic
+                Tile cannotMoveAwayFrom = target.Occupies; //invokedRune.Owner.Occupies;
 
-                            if (result.Item1 < CheckResult.Success)
-                                return true;
+                foreach (Creature cr in target.Battle.AllCreatures.Where(cr =>
+                             cr.IsAdjacentTo(target) && !CommonRuneRules.IsImmuneToThisInvocation(target, thisRune)))
+                {
+                    if (cr.IsImmuneTo(Trait.Illusion) || cr.IsImmuneTo(Trait.Mental) || cr.IsImmuneTo(Trait.Visual))
+                        continue;
 
-                            // Certain basic actions don't reach the code block where this log is announced,
-                            // so this manually announces them anyway.
-                            if (action.Name is "Stride" or "Step" or "Fly")
-                                action.Owner.Battle.Log("Flat check passed.", action.Name, stringBuilder.ToString());
+                    Sfxs.Play(ModData.SfxNames.InvokedOljinex);
 
+                    QEffect invokedOljinex = invokedRune.NewInvocationEffect(
+                        "INCOMPLETE TEXT. COMPLAIN AT ANASE IF YOU SEE THIS TEXT!",
+                        ExpirationCondition.ExpiresAtStartOfSourcesTurn);
+                    invokedOljinex.CountsAsADebuff = true;
+
+                    /* Oljinex can't reliably work as written. Here's some designs instead. */
+
+                    // Ojinex prevents steps?
+                    /*invokedOljinex.Description = $"You can't Step. You can attempt to disbelieve the illusion.";
+                    invokedOljinex.PreventTakingAction = action => action.ActionId == ActionId.Step ? "Oljinex, Rune of Cowards' Bane" : null;*/
+
+                    // Oljinex prevents steps and fizzles move actions with a flat check?
+                    /*invokedOljinex.Description = $"You can't Step. If you attempt a move action, you must succeed at a DC 5 flat check or it is lost. You can attempt to disbelieve the illusion.";
+                    invokedOljinex.PreventTakingAction = action => action.ActionId == ActionId.Step ? "Oljinex, Rune of Cowards' Bane" : null;
+                    invokedOljinex.FizzleOutgoingActions = async (qfThis, action, stringBuilder) =>
+                    {
+                        if (action.ActionId != ActionId.Stride || !action.HasTrait(Trait.Move))
                             return false;
-                        };
+                        var result = Checks.RollFlatCheck(5);
+                        stringBuilder.AppendLine($"Use move action while debuffed: {result.Item2}");
+                        return result.Item1 < CheckResult.Success;
+                    };*/
 
-                        // Seek to disbelieve the illusion.
-                        invokedOljinex.ProvideContextualAction = qfThis =>
+                    // Oljinex fizzles move actions that target too far away?
+                    /*invokedOljinex.FizzleOutgoingActions = async (qfThis, action, stringBuilder) =>
+                    {
+                        // Define this in case it needs to change for behavioral logic
+                        Tile cannotMoveAwayFrom = invokedRune.Owner.Occupies;//target.Occupies;
+
+                        if (!action.HasTrait(Trait.Move) || action.ChosenTargets.ChosenTile is not { } chosenTile)
+                            return false;
+                        if (cannotMoveAwayFrom.DistanceTo(chosenTile) <= qfThis.Owner.DistanceTo(cannotMoveAwayFrom))
+                            return false;
+                        stringBuilder.AppendLine("Cannot willingly move away");
+                        return true;
+                    };*/
+
+                    // Oljinex actually tries to create ephemeral walls?
+                    /*invokedOljinex.Tag = new Dictionary<Tile,TileKind>(); // Tiles which have been modified
+                    invokedOljinex.StateCheck = qfThis =>
+                    {
+                        foreach (Tile tile in qfThis.Owner.Battle.Map.AllTiles)
                         {
-                            CombatAction seekOljinex = new CombatAction(
-                                    qfThis.Owner,
-                                    new SideBySideIllustration(IllustrationName.FearsomeRunestone,
-                                        IllustrationName.Seek),
-                                    "Disbelieve Oljinex",
-                                    [
-                                        Trait.Basic,
-                                        Trait.IsNotHostile,
-                                        Trait.DoesNotBreakStealth,
-                                        Trait.UsesPerception
-                                    ],
-                                    "Attempt to disbelieve Oljinex' illusory terrain with a Seek action against the caster's class DC.",
-                                    Target.Self(
-                                        (cr, ai) => int.MinValue)) // TODO: encourage the action?
-                                .WithActiveRollSpecification(new ActiveRollSpecification(
-                                    Checks.Perception(),
-                                    (action, attacker, defender) =>
-                                        new CalculatedNumber(RunesmithClass.RunesmithDC(defender!), "Class DC", [])))
-                                .WithActionId(ActionId.Seek)
-                                .WithActionCost(1)
-                                .WithEffectOnEachTarget(async (thisAction, caster2, target2, result) =>
-                                {
-                                    if (result > CheckResult.Failure)
-                                        caster2.RemoveAllQEffects(qf => qf == qfThis);
-                                });
-                            return new ActionPossibility(seekOljinex, PossibilitySize.Full).WithPossibilityGroup(
-                                "remove debuff");
-                        };
+                            if (tile.DistanceTo(target.Occupies) >
+                                qfThis.Owner.Occupies.DistanceTo(target.Occupies))
+                            {
+                                (qfThis.Tag as Dictionary<Tile,TileKind>)![tile] = tile.Kind;
+                                tile.Kind = TileKind.Wall;
+                            }
+                        }
+                    };
+                    invokedOljinex.WhenExpires = qfThis =>
+                    {
+                        foreach (var tile in ((qfThis.Tag as Dictionary<Tile,TileKind>)!))
+                        {
+                            tile.Key.Kind = tile.Value;
+                        }
+                    };*/
 
-                        cr.AddQEffect(invokedOljinex);
-                        CommonRuneRules.ApplyImmunity(cr, thisRune);
-                    }
+                    // Oljinex reduces speed and prevents steps?
+                    /*invokedOljinex.PreventTakingAction = action => action.ActionId == ActionId.Step ? "Oljinex, Rune of Cowards' Bane" : null;
+                    invokedOljinex.BonusToAllSpeeds = qfThis =>
+                    {
+                        if (qfThis.Tag is true)
+                            return null; // Prevent infinite recursion
+                        qfThis.Tag = true;
+                        qfThis.Owner.RecalculateLandSpeedAndInitiative();
+                        qfThis.Tag = false;
+                        int penalty = - (qfThis.Owner.Speed - 1);
+                        return new Bonus(penalty, BonusType.Untyped, "Oljinex");
+                    };*/
 
-                    CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
-                },
-            }
+                    // Oljinex prevents step and normal stride, replaces stride?
+                    /*invokedOljinex.PreventTakingAction = action => /*action.ActionId == ActionId.Step ||#1# (action.ActionId == ActionId.Stride && action.Tag != invokedOljinex) ? "Oljinex, Rune of Cowards' Bane" : null;
+                    invokedOljinex.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                    {
+                        if (section.Name != "Invisible actions")
+                            return null;
+
+                        // locals
+                        Creature self = qfThis.Owner;
+                        Func<Creature, Tile, Usability> legality = (cr, t) => cr.DistanceTo(t) <= cr.DistanceTo(cannotMoveAwayFrom) ? Usability.Usable : Usability.NotUsable("Oljinex, Rune of Cowards' Bane");
+
+                        // Requires copying the basic Stride.
+                        CombatAction oljinexStride = new CombatAction(
+                                self,
+                                IllustrationName.None,
+                                self.HasEffect(QEffectId.Flying) ? "Fly" : "Stride",
+                                [Trait.Move, Trait.Basic],
+                                "Move up to your Speed.",
+                                Target.Tile(
+                                        (cr, t) => t.LooksFreeTo(cr),
+                                        (_, _) =>
+                                            int.MinValue)
+                                    .WithAdditionalTargetingRequirement(legality)
+                                    .WithPathfindingGuidelines(cr =>
+                                        new PathfindingDescription { Squares = 2, Style = new MovementStyle() {MaximumSquares = 2} })) //cr.Speed }))
+                            .WithActionId(ActionId.Stride)
+                            .WithActionCost(!self.Actions.NextStrideIsFree ? 1 : 0)
+                            .WithEffectOnChosenTargets(async (action, self2, targets) =>
+                                await self2.MoveToUsingEarlierFloodfill(targets.ChosenTile, action,
+                                    new MovementStyle()
+                                    {
+                                        MaximumSquares = 2, //self2.Speed,
+                                        Shifting = self2.HasEffect(QEffectId.Mobility) && !targets.ChosenTile
+                                            .InIteration.RequiresProvokingAttackOfOpportunity
+                                    }));
+                        oljinexStride.Tag = invokedOljinex;
+
+                        return new ActionPossibility(oljinexStride);
+                    };*/
+
+                    // Oljinex updates normal moves?
+                    /*invokedOljinex.StateCheck = async qfThis => // StateCheck is run before possibilities are generated.
+                    {
+                        (qfThis.Tag as List<CombatAction>)?.Clear(); // Just in case extra garbage collection is needed.
+                        qfThis.Tag = new List<CombatAction>();
+                    };
+                    invokedOljinex.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                    {
+                        // This gets called after a possibility is generated.
+                        // Gets called multiple times, so make sure not to do too much recursion.
+                        // That's what the StateCheck and .Tag is used for.
+
+                        Creature self = qfThis.Owner;
+                        Func<Creature, Tile, bool> isNotTooFar = (cr, t) => cr.DistanceTo(t) <= cr.DistanceTo(cannotMoveAwayFrom);
+
+                        Possibilities movePossibilities = self.Possibilities.Filter(possibility =>
+                            possibility.CombatAction.HasTrait(Trait.Move) && possibility.CombatAction.Target is TileTarget);
+                        foreach (PossibilitySection allSection in movePossibilities.Sections)
+                        {
+                            foreach (ActionPossibility movePossibility in allSection.Possibilities.Where(possibility => possibility is ActionPossibility).Cast<ActionPossibility>())
+                            {
+                                CombatAction moveAction = movePossibility.CombatAction;
+
+                                List<CombatAction>? alreadyModified = (qfThis.Tag as List<CombatAction>);
+                                if (alreadyModified == null || alreadyModified.Contains(moveAction))
+                                    continue;
+
+                                TileTarget oldTarget = (moveAction.Target as TileTarget)!; // Checked during .Filter().
+                                Func<Creature, Tile, Usability>? oldExtraPrereq =
+                                    oldTarget.AdditionalTargetingRequirement;
+                                moveAction.Target = oldTarget.WithAdditionalTargetingRequirement(
+                                    (cr, t) =>
+                                    {
+                                        if (oldExtraPrereq != null)
+                                            return oldExtraPrereq.Invoke(cr, t) && isNotTooFar.Invoke(cr, t) ? Usability.Usable : Usability.CommonReasons.NotUsableForComplexReason;
+                                        else
+                                            return isNotTooFar.Invoke(cr, t) ? Usability.Usable : Usability.CommonReasons.NotUsableForComplexReason;
+                                    });
+
+                                alreadyModified.Add(moveAction);
+                            }
+                        }
+
+                        return null;
+                    };*/
+
+                    // Oljinex fizzles move actions with a flat check, or greater if that target is too far away?
+                    invokedOljinex.Description =
+                        $"If you attempt a move action, you must succeed at a DC 5 flat check or it is lost. The DC is 11 instead if you attempt to move further away from {{Blue}}{target.Name}{{/Blue}}.";
+                    invokedOljinex.FizzleOutgoingActions = async (qfThis, action, stringBuilder) =>
+                    {
+                        if (!action.HasTrait(Trait.Move))
+                            return false;
+
+                        // Define this in case it needs to change for behavioral logic
+                        Tile cannotMoveFrom = invokedRune.Owner.Occupies; //target.Occupies;
+                        int flatDC = 5;
+                        if (action.ChosenTargets.ChosenTile is { } chosenTile
+                            && cannotMoveFrom.DistanceTo(chosenTile) >
+                            cannotMoveFrom.DistanceTo(qfThis.Owner.Occupies))
+                            flatDC = 11;
+                        (CheckResult, string) result = Checks.RollFlatCheck(flatDC);
+                        stringBuilder.AppendLine($"Moved while debuffed: {result.Item2}" +
+                                                 $"\n\n{{b}}{flatDC} DC breakdown:\n5{{/b}} Flat DC" +
+                                                 (flatDC == 11 ? "\n{b}{Red}+6{/Red}{/b} moved further away" : ""));
+
+                        if (result.Item1 < CheckResult.Success)
+                            return true;
+
+                        // Certain basic actions don't reach the code block where this log is announced,
+                        // so this manually announces them anyway.
+                        if (action.Name is "Stride" or "Step" or "Fly")
+                            action.Owner.Battle.Log("Flat check passed.", action.Name, stringBuilder.ToString());
+
+                        return false;
+                    };
+
+                    // Seek to disbelieve the illusion.
+                    invokedOljinex.ProvideContextualAction = qfThis =>
+                    {
+                        CombatAction seekOljinex = new CombatAction(
+                                qfThis.Owner,
+                                new SideBySideIllustration(IllustrationName.FearsomeRunestone,
+                                    IllustrationName.Seek),
+                                "Disbelieve Oljinex",
+                                [
+                                    Trait.Basic,
+                                    Trait.IsNotHostile,
+                                    Trait.DoesNotBreakStealth,
+                                    Trait.UsesPerception
+                                ],
+                                "Attempt to disbelieve Oljinex' illusory terrain with a Seek action against the caster's class DC.",
+                                Target.Self(
+                                    (cr, ai) => int.MinValue)) // TODO: encourage the action?
+                            .WithActiveRollSpecification(new ActiveRollSpecification(
+                                Checks.Perception(),
+                                (action, attacker, defender) =>
+                                    new CalculatedNumber(RunesmithClass.RunesmithDC(defender!), "Class DC", [])))
+                            .WithActionId(ActionId.Seek)
+                            .WithActionCost(1)
+                            .WithEffectOnEachTarget(async (thisAction, caster2, target2, result) =>
+                            {
+                                if (result > CheckResult.Failure)
+                                    caster2.RemoveAllQEffects(qf => qf == qfThis);
+                            });
+                        return new ActionPossibility(seekOljinex, PossibilitySize.Full).WithPossibilityGroup(
+                            "remove debuff");
+                    };
+
+                    cr.AddQEffect(invokedOljinex);
+                    CommonRuneRules.ApplyImmunity(cr, thisRune);
+                }
+
+                CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
+            })
             .WithDrawnOnShieldTechnical();
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneOljinex", runeOljinex);
 
@@ -1061,112 +1021,108 @@ public static class RunesmithRunes
                 "This rune sheds a revealing light in a 20-foot emanation. Creatures inside it take a -1 item penalty to Stealth checks, and the rune-bearer can't be undetected.",
                 "Each creature in the emanation must succeed at a Fortitude save or be dazzled for 1 round. The light fades, but leaves behind a dim glow which prevents the target from being undetected for 1 round.",
                 additionalTraits: [Trait.Light])
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
-                InvokeTechnicalTraits =
-                [
-                    //Trait.DoesNotRequireAttackRollOrSavingThrow, // Debatable. The target does save, but so does everyone else.
-                ],
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
-                {
-                    const float emanationSize = 4f; // 20 feet
+                const float emanationSize = 4f; // 20 feet
 
-                    DrawnRune pluunaPassive = new DrawnRune(
-                        thisRune,
-                        thisRune.Name,
-                        "Can't become undetected, and all creatures in a 20-foot emanation takes a -1 item penalty to Stealth checks.",
-                        ExpirationCondition.Ephemeral,
-                        caster,
-                        thisRune.Illustration)
+                DrawnRune pluunaPassive = new DrawnRune(
+                    thisRune,
+                    thisRune.Name,
+                    "Can't become undetected, and all creatures in a 20-foot emanation takes a -1 item penalty to Stealth checks.",
+                    ExpirationCondition.Ephemeral,
+                    caster,
+                    thisRune.Illustration)
+                {
+                    SpawnsAura = qfThis =>
                     {
-                        SpawnsAura = qfThis =>
-                        {
-                            return new
-                                MagicCircleAuraAnimation(IllustrationName.AngelicHaloCircle,
-                                    Microsoft.Xna.Framework.Color.Gold, emanationSize);
-                        },
-                        StateCheck = qfThis =>
-                        {
-                            qfThis.Owner.DetectionStatus.Undetected = false;
-                            qfThis.Owner.Battle.AllCreatures
-                                .Where(cr =>
-                                    cr.DistanceTo(qfThis.Owner) <= emanationSize)
-                                .ForEach(cr =>
-                                    cr.AddQEffect(new QEffect("Pluuna's Light",
-                                        "You have a -1 item penalty to Stealth checks.", ExpirationCondition.Ephemeral,
-                                        qfThis.Owner, IllustrationName.Light)
-                                    {
-                                        BonusToSkills = skill => skill == Skill.Stealth
-                                            ? new Bonus(-1, BonusType.Item, thisRune.Name)
-                                            : null
-                                    }));
-                        },
-                    };
-
-                    return pluunaPassive;
-                },
-                InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
-                {
-                    const float emanationSize = 4f; // 20 feet
-
-                    // Create action wrapper for targeting and roll-inspection of invoking from target to emanation creatures.
-                    CombatAction invokePluunaOnEveryone = new CombatAction(
-                            target, // Get creatures near the rune, who is the creature with the drawn rune being invoked
-                            thisRune.Illustration,
-                            $"Invoke {thisRune.Name}",
-                            new List<Trait>(thisRune.Traits).Append(Trait.DoNotShowInCombatLog).ToArray(),
-                            thisRune.InvocationTextWithHeightening(thisRune, caster.Level) ?? thisRune.InvocationText!,
-                            Target.Emanation((int)emanationSize))
-                        .WithActionCost(0)
-                        .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
-                        .WithSoundEffect(ModData.SfxNames.InvokedPluuna)
-                        .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
-                        .WithNoSaveFor((thisAction, cr) => CommonRuneRules.IsImmuneToThisInvocation(cr, thisRune))
-                        .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
-                        {
-                            /*foreach (Creature cr in caster.Battle.AllCreatures.Where(cr => cr.DistanceTo(target) <= emanationSize))
-                            {
-                                if (thisRune.IsImmuneToThisInvocation(cr))
-                                    continue;
-                            
-                                CheckResult result = CommonSpellEffects.RollSavingThrow(cr, sourceAction, Defense.Fortitude, caster.ClassOrSpellDC());
-                                if (result <= CheckResult.Failure)
+                        return new
+                            MagicCircleAuraAnimation(IllustrationName.AngelicHaloCircle,
+                                Microsoft.Xna.Framework.Color.Gold, emanationSize);
+                    },
+                    StateCheck = qfThis =>
+                    {
+                        qfThis.Owner.DetectionStatus.Undetected = false;
+                        qfThis.Owner.Battle.AllCreatures
+                            .Where(cr =>
+                                cr.DistanceTo(qfThis.Owner) <= emanationSize)
+                            .ForEach(cr =>
+                                cr.AddQEffect(new QEffect("Pluuna's Light",
+                                    "You have a -1 item penalty to Stealth checks.", ExpirationCondition.Ephemeral,
+                                    qfThis.Owner, IllustrationName.Light)
                                 {
-                                    cr.AddQEffect(QEffect.Dazzled().WithExpirationAtStartOfSourcesTurn(caster, 1));
-                                }
-                            
-                                thisRune.ApplyImmunity(cr);
-                            }*/
+                                    BonusToSkills = skill => skill == Skill.Stealth
+                                        ? new Bonus(-1, BonusType.Item, thisRune.Name)
+                                        : null
+                                }));
+                    },
+                };
 
-                            if (!CommonRuneRules.IsImmuneToThisInvocation(invokedOnto, thisRune))
+                return pluunaPassive;
+            })
+            .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
+            {
+                const float emanationSize = 4f; // 20 feet
+
+                // Create action wrapper for targeting and roll-inspection of invoking from target to emanation creatures.
+                CombatAction invokePluunaOnEveryone = new CombatAction(
+                        target, // Get creatures near the rune, who is the creature with the drawn rune being invoked
+                        thisRune.Illustration,
+                        $"Invoke {thisRune.Name}",
+                        new List<Trait>(thisRune.Traits).Append(Trait.DoNotShowInCombatLog).ToArray(),
+                        thisRune.InvocationTextWithHeightening(thisRune, caster.Level) ?? thisRune.InvocationText!,
+                        Target.Emanation((int)emanationSize))
+                    .WithActionCost(0)
+                    .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
+                    .WithSoundEffect(ModData.SfxNames.InvokedPluuna)
+                    .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
+                    .WithNoSaveFor((thisAction, cr) => CommonRuneRules.IsImmuneToThisInvocation(cr, thisRune))
+                    .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
+                    {
+                        /*foreach (Creature cr in caster.Battle.AllCreatures.Where(cr => cr.DistanceTo(target) <= emanationSize))
+                        {
+                            if (thisRune.IsImmuneToThisInvocation(cr))
+                                continue;
+                        
+                            CheckResult result = CommonSpellEffects.RollSavingThrow(cr, sourceAction, Defense.Fortitude, caster.ClassOrSpellDC());
+                            if (result <= CheckResult.Failure)
                             {
-                                if (result <= CheckResult.Failure)
-                                {
-                                    invokedOnto.AddQEffect(QEffect.Dazzled()
-                                        .WithExpirationAtStartOfSourcesTurn(caster, 1));
-                                }
-
-                                CommonRuneRules.ApplyImmunity(invokedOnto, thisRune);
+                                cr.AddQEffect(QEffect.Dazzled().WithExpirationAtStartOfSourcesTurn(caster, 1));
                             }
-                        });
+                        
+                            thisRune.ApplyImmunity(cr);
+                        }*/
 
-                    if (await caster.Battle.GameLoop.FullCast(
-                            invokePluunaOnEveryone /*, ChosenTargets.CreateSingleTarget(target)*/))
-                    {
-                        QEffect invokedPluuna = invokedRune.NewInvocationEffect(
-                            "This dim light prevents you from being undetected.",
-                            ExpirationCondition.ExpiresAtStartOfSourcesTurn);
-                        invokedPluuna.StateCheck = qfThis => { qfThis.Owner.DetectionStatus.Undetected = false; };
+                        if (!CommonRuneRules.IsImmuneToThisInvocation(invokedOnto, thisRune))
+                        {
+                            if (result <= CheckResult.Failure)
+                            {
+                                invokedOnto.AddQEffect(QEffect.Dazzled()
+                                    .WithExpirationAtStartOfSourcesTurn(caster, 1));
+                            }
 
-                        CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
-                        target.AddQEffect(invokedPluuna);
-                    }
-                    else
-                        sourceAction.RevertRequested = true;
-                },
-            }
+                            CommonRuneRules.ApplyImmunity(invokedOnto, thisRune);
+                        }
+                    });
+
+                if (await caster.Battle.GameLoop.FullCast(
+                        invokePluunaOnEveryone /*, ChosenTargets.CreateSingleTarget(target)*/))
+                {
+                    QEffect invokedPluuna = invokedRune.NewInvocationEffect(
+                        "This dim light prevents you from being undetected.",
+                        ExpirationCondition.ExpiresAtStartOfSourcesTurn);
+                    invokedPluuna.StateCheck = qfThis => { qfThis.Owner.DetectionStatus.Undetected = false; };
+
+                    CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
+                    target.AddQEffect(invokedPluuna);
+                }
+                else
+                    sourceAction.RevertRequested = true;
+            })
+            //.WithTargetDoesNotSaveTechnical() // Debatable. The target does save, but so does everyone else.
             .WithFortitudeSaveInvocationTechnical();
         AddRuneAsRuneFeat("RunesmithPlaytest.RunePluuna", runePluuna);
 
+        // BUG: Much like how Jurroz retroactively tracks damage taken, this should retroactively track moves made.
         Rune runeRanshu = new Rune(
                 "Ranshu, Rune of Thunder",
                 ModData.Traits.Ranshu,
@@ -1178,76 +1134,68 @@ public static class RunesmithRunes
                 "The preliminary streaks of lightning braid together into a powerful bolt. The rune-bearer takes 2d6 electricity damage, with a basic Fortitude save.",
                 "The damage increases by 1, and the damage of the invocation increases by 2d6.",
                 [Trait.Electricity, Trait.Primal])
-            {
-                LevelFormat = "+2",
-                PassiveTextWithHeightening = (thisRune, charLevel) =>
+            .WithHeightenedText(
+                (thisRune, charLevel) =>
                 {
                     int bonusDamage = (charLevel - thisRune.BaseLevel) / 2;
-                    string damage = "1d4" +
-                                    (bonusDamage > 0 ? $"+{S.HeightenedVariable(bonusDamage, 0)}" : null);
-                    return
-                        $"If the bearer does not take a move action at least once on its turn, lightning finds it at the end of its turn, dealing {damage} electricity damage.";
+                    string damage = "1d4" + (bonusDamage > 0 ? $"+{S.HeightenedVariable(bonusDamage, 0)}" : null);
+                    return $"If the bearer does not take a move action at least once on its turn, lightning finds it at the end of its turn, dealing {damage} electricity damage.";
                 },
-                InvocationTextWithHeightening = (thisRune, charLevel) =>
+                (thisRune, charLevel) =>
                 {
                     int numDice = 2 + (int)Math.Floor((charLevel - thisRune.BaseLevel) / 2d) * 2;
                     string heightenedVar = S.HeightenedVariable(numDice, 2);
-
-                    return
-                        $"The preliminary streaks of lightning braid together into a powerful bolt. The rune-bearer takes {heightenedVar}d6 electricity damage, with a basic Fortitude save.";
+                    return $"The preliminary streaks of lightning braid together into a powerful bolt. The rune-bearer takes {heightenedVar}d6 electricity damage, with a basic Fortitude save.";
                 },
-                UsageCondition = (attacker, defender) =>
+                "+2")
+            .WithUsageCondition(Rune.UsabilityConditions.UsableOnEnemies())
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
+            {
+                int bonusDamage = (caster.Level - thisRune.BaseLevel) / 2;
+                DiceFormula immobilityDamage = DiceFormula.FromText($"1d4+{bonusDamage}");
+                DrawnRune ranshuPassive = new DrawnRune(
+                    thisRune,
+                    thisRune.Name,
+                    $"If you don't take a move action at least once during your turn, you take {immobilityDamage} electricity damage.")
                 {
-                    return defender.EnemyOf(attacker)
-                        ? Usability.Usable
-                        : Usability.NotUsableOnThisCreature("not an enemy");
-                },
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
-                {
-                    int bonusDamage = ((caster?.Level ?? 1) - thisRune.BaseLevel) / 2;
-                    DiceFormula immobilityDamage = DiceFormula.FromText($"1d4+{bonusDamage}");
-                    DrawnRune ranshuPassive = new DrawnRune(thisRune, thisRune.Name,
-                        $"If you don't take a move action at least once during your turn, you take {immobilityDamage} electricity damage.")
+                    Illustration = thisRune.Illustration,
+                    Source = caster,
+                    //Value = immobilityDamage.ExpectedValue, // Value might be an unnecessary field, aesthetically. // TODO: use Key field?
+                    Traits = [..thisRune.Traits],
+                    AfterYouTakeAction = async (qfThis, action) =>
                     {
-                        Illustration = thisRune.Illustration,
-                        Source = caster,
-                        //Value = immobilityDamage.ExpectedValue, // Value might be an unnecessary field, aesthetically. // TODO: use Key field?
-                        Traits = [..thisRune.Traits],
-                        AfterYouTakeAction = async (qfThis, action) =>
-                        {
-                            if (action.HasTrait(Trait.Move))
-                                qfThis.UsedThisTurn = true; // Has moved this turn
-                        },
-                        EndOfYourTurnDetrimentalEffect = async (qfThis, self) =>
-                        {
-                            if ((qfThis as DrawnRune)!.Disabled)
-                                return;
-                            if (qfThis.UsedThisTurn == true) // If you have moved this turn,
-                                return; // don't take any damage.
-                            await CommonSpellEffects.DealDirectDamage(null, immobilityDamage, self, CheckResult.Failure,
-                                DamageKind.Electricity);
-                            Sfxs.Play(ModData.SfxNames.PassiveRanshu);
-                        },
-                    };
-                    return ranshuPassive;
-                },
-                InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
-                {
-                    if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
+                        if (action.HasTrait(Trait.Move))
+                            qfThis.UsedThisTurn = true; // Has moved this turn
+                    },
+                    EndOfYourTurnDetrimentalEffect = async (qfThis, self) =>
                     {
-                        int numDice = 2 + (int)Math.Floor((caster.Level - thisRune.BaseLevel) / 2d) * 2;
-                        DiceFormula invocationDamage = DiceFormula.FromText($"{numDice}d6");
-                        CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude,
-                            RunesmithClass.RunesmithDC(caster));
-                        await CommonSpellEffects.DealBasicDamage(sourceAction, caster, target, result,
-                            invocationDamage, DamageKind.Electricity);
-                        Sfxs.Play(ModData.SfxNames.InvokedRanshu);
-                    }
+                        if ((qfThis as DrawnRune)!.Disabled)
+                            return;
+                        if (qfThis.UsedThisTurn == true) // If you have moved this turn,
+                            return; // don't take any damage.
+                        await CommonSpellEffects.DealDirectDamage(null, immobilityDamage, self, CheckResult.Failure,
+                            DamageKind.Electricity);
+                        Sfxs.Play(ModData.SfxNames.PassiveRanshu);
+                    },
+                };
+                return ranshuPassive;
+            })
+            .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
+            {
+                if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
+                {
+                    int numDice = 2 + (int)Math.Floor((caster.Level - thisRune.BaseLevel) / 2d) * 2;
+                    DiceFormula invocationDamage = DiceFormula.FromText($"{numDice}d6");
+                    CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude,
+                        RunesmithClass.RunesmithDC(caster));
+                    await CommonSpellEffects.DealBasicDamage(sourceAction, caster, target, result,
+                        invocationDamage, DamageKind.Electricity);
+                    Sfxs.Play(ModData.SfxNames.InvokedRanshu);
+                }
 
-                    CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
-                    CommonRuneRules.ApplyImmunity(target, thisRune);
-                },
-            }
+                CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
+                CommonRuneRules.ApplyImmunity(target, thisRune);
+            })
             .WithDetrimentalPassiveTechnical()
             .WithDamagingInvocationTechnical()
             .WithFortitudeSaveInvocationTechnical();
@@ -1262,109 +1210,97 @@ public static class RunesmithRunes
                 "This spiraling diacritic channels the magic of a rune outwards, then back to the same location, allowing a rune to reconstitute itself.",
                 "After the base rune is invoked, the rune automatically Traces itself back upon the same target.\n\n{b}Special{/b} You can have only one copy of {i}sun-, diacritic rune of preservation{/i} applied at a given time, and once you invoke it, you cannot Etch or Trace it again this combat.",
                 additionalTraits: [ModData.Traits.Diacritic])
+            .WithUsageCondition(Rune.UsabilityConditions.CombinedUsability(
+                (atk, _) => atk.PersistentUsedUpResources.UsedUpActions.Contains("SunDiacritic")
+                    ? Usability.NotUsable("already invoked this combat")
+                    : Usability.Usable,
+                Rune.UsabilityConditions.UsableOnDiacritics(dr => !dr.Traits.Contains(ModData.Traits.Diacritic))))
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
-                UsageCondition = (attacker, defender) =>
+                // Only one instance allowed when drawn
+                foreach (Creature cr in target.Battle.AllCreatures)
                 {
-                    if (attacker.PersistentUsedUpResources.UsedUpActions.Contains("SunDiacritic"))
-                        return Usability.NotUsable("already invoked this combat");
-                    if (DrawnRune.GetDrawnRunes(null, defender) is { } drawnRunes)
-                        if (drawnRunes.Count == 0)
-                            return Usability.NotUsableOnThisCreature("not a rune-bearer");
-                        else if (drawnRunes.Any(dr => dr.AttachedDiacritic == null && !dr.Traits.Contains(ModData.Traits.Diacritic)))
-                            return Usability.Usable;
-                        else
-                            return Usability.NotUsableOnThisCreature("no valid runes");
-                    return Usability.Usable;
-                },
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
-                {
-                    // Only one instance allowed when drawn
-                    foreach (Creature cr in target.Battle.AllCreatures)
+                    cr.RemoveAllQEffects(qf => qf.Traits.Contains(ModData.Traits.SunDiacritic));
+                    DrawnRune.GetDrawnRunes(caster, cr).ForEach(dr =>
                     {
-                        cr.RemoveAllQEffects(qf => qf.Traits.Contains(ModData.Traits.SunDiacritic));
-                        DrawnRune.GetDrawnRunes(caster, cr).ForEach(dr =>
-                        {
-                            if (dr.AttachedDiacritic != null &&
-                                dr.AttachedDiacritic.Traits.Contains(ModData.Traits.SunDiacritic))
-                                dr.AttachedDiacritic = null;
-                        });
-                    }
-
-                    DrawnRune? CreateSunPassive(DrawnRune targetRune)
-                    {
-                        DrawnRune drawnSun = new DrawnRune(
-                                thisRune,
-                                $"{thisRune.Name} ({targetRune.Name})",
-                                "The base rune is automatically Traced again after being invoked.",
-                                ExpirationCondition.Ephemeral,
-                                caster,
-                                thisRune.Illustration)
-                            {
-                                Traits = [..thisRune.Traits],
-                                BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
-                                {
-                                    if (thisDr.Disabled)
-                                        return;
-                                    /*CombatAction sunRedraw = CombatAction.CreateSimple(
-                                        drInvoked.Source!,
-                                        "Sun, Diacritic Rune of Preservation",
-                                        [ModData.Traits.Traced]); // <- Even if it WAS etched before, it's now traced.*/
-                                    CombatAction sunRedraw = CommonRuneRules.CreateTraceAction(drInvoked.Source!, drInvoked.Rune, 0, 99);
-                                    if (await CommonRuneRules.DrawRuneOnTarget(sunRedraw, thisDr.Source!,
-                                            drInvoked.Owner, drInvoked.Rune, false) != null)
-                                        Sfxs.Play(ModData.SfxNames.InvokedSun);
-                                    thisDr.Source!.PersistentUsedUpResources.UsedUpActions.Add("SunDiacritic");
-                                },
-                            }
-                            .WithDiacriticRegulator(targetRune);
-
-                        return drawnSun;
-                    }
-
-                    // Target a specific rune
-                    List<string> validRunesString = [];
-                    List<DrawnRune> validRunes = [];
-                    foreach (DrawnRune dr in DrawnRune.GetDrawnRunes(null, target)
-                                 .Where(dr => dr.AttachedDiacritic == null))
-                    {
-                        validRunesString.Add(dr.Name ?? dr.ToString());
-                        validRunes.Add(dr);
-                    }
-
-                    if (validRunes.Count == 0)
-                        return null;
-
-                    if (sourceAction?.Target is AreaTarget)
-                    {
-                        foreach (DrawnRune? sunPassive in validRunes.Select(CreateSunPassive))
-                        {
-                            if (sunPassive == null)
-                                continue;
-                            
-                            // Determine the way the rune is being applied.
-                            if (sourceAction.HasTrait(ModData.Traits.Etched))
-                                sunPassive.WithIsEtched();
-                            else if (sourceAction.HasTrait(ModData.Traits.Traced))
-                                sunPassive.WithIsTraced();
-
-                            target.AddQEffect(sunPassive);
-                        }
-                        // Return an ephemeral DrawnRune since we just applied this to a whole batch of runes.
-                        return new DrawnRune(thisRune); 
-                    }
-                    
-                    ArgumentNullException.ThrowIfNull(caster);
-                    ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
-                        thisRune.Illustration,
-                        $"{{b}}{sourceAction?.Name}{{/b}}\nWhich rune would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
-                        validRunesString.ToArray()
-                    );
-
-                    DrawnRune targetRune = validRunes[chosenOption.Index];
-
-                    return CreateSunPassive(targetRune);
+                        if (dr.AttachedDiacritic != null &&
+                            dr.AttachedDiacritic.Traits.Contains(ModData.Traits.SunDiacritic))
+                            dr.AttachedDiacritic = null;
+                    });
                 }
-            }
+
+                DrawnRune? CreateSunPassive(DrawnRune targetRune)
+                {
+                    DrawnRune drawnSun = new DrawnRune(
+                            thisRune,
+                            $"{thisRune.Name} ({targetRune.Name})",
+                            "The base rune is automatically Traced again after being invoked.",
+                            ExpirationCondition.Ephemeral,
+                            caster,
+                            thisRune.Illustration)
+                        {
+                            Traits = [..thisRune.Traits],
+                            BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
+                            {
+                                if (thisDr.Disabled)
+                                    return;
+                                /*CombatAction sunRedraw = CombatAction.CreateSimple(
+                                    drInvoked.Source!,
+                                    "Sun, Diacritic Rune of Preservation",
+                                    [ModData.Traits.Traced]); // <- Even if it WAS etched before, it's now traced.*/
+                                CombatAction sunRedraw = CommonRuneRules.CreateTraceAction(drInvoked.Source!, drInvoked.Rune, 0, 99);
+                                if (await CommonRuneRules.DrawRuneOnTarget(sunRedraw, thisDr.Source!,
+                                        drInvoked.Owner, drInvoked.Rune, false) != null)
+                                    Sfxs.Play(ModData.SfxNames.InvokedSun);
+                                thisDr.Source!.PersistentUsedUpResources.UsedUpActions.Add("SunDiacritic");
+                            },
+                        }
+                        .WithDiacriticRegulator(targetRune);
+                    return drawnSun;
+                }
+
+                // Target a specific rune
+                List<string> validRunesString = [];
+                List<DrawnRune> validRunes = [];
+                foreach (DrawnRune dr in DrawnRune.GetDrawnRunes(null, target)
+                             .Where(dr => dr.AttachedDiacritic == null))
+                {
+                    validRunesString.Add(dr.Name ?? dr.ToString());
+                    validRunes.Add(dr);
+                }
+
+                if (validRunes.Count == 0)
+                    return null;
+
+                if (sourceAction.Target is AreaTarget)
+                {
+                    foreach (DrawnRune? sunPassive in validRunes.Select(CreateSunPassive))
+                    {
+                        if (sunPassive == null)
+                            continue;
+                        
+                        // Determine the way the rune is being applied.
+                        if (sourceAction.HasTrait(ModData.Traits.Etched))
+                            sunPassive.WithIsEtched();
+                        else if (sourceAction.HasTrait(ModData.Traits.Traced))
+                            sunPassive.WithIsTraced();
+
+                        target.AddQEffect(sunPassive);
+                    }
+                    // Return an ephemeral DrawnRune since we just applied this to a whole batch of runes.
+                    return new DrawnRune(thisRune); 
+                }
+                
+                ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
+                    thisRune.Illustration,
+                    $"{{b}}{sourceAction?.Name}{{/b}}\nWhich rune would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                    validRunesString.ToArray()
+                );
+
+                DrawnRune targetRune = validRunes[chosenOption.Index];
+
+                return CreateSunPassive(targetRune);
+            })
             .WithDrawnOnRuneTechnical();
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneSunDiacritic", runeSunDiacritic);
 
@@ -1378,112 +1314,97 @@ public static class RunesmithRunes
                 "This diacritic accentuates the base rune with bolder lines to give greater weight to its effects.",
                 "When the base rune is invoked, its invocation gains a status bonus to damage equal to your Intelligence modifier.",
                 additionalTraits: [ModData.Traits.Diacritic])
+            .WithUsageCondition(Rune.UsabilityConditions.UsableOnDiacritics(dr => dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile)))
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
-                UsageCondition = (attacker, defender) =>
+                DrawnRune? CreateUrPassive(DrawnRune targetRune)
                 {
-                    if (DrawnRune.GetDrawnRunes(null, defender) is { } drawnRunes)
-                        if (drawnRunes.Count == 0)
-                            return Usability.NotUsableOnThisCreature("not a rune-bearer");
-                        else if (drawnRunes.Any(dr =>
-                                     dr.AttachedDiacritic == null &&
-                                     dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile)))
-                            return Usability.Usable;
-                        else
-                            return Usability.NotUsableOnThisCreature("no valid runes");
-                    return Usability.Usable;
-                },
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
-                {
-                    DrawnRune? CreateUrPassive(DrawnRune targetRune)
-                    {
-                        ArgumentNullException.ThrowIfNull(caster);
-                        
-                        DrawnRune drawnUr = new DrawnRune(
-                            thisRune,
-                            $"{thisRune.Name} ({targetRune.Name})",
-                            $"The base rune's invocation damage gains a +{caster.Abilities.Intelligence} status bonus.",
-                            ExpirationCondition.Ephemeral,
-                            caster,
-                            thisRune.Illustration)
-                        {
-                            Traits = [..thisRune.Traits],
-                            BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
-                            {
-                                if (thisDr.Disabled)
-                                    return;
-                                QEffect invokeBonus = new QEffect()
-                                {
-                                    // No expiration because it needs to exist longer for invocations such as Esvadir which have hidden subsidiaries going on
-                                    // Is removed on its own when the rune is invoked, and it only applies to the same type, so it should be safe to manually expire that way in this callback structure.
-                                    //ExpiresAt = ExpirationCondition.EphemeralAtEndOfImmediateAction,
-                                    BonusToDamage = (qfThis, action, defender) =>
-                                    {
-                                        if (thisDr.Disabled)
-                                            return null;
-
-                                        if (!action.HasTrait(ModData.Traits.Invocation)
-                                            || action.Tag is not Rune
-                                            || drInvoked != thisDr.DrawnOn)
-                                            return null;
-
-                                        return new Bonus(caster.Abilities.Intelligence, BonusType.Status,
-                                            "Ur, Diacritic Rune of Intensity");
-                                    },
-                                };
-                                ArgumentNullException.ThrowIfNull(thisDr.Source);
-                                thisDr.Source.AddQEffect(invokeBonus);
-                            },
-                        }.WithDiacriticRegulator(targetRune);
-
-                        return drawnUr;
-                    }
-
-                    // Target a specific rune
-                    List<string> validRunesString = [];
-                    List<DrawnRune> validRunes = [];
-                    foreach (DrawnRune dr in DrawnRune.GetDrawnRunes(null, target)
-                                 .Where(dr =>
-                                     dr.AttachedDiacritic == null &&
-                                     dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile)))
-                    {
-                        validRunesString.Add(dr.Name ?? dr.ToString());
-                        validRunes.Add(dr);
-                    }
-
-                    if (validRunes.Count == 0)
-                        return null;
-
-                    if (sourceAction?.Target is AreaTarget)
-                    {
-                        foreach (DrawnRune? urPassive in validRunes.Select(CreateUrPassive))
-                        {
-                            if (urPassive == null)
-                                continue;
-                            
-                            // Determine the way the rune is being applied.
-                            if (sourceAction.HasTrait(ModData.Traits.Etched))
-                                urPassive.WithIsEtched();
-                            else if (sourceAction.HasTrait(ModData.Traits.Traced))
-                                urPassive.WithIsTraced();
-
-                            target.AddQEffect(urPassive);
-                        }
-                        // Return an ephemeral DrawnRune since we just applied this to a whole batch of runes.
-                        return new DrawnRune(thisRune);
-                    }
-                    
                     ArgumentNullException.ThrowIfNull(caster);
-                    ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
-                        thisRune.Illustration,
-                        $"{{b}}{sourceAction?.Name}{{/b}}\nWhich rune would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
-                        validRunesString.ToArray()
-                    );
+                    
+                    DrawnRune drawnUr = new DrawnRune(
+                        thisRune,
+                        $"{thisRune.Name} ({targetRune.Name})",
+                        $"The base rune's invocation damage gains a +{caster.Abilities.Intelligence} status bonus.",
+                        ExpirationCondition.Ephemeral,
+                        caster,
+                        thisRune.Illustration)
+                    {
+                        Traits = [..thisRune.Traits],
+                        BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
+                        {
+                            if (thisDr.Disabled)
+                                return;
+                            QEffect invokeBonus = new QEffect()
+                            {
+                                // No expiration because it needs to exist longer for invocations such as Esvadir which have hidden subsidiaries going on
+                                // Is removed on its own when the rune is invoked, and it only applies to the same type, so it should be safe to manually expire that way in this callback structure.
+                                //ExpiresAt = ExpirationCondition.EphemeralAtEndOfImmediateAction,
+                                BonusToDamage = (qfThis, action, defender) =>
+                                {
+                                    if (thisDr.Disabled)
+                                        return null;
 
-                    DrawnRune targetRune = validRunes[chosenOption.Index];
+                                    if (!action.HasTrait(ModData.Traits.Invocation)
+                                        || action.Tag is not Rune
+                                        || drInvoked != thisDr.DrawnOn)
+                                        return null;
 
-                    return CreateUrPassive(targetRune);
+                                    return new Bonus(caster.Abilities.Intelligence, BonusType.Status,
+                                        "Ur, Diacritic Rune of Intensity");
+                                },
+                            };
+                            ArgumentNullException.ThrowIfNull(thisDr.Source);
+                            thisDr.Source.AddQEffect(invokeBonus);
+                        },
+                    }.WithDiacriticRegulator(targetRune);
+
+                    return drawnUr;
                 }
-            }
+
+                // Target a specific rune
+                List<string> validRunesString = [];
+                List<DrawnRune> validRunes = [];
+                foreach (DrawnRune dr in DrawnRune.GetDrawnRunes(null, target)
+                             .Where(dr =>
+                                 dr.AttachedDiacritic == null &&
+                                 dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile)))
+                {
+                    validRunesString.Add(dr.Name ?? dr.ToString());
+                    validRunes.Add(dr);
+                }
+
+                if (validRunes.Count == 0)
+                    return null;
+
+                if (sourceAction.Target is AreaTarget)
+                {
+                    foreach (DrawnRune? urPassive in validRunes.Select(CreateUrPassive))
+                    {
+                        if (urPassive == null)
+                            continue;
+                        
+                        // Determine the way the rune is being applied.
+                        if (sourceAction.HasTrait(ModData.Traits.Etched))
+                            urPassive.WithIsEtched();
+                        else if (sourceAction.HasTrait(ModData.Traits.Traced))
+                            urPassive.WithIsTraced();
+
+                        target.AddQEffect(urPassive);
+                    }
+                    // Return an ephemeral DrawnRune since we just applied this to a whole batch of runes.
+                    return new DrawnRune(thisRune);
+                }
+                
+                ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
+                    thisRune.Illustration,
+                    $"{{b}}{sourceAction?.Name}{{/b}}\nWhich rune would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                    validRunesString.ToArray()
+                );
+
+                DrawnRune targetRune = validRunes[chosenOption.Index];
+
+                return CreateUrPassive(targetRune);
+            })
             .WithDrawnOnRuneTechnical();
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneUrDiacritic", runeUrDiacritic);
 
@@ -1498,330 +1419,313 @@ public static class RunesmithRunes
                 "(teleportation) You call the rune-bearer to your side. You teleport the target to any unoccupied square adjacent to you. If the bearer is unwilling, they can attempt a Will save to negate the effect.",
                 null,
                 [Trait.Arcane])
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
+                DrawnRune drawnZohk = new DrawnRune(
+                    thisRune,
+                    thisRune.Name,
+                    $"You can Stride with a +15-foot status bonus if your destination space is closer to {caster?.Name ?? "(...)"}.",
+                    ExpirationCondition.Ephemeral,
+                    caster,
+                    thisRune.Illustration)
                 {
-                    DrawnRune drawnZohk = new DrawnRune(
-                        thisRune,
-                        thisRune.Name,
-                        $"You can Stride with a +15-foot status bonus if your destination space is closer to {caster?.Name ?? "(...)"}.",
-                        ExpirationCondition.Ephemeral,
-                        caster,
-                        thisRune.Illustration)
+                    Tag = target.Occupies,
+                    StartOfYourEveryTurn = async (qfThis, self) =>
                     {
-                        Tag = target.Occupies,
-                        StartOfYourEveryTurn = async (qfThis, self) =>
-                        {
-                            qfThis.Tag = self.Occupies;
-                        },
-                        ProvideContextualAction = qfThis =>
-                        {
-                            if ((qfThis as DrawnRune)!.Disabled || qfThis.Tag is not Tile startTile)
-                                return null;
+                        qfThis.Tag = self.Occupies;
+                    },
+                    ProvideContextualAction = qfThis =>
+                    {
+                        if ((qfThis as DrawnRune)!.Disabled || qfThis.Tag is not Tile startTile)
+                            return null;
 
-                            CombatAction zohkStride = new CombatAction(
-                                    qfThis.Owner,
-                                    new SideBySideIllustration(IllustrationName.FleetStep, thisRune.Illustration),
-                                    "Stride (Zohk)",
-                                    [Trait.Move],
-                                    qfThis.Description!,
-                                    Target
-                                        .Self() // Behavior is somewhat unreliable. Removed since the world doesn't end if it immediately reverts.
-                                    /*.WithAdditionalRestriction(self =>
-                                    {
-                                        // Code repeated from StrideCloserToEnemyAsync.
-                                        // Go there for slightly better documentation and less consolidated code.
-                                        List<Tile> casterTile = [caster.Occupies];
-                                        IList<Tile> floodFill = Pathfinding.Floodfill(self, self.Battle, new PathfindingDescription()
-                                            {
-                                                Squares = self.Speed,
-                                                Style = { PermitsStep = false }
-                                            });
-                                        bool hasAtLeastOneOption = false;
-                                        foreach (Tile tile in floodFill)
-                                        {
-                                            if (!tile.IsFree || tile == self.Occupies || RunesmithPlaytest.IsTileCloserToAnyOfTheseTiles(self.Occupies, tile, casterTile))
-                                                continue;
-
-                                            CombatAction? moveAction = self.Possibilities.CreateActions(true)
-                                                .FirstOrDefault(pw => pw.Action.ActionId == ActionId.Stride) as CombatAction;
-                                            moveAction?.WithActionCost(0);
-
-                                            if (moveAction == null || !(bool)moveAction.Target.CanBeginToUse(self))
-                                                continue;
-
-                                            hasAtLeastOneOption = true;
-                                        }
-
-                                        return hasAtLeastOneOption ? null : "No legal squares to Stride to";
-                                    })*/)
-                                .WithActionCost(1)
-                                .WithEffectOnSelf(async (thisAction, self) =>
+                        CombatAction zohkStride = new CombatAction(
+                                qfThis.Owner,
+                                new SideBySideIllustration(IllustrationName.FleetStep, thisRune.Illustration),
+                                "Stride (Zohk)",
+                                [Trait.Move],
+                                qfThis.Description!,
+                                Target
+                                    .Self() // Behavior is somewhat unreliable. Removed since the world doesn't end if it immediately reverts.
+                                /*.WithAdditionalRestriction(self =>
                                 {
-                                    self.AddQEffect(new QEffect()
+                                    // Code repeated from StrideCloserToEnemyAsync.
+                                    // Go there for slightly better documentation and less consolidated code.
+                                    List<Tile> casterTile = [caster.Occupies];
+                                    IList<Tile> floodFill = Pathfinding.Floodfill(self, self.Battle, new PathfindingDescription()
+                                        {
+                                            Squares = self.Speed,
+                                            Style = { PermitsStep = false }
+                                        });
+                                    bool hasAtLeastOneOption = false;
+                                    foreach (Tile tile in floodFill)
                                     {
-                                        ExpiresAt = ExpirationCondition.EphemeralAtEndOfImmediateAction,
-                                        BonusToAllSpeeds = qfSpeed => new Bonus(3, BonusType.Status, qfThis.Name!),
-                                    });
+                                        if (!tile.IsFree || tile == self.Occupies || RunesmithPlaytest.IsTileCloserToAnyOfTheseTiles(self.Occupies, tile, casterTile))
+                                            continue;
 
-                                    Creature runeCaster = qfThis.Source!;
-                                    if (!await RunesmithClass.StrideCloserToEnemyAsync(qfThis.Owner, startTile, runeCaster,
-                                            $"Stride closer to {runeCaster.Name} or right-click to cancel."))
-                                    {
-                                        thisAction.RevertRequested = true;
+                                        CombatAction? moveAction = self.Possibilities.CreateActions(true)
+                                            .FirstOrDefault(pw => pw.Action.ActionId == ActionId.Stride) as CombatAction;
+                                        moveAction?.WithActionCost(0);
+
+                                        if (moveAction == null || !(bool)moveAction.Target.CanBeginToUse(self))
+                                            continue;
+
+                                        hasAtLeastOneOption = true;
                                     }
+
+                                    return hasAtLeastOneOption ? null : "No legal squares to Stride to";
+                                })*/)
+                            .WithActionCost(1)
+                            .WithEffectOnSelf(async (thisAction, self) =>
+                            {
+                                self.AddQEffect(new QEffect()
+                                {
+                                    ExpiresAt = ExpirationCondition.EphemeralAtEndOfImmediateAction,
+                                    BonusToAllSpeeds = qfSpeed => new Bonus(3, BonusType.Status, qfThis.Name!),
                                 });
 
-                            return new ActionPossibility(zohkStride, PossibilitySize.Full);
-                        },
-                    };
-
-                    return drawnZohk;
-                },
-                InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
-                {
-                    if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
-                    {
-                        CheckResult result = CheckResult.Failure;
-                        if (!target.FriendOf(caster))
-                        {
-                            result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Will,
-                                RunesmithClass.RunesmithDC(caster));
-                        }
-
-                        if (result <= CheckResult.Failure)
-                        {
-                            List<Option> options = [];
-
-                            // Populate options with empty adjacent tiles
-                            foreach (Tile tile in caster.Battle.Map.Tiles)
-                            {
-                                if (tile.IsFree && tile.IsAdjacentTo(caster.Occupies))
+                                Creature runeCaster = qfThis.Source!;
+                                if (!await RunesmithClass.StrideCloserToEnemyAsync(qfThis.Owner, startTile, runeCaster,
+                                        $"Stride closer to {runeCaster.Name} or right-click to cancel."))
                                 {
-                                    options.Add(new TileOption(tile, "Tile (" + tile.X + "," + tile.Y + ")",
-                                        async () => {},
-                                        int.MinValue, 
-                                        true));
+                                    thisAction.RevertRequested = true;
                                 }
-                            }
+                            });
 
-                            // Prompts the user for their desired tile and returns it or null
-                            Option? selectedOption = (await caster.Battle.SendRequest(
-                                new AdvancedRequest(caster, $"Choose a tile to teleport {target.Name} to.", options)
-                                {
-                                    IsMainTurn = false,
-                                    IsStandardMovementRequest = false,
-                                    TopBarIcon = thisRune.Illustration,
-                                    TopBarText = $"Choose a tile to teleport {target.Name} to.",
-                                })).ChosenOption;
+                        return new ActionPossibility(zohkStride, PossibilitySize.Full);
+                    },
+                };
 
-                            if (selectedOption is TileOption selectedTile)
-                            {
-                                await CommonSpellEffects.Teleport(target, selectedTile.Tile);
-                                Sfxs.Play(ModData.SfxNames.InvokedZohk);
-                            }
-                        }
+                return drawnZohk;
+            })
+            .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
+            {
+                if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
+                {
+                    CheckResult result = CheckResult.Failure;
+                    if (!target.FriendOf(caster))
+                    {
+                        result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Will,
+                            RunesmithClass.RunesmithDC(caster));
                     }
 
-                    CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
-                    CommonRuneRules.ApplyImmunity(target, thisRune);
+                    if (result <= CheckResult.Failure)
+                    {
+                        List<Option> options = [];
+
+                        // Populate options with empty adjacent tiles
+                        foreach (Tile tile in caster.Battle.Map.Tiles)
+                        {
+                            if (tile.IsFree && tile.IsAdjacentTo(caster.Occupies))
+                            {
+                                options.Add(new TileOption(tile, "Tile (" + tile.X + "," + tile.Y + ")",
+                                    async () => {},
+                                    int.MinValue, 
+                                    true));
+                            }
+                        }
+
+                        // Prompts the user for their desired tile and returns it or null
+                        Option? selectedOption = (await caster.Battle.SendRequest(
+                            new AdvancedRequest(caster, $"Choose a tile to teleport {target.Name} to.", options)
+                            {
+                                IsMainTurn = false,
+                                IsStandardMovementRequest = false,
+                                TopBarIcon = thisRune.Illustration,
+                                TopBarText = $"Choose a tile to teleport {target.Name} to.",
+                            })).ChosenOption;
+
+                        if (selectedOption is TileOption selectedTile)
+                        {
+                            await CommonSpellEffects.Teleport(target, selectedTile.Tile);
+                            Sfxs.Play(ModData.SfxNames.InvokedZohk);
+                        }
+                    }
                 }
-            }
+
+                CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
+                CommonRuneRules.ApplyImmunity(target, thisRune);
+            })
             .WithWillSaveInvocationTechnical();
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneZohk", runeZohk);
 
         // Level 9 Runes
         Rune runeEnDiacritic = new Rune(
-            "En-, Diacritic Rune of Expansion",
-            ModData.Traits.EnDiacritic,
-            IllustrationName.UnderwaterRunestone,
-            9,
-            "drawn on a rune that deals damage (and not already in an area)",
-            "This diacritic surrounds a rune with outward-facing arrows to magnify and direct power outward.",
-            "When the base rune is invoked, its damage applies in a 15-foot burst, centered on the rune-bearer. If any creatures are also within the area, they are subject to the base rune's effects (including any saving throw).",
-            additionalTraits:[ModData.Traits.Diacritic])
+                "En-, Diacritic Rune of Expansion",
+                ModData.Traits.EnDiacritic,
+                IllustrationName.UnderwaterRunestone,
+                9,
+                "drawn on a rune that deals damage (and not already in an area)",
+                "This diacritic surrounds a rune with outward-facing arrows to magnify and direct power outward.",
+                "When the base rune is invoked, its damage applies in a 15-foot burst, centered on the rune-bearer. If any creatures are also within the area, they are subject to the base rune's effects (including any saving throw).",
+                additionalTraits:[ModData.Traits.Diacritic])
+            .WithUsageCondition(Rune.UsabilityConditions.UsableOnDiacritics(dr =>
+                dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile) && !dr.Rune.InvokeTechnicalTraits.Contains(Trait.Splash))) // Target rune must deal damage and not already deal area damage.
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
-                UsageCondition = (attacker, defender) =>
+                // Target a specific rune
+                List<string> validRunesString = [];
+                List<DrawnRune> validRunes = [];
+                foreach (DrawnRune dr in DrawnRune.GetDrawnRunes(null, target)
+                             .Where(dr =>
+                                 dr.AttachedDiacritic == null
+                                 && dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile)
+                                 && !dr.Rune.InvokeTechnicalTraits.Contains(Trait.Splash)))
                 {
-                    if (DrawnRune.GetDrawnRunes(null, defender) is { } drawnRunes)
-                        if (drawnRunes.Count == 0)
-                            return Usability.NotUsableOnThisCreature("not a rune-bearer");
-                        else if (drawnRunes.Any(dr =>
-                                     dr.AttachedDiacritic == null &&
-                                     dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile) &&
-                                     !dr.Rune.InvokeTechnicalTraits.Contains(Trait.Splash)))
-                            return Usability.Usable;
-                        else
-                            return Usability.NotUsableOnThisCreature("no valid runes");
-                    return Usability.Usable;
-                },
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
+                    validRunesString.Add(dr.Name ?? dr.ToString());
+                    validRunes.Add(dr);
+                }
+
+                if (validRunes.Count == 0)
+                    return null;
+
+                if (sourceAction?.Target is AreaTarget)
                 {
-                    // Target a specific rune
-                    List<string> validRunesString = [];
-                    List<DrawnRune> validRunes = [];
-                    foreach (DrawnRune dr in DrawnRune.GetDrawnRunes(null, target)
-                                 .Where(dr =>
-                                     dr.AttachedDiacritic == null
-                                     && dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile)
-                                     && !dr.Rune.InvokeTechnicalTraits.Contains(Trait.Splash)))
+                    foreach (DrawnRune? urPassive in validRunes.Select(CreateEnPassive))
                     {
-                        validRunesString.Add(dr.Name ?? dr.ToString());
-                        validRunes.Add(dr);
-                    }
-
-                    if (validRunes.Count == 0)
-                        return null;
-
-                    if (sourceAction?.Target is AreaTarget)
-                    {
-                        foreach (DrawnRune? urPassive in validRunes.Select(CreateEnPassive))
-                        {
-                            if (urPassive == null)
-                                continue;
-                            
-                            // Determine the way the rune is being applied.
-                            if (sourceAction.HasTrait(ModData.Traits.Etched))
-                                urPassive.WithIsEtched();
-                            else if (sourceAction.HasTrait(ModData.Traits.Traced))
-                                urPassive.WithIsTraced();
-
-                            target.AddQEffect(urPassive);
-                        }
-                        // Return an ephemeral DrawnRune since we just applied this to a whole batch of runes.
-                        return new DrawnRune(thisRune);
-                    }
-                    
-                    ArgumentNullException.ThrowIfNull(caster);
-                    ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
-                        thisRune.Illustration,
-                        $"{{b}}{sourceAction?.Name}{{/b}}\nWhich rune would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
-                        validRunesString.ToArray());
-
-                    DrawnRune targetRune = validRunes[chosenOption.Index];
-
-                    return CreateEnPassive(targetRune);
-
-                    // Create rune
-                    DrawnRune? CreateEnPassive(DrawnRune drawnOnto)
-                    {
-                        ArgumentNullException.ThrowIfNull(caster);
+                        if (urPassive == null)
+                            continue;
                         
-                        DrawnRune drawnUr = new DrawnRune(
-                            thisRune,
-                            $"{thisRune.Name} ({drawnOnto.Name})",
-                            "When the base rune is invoked, its damage applies in a 15-foot burst, centered on the rune-bearer. If any creatures are also within the area, they are subject to the base rune's effects (including any saving throw).",
-                            ExpirationCondition.Never,
-                            caster,
-                            thisRune.Illustration)
-                        {
-                            Traits = [..thisRune.Traits],
-                            BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
-                            {
-                                if (thisDr.Disabled || drInvoked != thisDr.DrawnOn)
-                                    return;
+                        // Determine the way the rune is being applied.
+                        if (sourceAction.HasTrait(ModData.Traits.Etched))
+                            urPassive.WithIsEtched();
+                        else if (sourceAction.HasTrait(ModData.Traits.Traced))
+                            urPassive.WithIsTraced();
 
-                                sourceAction2.WithExtraTrait(ModData.Traits.InvokeAgainstGivenTarget);
-
-                                CombatAction emanationTargeting = new CombatAction(
-                                    drInvoked.Owner,
-                                    thisDr.Rune.Illustration,
-                                    thisDr.Rune.Name,
-                                    [..thisDr.Traits, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName],
-                                    "",
-                                    Target.Emanation(3))
-                                    .WithSoundEffect(ModData.SfxNames.InvokeRune)
-                                    .WithProjectileCone(VfxStyle.BasicProjectileCone(drInvoked.Rune.Illustration))
-                                    .WithActionCost(0);
-                                if (!await sourceAction2.Owner.Battle.GameLoop.FullCast(emanationTargeting))
-                                {
-                                    sourceAction2.RevertRequested = true;
-                                    return;
-                                }
-                                
-                                var invocation = drInvoked.Rune.InvocationBehavior;
-                                if (invocation != null)
-                                    drInvoked.Owner.Battle.AllCreatures.Where(cr => cr != drInvoked.Owner && cr.DistanceTo(drInvoked.Owner) <= 3).ForEach(async void (cr) =>
-                                    {
-                                        await invocation.Invoke(sourceAction2, drInvoked.Rune, sourceAction2.Owner, cr, drInvoked);
-                                    });
-                            },
-                        }.WithDiacriticRegulator(drawnOnto);
-
-                        return drawnUr;
+                        target.AddQEffect(urPassive);
                     }
-                },
-            }
+                    // Return an ephemeral DrawnRune since we just applied this to a whole batch of runes.
+                    return new DrawnRune(thisRune);
+                }
+                
+                ArgumentNullException.ThrowIfNull(caster);
+                ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
+                    thisRune.Illustration,
+                    $"{{b}}{sourceAction?.Name}{{/b}}\nWhich rune would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                    validRunesString.ToArray());
+
+                DrawnRune targetRune = validRunes[chosenOption.Index];
+
+                return CreateEnPassive(targetRune);
+
+                // Create rune
+                DrawnRune? CreateEnPassive(DrawnRune drawnOnto)
+                {
+                    ArgumentNullException.ThrowIfNull(caster);
+                    
+                    DrawnRune drawnUr = new DrawnRune(
+                        thisRune,
+                        $"{thisRune.Name} ({drawnOnto.Name})",
+                        "When the base rune is invoked, its damage applies in a 15-foot burst, centered on the rune-bearer. If any creatures are also within the area, they are subject to the base rune's effects (including any saving throw).",
+                        ExpirationCondition.Never,
+                        caster,
+                        thisRune.Illustration)
+                    {
+                        Traits = [..thisRune.Traits],
+                        BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
+                        {
+                            if (thisDr.Disabled || drInvoked != thisDr.DrawnOn)
+                                return;
+
+                            sourceAction2.WithExtraTrait(ModData.Traits.InvokeAgainstGivenTarget);
+
+                            CombatAction emanationTargeting = new CombatAction(
+                                drInvoked.Owner,
+                                thisDr.Rune.Illustration,
+                                thisDr.Rune.Name,
+                                [..thisDr.Traits, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName],
+                                "",
+                                Target.Emanation(3))
+                                .WithSoundEffect(ModData.SfxNames.InvokeRune)
+                                .WithProjectileCone(VfxStyle.BasicProjectileCone(drInvoked.Rune.Illustration))
+                                .WithActionCost(0);
+                            if (!await sourceAction2.Owner.Battle.GameLoop.FullCast(emanationTargeting))
+                            {
+                                sourceAction2.RevertRequested = true;
+                                return;
+                            }
+                            
+                            var invocation = drInvoked.Rune.InvocationBehavior;
+                            if (invocation != null)
+                                drInvoked.Owner.Battle.AllCreatures.Where(cr => cr != drInvoked.Owner && cr.DistanceTo(drInvoked.Owner) <= 3).ForEach(async void (cr) =>
+                                {
+                                    await invocation.Invoke(sourceAction2, drInvoked.Rune, sourceAction2.Owner, cr, drInvoked);
+                                });
+                        },
+                    }.WithDiacriticRegulator(drawnOnto);
+
+                    return drawnUr;
+                }
+            })
             .WithDrawnOnRuneTechnical();
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneEnDiacritic", runeEnDiacritic);
         
+        // PETR: With increased level caps, include heightening behavior.
         Rune runeFeikris = new Rune(
-            "Feikris, Rune of Gravity",
-            ModData.Traits.Feikris,
-            IllustrationName.ResilientRunestone,
-            9,
-            "drawn on a creature" /* or armor"*/,
-            "The lines of this rune overlap strangely, making it seem larger than it really is.",
-            "The rune-bearer gains a +2 item bonus to Athletics checks." /* and gains the benefits of the Titan Wrestler feat.*/,
-            invocationText:
-            "All creatures in a 15-foot emanation around the rune-bearer must succeed at a Fortitude save or be pulled 5 feet towards the rune-bearer (or 10 feet on a critical failure).",
-            /*levelText: "The item bonus increases to +3.",*/
-            additionalTraits: [Trait.Arcane])
+                "Feikris, Rune of Gravity",
+                ModData.Traits.Feikris,
+                IllustrationName.ResilientRunestone,
+                9,
+                "drawn on a creature" /* or armor"*/,
+                "The lines of this rune overlap strangely, making it seem larger than it really is.",
+                "The rune-bearer gains a +2 item bonus to Athletics checks." /* and gains the benefits of the Titan Wrestler feat.*/,
+                invocationText:
+                "All creatures in a 15-foot emanation around the rune-bearer must succeed at a Fortitude save or be pulled 5 feet towards the rune-bearer (or 10 feet on a critical failure).",
+                /*levelText: "The item bonus increases to +3.",*/
+                additionalTraits: [Trait.Arcane])
+            //.WithHeightenedText("17th")
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
-                //LevelFormat = "17th",
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
+                DrawnRune feikrisPassive = new DrawnRune(
+                    thisRune,
+                    "Feikris, Rune of Gravity",
+                    "You have a +2 item bonus to Athletics checks.")
                 {
-                    DrawnRune feikrisPassive = new DrawnRune(
-                        thisRune,
-                        "Feikris, Rune of Gravity",
-                        "You have a +2 item bonus to Athletics checks.")
+                    Illustration = thisRune.Illustration,
+                    Source = caster,
+                    Traits = [..thisRune.Traits],
+                    BonusToSkills = skill =>
+                        skill is Skill.Athletics ? new Bonus(caster?.Level == 17 ? 3 : 2, BonusType.Item, "Feikris") : null,
+                };
+                return feikrisPassive;
+            })
+            .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
+            {
+                // Create action wrapper for targeting and roll-inspection of invoking from target to emanation creatures.
+                CombatAction invokeFeikrisOnEveryone = new CombatAction(
+                        target, // Get creatures near the rune, who is the creature with the drawn rune being invoked
+                        thisRune.Illustration,
+                        $"Invoke {thisRune.Name}",
+                        new List<Trait>(thisRune.Traits).Append(Trait.DoNotShowInCombatLog).ToArray(),
+                        thisRune.InvocationTextWithHeightening(thisRune, caster.Level) ?? thisRune.InvocationText!,
+                        Target.Emanation(3)
+                            .WithIncludeOnlyIf((tar, cr) => cr != target))
+                    .WithActionCost(0)
+                    .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
+                    .WithSoundEffect(ModData.SfxNames.InvokedFeikris)
+                    .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
+                    .WithNoSaveFor((thisAction, cr) => cr == target || CommonRuneRules.IsImmuneToThisInvocation(cr, thisRune))
+                    .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
                     {
-                        Illustration = thisRune.Illustration,
-                        Source = caster,
-                        Traits = [..thisRune.Traits],
-                        BonusToSkills = skill =>
-                            skill is Skill.Athletics ? new Bonus(caster?.Level == 17 ? 3 : 2, BonusType.Item, "Feikris") : null,
-                    };
-                    return feikrisPassive;
-                },
-                InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
-                {
-                    // Create action wrapper for targeting and roll-inspection of invoking from target to emanation creatures.
-                    CombatAction invokeFeikrisOnEveryone = new CombatAction(
-                            target, // Get creatures near the rune, who is the creature with the drawn rune being invoked
-                            thisRune.Illustration,
-                            $"Invoke {thisRune.Name}",
-                            new List<Trait>(thisRune.Traits).Append(Trait.DoNotShowInCombatLog).ToArray(),
-                            thisRune.InvocationTextWithHeightening(thisRune, caster.Level) ?? thisRune.InvocationText!,
-                            Target.Emanation(3)
-                                .WithIncludeOnlyIf((tar, cr) => cr != target))
-                        .WithActionCost(0)
-                        .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
-                        .WithSoundEffect(ModData.SfxNames.InvokedFeikris)
-                        .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
-                        .WithNoSaveFor((thisAction, cr) => cr == target || CommonRuneRules.IsImmuneToThisInvocation(cr, thisRune))
-                        .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
+                        if (!CommonRuneRules.IsImmuneToThisInvocation(invokedOnto, thisRune))
                         {
-                            if (!CommonRuneRules.IsImmuneToThisInvocation(invokedOnto, thisRune))
+                            int distance = result switch
                             {
-                                int distance = result switch
-                                {
-                                    CheckResult.CriticalFailure => 2,
-                                    CheckResult.Failure => 1,
-                                    _ => 0
-                                };
-                                if (distance > 0)
-                                    await RunesmithClass.PullCreatureByDistance(target, invokedOnto, distance);
-                                CommonRuneRules.ApplyImmunity(invokedOnto, thisRune);
-                            }
-                        });
+                                CheckResult.CriticalFailure => 2,
+                                CheckResult.Failure => 1,
+                                _ => 0
+                            };
+                            if (distance > 0)
+                                await RunesmithClass.PullCreatureByDistance(target, invokedOnto, distance);
+                            CommonRuneRules.ApplyImmunity(invokedOnto, thisRune);
+                        }
+                    });
 
-                    if (await caster.Battle.GameLoop.FullCast(invokeFeikrisOnEveryone))
-                        CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
-                    else
-                        sourceAction.RevertRequested = true;
-                },
-            }
+                if (await caster.Battle.GameLoop.FullCast(invokeFeikrisOnEveryone))
+                    CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
+                else
+                    sourceAction.RevertRequested = true;
+            })
             .WithFortitudeSaveInvocationTechnical();
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneFeikris", runeFeikris);
 
@@ -2056,134 +1960,131 @@ public static class RunesmithRunes
                 });
         });
         
+        // PETR: With increased level caps, include heightening behavior.
         Rune runeKojastri = new Rune(
-            "Kojastri, Rune of Insulation",
-            ModData.Traits.Kojastri,
-            IllustrationName.FrostRunestone,
-            9,
-            "drawn on a creature", /*drawn on armor*/
-            "This rune insulates from harmful energy of all kinds.",
-            "The rune-bearer gains resistance 5 to your choice of cold, electricity, or fire, and any other creature that touches them or damages them with a melee unarmed attack or non-reach melee weapon takes 2d6 damage. The rune has the trait of the energy type chosen and deals damage of that type.",
-            invocationText: "Any creature that has the rune-bearer grabbed or restrained takes 4d6 damage with a basic Reflex save. On a failure, it also releases the rune-bearer." /*releases the armor's wearer.*/ /*engulfed, grabbed, restrained, or swallowed whole*/,
-            levelText: "The resistance increases by 5, and the damage increases by 1d6, or 2d6 for the invocation.",
-            additionalTraits: [Trait.Arcane])
+                "Kojastri, Rune of Insulation",
+                ModData.Traits.Kojastri,
+                IllustrationName.FrostRunestone,
+                9,
+                "drawn on a creature", /*drawn on armor*/
+                "This rune insulates from harmful energy of all kinds.",
+                "The rune-bearer gains resistance 5 to your choice of cold, electricity, or fire, and any other creature that touches them or damages them with a melee unarmed attack or non-reach melee weapon takes 2d6 damage. The rune has the trait of the energy type chosen and deals damage of that type.",
+                invocationText: "Any creature that has the rune-bearer grabbed or restrained takes 4d6 damage with a basic Reflex save. On a failure, it also releases the rune-bearer." /*releases the armor's wearer.*/ /*engulfed, grabbed, restrained, or swallowed whole*/,
+                //levelText: "The resistance increases by 5, and the damage increases by 1d6, or 2d6 for the invocation.",
+                additionalTraits: [Trait.Arcane])
+            //.WithHeightenedText(null, null, "+4")
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
-                LevelFormat = "+4",
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
+                ChoiceButtonOption choice = await caster.AskForChoiceAmongButtons(
+                    thisRune.Illustration,
+                    $"{{b}}{thisRune.Name}{{/b}}\nChoose which damage type to insulate against.",
+                    "Cold", "Electricity", "Fire"); // TODO: inline icons?
+
+                DamageKind chosenKind;
+                Trait chosenTrait;
+                switch (choice.Index)
                 {
-                    ArgumentNullException.ThrowIfNull(caster);
-
-                    ChoiceButtonOption choice = await caster.AskForChoiceAmongButtons(
-                        thisRune.Illustration,
-                        $"{{b}}{thisRune.Name}{{/b}}\nChoose which damage type to insulate against.",
-                        "Cold", "Electricity", "Fire"); // TODO: inline icons?
-
-                    DamageKind chosenKind;
-                    Trait chosenTrait;
-                    switch (choice.Index)
+                    case 0:
+                        chosenKind = DamageKind.Cold;
+                        chosenTrait = Trait.Cold;
+                        break;
+                    case 1:
+                        chosenKind = DamageKind.Electricity;
+                        chosenTrait = Trait.Electricity;
+                        break;
+                    case 2:
+                        chosenKind = DamageKind.Fire;
+                        chosenTrait = Trait.Fire;
+                        break;
+                    default:
+                        return null;
+                }
+                
+                DrawnRune kojastriPassive = new DrawnRune(
+                    thisRune,
+                    thisRune.Name + $" ({chosenKind.ToStringOrTechnical().ToLower()})",
+                    $"You have resistance {GetResistanceAmount(caster.Level)} to {chosenKind.ToStringOrTechnical().ToLower()} damage, and creatures take {GetPassiveDamageAmount(caster.Level)} damage of the chosen type when they touch you.",
+                    ExpirationCondition.Never,
+                    caster,
+                    thisRune.Illustration)
                     {
-                        case 0:
-                            chosenKind = DamageKind.Cold;
-                            chosenTrait = Trait.Cold;
-                            break;
-                        case 1:
-                            chosenKind = DamageKind.Electricity;
-                            chosenTrait = Trait.Electricity;
-                            break;
-                        case 2:
-                            chosenKind = DamageKind.Fire;
-                            chosenTrait = Trait.Fire;
-                            break;
-                        default:
-                            return null;
-                    }
-                    
-                    DrawnRune kojastriPassive = new DrawnRune(
-                        thisRune,
-                        thisRune.Name + $" ({chosenKind.ToStringOrTechnical().ToLower()})",
-                        $"You have resistance {GetResistanceAmount(caster.Level)} to {chosenKind.ToStringOrTechnical().ToLower()} damage, and creatures take {GetPassiveDamageAmount(caster.Level)} damage of the chosen type when they touch you.",
-                        ExpirationCondition.Never,
-                        caster,
-                        thisRune.Illustration)
+                        Tag = chosenKind,
+                        CountsAsABuff = true,
+                        StateCheck = qfThis =>
+                            qfThis.Owner.WeaknessAndResistance.AddResistance(chosenKind, GetResistanceAmount(caster.Level)),
+                        AfterYouAreTargeted = async (qfThis, action) =>
                         {
-                            Tag = chosenKind,
-                            CountsAsABuff = true,
-                            StateCheck = qfThis =>
-                                qfThis.Owner.WeaknessAndResistance.AddResistance(chosenKind, GetResistanceAmount(caster.Level)),
-                            AfterYouAreTargeted = async (qfThis, action) =>
+                            if (action == sourceAction || action.Owner == qfThis.Owner)
+                                return;
+
+                            // Fail to do thorns if not the first of multiple duplicate effects
+                            if (qfThis != qfThis.Owner.QEffects.First(qf =>
+                                    qf is DrawnRune dr && dr.Rune.RuneId == thisRune.RuneId))
+                                return;
+                            
+                            if (action.Target is CreatureTarget { RangeKind: RangeKind.Melee } && !(action.HasTrait(Trait.Weapon) && action.HasTrait(Trait.Reach)))
                             {
-                                if (action == sourceAction || action.Owner == qfThis.Owner)
-                                    return;
+                                await CommonSpellEffects.DealDirectDamage(
+                                    CombatAction.CreateSimple(qfThis.Owner, thisRune.Name, [..qfThis.Traits]),
+                                    DiceFormula.FromText(GetPassiveDamageAmount(caster.Level)),
+                                    action.Owner,
+                                    CheckResult.Success,
+                                    chosenKind);
+                            }
+                        },
+                    };
+                kojastriPassive.Traits.Add(chosenTrait); // TODO: Go remove the [..Traits]s from the other runes. It's already part of the constructor (i forgor).
+                return kojastriPassive;
 
-                                // Fail to do thorns if not the first of multiple duplicate effects
-                                if (qfThis != qfThis.Owner.QEffects.First(qf =>
-                                        qf is DrawnRune dr && dr.Rune.RuneId == thisRune.RuneId))
-                                    return;
-                                
-                                if (action.Target is CreatureTarget { RangeKind: RangeKind.Melee } && !(action.HasTrait(Trait.Weapon) && action.HasTrait(Trait.Reach)))
-                                {
-                                    await CommonSpellEffects.DealDirectDamage(
-                                        CombatAction.CreateSimple(qfThis.Owner, thisRune.Name, [..qfThis.Traits]),
-                                        DiceFormula.FromText(GetPassiveDamageAmount(caster.Level)),
-                                        action.Owner,
-                                        CheckResult.Success,
-                                        chosenKind);
-                                }
-                            },
-                        };
-                    kojastriPassive.Traits.Add(chosenTrait); // TODO: Go remove the [..Traits]s from the other runes. It's already part of the constructor (i forgor).
-                    return kojastriPassive;
-
-                    // Local functions
-                    int GetResistanceAmount(int level) {
-                        int currentLevel = Math.Min(level, 9);
-                        int bonusLevel = (currentLevel - 9) / 4;
-                        return 5 + (bonusLevel * 5);
-                    }
-                    string GetPassiveDamageAmount(int level) {
-                        int currentLevel = Math.Min(level, 9);
-                        int bonusLevel = (currentLevel - 9) / 4;
-                        return (2 + (bonusLevel * 1)) + "d6";
-                    }
-                },
-                InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
+                // Local functions
+                int GetResistanceAmount(int level) {
+                    int currentLevel = Math.Min(level, 9);
+                    int bonusLevel = (currentLevel - 9) / 4;
+                    return 5 + (bonusLevel * 5);
+                }
+                string GetPassiveDamageAmount(int level) {
+                    int currentLevel = Math.Min(level, 9);
+                    int bonusLevel = (currentLevel - 9) / 4;
+                    return (2 + (bonusLevel * 1)) + "d6";
+                }
+            })
+            .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
+            {
+                Sfxs.Play(ModData.SfxNames.InvokedKojastri);
+                target.QEffects.ForEach(qf =>
                 {
-                    Sfxs.Play(ModData.SfxNames.InvokedKojastri);
-                    target.QEffects.ForEach(qf =>
-                    {
-                        if (qf.Id is not QEffectId.Grappled || invokedRune.Tag is not DamageKind damageType || CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
-                            return;
+                    if (qf.Id is not QEffectId.Grappled || invokedRune.Tag is not DamageKind damageType || CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
+                        return;
 
-                        Creature grappler = qf.Source!;
-                        CombatAction invocationDetails = CombatAction.CreateSimple(caster, sourceAction.Name, [..invokedRune.Traits])
-                            .WithSavingThrow(new SavingThrow(Defense.Reflex, RunesmithClass.RunesmithDC(caster)));
-                        CheckResult result = CommonSpellEffects.RollSavingThrow(
-                            grappler,
-                            invocationDetails,
-                            Defense.Reflex,
-                            RunesmithClass.RunesmithDC(caster));
-                        CommonSpellEffects.DealBasicDamage(
-                            invocationDetails,
-                            caster,
-                            grappler,
-                            result,
-                            GetInvocationDamageAmount(caster.Level),
-                            damageType);
-                        if (result < CheckResult.Success)
-                            qf.ExpiresAt = ExpirationCondition.Immediately;
-                        CommonRuneRules.ApplyImmunity(grappler, thisRune);
-                    });
-                    CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
-                    return;
+                    Creature grappler = qf.Source!;
+                    CombatAction invocationDetails = CombatAction.CreateSimple(caster, sourceAction.Name, [..invokedRune.Traits])
+                        .WithSavingThrow(new SavingThrow(Defense.Reflex, RunesmithClass.RunesmithDC(caster)));
+                    CheckResult result = CommonSpellEffects.RollSavingThrow(
+                        grappler,
+                        invocationDetails,
+                        Defense.Reflex,
+                        RunesmithClass.RunesmithDC(caster));
+                    CommonSpellEffects.DealBasicDamage(
+                        invocationDetails,
+                        caster,
+                        grappler,
+                        result,
+                        GetInvocationDamageAmount(caster.Level),
+                        damageType);
+                    if (result < CheckResult.Success)
+                        qf.ExpiresAt = ExpirationCondition.Immediately;
+                    CommonRuneRules.ApplyImmunity(grappler, thisRune);
+                });
+                CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
+                return;
 
-                    string GetInvocationDamageAmount(int level)
-                    {
-                        int currentLevel = Math.Min(level, 9);
-                        int bonusLevel = (currentLevel - 9) / 4;
-                        return (4 + (bonusLevel * 2)) + "d6";
-                    }
-                },
-            }
+                string GetInvocationDamageAmount(int level)
+                {
+                    int currentLevel = Math.Min(level, 9);
+                    int bonusLevel = (currentLevel - 9) / 4;
+                    return (4 + (bonusLevel * 2)) + "d6";
+                }
+            })
             .WithDamagingInvocationTechnical()
             .WithDamagingAreaInvocationTechnical()
             .WithReflexSaveInvocationTechnical()

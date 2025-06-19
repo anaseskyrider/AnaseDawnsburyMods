@@ -17,8 +17,7 @@ public static class ModData
 
         You can now use the many new methods in the CommonQuestions class to add dialogue and other player interactivity choices. */
         
-        public const string EsvadirOnEnemies = "RunesmithPlaytest.EsvadirOnEnemies";
-        public const string OljinexOnEnemies = "RunesmithPlaytest.OljinexOnEnemies";
+        public const string UnrestrictedTrace = "RunesmithPlaytest.UnrestrictedTrace";
     }
     
     public static class Traits
@@ -215,7 +214,6 @@ public static class ModData
         //public static readonly Illustration DawnsburySun = new ModdedIllustration("RunesmithAssets/PatreonSunTransparent.png");
         public static readonly string DawnsburySunPath = "RunesmithAssets/PatreonSunTransparent.png";
         #endregion
-    
     }
 
     public static class SubmenuIds
