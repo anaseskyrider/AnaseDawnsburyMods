@@ -32,41 +32,23 @@ public class DrawnRune : QEffect
         this.Traits = new List<Trait>(rune.Traits);
     }
 
+    /// <summary>
+    /// Uses ExpirationCondition.Ephemeral. Must be set later. Also uses the rune's illustration by default. See: <see cref="QEffect(string, string, ExpirationCondition, Creature?, Illustration?)"/>
+    /// </summary>
+    /// <param name="rune"></param>
+    /// <param name="name"></param>
+    /// <param name="description"></param>
+    /// <param name="source"></param>
     public DrawnRune(
         Rune rune,
-        string name,
-        string description)
-        : base(
-            name,
-            description)
-    {
-        this.Rune = rune;
-        this.Traits = new List<Trait>(rune.Traits);
-    }
-
-    public DrawnRune(
-        Rune rune,
-        string name,
         string description,
-        ExpirationCondition expiresAt,
-        Creature? source,
-        Illustration? illustration = null)
+        Creature? source)
         : base(
-            name,
+            rune.Name,
             description,
-            expiresAt,
+            ExpirationCondition.Ephemeral,
             source,
-            illustration)
-    {
-        this.Rune = rune;
-        this.Traits = new List<Trait>(rune.Traits);
-    }
-
-    public DrawnRune(
-        Rune rune,
-        ExpirationCondition ephemeralCondition)
-        : base(
-            ephemeralCondition)
+            rune.Illustration)
     {
         this.Rune = rune;
         this.Traits = new List<Trait>(rune.Traits);

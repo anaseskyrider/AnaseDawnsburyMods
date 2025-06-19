@@ -79,13 +79,12 @@ public static class RunesmithRunes
             .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
                 int resistReductionAmount = 6 + (caster.Level - thisRune.BaseLevel) / 2;
-                DrawnRune atrylPassive = new DrawnRune(thisRune, thisRune.Name,
-                    "Fire resistance reduced by " + resistReductionAmount + ".")
+                DrawnRune atrylPassive = new DrawnRune(
+                    thisRune,
+                    "Fire resistance reduced by " + resistReductionAmount + ".",
+                    caster)
                 {
-                    Illustration = thisRune.Illustration,
-                    Source = caster,
-                    Value = resistReductionAmount, // Value might be an unnecessary field, aesthetically. // TODO: use Key field?
-                    Traits = [..thisRune.Traits],
+                    Value = resistReductionAmount, // Value might be an unnecessary field, aesthetically.
                     StateCheck = qfSelf =>
                     {
                         if ((qfSelf as DrawnRune)!.Disabled)
@@ -162,77 +161,73 @@ public static class RunesmithRunes
                 DrawnRune? MakeEsvadirPassive(Item targetItem)
                 {
                     DrawnRune esvadirPassive = new DrawnRune(
-                            thisRune,
-                            $"{thisRune.Name} ({targetItem.Name})",
-                            $"The target item or piercing and slashing unarmed strikes deal 2 persistent bleed damage per weapon damage die.",
-                            ExpirationCondition.Ephemeral,
-                            caster,
-                            thisRune.Illustration)
+                        thisRune,
+                        $"The target item or piercing and slashing unarmed strikes deal 2 persistent bleed damage per weapon damage die.",
+                        caster)
+                    {
+                        Name = $"{thisRune.Name} ({targetItem.Name})", // Custom name
+                        AfterYouTakeAction = async (QEffect qfSelf, CombatAction action) => // Add bleed
                         {
-                            Source = caster,
-                            Traits = [..thisRune.Traits], //[..thisRune.Traits],
-                            AfterYouTakeAction = async (QEffect qfSelf, CombatAction action) => // Add bleed
+                            if ((qfSelf as DrawnRune)!.Disabled)
+                                return;
+
+                            Item? qfItem = (qfSelf as DrawnRune)?.DrawnOn as Item;
+                            Item? actionItem = action.Item;
+
+                            // This many complex conditionals is really hard to work out so I did it the long way.
+                            // Fail to bleed if,
+                            if (actionItem == null || qfItem == null || // either item is blank
+                                !action.HasTrait(Trait.Strike) || // or the action isn't a strike
+                                action.ChosenTargets.ChosenCreature == null || // or null targets
+                                action.ChosenTargets.ChosenCreature ==
+                                qfSelf.Owner || // or I'm my target for any reason
+                                !(actionItem.DetermineDamageKinds().Contains(DamageKind.Piercing) ||
+                                  actionItem.DetermineDamageKinds()
+                                      .Contains(DamageKind
+                                          .Slashing))) // or it's not piercing or slashing damage
+                                return;
+                            // Fail to bleed if,
+                            if (actionItem.HasTrait(Trait.Unarmed)) // attacking with an unarmed,
                             {
-                                if ((qfSelf as DrawnRune)!.Disabled)
+                                if (!qfItem.HasTrait(Trait.Unarmed)) // that is unbuffed.
                                     return;
-
-                                Item? qfItem = (qfSelf as DrawnRune)?.DrawnOn as Item;
-                                Item? actionItem = action.Item;
-
-                                // This many complex conditionals is really hard to work out so I did it the long way.
-                                // Fail to bleed if,
-                                if (actionItem == null || qfItem == null || // either item is blank
-                                    !action.HasTrait(Trait.Strike) || // or the action isn't a strike
-                                    action.ChosenTargets.ChosenCreature == null || // or null targets
-                                    action.ChosenTargets.ChosenCreature ==
-                                    qfSelf.Owner || // or I'm my target for any reason
-                                    !(actionItem.DetermineDamageKinds().Contains(DamageKind.Piercing) ||
-                                      actionItem.DetermineDamageKinds()
-                                          .Contains(DamageKind
-                                              .Slashing))) // or it's not piercing or slashing damage
+                            }
+                            else // attacking with a regular weapon,
+                            {
+                                if (actionItem != qfItem) // that is unbuffed.
                                     return;
-                                // Fail to bleed if,
-                                if (actionItem.HasTrait(Trait.Unarmed)) // attacking with an unarmed,
-                                {
-                                    if (!qfItem.HasTrait(Trait.Unarmed)) // that is unbuffed.
-                                        return;
-                                }
-                                else // attacking with a regular weapon,
-                                {
-                                    if (actionItem != qfItem) // that is unbuffed.
-                                        return;
-                                }
+                            }
 
 
-                                // Determine weapon damage dice count
-                                string weaponDamageDiceCount =
-                                    actionItem.WeaponProperties!.DamageDieCount.ToString();
-                                ;
-                                if (action.TrueDamageFormula is { } trueDamage)
-                                {
-                                    Capture diceCountCapture =
-                                        Regex.Match(trueDamage.ToString(), @"(\d+)d\d+").Groups[1];
-                                    if (diceCountCapture.Value != "")
-                                        weaponDamageDiceCount = diceCountCapture.Value;
-                                }
+                            // Determine weapon damage dice count
+                            string weaponDamageDiceCount =
+                                actionItem.WeaponProperties!.DamageDieCount.ToString();
+                            ;
+                            if (action.TrueDamageFormula is { } trueDamage)
+                            {
+                                Capture diceCountCapture =
+                                    Regex.Match(trueDamage.ToString(), @"(\d+)d\d+").Groups[1];
+                                if (diceCountCapture.Value != "")
+                                    weaponDamageDiceCount = diceCountCapture.Value;
+                            }
 
-                                DiceFormula bleedAmount = DiceFormula.FromText(
-                                    (2 * int.Parse(weaponDamageDiceCount) *
-                                     (action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1)).ToString(),
-                                    thisRune.Name);
+                            DiceFormula bleedAmount = DiceFormula.FromText(
+                                (2 * int.Parse(weaponDamageDiceCount) *
+                                 (action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1)).ToString(),
+                                thisRune.Name);
 
-                                //DiceFormula bleedAmount = DiceFormula.FromText(
-                                //((action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1) * 2 * actionItem.WeaponProperties!.DamageDieCount).ToString(),
-                                //thisRune.Name);
+                            //DiceFormula bleedAmount = DiceFormula.FromText(
+                            //((action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1) * 2 * actionItem.WeaponProperties!.DamageDieCount).ToString(),
+                            //thisRune.Name);
 
-                                if (action.CheckResult >= CheckResult.Success)
-                                {
-                                    action.ChosenTargets.ChosenCreature.AddQEffect(
-                                        QEffect.PersistentDamage(bleedAmount, DamageKind.Bleed));
-                                }
-                            },
-                        }
-                        .WithItemOrUnarmedRegulator(targetItem);
+                            if (action.CheckResult >= CheckResult.Success)
+                            {
+                                action.ChosenTargets.ChosenCreature.AddQEffect(
+                                    QEffect.PersistentDamage(bleedAmount, DamageKind.Bleed));
+                            }
+                        },
+                    }
+                    .WithItemOrUnarmedRegulator(targetItem);
 
                     return esvadirPassive;
                 }
@@ -360,13 +355,10 @@ public static class RunesmithRunes
                 {
                     DrawnRune drawnHoltrik = new DrawnRune(
                         thisRune,
-                        $"{thisRune.Name} ({targetItem.Name})",
                         "The circumstance bonus from Raising a Shield is increased by 1.",
-                        ExpirationCondition.Ephemeral,
-                        caster,
-                        thisRune.Illustration)
+                        caster)
                     {
-                        Traits = [..thisRune.Traits], //[..thisRune.Traits],
+                        Name = $"{thisRune.Name} ({targetItem.Name})", // Custom name
                         BonusToDefenses = (qfSelf, attackAction, targetDefense) =>
                         {
                             if ((qfSelf as DrawnRune)!.Disabled)
@@ -504,17 +496,13 @@ public static class RunesmithRunes
                 {
                     DrawnRune marssylPassive = new DrawnRune(
                         thisRune,
-                        $"{thisRune.Name} ({targetItem.Name})",
                         $"The target item or bludgeoning unarmed strikes deal 1 bludgeoning splash damage per weapon damage die." +
                         (targetItem.HasTrait(Trait.Melee)
                             ? "\n\nMelee weapon: The rune-bearer is immune to this splash damage."
                             : null),
-                        ExpirationCondition.Ephemeral,
-                        caster,
-                        thisRune.Illustration)
+                        caster)
                     {
-                        Source = caster,
-                        Traits = [..thisRune.Traits], //[..thisRune.Traits],
+                        Name = $"{thisRune.Name} ({targetItem.Name})", // Custom name
                         AfterYouTakeAction = async (qfSelf, action) => // Add splash
                         {
                             if ((qfSelf as DrawnRune)!.Disabled)
@@ -703,13 +691,10 @@ public static class RunesmithRunes
                 {
                     DrawnRune drawnOljinex = new DrawnRune(
                         thisRune,
-                        $"{thisRune.Name} ({targetItem.Name})",
                         "While the shield is raised, you have a +1 status bonus to AC against physical ranged attacks.",
-                        ExpirationCondition.Ephemeral,
-                        caster,
-                        thisRune.Illustration)
+                        caster)
                     {
-                        Traits = [..thisRune.Traits],
+                        Name = $"{thisRune.Name} ({targetItem.Name})", // Custom name
                         BonusToDefenses = (qfSelf, attackAction, targetDefense) =>
                         {
                             if ((qfSelf as DrawnRune)!.Disabled)
@@ -1027,11 +1012,8 @@ public static class RunesmithRunes
 
                 DrawnRune pluunaPassive = new DrawnRune(
                     thisRune,
-                    thisRune.Name,
                     "Can't become undetected, and all creatures in a 20-foot emanation takes a -1 item penalty to Stealth checks.",
-                    ExpirationCondition.Ephemeral,
-                    caster,
-                    thisRune.Illustration)
+                    caster)
                 {
                     SpawnsAura = qfThis =>
                         new MagicCircleAuraAnimation(
@@ -1154,13 +1136,9 @@ public static class RunesmithRunes
                 DiceFormula immobilityDamage = DiceFormula.FromText($"1d4+{bonusDamage}");
                 DrawnRune ranshuPassive = new DrawnRune(
                     thisRune,
-                    thisRune.Name,
-                    $"If you don't take a move action at least once during your turn, you take {immobilityDamage} electricity damage.")
+                    $"If you don't take a move action at least once during your turn, you take {immobilityDamage} electricity damage.",
+                    caster)
                 {
-                    Illustration = thisRune.Illustration,
-                    Source = caster,
-                    //Value = immobilityDamage.ExpectedValue, // Value might be an unnecessary field, aesthetically. // TODO: use Key field?
-                    Traits = [..thisRune.Traits],
                     AfterYouTakeAction = async (qfThis, action) =>
                     {
                         if (action.HasTrait(Trait.Move))
@@ -1231,30 +1209,27 @@ public static class RunesmithRunes
                 DrawnRune? CreateSunPassive(DrawnRune targetRune)
                 {
                     DrawnRune drawnSun = new DrawnRune(
-                            thisRune,
-                            $"{thisRune.Name} ({targetRune.Name})",
-                            "The base rune is automatically Traced again after being invoked.",
-                            ExpirationCondition.Ephemeral,
-                            caster,
-                            thisRune.Illustration)
+                        thisRune,
+                        "The base rune is automatically Traced again after being invoked.",
+                        caster)
+                    {
+                        Name = $"{thisRune.Name} ({targetRune.Name})", // Custom name
+                        BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
                         {
-                            Traits = [..thisRune.Traits],
-                            BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
-                            {
-                                if (thisDr.Disabled)
-                                    return;
-                                /*CombatAction sunRedraw = CombatAction.CreateSimple(
-                                    drInvoked.Source!,
-                                    "Sun, Diacritic Rune of Preservation",
-                                    [ModData.Traits.Traced]); // <- Even if it WAS etched before, it's now traced.*/
-                                CombatAction sunRedraw = CommonRuneRules.CreateTraceAction(drInvoked.Source!, drInvoked.Rune, 0, 99);
-                                if (await CommonRuneRules.DrawRuneOnTarget(sunRedraw, thisDr.Source!,
-                                        drInvoked.Owner, drInvoked.Rune, false) != null)
-                                    Sfxs.Play(ModData.SfxNames.InvokedSun);
-                                thisDr.Source!.PersistentUsedUpResources.UsedUpActions.Add("SunDiacritic");
-                            },
-                        }
-                        .WithDiacriticRegulator(targetRune);
+                            if (thisDr.Disabled)
+                                return;
+                            /*CombatAction sunRedraw = CombatAction.CreateSimple(
+                                drInvoked.Source!,
+                                "Sun, Diacritic Rune of Preservation",
+                                [ModData.Traits.Traced]); // <- Even if it WAS etched before, it's now traced.*/
+                            CombatAction sunRedraw = CommonRuneRules.CreateTraceAction(drInvoked.Source!, drInvoked.Rune, 0, 99);
+                            if (await CommonRuneRules.DrawRuneOnTarget(sunRedraw, thisDr.Source!,
+                                    drInvoked.Owner, drInvoked.Rune, false) != null)
+                                Sfxs.Play(ModData.SfxNames.InvokedSun);
+                            thisDr.Source!.PersistentUsedUpResources.UsedUpActions.Add("SunDiacritic");
+                        },
+                    }
+                    .WithDiacriticRegulator(targetRune);
                     return drawnSun;
                 }
 
@@ -1318,17 +1293,12 @@ public static class RunesmithRunes
             {
                 DrawnRune? CreateUrPassive(DrawnRune targetRune)
                 {
-                    ArgumentNullException.ThrowIfNull(caster);
-                    
                     DrawnRune drawnUr = new DrawnRune(
                         thisRune,
-                        $"{thisRune.Name} ({targetRune.Name})",
                         $"The base rune's invocation damage gains a +{caster.Abilities.Intelligence} status bonus.",
-                        ExpirationCondition.Ephemeral,
-                        caster,
-                        thisRune.Illustration)
+                        caster)
                     {
-                        Traits = [..thisRune.Traits],
+                        Name = $"{thisRune.Name} ({targetRune.Name})", // Custom name
                         BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
                         {
                             if (thisDr.Disabled)
@@ -1422,11 +1392,8 @@ public static class RunesmithRunes
             {
                 DrawnRune drawnZohk = new DrawnRune(
                     thisRune,
-                    thisRune.Name,
                     $"You can Stride with a +15-foot status bonus if your destination space is closer to {caster?.Name ?? "(...)"}.",
-                    ExpirationCondition.Ephemeral,
-                    caster,
-                    thisRune.Illustration)
+                    caster)
                 {
                     Tag = target.Occupies,
                     StartOfYourEveryTurn = async (qfThis, self) =>
@@ -1578,7 +1545,7 @@ public static class RunesmithRunes
                 if (validRunes.Count == 0)
                     return null;
 
-                if (sourceAction?.Target is AreaTarget)
+                if (sourceAction.Target is AreaTarget)
                 {
                     foreach (DrawnRune? urPassive in validRunes.Select(CreateEnPassive))
                     {
@@ -1597,7 +1564,6 @@ public static class RunesmithRunes
                     return new DrawnRune(thisRune);
                 }
                 
-                ArgumentNullException.ThrowIfNull(caster);
                 ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
                     thisRune.Illustration,
                     $"{{b}}{sourceAction?.Name}{{/b}}\nWhich rune would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
@@ -1610,17 +1576,12 @@ public static class RunesmithRunes
                 // Create rune
                 DrawnRune? CreateEnPassive(DrawnRune drawnOnto)
                 {
-                    ArgumentNullException.ThrowIfNull(caster);
-                    
                     DrawnRune drawnUr = new DrawnRune(
                         thisRune,
-                        $"{thisRune.Name} ({drawnOnto.Name})",
                         "When the base rune is invoked, its damage applies in a 15-foot burst, centered on the rune-bearer. If any creatures are also within the area, they are subject to the base rune's effects (including any saving throw).",
-                        ExpirationCondition.Never,
-                        caster,
-                        thisRune.Illustration)
+                        caster)
                     {
-                        Traits = [..thisRune.Traits],
+                        Name = $"{thisRune.Name} ({drawnOnto.Name})", // Custom name
                         BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
                         {
                             if (thisDr.Disabled || drInvoked != thisDr.DrawnOn)
@@ -1646,10 +1607,11 @@ public static class RunesmithRunes
                             
                             var invocation = drInvoked.Rune.InvocationBehavior;
                             if (invocation != null)
-                                drInvoked.Owner.Battle.AllCreatures.Where(cr => cr != drInvoked.Owner && cr.DistanceTo(drInvoked.Owner) <= 3).ForEach(async void (cr) =>
+                                foreach (Creature cr in drInvoked.Owner.Battle.AllCreatures
+                                             .Where(cr => cr != drInvoked.Owner && cr.DistanceTo(drInvoked.Owner) <= 3))
                                 {
                                     await invocation.Invoke(sourceAction2, drInvoked.Rune, sourceAction2.Owner, cr, drInvoked);
-                                });
+                                };
                         },
                     }.WithDiacriticRegulator(drawnOnto);
 
@@ -1677,12 +1639,9 @@ public static class RunesmithRunes
             {
                 DrawnRune feikrisPassive = new DrawnRune(
                     thisRune,
-                    "Feikris, Rune of Gravity",
-                    "You have a +2 item bonus to Athletics checks.")
+                    "You have a +2 item bonus to Athletics checks.",
+                    caster)
                 {
-                    Illustration = thisRune.Illustration,
-                    Source = caster,
-                    Traits = [..thisRune.Traits],
                     BonusToSkills = skill =>
                         skill is Skill.Athletics ? new Bonus(caster?.Level == 17 ? 3 : 2, BonusType.Item, "Feikris") : null,
                 };
@@ -1745,11 +1704,8 @@ public static class RunesmithRunes
                     QEffect vision = QEffect.AllAroundVision();
                     DrawnRune ichelsuPassive = new DrawnRune(
                         thisRune,
-                        thisRune.Name,
                         "You gain the effects of see the unseen and all-around vision.",
-                        ExpirationCondition.Never,
-                        caster,
-                        thisRune.Illustration)
+                        caster)
                     {
                         StateCheck = async qfThis =>
                         {
@@ -1824,115 +1780,110 @@ public static class RunesmithRunes
             "Whenever a creature Strikes the rune-bearer, draconic sanction fully focuses on them, causing them to become off-guard for 1 round.",
             invocationText: "As a {icon:FreeAction} free action, the rune-bearer can Fly up to 60 feet toward a creature that has damaged them in the last minute. If they end this movement adjacent to the creature, the creature becomes off-guard until the end of the rune-bearer's next turn.",
             additionalTraits: [Trait.Dragon])
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
+                DrawnRune jurrozPassive = new DrawnRune(
+                    thisRune,
+                    "Whenever a creature Strikes you, you become off-guard for 1 round.",
+                    caster)
                 {
-                    DrawnRune jurrozPassive = new DrawnRune(
-                        thisRune,
-                        "Jurroz, Rune of Dragon Fury",
-                        "Whenever a creature Strikes you, you become off-guard for 1 round.")
+                    AfterYouTakeDamage = async (qfThis, amount, kind, action, critical) =>
                     {
-                        Illustration = thisRune.Illustration,
-                        Source = caster,
-                        Traits = [..thisRune.Traits],
-                        AfterYouTakeDamage = async (qfThis, amount, kind, action, critical) =>
-                        {
-                            if (action == null || !action.HasTrait(Trait.Strike))
-                                return;
-                            
-                            QEffect jurrozFooted = QEffect.FlatFooted("Jurroz, Rune of Dragon Fury")
-                                .WithExpirationAtStartOfSourcesTurn(action.Owner, 1);
-                            jurrozFooted.Key = "RunesmithPlaytest.JurrozPassive";
-                            qfThis.Owner.AddQEffect(jurrozFooted);
-                        },
-                    };
-                    return jurrozPassive;
-                },
-                InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
-                {
-                    if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
-                    {
-                        if (caster.FindQEffect(ModData.QEffectIds.JurrozDamageTracker) is not { Tag: Dictionary<Creature, List<Creature>> damageHistory } || !damageHistory.TryGetValue(target, out var damagedBy))
+                        if (action == null || !action.HasTrait(Trait.Strike))
                             return;
-                        
-                        // Add flying effects and ensure you have enough speed
-                        QEffect bigFly = QEffect.Flying()
-                            .WithExpirationNever();
-                        bigFly.BonusToAllSpeeds = qfThis => new Bonus(12, BonusType.Untyped, "Jurroz");
-                        target.AddQEffect(bigFly);
-                        
-                        // Get a floodfill for movement using striding, after making the rune-bearer flying
-                        List<Option> tileOptions = [
-                            new CancelOption(true),
-                            new PassViaButtonOption("Pass (consumes rune)"),
-                        ];
-                        CombatAction? moveAction = (target.Possibilities.CreateActions(true)
-                            .FirstOrDefault(pw => pw.Action.ActionId == ActionId.Stride) as CombatAction)
-                            ?.WithActionCost(0);
-                        IList<Tile> floodFill = Pathfinding.Floodfill(target, target.Battle, new PathfindingDescription()
-                            {
-                                Squares = 12,
-                                Style = { MaximumSquares = 12 }
-                            })
-                            .Where(tile =>
-                                tile.LooksFreeTo(target) && damagedBy.Any(cr2 => cr2.DistanceTo(tile) < target.DistanceTo(cr2)))
-                            .ToList();
-                        floodFill.ForEach(tile =>
+                            
+                        QEffect jurrozFooted = QEffect.FlatFooted("Jurroz, Rune of Dragon Fury")
+                            .WithExpirationAtStartOfSourcesTurn(action.Owner, 1);
+                        jurrozFooted.Key = "RunesmithPlaytest.JurrozPassive";
+                        qfThis.Owner.AddQEffect(jurrozFooted);
+                    },
+                };
+                return jurrozPassive;
+            })
+            .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
+            {
+                if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
+                {
+                    if (caster.FindQEffect(ModData.QEffectIds.JurrozDamageTracker) is not { Tag: Dictionary<Creature, List<Creature>> damageHistory } || !damageHistory.TryGetValue(target, out var damagedBy))
+                        return;
+                    
+                    // Add flying effects and ensure you have enough speed
+                    QEffect bigFly = QEffect.Flying()
+                        .WithExpirationNever();
+                    bigFly.BonusToAllSpeeds = qfThis => new Bonus(12, BonusType.Untyped, "Jurroz");
+                    target.AddQEffect(bigFly);
+                    
+                    // Get a floodfill for movement using striding, after making the rune-bearer flying
+                    List<Option> tileOptions = [
+                        new CancelOption(true),
+                        new PassViaButtonOption("Pass (consumes rune)"),
+                    ];
+                    CombatAction? moveAction = (target.Possibilities.CreateActions(true)
+                        .FirstOrDefault(pw => pw.Action.ActionId == ActionId.Stride) as CombatAction)
+                        ?.WithActionCost(0);
+                    IList<Tile> floodFill = Pathfinding.Floodfill(target, target.Battle, new PathfindingDescription()
                         {
-                            if (moveAction == null || !(bool)moveAction.Target.CanBeginToUse(target)) return;
-                            tileOptions.Add(moveAction.CreateUseOptionOn(tile).WithIllustration(moveAction.Illustration));
-                        });
-                        
-                        // Pick a tile to fly to
-                        Option chosenTile = (await target.Battle.SendRequest(
-                            new AdvancedRequest(target, "Choose where to Fly to or right-click to cancel. You should end your movement next to a creature who has damaged you.", tileOptions)
-                            {
-                                IsMainTurn = false,
-                                IsStandardMovementRequest = true,
-                                TopBarIcon = thisRune.Illustration,
-                                TopBarText = "Choose where to Fly to or right-click to cancel. You should end your movement next to a creature who has damaged you.",
-                            })).ChosenOption;
-                        switch (chosenTile)
+                            Squares = 12,
+                            Style = { MaximumSquares = 12 }
+                        })
+                        .Where(tile =>
+                            tile.LooksFreeTo(target) && damagedBy.Any(cr2 => cr2.DistanceTo(tile) < target.DistanceTo(cr2)))
+                        .ToList();
+                    floodFill.ForEach(tile =>
+                    {
+                        if (moveAction == null || !(bool)moveAction.Target.CanBeginToUse(target)) return;
+                        tileOptions.Add(moveAction.CreateUseOptionOn(tile).WithIllustration(moveAction.Illustration));
+                    });
+                    
+                    // Pick a tile to fly to
+                    Option chosenTile = (await target.Battle.SendRequest(
+                        new AdvancedRequest(target, "Choose where to Fly to or right-click to cancel. You should end your movement next to a creature who has damaged you.", tileOptions)
                         {
-                            case CancelOption:
-                                sourceAction.RevertRequested = true;
-                                break;
-                            case TileOption tOpt:
-                                // Perform fly
-                                Sfxs.Play(ModData.SfxNames.InvokedJurroz);
-                                await tOpt.Action();
-                                target.RemoveAllQEffects(qf => qf == bigFly);
-                                
-                                // Apply off-guard to a creature
-                                List<Creature> validCreatures = target.Battle.AllCreatures
-                                    .Where(cr =>
-                                        target.EnemyOf(cr) && target.IsAdjacentTo(cr) && damagedBy.Contains(cr))
-                                    .ToList();
-                                Creature? chosenCreature = await target.Battle.AskToChooseACreature(
-                                    target,
-                                    validCreatures,
-                                    thisRune.Illustration,
-                                    "Choose a creature who has damaged you to make off-guard.",
-                                    "This creature becomes off-guard until the end of your next turn.",
-                                    " Don't make off-guard ");
-                                if (chosenCreature != null)
-                                {
-                                    QEffect jurrozFooted = QEffect.FlatFooted("Jurroz, Rune of Dragon Fury")
-                                        .WithExpirationAtEndOfSourcesNextTurn(target, true);
-                                    jurrozFooted.Key = "RunesmithPlaytest.JurrozInvocation";
-                                    chosenCreature.AddQEffect(jurrozFooted);
-                                }
-                                CommonRuneRules.ApplyImmunity(target, thisRune);
-                                CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
-                                break;
-                            case PassViaButtonOption:
-                                CommonRuneRules.ApplyImmunity(target, thisRune);
-                                CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
-                                break;
-                        }
+                            IsMainTurn = false,
+                            IsStandardMovementRequest = true,
+                            TopBarIcon = thisRune.Illustration,
+                            TopBarText = "Choose where to Fly to or right-click to cancel. You should end your movement next to a creature who has damaged you.",
+                        })).ChosenOption;
+                    switch (chosenTile)
+                    {
+                        case CancelOption:
+                            sourceAction.RevertRequested = true;
+                            break;
+                        case TileOption tOpt:
+                            // Perform fly
+                            Sfxs.Play(ModData.SfxNames.InvokedJurroz);
+                            await tOpt.Action();
+                            target.RemoveAllQEffects(qf => qf == bigFly);
+                            
+                            // Apply off-guard to a creature
+                            List<Creature> validCreatures = target.Battle.AllCreatures
+                                .Where(cr =>
+                                    target.EnemyOf(cr) && target.IsAdjacentTo(cr) && damagedBy.Contains(cr))
+                                .ToList();
+                            Creature? chosenCreature = await target.Battle.AskToChooseACreature(
+                                target,
+                                validCreatures,
+                                thisRune.Illustration,
+                                "Choose a creature who has damaged you to make off-guard.",
+                                "This creature becomes off-guard until the end of your next turn.",
+                                " Don't make off-guard ");
+                            if (chosenCreature != null)
+                            {
+                                QEffect jurrozFooted = QEffect.FlatFooted("Jurroz, Rune of Dragon Fury")
+                                    .WithExpirationAtEndOfSourcesNextTurn(target, true);
+                                jurrozFooted.Key = "RunesmithPlaytest.JurrozInvocation";
+                                chosenCreature.AddQEffect(jurrozFooted);
+                            }
+                            CommonRuneRules.ApplyImmunity(target, thisRune);
+                            CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
+                            break;
+                        case PassViaButtonOption:
+                            CommonRuneRules.ApplyImmunity(target, thisRune);
+                            CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
+                            break;
                     }
                 }
-            };
+            });
         RuneFeat jurrozFeat = AddRuneAsRuneFeat("RunesmithPlaytest.RuneJurroz", runeJurroz);
         jurrozFeat.WithPermanentQEffect(null, qfFeat =>
         {
@@ -2001,37 +1952,35 @@ public static class RunesmithRunes
                 
                 DrawnRune kojastriPassive = new DrawnRune(
                     thisRune,
-                    thisRune.Name + $" ({chosenKind.ToStringOrTechnical().ToLower()})",
                     $"You have resistance {GetResistanceAmount(caster.Level)} to {chosenKind.ToStringOrTechnical().ToLower()} damage, and creatures take {GetPassiveDamageAmount(caster.Level)} damage of the chosen type when they touch you.",
-                    ExpirationCondition.Never,
-                    caster,
-                    thisRune.Illustration)
+                    caster)
+                {
+                    Name = $"{thisRune.Name} ({chosenKind.ToStringOrTechnical().ToLower()})",
+                    Tag = chosenKind,
+                    CountsAsABuff = true,
+                    StateCheck = qfThis =>
+                        qfThis.Owner.WeaknessAndResistance.AddResistance(chosenKind, GetResistanceAmount(caster.Level)),
+                    AfterYouAreTargeted = async (qfThis, action) =>
                     {
-                        Tag = chosenKind,
-                        CountsAsABuff = true,
-                        StateCheck = qfThis =>
-                            qfThis.Owner.WeaknessAndResistance.AddResistance(chosenKind, GetResistanceAmount(caster.Level)),
-                        AfterYouAreTargeted = async (qfThis, action) =>
-                        {
-                            if (action == sourceAction || action.Owner == qfThis.Owner)
-                                return;
+                        if (action == sourceAction || action.Owner == qfThis.Owner)
+                            return;
 
-                            // Fail to do thorns if not the first of multiple duplicate effects
-                            if (qfThis != qfThis.Owner.QEffects.First(qf =>
-                                    qf is DrawnRune dr && dr.Rune.RuneId == thisRune.RuneId))
-                                return;
-                            
-                            if (action.Target is CreatureTarget { RangeKind: RangeKind.Melee } && !(action.HasTrait(Trait.Weapon) && action.HasTrait(Trait.Reach)))
-                            {
-                                await CommonSpellEffects.DealDirectDamage(
-                                    CombatAction.CreateSimple(qfThis.Owner, thisRune.Name, [..qfThis.Traits]),
-                                    DiceFormula.FromText(GetPassiveDamageAmount(caster.Level)),
-                                    action.Owner,
-                                    CheckResult.Success,
-                                    chosenKind);
-                            }
-                        },
-                    };
+                        // Fail to do thorns if not the first of multiple duplicate effects
+                        if (qfThis != qfThis.Owner.QEffects.First(qf =>
+                                qf is DrawnRune dr && dr.Rune.RuneId == thisRune.RuneId))
+                            return;
+                        
+                        if (action.Target is CreatureTarget { RangeKind: RangeKind.Melee } && !(action.HasTrait(Trait.Weapon) && action.HasTrait(Trait.Reach)))
+                        {
+                            await CommonSpellEffects.DealDirectDamage(
+                                CombatAction.CreateSimple(qfThis.Owner, thisRune.Name, [..qfThis.Traits]),
+                                DiceFormula.FromText(GetPassiveDamageAmount(caster.Level)),
+                                action.Owner,
+                                CheckResult.Success,
+                                chosenKind);
+                        }
+                    },
+                };
                 kojastriPassive.Traits.Add(chosenTrait); // TODO: Go remove the [..Traits]s from the other runes. It's already part of the constructor (i forgor).
                 return kojastriPassive;
 

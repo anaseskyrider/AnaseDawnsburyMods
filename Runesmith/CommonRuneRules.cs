@@ -395,7 +395,7 @@ public static class CommonRuneRules
     /// <returns>(CombatAction) the anyCombatAction that was passed, with the new WithEffectOnChosenTargets.</returns>
     public static CombatAction WithImmediatelyRemovesImmunity(CombatAction anyCombatAction)
     {
-        anyCombatAction.WithEffectOnChosenTargets(async (caster, targets) =>
+        anyCombatAction = anyCombatAction.WithEffectOnChosenTargets(async (caster, targets) =>
         {
             caster.Battle.AllCreatures.ForEach(cr =>
                 CommonRuneRules.RemoveAllImmunities(cr));

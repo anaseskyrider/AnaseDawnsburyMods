@@ -208,7 +208,7 @@ public static class RunesmithClass
                                     .Sum(cr => DrawnRune.GetDrawnRunes(caster, cr).Count(dr => !dr.Disabled));
                             }
                         });
-                        CommonRuneRules.WithImmediatelyRemovesImmunity(invokeRuneAction);
+                    CommonRuneRules.WithImmediatelyRemovesImmunity(invokeRuneAction); 
                     return new ActionPossibility(invokeRuneAction);
                 };
             });
