@@ -1034,11 +1034,9 @@ public static class RunesmithRunes
                     thisRune.Illustration)
                 {
                     SpawnsAura = qfThis =>
-                    {
-                        return new
-                            MagicCircleAuraAnimation(IllustrationName.AngelicHaloCircle,
-                                Microsoft.Xna.Framework.Color.Gold, emanationSize);
-                    },
+                        new MagicCircleAuraAnimation(
+                            IllustrationName.AngelicHaloCircle,
+                            Microsoft.Xna.Framework.Color.Gold, emanationSize),
                     StateCheck = qfThis =>
                     {
                         qfThis.Owner.DetectionStatus.Undetected = false;
@@ -1050,6 +1048,7 @@ public static class RunesmithRunes
                                     "You have a -1 item penalty to Stealth checks.", ExpirationCondition.Ephemeral,
                                     qfThis.Owner, IllustrationName.Light)
                                 {
+                                    Key = "Pluuna's Light",
                                     BonusToSkills = skill => skill == Skill.Stealth
                                         ? new Bonus(-1, BonusType.Item, thisRune.Name)
                                         : null
