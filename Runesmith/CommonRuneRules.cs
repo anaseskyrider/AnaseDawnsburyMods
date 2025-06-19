@@ -407,13 +407,13 @@ public static class CommonRuneRules
 
     #region Drawing Runes
     /// <summary>
-    /// The CASTER uses an ACTION to apply the RUNE's <see cref="NewDrawnRune"/> to the TARGET, which might IGNORE targeting restrictions.
+    /// The CASTER uses an ACTION to apply the RUNE's <see cref="Rune.NewDrawnRune"/> to the TARGET, which might IGNORE targeting restrictions.
     /// </summary>
     /// <param name="sourceAction">The CombatAction which is applying the rune. This action should have either the <see cref="ModData.Traits.Traced"/> or the <see cref="ModData.Traits.Etched"/> traits to determine the duration of the effect being applied.</param>
     /// <param name="caster">The Creature applying the rune.</param>
     /// <param name="target">The Creature the rune is applying to.</param>
     /// <param name="rune">The rune to draw.</param>
-    /// <param name="ignoreUsageRequirements">(Default: false) If false, then the DrawnRune is applied only when its Rune's <see cref="UsageCondition"/> is valid for the target. This is true for cases like the Runic Reprisal feat which allows a Runesmith to apply any damaging rune to their shield, taking none of the passive effects, but allowing it to be invoked on a creature when they Shield Block.</param>
+    /// <param name="ignoreUsageRequirements">(Default: false) If false, then the DrawnRune is applied only when its Rune's <see cref="Rune.UsageCondition"/> is valid for the target. This is true for cases like the Runic Reprisal feat which allows a Runesmith to apply any damaging rune to their shield, taking none of the passive effects, but allowing it to be invoked on a creature when they Shield Block.</param>
     /// <returns>(bool) True if the effect was successfully applied to the target, false otherwise.</returns>
     public static async Task<DrawnRune?> DrawRuneOnTarget(
         CombatAction sourceAction,
