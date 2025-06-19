@@ -63,7 +63,7 @@ public static class CommonRuneRules
     /// Gets the full description block for the Rune with formatting, optionally with the flavor text.
     /// </summary>
     /// <param name="rune">The rune to use.</param>
-    /// <param name="withFlavorText">Whether to include <see cref="WithFlavorTextFormatting"/> in the return.</param>
+    /// <param name="withFlavorText">Whether to include <see cref="Rune.WithFlavorTextFormatting"/> in the return.</param>
     /// <returns>(string) The full description with formatting.</returns>
     public static string GetFormattedFeatDescription(Rune rune, bool withFlavorText = true)
     {
@@ -101,7 +101,7 @@ public static class CommonRuneRules
     }
 
     /// <summary>
-    /// Determines whether a TARGET Creature is immune to the invocation effects of this Rune by searching for a QEffect with the <see cref="ModData.Traits.InvocationImmunity"/> trait and a trait matching this Rune's <see cref="RuneId"/>.
+    /// Determines whether a TARGET Creature is immune to the invocation effects of this Rune by searching for a QEffect with the <see cref="ModData.Traits.InvocationImmunity"/> trait and a trait matching this Rune's <see cref="Rune.RuneId"/>.
     /// </summary>
     /// <param name="target">The CREATURE to check.</param>
     /// <param name="rune">The RUNE to check.</param>
@@ -197,9 +197,7 @@ public static class CommonRuneRules
                     _ => Target.Self().WithAdditionalRestriction(self =>
                         RunesmithClass.IsRunesmithHandFree(self) ? null : "You must have a free hand to trace a rune")
                 })
-            {
-                Tag = rune,
-            }
+            .WithTag(rune)
             .WithActionCost(actions)
             .WithSoundEffect(ModData.SfxNames.TraceRune)
             .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
@@ -213,9 +211,9 @@ public static class CommonRuneRules
             drawRuneAction.WithProjectileCone(VfxStyle.BasicProjectileCone(rune.Illustration ?? IllustrationName.None));
         
         if (actions == -3)
-            drawRuneAction.WithCreateVariantDescription((actions, spellVariant) =>
+            drawRuneAction.WithCreateVariantDescription((actions2, spellVariant) =>
             { // Just having this gives the variant range information.
-                return actions switch
+                return actions2 switch
                 {
                     //1 => this.CreateTraceActionDescription(drawRuneAction, withFlavorText:false),
                     //2 => this.CreateTraceActionDescription(drawRuneAction, withFlavorText:false),

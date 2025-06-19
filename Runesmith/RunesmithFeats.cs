@@ -42,9 +42,7 @@ public static class RunesmithFeats
     
     public static void CreateFeats()
     {
-        /////////////////////
-        // 1st Level Feats //
-        /////////////////////
+        #region 1st-Level Feats
         Feat backupRunicEnhancement = new TrueFeat(
                 ModData.FeatNames.BackupRunicEnhancement,
                 1,
@@ -328,10 +326,9 @@ public static class RunesmithFeats
                     };*/
                 });
         ModManager.AddFeat(runeSinger);
+        #endregion
         
-        /////////////////////
-        // 2nd Level Feats //
-        /////////////////////
+        #region 2nd-Level Feats
         Feat fortifyingKnock = new TrueFeat(
                 ModData.FeatNames.FortifyingKnock,
                 2,
@@ -608,10 +605,9 @@ public static class RunesmithFeats
                 );
             });
         ModManager.AddFeat(smithingWeaponsFamiliarity);
+        #endregion
         
-        /////////////////////
-        // 4th Level Feats //
-        /////////////////////
+        #region 4th-Level Feats
         Feat artistsAttendance = new TrueFeat(
                 ModData.FeatNames.ArtistsAttendance,
                 4,
@@ -935,10 +931,9 @@ public static class RunesmithFeats
                 }
             });
         ModManager.AddFeat(transposeEtching);
+        #endregion
         
-        /////////////////////
-        // 6th Level Feats //
-        /////////////////////
+        #region 6th-Level Feats
         Feat runicReprisal = new TrueFeat(
                 ModData.FeatNames.RunicReprisal,
                 6,
@@ -1288,10 +1283,9 @@ public static class RunesmithFeats
                     };
                 });
         ModManager.AddFeat(wordsFlyFree);
+        #endregion
         
-        /////////////////////
-        // 8th Level Feats //
-        /////////////////////
+        #region 8th-Level Feats
         Feat drawnInRed = new TrueFeat(
                 ModData.FeatNames.DrawnInRed,
                 8,
@@ -1540,5 +1534,6 @@ public static class RunesmithFeats
                 qfFeat.BonusToInitiative = qfThis => new Bonus(1, BonusType.Status, "Read The Bones");
             });
         ModManager.AddFeat(readTheBones);
+        #endregion
     }
 }

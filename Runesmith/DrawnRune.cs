@@ -36,7 +36,6 @@ public class DrawnRune : QEffect
     /// Uses ExpirationCondition.Ephemeral. Must be set later. Also uses the rune's illustration by default. See: <see cref="QEffect(string, string, ExpirationCondition, Creature?, Illustration?)"/>
     /// </summary>
     /// <param name="rune"></param>
-    /// <param name="name"></param>
     /// <param name="description"></param>
     /// <param name="source"></param>
     public DrawnRune(
@@ -301,6 +300,7 @@ public class DrawnRune : QEffect
     #endregion
     
     #region Task Methods
+    // TODO: move this function
     /// <summary>
     /// <para>Sets its DrawnOn to the new DrawnOn and moves the DrawnRune from its old Owner to its new Owner.</para>
     /// <para>Use Case: the Transpose Etching feat which allows you to move a rune from one target to another.</para>
