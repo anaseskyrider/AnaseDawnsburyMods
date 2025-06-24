@@ -1824,7 +1824,16 @@ public static class RunesmithRunes
                         new CancelOption(true),
                         new PassViaButtonOption("Pass (consumes rune)"),
                     ];
-                    CombatAction? moveAction = (target.Possibilities.CreateActions(true)
+                    CombatAction? moveAction = (target.Possibilities
+                            .Filter(ap =>
+                            {
+                                if (ap.CombatAction.ActionId != ActionId.Stride)
+                                    return false;
+                                ap.CombatAction.ActionCost = 0;
+                                ap.RecalculateUsability();
+                                return true;
+                            })
+                            .CreateActions(true)
                         .FirstOrDefault(pw => pw.Action.ActionId == ActionId.Stride) as CombatAction)
                         ?.WithActionCost(0);
                     IList<Tile> floodFill = Pathfinding.Floodfill(target, target.Battle, new PathfindingDescription()
