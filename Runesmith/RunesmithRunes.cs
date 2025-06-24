@@ -1781,7 +1781,7 @@ public static class RunesmithRunes
             ModData.Traits.Jurroz,
             IllustrationName.CorrosiveRunestone,
             9,
-            "etched onto a creature", //or armor",
+            $"etched onto a creature ({new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString} cannot be traced)", //or armor",
             "This angular rune channels the fury of dragon kind.",
             "Whenever a creature Strikes the rune-bearer, draconic sanction fully focuses on them, causing the striking creature to become off-guard for 1 round.",
             invocationText: "As a {icon:FreeAction} free action, the rune-bearer can Fly up to 60 feet toward a creature that has damaged them in the last minute. If they end this movement adjacent to the creature, the creature becomes off-guard until the end of the rune-bearer's next turn.",
