@@ -487,66 +487,66 @@ public static class RunesmithClass
                 values.GrantFeat(etchRune.FeatName);
                 
                 // higher levels
-                values.AddAtLevel(2, values =>
+                values.AddAtLevel(2, values2 =>
                 {
-                    values.GrantFeat(runicCrafter.FeatName);
+                    values2.GrantFeat(runicCrafter.FeatName);
                 });
-                values.AddAtLevel(5, values =>
+                values.AddAtLevel(5, values2 =>
                 {
-                    values.SetProficiency(Trait.Unarmed, Proficiency.Expert);
-                    values.SetProficiency(Trait.Simple, Proficiency.Expert);
-                    values.SetProficiency(Trait.Martial, Proficiency.Expert);
-                    values.SetProficiency(ModData.Traits.ArtisansHammer, Proficiency.Expert);
-                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
+                    values2.SetProficiency(Trait.Unarmed, Proficiency.Expert);
+                    values2.SetProficiency(Trait.Simple, Proficiency.Expert);
+                    values2.SetProficiency(Trait.Martial, Proficiency.Expert);
+                    values2.SetProficiency(ModData.Traits.ArtisansHammer, Proficiency.Expert);
+                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values2)!;
                     repertoire.IncreaseEtchLimit(5, 1);
                 });
-                values.AddAtLevel(7, values =>
+                values.AddAtLevel(7, values2 =>
                 {
-                    values.SetProficiency(Trait.Reflex, Proficiency.Expert);
-                    values.SetProficiency(ModData.Traits.Runesmith, Proficiency.Expert);
+                    values2.SetProficiency(Trait.Reflex, Proficiency.Expert);
+                    values2.SetProficiency(ModData.Traits.Runesmith, Proficiency.Expert);
                 });
                 // Future content
-                values.AddAtLevel(9, values =>
+                values.AddAtLevel(9, values2 =>
                 {
-                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
+                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values2)!;
                     repertoire.IncreaseEtchLimit(9, 1);
                 });
-                values.AddAtLevel(11, values =>
+                values.AddAtLevel(11, values2 =>
                 {
-                    values.SetProficiency(Trait.Fortitude, Proficiency.Master);
+                    values2.SetProficiency(Trait.Fortitude, Proficiency.Master);
                     // See WithOnCreature for the success->critical effect.
                 });
-                values.AddAtLevel(13, values =>
+                values.AddAtLevel(13, values2 =>
                 {
-                    values.SetProficiency(Trait.UnarmoredDefense, Proficiency.Expert);
-                    values.SetProficiency(Trait.LightArmor, Proficiency.Expert);
-                    values.SetProficiency(Trait.MediumArmor, Proficiency.Expert);
+                    values2.SetProficiency(Trait.UnarmoredDefense, Proficiency.Expert);
+                    values2.SetProficiency(Trait.LightArmor, Proficiency.Expert);
+                    values2.SetProficiency(Trait.MediumArmor, Proficiency.Expert);
                     
-                    values.SetProficiency(Trait.Perception, Proficiency.Expert);
+                    values2.SetProficiency(Trait.Perception, Proficiency.Expert);
                     
-                    values.SetProficiency(Trait.Unarmed, Proficiency.Master);
-                    values.SetProficiency(Trait.Simple, Proficiency.Master);
-                    values.SetProficiency(Trait.Martial, Proficiency.Master);
+                    values2.SetProficiency(Trait.Unarmed, Proficiency.Master);
+                    values2.SetProficiency(Trait.Simple, Proficiency.Master);
+                    values2.SetProficiency(Trait.Martial, Proficiency.Master);
                     
-                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
+                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values2)!;
                     repertoire.IncreaseEtchLimit(13, 1);
                 });
-                values.AddAtLevel(15, values =>
+                values.AddAtLevel(15, values2 =>
                 {
-                    values.SetProficiency(ModData.Traits.Runesmith, Proficiency.Master);
+                    values2.SetProficiency(ModData.Traits.Runesmith, Proficiency.Master);
                 });
-                values.AddAtLevel(17, values =>
+                values.AddAtLevel(17, values2 =>
                 {
-                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values)!;
+                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values2)!;
                     repertoire.IncreaseEtchLimit(17, 1);
                 });
-                values.AddAtLevel(19, values =>
+                values.AddAtLevel(19, values2 =>
                 {
-                    values.SetProficiency(ModData.Traits.Runesmith, Proficiency.Legendary);
+                    values2.SetProficiency(ModData.Traits.Runesmith, Proficiency.Legendary);
                     
-                    values.SetProficiency(Trait.UnarmoredDefense, Proficiency.Master);
-                    values.SetProficiency(Trait.LightArmor, Proficiency.Master);
-                    values.SetProficiency(Trait.MediumArmor, Proficiency.Master);
+                    values2.SetProficiency(Trait.UnarmoredDefense, Proficiency.Master);
+                    values2.SetProficiency(Trait.LightArmor, Proficiency.Master);
+                    values2.SetProficiency(Trait.MediumArmor, Proficiency.Master);
                 });
             })
             .WithOnCreature(cr =>
@@ -690,10 +690,10 @@ public static class RunesmithClass
                     TopBarText = messageString,
                 })).ChosenOption;
         }
-label_34:
+        label_34:
         if (selectedOption != null)
         {
-            int num = await selectedOption.Action() ? 1 : 0;
+            await selectedOption.Action();
             self.Battle.MovementConfirmer = null;
             if (selectedOption is CancelOption or PassViaButtonOption)
             {
@@ -737,7 +737,7 @@ label_34:
     {
         if (target.WeaknessAndResistance.ImmunityToForcedMovement)
         {
-            target.Occupies.Overhead("{i}immune{/i}", Color.White, target?.ToString() + " is immune to forced movement and can't be pulled.");
+            target.Occupies.Overhead("{i}immune{/i}", Color.White, target + " is immune to forced movement and can't be pulled.");
             return;
         }
         

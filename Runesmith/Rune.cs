@@ -340,6 +340,13 @@ public class Rune
         this.DrawTechnicalTraits = this.DrawTechnicalTraits.Concat([Trait.IsHostile]).ToList();
         return this;
     }
+
+    /// <summary>Adds ModData.Traits.Etched to DrawTechnicalTraits, which indicates to other parts of the mod that rune can only be drawn by etching it.</summary>
+    public Rune WithOnlyEtchedTechnical()
+    {
+        this.DrawTechnicalTraits = this.DrawTechnicalTraits.Concat([ModData.Traits.Etched]).ToList();
+        return this;
+    }
     
     /// <summary>Adds Trait.IsHostile to InvokeTechnicalTraits, which indicates to other parts of the mod that the invocation deals damage when invoked.</summary>
     public Rune WithDamagingInvocationTechnical()

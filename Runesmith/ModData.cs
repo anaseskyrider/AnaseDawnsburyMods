@@ -190,6 +190,7 @@ public static class ModData
     public static class ActionIds
     {
         public static readonly ActionId TraceRune = ModManager.RegisterEnumMember<ActionId>("TraceRune");
+        public static readonly ActionId EtchRune = ModManager.RegisterEnumMember<ActionId>("EtchRune");
         public static readonly ActionId InvokeRune = ModManager.RegisterEnumMember<ActionId>("InvokeRune");
     }
 

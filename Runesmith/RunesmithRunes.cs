@@ -62,7 +62,7 @@ public static class RunesmithRunes
                 {
                     const int baseValue = 6;
                     int bonusValue = (level - thisRune.BaseLevel) / 2; // Increase by 1 every 2 character levels
-                    int totalValue = 6 + (level - thisRune.BaseLevel) / 2;
+                    int totalValue = 6 + bonusValue;
                     string heightenedVar = S.HeightenedVariable(totalValue, baseValue);
                     return $"The bearer's fire resistance, if any, is reduced by {heightenedVar}. Its immunities are unaffected.";
                 },
@@ -93,7 +93,7 @@ public static class RunesmithRunes
                         Resistance? fireResist =
                             qfSelf.Owner.WeaknessAndResistance.Resistances.FirstOrDefault(res =>
                                 res.DamageKind == DamageKind.Fire);
-                        if (fireResist != null && fireResist.Value > 0)
+                        if (fireResist is { Value: > 0 })
                         {
                             QEffect? existingAtryl = qfSelf.Owner.QEffects.FirstOrDefault(qfSearch =>
                                 qfSearch.Name == "Atryl, Rune of Fire" && qfSearch != qfSelf);
@@ -202,7 +202,6 @@ public static class RunesmithRunes
                             // Determine weapon damage dice count
                             string weaponDamageDiceCount =
                                 actionItem.WeaponProperties!.DamageDieCount.ToString();
-                            ;
                             if (action.TrueDamageFormula is { } trueDamage)
                             {
                                 Capture diceCountCapture =
@@ -270,7 +269,7 @@ public static class RunesmithRunes
                 
                 ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
                     thisRune.Illustration,
-                    $"{{b}}{sourceAction?.Name}{{/b}}\nWhich item, or unarmed strikes, would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                    $"{{b}}{sourceAction.Name}{{/b}}\nWhich item, or unarmed strikes, would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
                     validItemsString.ToArray()
                 );
 
@@ -395,7 +394,7 @@ public static class RunesmithRunes
                     case 1:
                         return MakeHoltrikPassive(target.HeldItems.First(item => item.HasTrait(Trait.Shield)));
                     default:
-                        if (sourceAction?.Target is AreaTarget)
+                        if (sourceAction.Target is AreaTarget)
                         {
                             foreach (DrawnRune? holtrikPassive in target.HeldItems.Select(MakeHoltrikPassive))
                             {
@@ -418,7 +417,7 @@ public static class RunesmithRunes
                         Item targetItem = await target.Battle.AskForConfirmation(
                             caster ?? throw new ArgumentNullException(nameof(caster)),
                             thisRune.Illustration,
-                            $"{{b}}{sourceAction?.Name}{{/b}}\nWhich shield would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                            $"{{b}}{sourceAction.Name}{{/b}}\nWhich shield would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
                             target.HeldItems[0].Name,
                             target.HeldItems[1].Name)
                             ? target.HeldItems[0]
@@ -505,11 +504,12 @@ public static class RunesmithRunes
                         Name = $"{thisRune.Name} ({targetItem.Name})", // Custom name
                         AfterYouTakeAction = async (qfSelf, action) => // Add splash
                         {
+                            #region vars and validation checks
                             if ((qfSelf as DrawnRune)!.Disabled)
                                 return;
                             Item? qfItem = (qfSelf as DrawnRune)?.DrawnOn as Item;
                             Item? actionItem = action.Item;
-
+                            
                             // This many complex conditionals is really hard to work out so I did it the long way.
                             // Fail to splash if,
                             if (actionItem == null || qfItem == null || // either item is blank
@@ -537,6 +537,7 @@ public static class RunesmithRunes
                             if (qfSelf != qfSelf.Owner.QEffects.First(qf =>
                                     qf is DrawnRune dr && dr.Rune.RuneId == ModData.Traits.Marssyl))
                                 return;
+                            #endregion
 
                             // Determine weapon damage dice count
                             string weaponDamageDiceCount = actionItem.WeaponProperties!.DamageDieCount.ToString();
@@ -562,15 +563,15 @@ public static class RunesmithRunes
 
                                 if (action.CheckResult > CheckResult.Failure) // If the strike also at least succeeded,
                                 {
-                                    foreach (Creature target in qfSelf.Owner.Battle.AllCreatures.Where(cr =>
+                                    foreach (Creature target2 in qfSelf.Owner.Battle.AllCreatures.Where(cr =>
                                                  action.ChosenTargets.ChosenCreature
                                                      .IsAdjacentTo(cr))) // Loop through all adjacent creatures,
                                     {
-                                        if (target != qfSelf.Owner ||
+                                        if (target2 != qfSelf.Owner ||
                                             !actionItem.HasTrait(Trait
                                                 .Melee)) // And if it's a melee attack, skip me, otherwise include me when I,
                                             await CommonSpellEffects.DealDirectSplashDamage(action, splashAmount,
-                                                target, DamageKind.Bludgeoning); // splash them too.
+                                                target2, DamageKind.Bludgeoning); // splash them too.
                                     }
                                 }
                             }
@@ -597,7 +598,7 @@ public static class RunesmithRunes
                 validItems.Add(target.UnarmedStrike);
                 validItemsString.Add("unarmed strikes");
 
-                if (sourceAction?.Target is AreaTarget)
+                if (sourceAction.Target is AreaTarget)
                 {
                     foreach (DrawnRune? marssylPassive in validItems.Select(MakeMarssylPassive))
                     {
@@ -618,7 +619,7 @@ public static class RunesmithRunes
 
                 ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
                     thisRune.Illustration,
-                    $"{{b}}{sourceAction?.Name}{{/b}}\nWhich item, or unarmed strikes, would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                    $"{{b}}{sourceAction.Name}{{/b}}\nWhich item, or unarmed strikes, would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
                     validItemsString.ToArray()
                 );
 
@@ -721,7 +722,7 @@ public static class RunesmithRunes
                     case 1:
                         return MakeOljinexPassive(target.HeldItems.First(item => item.HasTrait(Trait.Shield)));
                     default:
-                        if (sourceAction?.Target is AreaTarget)
+                        if (sourceAction.Target is AreaTarget)
                         {
                             foreach (DrawnRune? oljinexPassive in target.HeldItems.Select(MakeOljinexPassive))
                             {
@@ -745,7 +746,7 @@ public static class RunesmithRunes
                         Item targetItem = await target.Battle.AskForConfirmation(
                             caster ?? throw new ArgumentNullException(nameof(caster)),
                             IllustrationName.MagicWeapon,
-                            $"{{b}}{sourceAction?.Name}{{/b}}\nWhich shield would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                            $"{{b}}{sourceAction.Name}{{/b}}\nWhich shield would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
                             target.HeldItems[0].Name, target.HeldItems[1].Name)
                             ? target.HeldItems[0]
                             : target.HeldItems[1];
@@ -971,7 +972,7 @@ public static class RunesmithRunes
                                 ],
                                 "Attempt to disbelieve Oljinex' illusory terrain with a Seek action against the caster's class DC.",
                                 Target.Self(
-                                    (cr, ai) => int.MinValue)) // TODO: encourage the action?
+                                    (_,_) => int.MinValue)) // TODO: encourage the action?
                             .WithActiveRollSpecification(new ActiveRollSpecification(
                                 Checks.Perception(),
                                 (action, attacker, defender) =>
@@ -1148,7 +1149,7 @@ public static class RunesmithRunes
                     {
                         if ((qfThis as DrawnRune)!.Disabled)
                             return;
-                        if (qfThis.UsedThisTurn == true) // If you have moved this turn,
+                        if (qfThis.UsedThisTurn) // If you have moved this turn,
                             return; // don't take any damage.
                         await CommonSpellEffects.DealDirectDamage(null, immobilityDamage, self, CheckResult.Failure,
                             DamageKind.Electricity);
@@ -1222,7 +1223,12 @@ public static class RunesmithRunes
                                 drInvoked.Source!,
                                 "Sun, Diacritic Rune of Preservation",
                                 [ModData.Traits.Traced]); // <- Even if it WAS etched before, it's now traced.*/
-                            CombatAction sunRedraw = CommonRuneRules.CreateTraceAction(drInvoked.Source!, drInvoked.Rune, 0, 99);
+                            CombatAction? sunRedraw = CommonRuneRules.CreateTraceAction(drInvoked.Source!, drInvoked.Rune, 0, 99);
+                            if (sunRedraw == null)
+                            {
+                                thisDr.Owner.Battle.Log("Sun- failed to trace rune due to unknown reason. Usage of Sun was not consumed.");
+                                return;
+                            }
                             if (await CommonRuneRules.DrawRuneOnTarget(sunRedraw, thisDr.Source!,
                                     drInvoked.Owner, drInvoked.Rune, false) != null)
                                 Sfxs.Play(ModData.SfxNames.InvokedSun);
@@ -1267,7 +1273,7 @@ public static class RunesmithRunes
                 
                 ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
                     thisRune.Illustration,
-                    $"{{b}}{sourceAction?.Name}{{/b}}\nWhich rune would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                    $"{{b}}{sourceAction.Name}{{/b}}\nWhich rune would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
                     validRunesString.ToArray()
                 );
 
@@ -1366,7 +1372,7 @@ public static class RunesmithRunes
                 
                 ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
                     thisRune.Illustration,
-                    $"{{b}}{sourceAction?.Name}{{/b}}\nWhich rune would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                    $"{{b}}{sourceAction.Name}{{/b}}\nWhich rune would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
                     validRunesString.ToArray()
                 );
 
@@ -1392,7 +1398,7 @@ public static class RunesmithRunes
             {
                 DrawnRune drawnZohk = new DrawnRune(
                     thisRune,
-                    $"You can Stride with a +15-foot status bonus if your destination space is closer to {caster?.Name ?? "(...)"}.",
+                    $"You can Stride with a +15-foot status bonus if your destination space is closer to {caster.Name}.",
                     caster)
                 {
                     Tag = target.Occupies,
@@ -1492,7 +1498,7 @@ public static class RunesmithRunes
                         }
 
                         // Prompts the user for their desired tile and returns it or null
-                        Option? selectedOption = (await caster.Battle.SendRequest(
+                        Option selectedOption = (await caster.Battle.SendRequest(
                             new AdvancedRequest(caster, $"Choose a tile to teleport {target.Name} to.", options)
                             {
                                 IsMainTurn = false,
@@ -1566,7 +1572,7 @@ public static class RunesmithRunes
                 
                 ChoiceButtonOption chosenOption = await caster.AskForChoiceAmongButtons(
                     thisRune.Illustration,
-                    $"{{b}}{sourceAction?.Name}{{/b}}\nWhich rune would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
+                    $"{{b}}{sourceAction.Name}{{/b}}\nWhich rune would you like to apply {{Blue}}{thisRune.Name}{{/Blue}} to?",
                     validRunesString.ToArray());
 
                 DrawnRune targetRune = validRunes[chosenOption.Index];
@@ -1611,7 +1617,7 @@ public static class RunesmithRunes
                                              .Where(cr => cr != drInvoked.Owner && cr.DistanceTo(drInvoked.Owner) <= 3))
                                 {
                                     await invocation.Invoke(sourceAction2, drInvoked.Rune, sourceAction2.Owner, cr, drInvoked);
-                                };
+                                }
                         },
                     }.WithDiacriticRegulator(drawnOnto);
 
@@ -1643,7 +1649,7 @@ public static class RunesmithRunes
                     caster)
                 {
                     BonusToSkills = skill =>
-                        skill is Skill.Athletics ? new Bonus(caster?.Level == 17 ? 3 : 2, BonusType.Item, "Feikris") : null,
+                        skill is Skill.Athletics ? new Bonus(caster.Level == 17 ? 3 : 2, BonusType.Item, "Feikris") : null,
                 };
                 return feikrisPassive;
             })
