@@ -1781,16 +1781,17 @@ public static class RunesmithRunes
             ModData.Traits.Jurroz,
             IllustrationName.CorrosiveRunestone,
             9,
-            "etch onto a creature", //or armor",
+            "etched onto a creature", //or armor",
             "This angular rune channels the fury of dragon kind.",
-            "Whenever a creature Strikes the rune-bearer, draconic sanction fully focuses on them, causing them to become off-guard for 1 round.",
+            "Whenever a creature Strikes the rune-bearer, draconic sanction fully focuses on them, causing the striking creature to become off-guard for 1 round.",
             invocationText: "As a {icon:FreeAction} free action, the rune-bearer can Fly up to 60 feet toward a creature that has damaged them in the last minute. If they end this movement adjacent to the creature, the creature becomes off-guard until the end of the rune-bearer's next turn.",
             additionalTraits: [Trait.Dragon])
+            .WithUsageCondition(Rune.UsabilityConditions.UsableOnAllies())
             .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
                 DrawnRune jurrozPassive = new DrawnRune(
                     thisRune,
-                    "Whenever a creature Strikes you, you become off-guard for 1 round.",
+                    "Whenever a creature Strikes you, they become off-guard for 1 round.",
                     caster)
                 {
                     AfterYouTakeDamage = async (qfThis, amount, kind, action, critical) =>
@@ -1801,7 +1802,7 @@ public static class RunesmithRunes
                         QEffect jurrozFooted = QEffect.FlatFooted("Jurroz, Rune of Dragon Fury")
                             .WithExpirationAtStartOfSourcesTurn(action.Owner, 1);
                         jurrozFooted.Key = "RunesmithPlaytest.JurrozPassive";
-                        qfThis.Owner.AddQEffect(jurrozFooted);
+                        action.Owner.AddQEffect(jurrozFooted);
                     },
                 };
                 return jurrozPassive;
@@ -1898,7 +1899,8 @@ public static class RunesmithRunes
                             break;
                     }
                 }
-            });
+            })
+            .WithOnlyEtchedTechnical();
         RuneFeat jurrozFeat = AddRuneAsRuneFeat("RunesmithPlaytest.RuneJurroz", runeJurroz);
         jurrozFeat.WithPermanentQEffect(null, qfFeat =>
         {

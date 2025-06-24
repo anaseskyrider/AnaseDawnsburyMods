@@ -54,7 +54,8 @@ public static class RunesmithClass
                     RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(qfThis.Owner);
                     if (repertoire == null)
                         return null;
-                    foreach (Rune rune in repertoire.GetRunesKnown(qfThis.Owner))
+                    foreach (Rune rune in repertoire.GetRunesKnown(qfThis.Owner)
+                                 .Where(rune => !rune.DrawTechnicalTraits.Contains(ModData.Traits.Etched)))
                     {
                         List<Possibility> specificRunePossibilities = [];
                         
@@ -62,7 +63,9 @@ public static class RunesmithClass
                         bool hasRuneSinger = qfThis.Owner.HasEffect(ModData.QEffectIds.RuneSinger);
                         if (!hasRuneSinger)
                         {
-                            CombatAction oneActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 1);
+                            CombatAction? oneActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 1);
+                            if (oneActionTraceRune == null)
+                                continue;
                             oneActionTraceRune.ContextMenuName = "{icon:Action} " + oneActionTraceRune.Name;
                             (oneActionTraceRune.Target as CreatureTarget)!
                                 .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
@@ -74,7 +77,9 @@ public static class RunesmithClass
                             specificRunePossibilities.Add(traceRunePossibility1);
                         }
                         
-                        CombatAction twoActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 2);
+                        CombatAction? twoActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 2);
+                        if (twoActionTraceRune == null)
+                            continue;
                         if (!hasRuneSinger)
                         {
                             // Declutter your options by removing the ranged option while in melee.

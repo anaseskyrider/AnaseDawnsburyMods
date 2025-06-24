@@ -370,9 +370,13 @@ public static class RunesmithFeats
                         // Disable this rune if it isn't a proper shield rune.
                         bool isDisabledRune = !rune.DrawTechnicalTraits.Contains(Trait.Shield);
                         
-                        CombatAction knockThisRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 0)
-                            .WithActionCost(1)
+                        CombatAction? knockThisRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 0)?
+                            .WithActionCost(1)?
                             .WithExtraTrait(Trait.DoNotShowInCombatLog); // Too much text spam.
+                        
+                        if (knockThisRune == null)
+                            continue;
+                        
                         if (knockThisRune.HasTrait(Trait.Manipulate)) // Don't bother adding if it doesn't have manipulate
                             knockThisRune.WithExtraTrait(Trait.DoesNotProvoke); // Provoke manually later
                         knockThisRune.Name = $"Knock {rune.Name}";
@@ -1368,9 +1372,11 @@ public static class RunesmithFeats
 
                     if (foundRune.UsageCondition.Invoke(qfFeat.Owner, bloodTarget) == Usability.Usable)
                     {
-                        CombatAction bloodTrace = CommonRuneRules.CreateTraceAction(qfThis.Owner, foundRune, 2, 12)
-                            .WithActionCost(1)
+                        CombatAction? bloodTrace = CommonRuneRules.CreateTraceAction(qfThis.Owner, foundRune, 2, 12)?
+                            .WithActionCost(1)?
                             .WithExtraTrait(Trait.Basic);
+                        if (bloodTrace == null)
+                            return null;
                         ((CreatureTarget)bloodTrace.Target).WithAdditionalConditionOnTargetCreature(
                             (attacker, defender) => defender == bloodTarget
                                 ? Usability.Usable

@@ -131,24 +131,19 @@ public static class CommonRuneRules
 
     #region CombatActions
     /// <summary>
-    /// Creates a generic CombatAction which when executed, calls <see cref="DrawRuneOnTarget"/> on each target using this Rune. This action inherits the mechanics of Tracing a Rune, such as the <see cref="ModData.Traits.Traced"/> and Manipulate traits.
+    /// Creates a generic CombatAction which when executed, calls <see cref="DrawRuneOnTarget"/> on each target using this Rune.
     /// </summary>
     /// <param name="owner">The creature (Runesmith) who is using this action.</param>
     /// <param name="rune">The rune to create an action for.</param>
     /// <param name="actions">The number of actions for this variant. If actions==-3, a 1-2 action variable target is used. If actions==1, an adjacent target is used. If actions==2, a ranged target is used (6 tiles). Otherwise, a Self target is used. The action cost can still be altered afterward (such as for use in subsidiary actions).</param>
     /// <param name="range">The range (in tiles) to use for the 2-action version. Default is 6.</param>
-    /// <returns>(CombatAction) The action which traces the given rune on the target.</returns>
-    public static CombatAction CreateTraceAction(
+    /// <returns>(CombatAction) The action which draws the given rune on the target.</returns>
+    internal static CombatAction CreateDrawAction(
         Creature owner,
         Rune rune,
         int actions = 0,
         int? range = 6)
     {
-        bool hasRuneSinger = owner.HasEffect(ModData.QEffectIds.RuneSinger);
-        
-        if (hasRuneSinger && actions == 1)
-            actions = 2; // Make it the 2-action version instead
-        
         // Determine range to target (logic maybe expanded later)
         int rangeToTarget = range ?? 6;
 
@@ -174,19 +169,17 @@ public static class CommonRuneRules
         }
         
         // Determine traits
-        Trait[] traits = rune.Traits.ToArray().Concat([
-                Trait.Concentrate,
+        Trait[] traits = [
+                ..rune.Traits,
                 Trait.Magical,
-                Trait.Manipulate,
-                ModData.Traits.Traced,
                 Trait.Spell // <- Should apply magic immunity.
-            ]).ToArray();
+            ];
         
         // Create action
         CombatAction drawRuneAction = new CombatAction(
                 owner,
-                rune.Illustration ?? IllustrationName.None,
-                "Trace " + rune.Name,
+                rune.Illustration,
+                "Draw " + rune.Name,
                 traits,
                 "ERROR: INCOMPLETE DESCRIPTION",
                 actions switch
@@ -206,18 +199,46 @@ public static class CommonRuneRules
                 if (await CommonRuneRules.DrawRuneOnTarget(thisAction, caster, target, actionRune) == null)
                     thisAction.RevertRequested = true;
             });
-
+        
+        return drawRuneAction;
+    }
+    
+    /// <summary>Returns a version of <see cref="CreateDrawAction"/> with modified mechanics for Tracing a Rune, such as the <see cref="ModData.Traits.Traced"/> and Manipulate traits.</summary>
+    public static CombatAction? CreateTraceAction(
+        Creature owner,
+        Rune rune,
+        int actions = 0,
+        int? range = 6)
+    {
+        if (rune.DrawTechnicalTraits.Contains(ModData.Traits.Etched))
+            return null;
+        
+        bool hasRuneSinger = owner.HasEffect(ModData.QEffectIds.RuneSinger);
+        
+        if (hasRuneSinger && actions == 1)
+            actions = 2; // Make it the 2-action version instead
+        
+        // Determine range to target (logic maybe expanded later)
+        int rangeToTarget = range ?? 6;
+        
+        CombatAction traceRune = CreateDrawAction(owner, rune, actions, range)
+            .WithExtraTrait(Trait.Concentrate)
+            .WithExtraTrait(Trait.Manipulate)
+            .WithExtraTrait(ModData.Traits.Traced)
+            .WithActionId(ModData.ActionIds.TraceRune);
+        traceRune.Name = $"Trace {rune.Name}";
+        
         if (actions != 1) // Isn't the melee one
-            drawRuneAction.WithProjectileCone(VfxStyle.BasicProjectileCone(rune.Illustration ?? IllustrationName.None));
+            traceRune.WithProjectileCone(VfxStyle.BasicProjectileCone(rune.Illustration));
         
         if (actions == -3)
-            drawRuneAction.WithCreateVariantDescription((actions2, spellVariant) =>
+            traceRune.WithCreateVariantDescription((actions2, spellVariant) =>
             { // Just having this gives the variant range information.
                 return actions2 switch
                 {
                     //1 => this.CreateTraceActionDescription(drawRuneAction, withFlavorText:false),
                     //2 => this.CreateTraceActionDescription(drawRuneAction, withFlavorText:false),
-                    _ => CommonRuneRules.CreateTraceActionDescription(drawRuneAction, rune, withFlavorText:false)
+                    _ => CommonRuneRules.CreateTraceActionDescription(traceRune, rune, withFlavorText:false)
                 };
             });
         
@@ -225,40 +246,39 @@ public static class CommonRuneRules
         switch (actions)
         {
             case -3:
-                drawRuneAction.Description = CommonRuneRules.CreateTraceActionDescription(drawRuneAction, rune, afterUsageText:$"\n\n{{icon:Action}} The range is touch.\n{{icon:TwoActions}} The range is {rangeToTarget*5} feet.");
+                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(traceRune, rune, afterUsageText:$"\n\n{{icon:Action}} The range is touch.\n{{icon:TwoActions}} The range is {rangeToTarget*5} feet.");
                 break;
             case 1:
-                drawRuneAction.Description = CommonRuneRules.CreateTraceActionDescription(drawRuneAction, rune, prologueText:"{b}Range{/b} touch\n");
+                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(traceRune, rune, prologueText:"{b}Range{/b} touch\n");
                 break;
             case 2:
-                drawRuneAction.Description = CommonRuneRules.CreateTraceActionDescription(drawRuneAction, rune, prologueText:$"{{b}}Range{{/b}} {rangeToTarget*5} feet\n");
+                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(traceRune, rune, prologueText:$"{{b}}Range{{/b}} {rangeToTarget*5} feet\n");
                 break;
             default:
-                drawRuneAction.Description = CommonRuneRules.CreateTraceActionDescription(drawRuneAction, rune, prologueText:"{b}Range{/b} self\n");
+                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(traceRune, rune, prologueText:"{b}Range{/b} self\n");
                 break;
         }
 
         // Modify according to Rune-Singer
         if (hasRuneSinger)
         {
-            drawRuneAction = drawRuneAction
+            traceRune = traceRune
                 .WithActionCost(actions == 0 ? 0 : 1)
                 .WithSoundEffect(ModData.SfxNames.SingRune)
                 .WithEffectOnSelf(self =>
                 {
                     self.RemoveAllQEffects(qf => qf.Id == ModData.QEffectIds.RuneSinger || qf.Id == ModData.QEffectIds.RuneSingerCreator);
                 });
-            drawRuneAction.Name = drawRuneAction.Name.Replace("Trace", "Sing");
-            drawRuneAction.Description = drawRuneAction.Description.Replace("{b}Range{/b} 30 feet", "{Blue}{b}Range{/b} 30 feet{/Blue}\n{Blue}{b}Frequency{/b} Once per combat{/Blue}");
+            traceRune.Name = traceRune.Name.Replace("Trace", "Sing");
+            traceRune.Description = traceRune.Description.Replace("{b}Range{/b} 30 feet", "{Blue}{b}Range{/b} 30 feet{/Blue}\n{Blue}{b}Frequency{/b} Once per combat{/Blue}");
             //drawRuneAction.Illustration = new SideBySideIllustration(drawRuneAction.Illustration, ModData.Illustrations.RuneSinger);
-            drawRuneAction.Traits.Remove(Trait.Manipulate);
+            traceRune.Traits.Remove(Trait.Manipulate);
         }
         
-        return drawRuneAction;
+        return traceRune;
     }
 
-    /// <summary>
-    /// Creates a variant of <see cref="CreateTraceAction"/> that inherits the mechanics of Etching a Rune, such as the <see cref="ModData.Traits.Etched"/> trait and a map-sized range limit, and only applying runes to allies.
+    /// <summary>Creates a variant of <see cref="CreateDrawAction"/> with modified mechanics for Etching a Rune, such as the <see cref="ModData.Traits.Etched"/> trait and a map-sized range limit, and only applying runes to allies.
     /// </summary>
     /// <param name="owner">The creature (Runesmith) who is using this action.</param>
     /// <param name="rune">The rune to create an etch action for.</param>
@@ -267,26 +287,19 @@ public static class CommonRuneRules
         Creature owner,
         Rune rune)
     {
-        CombatAction etchAction = CommonRuneRules.CreateTraceAction(owner, rune, 2)
+        CombatAction etchAction = CommonRuneRules.CreateDrawAction(owner, rune, 2)
+            .WithActionId(ModData.ActionIds.EtchRune)
             .WithActionCost(0)
+            .WithExtraTrait(ModData.Traits.Etched)
             .WithSoundEffect(ModData.SfxNames.EtchRune);
         etchAction.Name = $"Etch {rune.Name}";
         etchAction.Description = CommonRuneRules.CreateTraceActionDescription(etchAction, rune, false, prologueText:"{Blue}Etched: lasts until the end of combat.{/Blue}\n");
-        etchAction.Traits.Remove(ModData.Traits.Traced);
-        etchAction.Traits.Remove(Trait.Manipulate); // Just in case this might provoke a reaction.
-        etchAction.Traits.Remove(Trait.Concentrate); // Just in case this might provoke a reaction.
-        etchAction.Traits.Add(ModData.Traits.Etched);
         
         // Usable across the whole map
         etchAction.Target = Target.RangedFriend(99); // BUG: Is blocked by line of effect. I don't currently know a way around this.
         // Do this again since we just replaced the target.
         (etchAction.Target as CreatureTarget)!.WithAdditionalConditionOnTargetCreature(rune.UsageCondition);
         // Don't add a free hand requirement; this "technically" happened "before" combat.
-        
-        // Remove tedious animations
-        etchAction.ProjectileIllustration = null;
-        etchAction.ProjectileCount = 0;
-        etchAction.ProjectileKind = ProjectileKind.None;
         
         return etchAction;
     }
@@ -347,12 +360,13 @@ public static class CommonRuneRules
                 initialDescription + (rune.InvocationTextWithHeightening(rune, caster.Level) ?? "[No invocation entry]"),
                 invokeTarget)
             .WithTag(rune)
+            .WithActionId(ModData.ActionIds.InvokeRune)
             .WithActionCost(0)
             .WithProjectileCone(VfxStyle.BasicProjectileCone(rune.Illustration))
             .WithSoundEffect(ModData.SfxNames.InvokeRune)
-            .WithEffectOnEachTarget(async (thisInvokeAction, caster, target, result) =>
+            .WithEffectOnEachTarget(async (thisInvokeAction, caster2, target, result) =>
             {
-                await CommonRuneRules.InvokeDrawnRune(thisInvokeAction, caster, target, runeTarget);
+                await CommonRuneRules.InvokeDrawnRune(thisInvokeAction, caster2, target, runeTarget);
             });
 
         // Saving Throw Tooltip Creator
@@ -473,7 +487,10 @@ public static class CommonRuneRules
         {
             if (runeFilter != null && runeFilter.Invoke(rune) != true)
                 continue;
-            CombatAction traceThisRuneAction = CommonRuneRules.CreateTraceAction(caster, rune, 2, range).WithActionCost(0);
+            CombatAction? traceThisRuneAction = CommonRuneRules.CreateTraceAction(caster, rune, 2, range)?
+                .WithActionCost(0);
+            if (traceThisRuneAction == null)
+                continue;
             traceThisRuneAction.Description = CommonRuneRules.CreateTraceActionDescription(traceThisRuneAction, rune, withFlavorText:false);
             GameLoop.AddDirectUsageOnCreatureOptions(
                 traceThisRuneAction, // Use at normal range.
@@ -554,7 +571,10 @@ public static class CommonRuneRules
         {
             if (runeFilter != null && runeFilter.Invoke(rune) != true)
                 continue;
-            CombatAction traceThisRuneAction = CommonRuneRules.CreateTraceAction(caster, rune, 2, range).WithActionCost(0);
+            CombatAction? traceThisRuneAction = CommonRuneRules.CreateTraceAction(caster, rune, 2, range)?
+                .WithActionCost(0);
+            if (traceThisRuneAction == null)
+                continue;
             traceThisRuneAction.Description = CommonRuneRules.CreateTraceActionDescription(traceThisRuneAction, rune, withFlavorText:false);
             GameLoop.AddDirectUsageOnCreatureOptions(traceThisRuneAction, options, false);
         }
