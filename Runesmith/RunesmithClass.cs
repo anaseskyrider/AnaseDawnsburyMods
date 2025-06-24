@@ -80,7 +80,7 @@ public static class RunesmithClass
                             // Declutter your options by removing the ranged option while in melee.
                             (twoActionTraceRune.Target as CreatureTarget)!
                                 .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
-                                    attacker.IsAdjacentTo(defender)
+                                    attacker.DistanceTo(defender) <= 1
                                         ? Usability.NotUsableOnThisCreature("use the 1-action version")
                                         : Usability.Usable);
                         }
