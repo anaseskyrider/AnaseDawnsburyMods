@@ -20,7 +20,7 @@ public static class RunesmithArchetype
         Feat runesmithDedication = ArchetypeFeats.CreateMulticlassDedication(
                 ModData.Traits.Runesmith,
                 "You have dabbled in the scholarly art at the heart of all magic, the rune.",
-                "You become trained in Crafting; if you were already trained in Crafting, you instead become trained in a skill of your choice.\n\nYou can use "+ModTooltips.TraitRune+"runes{/} like a runesmith. You gain a runic repertoire with two 1st-level runes from the runesmith's rune list. The DCs for these runes is based on your class DC and your Intelligence.\n\nYou can use the "+ModTooltips.ActionTraceRune+"Trace Rune{/} "+RulesBlock.GetIconTextFromNumberOfActions(-3)+" and "+ModTooltips.ActionInvokeRune+"Invoke Rune{/} "+RulesBlock.GetIconTextFromNumberOfActions(1)+" actions.")
+                "You become trained in Crafting; if you were already trained in Crafting, you instead become trained in a skill of your choice.\n\nYou can use "+ModTooltips.TraitRune("runes")+" like a runesmith. You gain a runic repertoire with two 1st-level runes from the runesmith's rune list. The DCs for these runes is based on your class DC and your Intelligence.\n\nYou can use the "+ModTooltips.ActionTraceRune("Trace Rune "+RulesBlock.GetIconTextFromNumberOfActions(-3))+" and "+ModTooltips.ActionInvokeRune("Invoke Rune "+RulesBlock.GetIconTextFromNumberOfActions(1))+" actions.")
             .WithOnSheet(values =>
             {
                 values.TrainInThisOrSubstitute(Skill.Crafting);

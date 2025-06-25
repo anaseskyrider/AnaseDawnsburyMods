@@ -428,18 +428,18 @@ public static class RunesmithClass
                 [Trait.Perception, Trait.Reflex, Trait.Unarmed, Trait.Simple, Trait.Martial, Trait.UnarmoredDefense, Trait.LightArmor, Trait.MediumArmor, Trait.Crafting],
                 [Trait.Fortitude, Trait.Will],
                 2,
-                "{b}1. Runic Repertoire.{/b} A runesmith doesn't cast spells, but they can use "+ModTooltips.TraitRune+"runesmith runes{/}. You learn 4 runes of 1st-level. You learn additional runes at higher levels. Your runes are the same level you are, regardless when you learn them {i}(some runes increase in power at higher levels, as listed in their Level entry){/i}. Runes use your class DC, which is based on Intelligence." +
-                "\r\n\r\n{b}2. Applying Runes.{/b} You can apply runes in one of two ways: {i}tracing{/i} the rune with the "+ModTooltips.ActionTraceRune+"Trace Rune{/} action, or by {i}etching{/i} the rune at the start of combat with the "+ModTooltips.ActionEtchRune+"Etch Rune{/} activity." +
-                "\r\n\r\n{b}3. Invoking Runes.{/b} You can also invoke a rune with the "+ModTooltips.ActionInvokeRune+"Invoke Rune{/} action." +
+                "{b}1. Runic Repertoire.{/b} A runesmith doesn't cast spells, but they can use "+ModTooltips.TraitRune("runesmith runes")+". You start with 4 runes of 1st level, and learn an additional rune every 2nd level. Your runes are the same level you are, regardless of when you learn them {i}(some runes increase in power at higher levels, as listed in their Level entry){/i}. Runes use your class DC, which is based on Intelligence. If a rune lists a tradition trait (such as Arcane), then it belongs to that tradition; it otherwise belongs to any tradition "+ModTooltips.FeatureTraditionSkill("whose skill")+" you're trained in for the purposes of abilities which require a rune of a specific tradition." +
+                "\r\n\r\n{b}2. Applying Runes.{/b} You can apply runes in one of two ways: {i}tracing{/i} the rune with the "+ModTooltips.ActionTraceRune("Trace Rune")+" action, or by {i}etching{/i} the rune at the start of combat with the "+ModTooltips.ActionEtchRune("Etch Rune")+" activity." +
+                "\r\n\r\n{b}3. Invoking Runes.{/b} You can also invoke a rune with the "+ModTooltips.ActionInvokeRune("Invoke Rune")+" action." +
                 "\r\n\r\n{b}4. Runesmith feat.{/b}" +
                 "\r\n\r\n{b}5. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks" +
                 "\r\n\r\n{b}At higher levels:{/b}" +
-                "\r\n{b}Level 2:{/b} Runesmith feat, "+ModTooltips.FeatureRunicCrafter+"runic crafter{/}" +
+                "\r\n{b}Level 2:{/b} Runesmith feat, "+ModTooltips.FeatureRunicCrafter("runic crafter") +
                 "\r\n{b}Level 3:{/b} General feat, skill increase, additional level 1 rune known" +
                 "\r\n{b}Level 4:{/b} Runesmith feat" +
-                "\r\n{b}Level 5:{/b} Attribute boosts, ancestry feat, skill increase, "+ModTooltips.FeatureSmithsWeaponExpertise+"smith's weapon expertise{/}, additional level 1 rune known, additional maximum etched rune" +
+                "\r\n{b}Level 5:{/b} Attribute boosts, ancestry feat, skill increase, "+ModTooltips.FeatureSmithsWeaponExpertise("smith's weapon expertise")+", additional level 1 rune known, additional maximum etched rune" +
                 "\r\n{b}Level 6:{/b} Runesmith feat" +
-                "\r\n{b}Level 7:{/b} General feat, skill increase, expert class DC, expert in Reflex saves, "+ModTooltips.FeatureRunicOptimization+"runic optimization{/} ({Red}NYI{/Red}, uses Weapon Specialization), additional level 1 rune known" + // TODO: adjust text with Runic Optimization implementation
+                "\r\n{b}Level 7:{/b} General feat, skill increase, expert class DC, expert in Reflex saves, "+ModTooltips.FeatureRunicOptimization("runic optimization")+" ({Red}NYI{/Red}, uses Weapon Specialization), additional level 1 rune known" + // TODO: adjust text with Runic Optimization implementation
                 "\r\n{b}Level 8:{/b} Runesmith feat",
                 null)
             .WithOnSheet(values =>

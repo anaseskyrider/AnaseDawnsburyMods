@@ -3,6 +3,7 @@ using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Display.Controls.Statblocks;
 using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
@@ -48,22 +49,6 @@ public class RunicRepertoireFeat : Feat
         this.ClassOfOrigin = classOfOrigin;
         if (etchLimit != null)
             this.EtchLimitIncreases.Add(1, (int)etchLimit);
-        
-        // Description-maker
-        this.WithPermanentQEffect("", qfFeat =>
-        {
-            qfFeat.Description = DescribeRepertoire(qfFeat.Owner);
-            
-            /*qfFeat.StartOfCombatBeforeOpeningCutscene = async qfThis =>
-            {
-                qfThis.Description = DescribeRepertoire(qfThis.Owner);
-            };*/
-            
-            qfFeat.StateCheck += async qfThis =>
-            {
-                qfThis.Description = DescribeRepertoire(qfThis.Owner);
-            };
-        });
     }
     #endregion
     
@@ -140,37 +125,6 @@ public class RunicRepertoireFeat : Feat
         return true;
     }
     #endregion
-    
-    /// <summary>
-    /// Produces a detailed description of your runic repertoire, similar to spellcasting on a stat block.
-    /// </summary>
-    public string DescribeRepertoire(Creature owner)
-    {
-        int DC = RunesmithClass.RunesmithDC(owner);
-        string stats = $"DC {DC};";
-        int etchLimitNum = this.GetEtchLimit(owner.Level);
-        string etchLimit = etchLimitNum > 0 ? $"{{b}}etch limit{{/b}} ({etchLimitNum} runes); " : "";
-        string runesKnown = string.Join("; ",
-            GetRunesKnown(owner)
-                .GroupBy(rune => rune.BaseLevel)
-                .OrderByDescending(rg => rg.Key)
-                .Select(rg =>
-                {
-                    string rank = "{b}" + rg.Key.Ordinalize2() + "{/b}";
-                    string runes = string.Join(", ",
-                        rg.GroupBy(rn => rn.Name)
-                            .OrderBy(lg => lg.Key)
-                            .Select(runes =>
-                            {
-                                Rune first = runes.First();
-                                return first.Name.Substring(0, first.RuneId.ToStringOrTechnical().Length);
-                            }));
-                    return rank + " {i}" + runes + "{/i}";
-                })
-        );
-        string description = stats + " " + etchLimit + runesKnown;
-        return description;
-    }
 
     /// <summary>
     /// Add an increase at what level and by how much to your Etch Limit.

@@ -75,6 +75,77 @@ public static class CommonRuneRules
             (rune.WithLevelTextFormatting() != null ? "\n\n" + rune.WithLevelTextFormatting() : null);
         return description;
     }
+
+    public static string DescribeRunicRepertoire(Creature owner)
+    {
+        RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(owner);
+        if (repertoire == null)
+            return "";
+        List<string> traditions = [];
+        if (owner.Skills.IsTrained(Skill.Arcana))
+            traditions.Add("arcane");
+        if (owner.Skills.IsTrained(Skill.Religion))
+            traditions.Add("divine");
+        if (owner.Skills.IsTrained(Skill.Occultism))
+            traditions.Add("occult");
+        if (owner.Skills.IsTrained(Skill.Nature))
+            traditions.Add("primal");
+        int DC = RunesmithClass.RunesmithDC(owner);
+        int etchLim = repertoire.GetEtchLimit(owner.Level);
+        string? tattoo = (owner.PersistentCharacterSheet?.Calculated.AllFeats
+                .FirstOrDefault(ft => ft.FeatName.ToStringOrTechnical().Contains("FeatTattooed"))?.Tag as Rune)?.BaseName.ToLower() ?? null;
+        string runesKnown = string.Join("; ",
+            repertoire.GetRunesKnown(owner)
+                .GroupBy(rune => rune.BaseLevel)
+                .OrderByDescending(rg => rg.Key)
+                .Select(rg =>
+                {
+                    string rank = "{b}" + rg.Key.Ordinalize2() + "{/b}";
+                    string runes = string.Join(", ",
+                        rg.GroupBy(rn => rn.Name)
+                            .OrderBy(lg => lg.Key)
+                            .Select(runes =>
+                            {
+                                Rune first = runes.First();
+                                return first.Name.Substring(0, first.RuneId.ToStringOrTechnical().Length).ToLower();
+                            }));
+                    return rank + " {i}" + runes + "{/i}";
+                })
+        );
+        return $"{{b}}Traditions{{/b}} {string.Join(", ", traditions)}\n{{b}}DC{{/b}} {DC}"
+            + (etchLim > 0 ? $"; {{b}}etch limit{{/b}} {etchLim}" : null)
+            + (tattoo != null ? $"\n{{b}}Tattoo{{/b}} {{i}}{tattoo}{{/i}}" : null)
+            + (owner.PersistentUsedUpResources.UsedUpActions.Contains("RunicTattoo") ? " (expended)" : null)
+            + $"\n{runesKnown}";
+        
+        /*
+         // Kept old code just because
+        int DC = RunesmithClass.RunesmithDC(owner);
+        string stats = $"DC {DC};";
+        int etchLimitNum = this.GetEtchLimit(owner.Level);
+        string etchLimit = etchLimitNum > 0 ? $"{{b}}etch limit{{/b}} ({etchLimitNum} runes); " : "";
+        string runesKnown = string.Join("; ",
+            GetRunesKnown(owner)
+                .GroupBy(rune => rune.BaseLevel)
+                .OrderByDescending(rg => rg.Key)
+                .Select(rg =>
+                {
+                    string rank = "{b}" + rg.Key.Ordinalize2() + "{/b}";
+                    string runes = string.Join(", ",
+                        rg.GroupBy(rn => rn.Name)
+                            .OrderBy(lg => lg.Key)
+                            .Select(runes =>
+                            {
+                                Rune first = runes.First();
+                                return first.Name.Substring(0, first.RuneId.ToStringOrTechnical().Length);
+                            }));
+                    return rank + " {i}" + runes + "{/i}";
+                })
+        );
+        string description = stats + " " + etchLimit + runesKnown;
+        return description;
+        */
+    }
     #endregion
 
     #region Immunities
@@ -552,7 +623,7 @@ public static class CommonRuneRules
     /// <param name="range">(default: 6) if a target is not provided, this range is used for tracing a rune.</param>
     /// <param name="runeFilter">(nullable) A lambda which returns true if the Rune is a valid option to draw.</param>
     /// <param name="canBeCanceled">Whether the attempt to draw the rune can be canceled.</param>
-    public static async Task PickACreatureAndDrawARune(
+    public static async Task<bool> PickACreatureAndDrawARune(
         CombatAction? sourceAction,
         Creature caster,
         Func<Creature, bool>? targetFilter = null,
@@ -563,7 +634,7 @@ public static class CommonRuneRules
         // Get available runes
         RunicRepertoireFeat? repertoireFeat = RunicRepertoireFeat.GetRepertoireOnCreature(caster);
         if (repertoireFeat == null)
-            return;
+            return false;
         
         // Generate options
         List<Option> options = [];
@@ -586,7 +657,7 @@ public static class CommonRuneRules
         
         // Add bells and whistles to options
         if (options.Count <= 0)
-            return;
+            return false;
         if (canBeCanceled == true)
             options.Add(new CancelOption(true));
         options.Add(new PassViaButtonOption(" Confirm no trace action "));
@@ -611,13 +682,14 @@ public static class CommonRuneRules
             case CancelOption:
                 if (sourceAction != null)
                     sourceAction.RevertRequested = true;
-                return;
+                return false;
             case PassViaButtonOption:
-                return;
+                return true;
         }
         
         // Execute chosen option
         await chosenOption.Action();
+        return true;
     }
     #endregion
 

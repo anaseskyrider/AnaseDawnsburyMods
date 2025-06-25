@@ -2,19 +2,20 @@ using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
 
-public class ModTooltips
+public static class ModTooltips
 {
-    public static readonly string TraitRune = "{tooltip:Runesmith.Trait.Rune}";
-    public static readonly string TraitInvocation = "{tooltip:Runesmith.Trait.Invocation}";
-    public static readonly string ActionTraceRune = "{tooltip:Runesmith.Action.TraceRune}";
-    public static readonly string ActionInvokeRune = "{tooltip:Runesmith.Action.InvokeRune}";
-    public static readonly string ActionEtchRune = "{tooltip:Runesmith.Action.EtchRune}";
-    public static readonly string FeatureRunicCrafter = "{tooltip:Runesmith.Features.RunicCrafter}";
-    public static readonly string FeatureSmithsWeaponExpertise = "{tooltip:Runesmith.Features.SmithsWeaponExpertise}";
-    public static readonly string FeatureRunicOptimization = "{tooltip:Runesmith.Features.RunicOptimization}";
-    public static readonly string FeatsFortifyingKnock = "{tooltip:Runesmith.Feats.FortifyingKnock}";
-    public static readonly string FeatsRunicTattoo = "{tooltip:Runesmith.Feats.RunicTattoo}";
-    public static readonly string FeatsWordsFlyFree = "{tooltip:Runesmith.Feats.WordsFlyFree}";
+    public static readonly Func<string, string> TraitRune = input => "{tooltip:Runesmith.Trait.Rune}"+input+"{/}";
+    public static readonly Func<string, string> TraitInvocation = input => "{tooltip:Runesmith.Trait.Invocation}"+input+"{/}";
+    public static readonly Func<string, string> ActionTraceRune = input => "{tooltip:Runesmith.Action.TraceRune}"+input+"{/}";
+    public static readonly Func<string, string> ActionInvokeRune = input => "{tooltip:Runesmith.Action.InvokeRune}"+input+"{/}";
+    public static readonly Func<string, string> ActionEtchRune = input => "{tooltip:Runesmith.Action.EtchRune}"+input+"{/}";
+    public static readonly Func<string, string> FeatureTraditionSkill = input => "{tooltip:Runesmith.Features.TraditionSkill}"+input+"{/}";
+    public static readonly Func<string, string> FeatureRunicCrafter = input => "{tooltip:Runesmith.Features.RunicCrafter}"+input+"{/}";
+    public static readonly Func<string, string> FeatureSmithsWeaponExpertise = input => "{tooltip:Runesmith.Features.SmithsWeaponExpertise}"+input+"{/}";
+    public static readonly Func<string, string> FeatureRunicOptimization = input => "{tooltip:Runesmith.Features.RunicOptimization}"+input+"{/}";
+    public static readonly Func<string, string> FeatsFortifyingKnock = input => "{tooltip:Runesmith.Feats.FortifyingKnock}"+input+"{/}";
+    public static readonly Func<string, string> FeatsRunicTattoo = input => "{tooltip:Runesmith.Feats.RunicTattoo}"+input+"{/}";
+    public static readonly Func<string, string> FeatsWordsFlyFree = input => "{tooltip:Runesmith.Feats.WordsFlyFree}"+input+"{/}";
     
     public static void RegisterTooltips()
     {
@@ -58,6 +59,10 @@ public class ModTooltips
         ModManager.RegisterInlineTooltip(
             "Runesmith.Features.RunicOptimization",
             "{b}Runic Optimization{/b}\n{i}Level 7 Runesmith feature{/i}\nYou deal 2 additional damage with weapons bearing a striking rune, or 3 damage with greater striking runes, or 4 damage with major striking runes.");
+        
+        ModManager.RegisterInlineTooltip(
+            "Runesmith.Features.TraditionSkill",
+            "{b}Traditions of Magic and Skills{/b}\nCertain skills belong to certain traditions of magic. The arcane tradition is related to the arcana skill. The divine tradition is related to the religion skill. The occult tradition is related to the occultism skill. The primal tradition is related to the nature skill.");
         
         /////////////////
         // Class Feats //
