@@ -1,8 +1,11 @@
 ﻿using Dawnsbury.Auxiliary;
+using Dawnsbury.Campaign.Path;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations.Movement;
+using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.AbilityScores;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.Library;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
@@ -14,6 +17,7 @@ using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
+using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
@@ -314,107 +318,68 @@ public static class RunesmithClass
                 "Your equipment gains the effects of the highest level fundamental armor and weapon runes for your level. This does not count as having runes for the purposes of other rules (you must still have potency runes to apply property runes).",
                 [],
                 null)
-            .WithPermanentQEffect("INCOMPLETE TEXT", qfFeat =>
-            {
-                int lvl = qfFeat.Owner.Level;
-                
-                // Uses code from ABP //
-                // Will need to fix Striking if Dawnsbury increases to levels beyond 8th.
-                int attackPotency = lvl switch
-                {
-                    <= 1 => 0,
-                    <= 9 => 1,
-                    <= 15 => 2,
-                    _ => 3
-                };
-                
-                int defensePotency = lvl switch
-                {
-                    <= 4 => 0,
-                    <= 10 => 1,
-                    <= 17 => 2,
-                    _ => 3
-                };
-                
-                int savingThrowPotency = lvl switch
-                {
-                    <= 7 => 0,
-                    <= 13 => 1,
-                    <= 19 => 2,
-                    _ => 3
-                };
-                
-                // Attack Potency
-                qfFeat.BonusToAttackRolls = (qfSelf, combatAction, defender) =>
-                {
-                    if (combatAction.HasTrait(Trait.Attack) && combatAction.Item != null &&
-                        (combatAction.Item.HasTrait(Trait.Weapon) || combatAction.Item.HasTrait(Trait.Unarmed)) &&
-                        attackPotency > 0)
-                    {
-                        return new Bonus(attackPotency, BonusType.Item, "Runic Crafter");
-                    }
-
-                    return null;
-                };
-                
-                // Striking
-                qfFeat.IncreaseItemDamageDieCount = (qfSelf, item) =>
-                {
-                    if (lvl < 4) // At 4 or higher, add striking.
-                        return false;
-                    
-                    return item.WeaponProperties?.DamageDieCount == 1;
-                };
-                
-                qfFeat.BonusToDefenses = (effect, action, defense) =>
-                {
-                    // AC Potency
-                    if (defense == Defense.AC && defensePotency > 0)
-                    {
-                        var itemBonus = effect.Owner.Armor.Item?.ArmorProperties?.ItemBonus ?? 0;
-                        if (defensePotency > itemBonus)
-                        {
-                            return new Bonus(defensePotency - itemBonus, BonusType.Untyped, "Runic Crafter");
-                        }
-                    } // Saving Throw Potency
-                    else if (defense.IsSavingThrow() && savingThrowPotency > 0)
-                    {
-                        return new Bonus(savingThrowPotency, BonusType.Item, "Runic Crafter");
-                    }
-
-                    return null;
-                };
-
-                string[] descriptionStack = [];
-                if (attackPotency > 0)
-                    descriptionStack = descriptionStack.Append($"You have a +{attackPotency} item bonus to weapon attack rolls").ToArray();
-                if (lvl >= 4)
-                    descriptionStack = descriptionStack.Append("your Strikes deal two damage dice instead of one").ToArray();
-                if (defensePotency > 0)
-                    descriptionStack = descriptionStack.Append($"a +{defensePotency} item bonus to AC").ToArray();
-                if (savingThrowPotency > 0)
-                    descriptionStack = descriptionStack.Append($"a +{savingThrowPotency} item bonus to all saving throws").ToArray();
-                string description = "";
-                switch (descriptionStack.Length)
-                {
-                    case 0:
-                        break;
-                    case 1:
-                        description = descriptionStack.First();
-                        break;
-                    case 2:
-                        description = string.Join(" and ", descriptionStack);
-                        break;
-                    default:
-                        descriptionStack[^1] = descriptionStack[^1].Insert(0, "and ");
-                        description = string.Join(", ", descriptionStack);
-                        break;
-                }
-                description += ".";
-                    
-                qfFeat.Description = description;
-            });
+            .WithOnCreature(AddRunicCrafterEffect);
         ModManager.AddFeat(runicCrafter);
+
+        Feat assuredRunicCrafter = new Feat(
+                ModData.FeatNames.AssuredRunicCrafter,
+                "You’re so used to tracing and etching runes in the field that when given the peace and quiet of a proper workshop, it’s hard for things to go astray.",
+                "{b}Precombat Preparations{/b}You can select one ally to gain the benefits of your " +
+                ModTooltips.FeatureRunicCrafter("Runic Crafter") + " feature.",
+                [],
+                null)
+            .WithOnSheet(values =>
+            {
+                values.AddSelectionOption(new SingleFeatSelectionOption(
+                        "RunesmithPlaytest.AssuredRunicCrafter",
+                        "Assured Runic Crafter",
+                        SelectionOption.PRECOMBAT_PREPARATIONS_LEVEL,
+                        ft => ft.Tag is "Assured Runic Crafter")
+                    .WithIsOptional());
+            });
+        ModManager.AddFeat(assuredRunicCrafter);
+        for (int i = 0; i < 4; i++)
+        {
+            int index = i;
+            Feat assuredChoice = new Feat(
+                    ModManager.RegisterFeatName(ModData.FeatNames.AssuredRunicCrafterChoice + (i + 1),
+                        "Player Character " + (i + 1)),
+                    null,
+                    "",
+                    [],
+                    null)
+                .WithNameCreator(_ =>
+                    $"Grant Runic Crafter to {GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"}")
+                .WithRulesTextCreator(_ =>
+                    $"{GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"} will gain the benefits of your {ModTooltips.FeatureRunicCrafter("Runic Crafter")} feature at the start of combat.")
+                .WithIllustrationCreator(_ =>
+                    GetCharacterSheetFromPartyMember(index)?.Illustration ?? ModData.Illustrations.TraceRune)
+                .WithTag("Assured Runic Crafter")
+                .WithPermanentQEffect(
+                    "An ally chosen before the start of combat gains the effects of your Runic Crafter feature.",
+                    qfFeat =>
+                    {
+                        qfFeat.StartOfCombat = async qfThis =>
+                        {
+                            if (GetCharacterSheetFromPartyMember(index) is {} hero
+                                && qfThis.Owner.Battle.AllCreatures.FirstOrDefault(cr2 =>
+                                    cr2 != qfThis.Owner &&
+                                    cr2.PersistentCharacterSheet == hero) is { } chosenCreature)
+                            {
+                                QEffect crafter = AddRunicCrafterEffect(chosenCreature);
+                                crafter.Name = "Assured Runic Crafter";
+                                crafter.DoNotShowUpOverhead = false;
+                            }
+                        };
+                    })
+                .WithPrerequisite(_ => // Can't select another Runesmith
+                    GetCharacterSheetFromPartyMember(index)?.Class?.ClassTrait != ModData.Traits.Runesmith,
+                    "Can't select another Runesmith")
+                .WithPrerequisite(values => // Can't select yourself
+                    GetCharacterSheetFromPartyMember(index) != values.Sheet,
+                    "Can't select yourself");
+            ModManager.AddFeat(assuredChoice);
+        }
         
         /////////////////////
         // Runesmith Class //
@@ -437,10 +402,22 @@ public static class RunesmithClass
                 "\r\n{b}Level 2:{/b} Runesmith feat, "+ModTooltips.FeatureRunicCrafter("runic crafter") +
                 "\r\n{b}Level 3:{/b} General feat, skill increase, additional level 1 rune known" +
                 "\r\n{b}Level 4:{/b} Runesmith feat" +
-                "\r\n{b}Level 5:{/b} Attribute boosts, ancestry feat, skill increase, "+ModTooltips.FeatureSmithsWeaponExpertise("smith's weapon expertise")+", additional level 1 rune known, additional maximum etched rune" +
+                "\r\n{b}Level 5:{/b} Attribute boosts, ancestry feat, skill increase, expert in simple and martial weapons and in unarmed attacks, additional level 1 rune known, additional maximum etched rune" +
                 "\r\n{b}Level 6:{/b} Runesmith feat" +
-                "\r\n{b}Level 7:{/b} General feat, skill increase, expert class DC, expert in Reflex saves, "+ModTooltips.FeatureRunicOptimization("runic optimization")+" ({Red}NYI{/Red}, uses Weapon Specialization), additional level 1 rune known" + // TODO: adjust text with Runic Optimization implementation
-                "\r\n{b}Level 8:{/b} Runesmith feat",
+                "\r\n{b}Level 7:{/b} General feat, skill increase, expert in runesmith DC, expert in Reflex saves, "+ModTooltips.FeatureRunicOptimization("runic optimization")+", additional level 1 rune known" +
+                "\r\n{b}Level 8:{/b} Runesmith feat" +
+                (!isUnlockedLevels ? null : "\r\n(INCOMPLETE CONTENT BEYOND THIS POINT: level 9 & 17 runes, level 10+ class feats)\r\n{b}Level 9:{/b} Ancestry feat, "+ModTooltips.FeatureAssuredRunicCrafter("assured runic crafter")+", skill increase, level 9 runes, additional maximum etched rune"
+                    + "\r\n{b}Level 10:{/b} Attribute boosts, runesmith feat"
+                    + "\r\n{b}Level 11:{/b} General feat, skill increase, "+ModTooltips.FeatureSmithsEndurance("smith's endurance")+", additional level 9 rune known"
+                    + "\r\n{b}Level 12:{/b} Runesmith feat"
+                    + "\r\n{b}Level 13:{/b} Ancestry feat, expert in light and medium armor and in unarmored defense, expert in Perception, skill increase, master in simple and martial weapons and in unarmed attacks, additional level 9 rune known, additional maximum etched rune"
+                    + "\r\n{b}Level 14:{/b} Runesmith feat"
+                    + "\r\n{b}Level 15:{/b} Attribute boosts, general feat, "+ModTooltips.FeatureRunicOptimization("greater runic optimization")+", master in runesmith DC, skill increase, additional level 9 rune known"
+                    + "\r\n{b}Level 16:{/b} Runesmith feat"
+                    + "\r\n{b}Level 17:{/b} Ancestry feat, skill increase, level 17 runes, additional maximum etched rune"
+                    + "\r\n{b}Level 18:{/b} Runesmith feat"
+                    + "\r\n{b}Level 19:{/b} General feat, legendary in runesmith DC, master in light and medium armor and in unarmored defense, skill increase, additional level 19 rune known"
+                    + "\r\n{b}Level 20:{/b} Attribute boosts, runesmith feat"),
                 null)
             .WithOnSheet(values =>
             {
@@ -556,13 +533,10 @@ public static class RunesmithClass
             })
             .WithOnCreature(cr =>
             {
-                if (cr.Level >= 7)
+                if (cr.Level is >= 7 and < 15)
                 {
-                    // TODO: Runic Optimization, which is slightly different from weapon spec.
-                    QEffect wepSpec = QEffect.WeaponSpecialization();
-                    wepSpec.Description =
-                        "You deal 2 more damage with any expert weapon and unarmed attacks, or 3 if you're a master, or 4 if you're legendary.";
-                    cr.AddQEffect(wepSpec);
+                    QEffect optimize = RunicOptimization(cr.Level >= 15);
+                    cr.AddQEffect(optimize);
                 }
                 
                 // Higher level content
@@ -577,16 +551,180 @@ public static class RunesmithClass
                     });
                     // See WithOnSheet for the Master proficiency increase.
                 }
-                
-                if (cr.Level >= 15)
-                {
-                    // Lv15: greater weapon spec "greater runic optimization"
-                }
             });
         runesmithClassFeat.RulesText = runesmithClassFeat.RulesText
             .Replace("Key ability", "Key attribute")
             .Replace("trained in Crafting", "trained in Crafting; as well as your choice of Arcana, Nature, Occultism, or Religion;");
         ModManager.AddFeat(runesmithClassFeat);
+    }
+    
+    public static QEffect RunicOptimization(bool greater)
+    {
+        int basicIncrease = greater ? 4 : 2;
+        const int step = 1;
+        string specializationName = greater ? "Greater runic optimization" : "Runic optimization";
+        string description = $"You deal an additional {basicIncrease} damage with weapons and unarmed attacks in which you have expert proficiency. This damage increases to {basicIncrease + step} if you're a master, and {basicIncrease + 2 * step} if you're legendary.";
+        return new QEffect(specializationName, description)
+        {
+            BonusToDamage = (qfThis, action, target) =>
+            {
+                if (action.Item == null)
+                    return null;
+                Proficiency proficiency = action.Owner.Proficiencies.Get(action.Item.Traits);
+                int bonusAmount = proficiency switch
+                {
+                    Proficiency.Expert => basicIncrease,
+                    Proficiency.Master => basicIncrease + step,
+                    Proficiency.Legendary => basicIncrease + 2 * step,
+                    _ => 0
+                };
+                return proficiency >= Proficiency.Expert
+                    ? new Bonus(bonusAmount, BonusType.Untyped, specializationName)
+                    : null;
+            }
+        };
+    }
+    
+    public static QEffect AddRunicCrafterEffect(Creature owner)
+    {
+        // Uses code from ABP //
+        QEffect RCFX = new QEffect("Runic Crafter", "INCOMPLETE", ExpirationCondition.Never, owner, IllustrationName.None)
+        {
+            Innate = true,
+            BonusToAttackRolls = (qfThis, combatAction, defender) =>
+            {
+                int attackPotency = GetAttackPotency(qfThis.Owner.Level);
+                if (combatAction.HasTrait(Trait.Attack) && combatAction.Item != null &&
+                    (combatAction.Item.HasTrait(Trait.Weapon) || combatAction.Item.HasTrait(Trait.Unarmed)) &&
+                    attackPotency > 0)
+                {
+                    return new Bonus(attackPotency, BonusType.Item, "Runic Crafter");
+                }
+
+                return null;
+            },
+            BonusToDefenses = (qfThis, action, defense) =>
+            {
+                int defensePotency = GetACPotency(qfThis.Owner.Level);
+                int savingThrowPotency = GetResilience(qfThis.Owner.Level);
+                
+                // AC Potency
+                if (defense == Defense.AC && defensePotency > 0)
+                {
+                    var itemBonus = qfThis.Owner.Armor.Item?.ArmorProperties?.ItemBonus ?? 0;
+                    if (defensePotency > itemBonus)
+                    {
+                        return new Bonus(defensePotency - itemBonus, BonusType.Untyped, "Runic Crafter");
+                    }
+                } // Saving Throw Potency
+                else if (defense.IsSavingThrow() && savingThrowPotency > 0)
+                {
+                    return new Bonus(savingThrowPotency, BonusType.Item, "Runic Crafter");
+                }
+
+                return null;
+            },
+        };
+
+        // Update Description
+        int attackPotency = GetAttackPotency(owner.Level);
+        int defensePotency = GetACPotency(owner.Level);
+        int savingThrowPotency = GetResilience(owner.Level);
+        string[] descriptionStack = [];
+        if (attackPotency > 0)
+            descriptionStack = descriptionStack.Append($"You have a +{attackPotency} item bonus to weapon attack rolls").ToArray();
+        if (owner.Level >= 4)
+            descriptionStack = descriptionStack.Append("your Strikes deal two damage dice instead of one").ToArray();
+        if (defensePotency > 0)
+            descriptionStack = descriptionStack.Append($"a +{defensePotency} item bonus to AC").ToArray();
+        if (savingThrowPotency > 0)
+            descriptionStack = descriptionStack.Append($"a +{savingThrowPotency} item bonus to all saving throws").ToArray();
+        string description = "";
+        switch (descriptionStack.Length)
+        {
+            case 0:
+                break;
+            case 1:
+                description = descriptionStack.First();
+                break;
+            case 2:
+                description = string.Join(" and ", descriptionStack);
+                break;
+            default:
+                descriptionStack[^1] = descriptionStack[^1].Insert(0, "and ");
+                description = string.Join(", ", descriptionStack);
+                break;
+        }
+        description += ".";
+        
+        RCFX.Description = description;
+        
+        owner.AddQEffect(RCFX);
+
+        // Add Striking
+        if (owner.Level >= 4)
+            AddCumulativeStriking(owner, 1);
+        if (owner.Level >= 12)
+            AddCumulativeStriking(owner, 2);
+        if (owner.Level >= 19)
+            AddCumulativeStriking(owner, 3);
+        
+        return RCFX;
+        
+        // Locals
+        QEffect AddCumulativeStriking(Creature owner2, int bonusDice)
+        {
+            QEffect striking = new QEffect("Runic Crafter (Striking)", "INCOMPLETE", ExpirationCondition.Never,
+                owner2, IllustrationName.None)
+            {
+                IncreaseItemDamageDieCount = (qfSelf, item) =>
+                    item.WeaponProperties?.DamageDieCount <= bonusDice,
+            };
+            owner2.AddQEffect(striking);
+            return striking;
+        }
+        int GetAttackPotency(int level)
+        {
+            switch (level)
+            {
+                case <= 1:
+                    return 0;
+                case <= 9:
+                    return 1;
+                case <= 15:
+                    return 2;
+                default:
+                    return 3;
+            }
+        }
+        int GetACPotency(int level)
+        {
+            switch (level)
+            {
+                case <= 4:
+                    return 0;
+                case <= 10:
+                    return 1;
+                case <= 17:
+                    return 2;
+                default:
+                    return 3;
+            }
+        }
+        int GetResilience(int level)
+        {
+            switch (level)
+            {
+                case <= 7:
+                    return 0;
+                case <= 13:
+                    return 1;
+                case <= 19:
+                    return 2;
+                default:
+                    return 3;
+            }
+        }
     }
     
     // TODO: Use the new function, public int ClassDC(Trait classTrait)
@@ -831,6 +969,18 @@ public static class RunesmithClass
             MaximumSquares = 100,
             ForcedMovement = true
         });
+    }
+
+    /// <summary>If a character sheet is available at the execution time of this function, it will return a character sheet of a party member either during campaign play or in free encounter play.</summary>
+    /// <param name="index">The 0th-indexed party member.</param>
+    public static CharacterSheet? GetCharacterSheetFromPartyMember(int index)
+    {
+        CharacterSheet? hero = null;
+        if (CampaignState.Instance is { } campaign)
+            hero = campaign.Heroes[index].CharacterSheet;
+        else if (CharacterLibrary.Instance is { } library)
+            hero = library.SelectedRandomEncounterParty[index];
+        return hero;
     }
 }
 

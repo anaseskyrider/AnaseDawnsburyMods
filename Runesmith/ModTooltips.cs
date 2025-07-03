@@ -11,8 +11,9 @@ public static class ModTooltips
     public static readonly Func<string, string> ActionEtchRune = input => "{tooltip:Runesmith.Action.EtchRune}"+input+"{/}";
     public static readonly Func<string, string> FeatureTraditionSkill = input => "{tooltip:Runesmith.Features.TraditionSkill}"+input+"{/}";
     public static readonly Func<string, string> FeatureRunicCrafter = input => "{tooltip:Runesmith.Features.RunicCrafter}"+input+"{/}";
-    public static readonly Func<string, string> FeatureSmithsWeaponExpertise = input => "{tooltip:Runesmith.Features.SmithsWeaponExpertise}"+input+"{/}";
     public static readonly Func<string, string> FeatureRunicOptimization = input => "{tooltip:Runesmith.Features.RunicOptimization}"+input+"{/}";
+    public static readonly Func<string, string> FeatureAssuredRunicCrafter = input => "{tooltip:Runesmith.Features.AssuredRunicCrafter}"+input+"{/}";
+    public static readonly Func<string, string> FeatureSmithsEndurance = input => "{tooltip:Runesmith.Features.SmithsEndurance}"+input+"{/}";
     public static readonly Func<string, string> FeatsFortifyingKnock = input => "{tooltip:Runesmith.Feats.FortifyingKnock}"+input+"{/}";
     public static readonly Func<string, string> FeatsRunicTattoo = input => "{tooltip:Runesmith.Feats.RunicTattoo}"+input+"{/}";
     public static readonly Func<string, string> FeatsWordsFlyFree = input => "{tooltip:Runesmith.Feats.WordsFlyFree}"+input+"{/}";
@@ -53,16 +54,20 @@ public static class ModTooltips
             "{b}Runic Crafter{/b}\n{i}Level 2 Runesmith feature{/i}\nYour equipment gains the effects of the highest level fundamental armor and weapon runes for your level.");
         
         ModManager.RegisterInlineTooltip(
-            "Runesmith.Features.SmithsWeaponExpertise",
-            "{b}Smith's Weapon Expertise{/b}\n{i}Level 5 Runesmith feature{/i}\nYour proficiency ranks for simple weapons, martial weapons, and unarmed attacks increase to expert.");
-        
-        ModManager.RegisterInlineTooltip(
             "Runesmith.Features.RunicOptimization",
-            "{b}Runic Optimization{/b}\n{i}Level 7 Runesmith feature{/i}\nYou deal 2 additional damage with weapons bearing a striking rune, or 3 damage with greater striking runes, or 4 damage with major striking runes.");
+            "{b}Runic Optimization{/b}\n{i}Level 7 Runesmith feature{/i}\nYou deal an additional 2 damage with weapons and unarmed attacks in which you have expert proficiency. This damage increases to 3 if you're a master, and 4 if you're legendary.\n\nAt level 15, you gain Greater Runic Optimization, which increases these bonuses by 2.");
         
         ModManager.RegisterInlineTooltip(
             "Runesmith.Features.TraditionSkill",
             "{b}Traditions of Magic and Skills{/b}\nCertain skills belong to certain traditions of magic. The arcane tradition is related to the arcana skill. The divine tradition is related to the religion skill. The occult tradition is related to the occultism skill. The primal tradition is related to the nature skill.");
+        
+        ModManager.RegisterInlineTooltip(
+            "Runesmith.Features.AssuredRunicCrafter",
+            "{b}Assured Runic Crafter{/b}\n{i}Level 9 Runesmith feature{/i}\nYou can select one ally to gain the benefits of your Runic Crafter feature.");
+        
+        ModManager.RegisterInlineTooltip(
+            "Runesmith.Features.SmithsEndurance",
+            "{b}Smith's Endurance{/b}\n{i}Level 11 Runesmith feature{/i}\nYour proficiency rank for Fortitude saves increases to master. When you roll a success on a Fortitude save, you get a critical success instead.");
         
         /////////////////
         // Class Feats //
