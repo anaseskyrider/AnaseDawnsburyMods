@@ -492,6 +492,7 @@ public static class RunesmithClass
                 {
                     RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values2)!;
                     repertoire.IncreaseEtchLimit(9, 1);
+                    values2.GrantFeat(assuredRunicCrafter.FeatName);
                 });
                 values.AddAtLevel(11, values2 =>
                 {
