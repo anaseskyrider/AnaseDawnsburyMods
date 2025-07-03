@@ -535,7 +535,7 @@ public static class RunesmithClass
             })
             .WithOnCreature(cr =>
             {
-                if (cr.Level is >= 7 and < 15)
+                if (cr.Level >= 7)
                 {
                     QEffect optimize = RunicOptimization(cr.Level >= 15);
                     cr.AddQEffect(optimize);
