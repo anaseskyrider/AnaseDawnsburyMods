@@ -10,5 +10,6 @@ public class MoreBasicActions
         Aid.LoadAid();
         Ready.LoadReady();
         HelpUp.LoadHelpUp();
+        QuickRepair.LoadFeat();
     }
 }

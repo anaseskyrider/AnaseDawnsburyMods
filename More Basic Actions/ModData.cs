@@ -19,6 +19,7 @@ public static class ModData
     public static class FeatNames
     {
         public static readonly FeatName CooperativeNature = ModManager.RegisterFeatName("MoreBasicActions.Human.CooperativeNature", "Cooperative Nature");
+        public static readonly FeatName QuickRepair = ModManager.RegisterFeatName("MoreBasicActions.QuickRepair", "Quick Repair");
     }
     
     public static class QEffectIds
@@ -33,13 +34,18 @@ public static class ModData
         public static readonly ActionId AidReaction = ModManager.RegisterEnumMember<ActionId>("AidReaction");
         public static readonly ActionId Ready = ModManager.RegisterEnumMember<ActionId>("Ready");
         public static readonly ActionId HelpUp = ModManager.RegisterEnumMember<ActionId>("HelpUp");
+        public static readonly ActionId QuickRepair = ModManager.RegisterEnumMember<ActionId>("QuickRepair");
     };
 
     public static class Illustrations
     {
+        public static readonly string DDSunPath = "MoreBasicActionsAssets/PatreonSunTransparent.png";
+        //new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString
         public static readonly Illustration Aid = new ModdedIllustration("MoreBasicActionsAssets/protection.png");
         public static readonly Illustration Ready = new ModdedIllustration("MoreBasicActionsAssets/chronometer.png");
         public static readonly Illustration HelpUp = new ModdedIllustration("MoreBasicActionsAssets/helping-hand.png");
+        public static readonly Illustration QuickRepair = IllustrationName.Adamantine;
+        //new ModdedIllustration("MoreBasicActionsAssets/helping-hand.png");
     };
 
     public static class SubmenuIds
