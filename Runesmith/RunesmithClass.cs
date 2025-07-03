@@ -395,7 +395,7 @@ public static class RunesmithClass
                 2,
                 "{b}1. Runic Repertoire.{/b} A runesmith doesn't cast spells, but they can use "+ModTooltips.TraitRune("runesmith runes")+". You start with 4 runes of 1st level, and learn an additional rune every 2nd level. Your runes are the same level you are, regardless of when you learn them {i}(some runes increase in power at higher levels, as listed in their Level entry){/i}. Runes use your class DC, which is based on Intelligence. If a rune lists a tradition trait (such as Arcane), then it belongs to that tradition; it otherwise belongs to any tradition "+ModTooltips.FeatureTraditionSkill("whose skill")+" you're trained in for the purposes of abilities which require a rune of a specific tradition." +
                 "\r\n\r\n{b}2. Applying Runes.{/b} You can apply runes in one of two ways: {i}tracing{/i} the rune with the "+ModTooltips.ActionTraceRune("Trace Rune")+" action, or by {i}etching{/i} the rune at the start of combat with the "+ModTooltips.ActionEtchRune("Etch Rune")+" activity." +
-                "\r\n\r\n{b}3. Invoking Runes.{/b} You can also invoke a rune with the "+ModTooltips.ActionInvokeRune("Invoke Rune")+" action." +
+                "\r\n\r\n{b}3. Invoking Runes.{/b} You can activate a rune's invocation feature with the "+ModTooltips.ActionInvokeRune("Invoke Rune")+" action." +
                 "\r\n\r\n{b}4. Runesmith feat.{/b}" +
                 "\r\n\r\n{b}5. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks" +
                 "\r\n\r\n{b}At higher levels:{/b}" +
@@ -405,19 +405,19 @@ public static class RunesmithClass
                 "\r\n{b}Level 5:{/b} Attribute boosts, ancestry feat, skill increase, expert in simple and martial weapons and in unarmed attacks, additional level 1 rune known, additional maximum etched rune" +
                 "\r\n{b}Level 6:{/b} Runesmith feat" +
                 "\r\n{b}Level 7:{/b} General feat, skill increase, expert in runesmith DC, expert in Reflex saves, "+ModTooltips.FeatureRunicOptimization("runic optimization")+", additional level 1 rune known" +
-                "\r\n{b}Level 8:{/b} Runesmith feat" +
-                (!isUnlockedLevels ? null : "\r\n(INCOMPLETE CONTENT BEYOND THIS POINT: level 9 & 17 runes, level 10+ class feats)\r\n{b}Level 9:{/b} Ancestry feat, "+ModTooltips.FeatureAssuredRunicCrafter("assured runic crafter")+", skill increase, level 9 runes, additional maximum etched rune"
-                    + "\r\n{b}Level 10:{/b} Attribute boosts, runesmith feat"
-                    + "\r\n{b}Level 11:{/b} General feat, skill increase, "+ModTooltips.FeatureSmithsEndurance("smith's endurance")+", additional level 9 rune known"
-                    + "\r\n{b}Level 12:{/b} Runesmith feat"
-                    + "\r\n{b}Level 13:{/b} Ancestry feat, expert in light and medium armor and in unarmored defense, expert in Perception, skill increase, master in simple and martial weapons and in unarmed attacks, additional level 9 rune known, additional maximum etched rune"
-                    + "\r\n{b}Level 14:{/b} Runesmith feat"
-                    + "\r\n{b}Level 15:{/b} Attribute boosts, general feat, "+ModTooltips.FeatureRunicOptimization("greater runic optimization")+", master in runesmith DC, skill increase, additional level 9 rune known"
-                    + "\r\n{b}Level 16:{/b} Runesmith feat"
-                    + "\r\n{b}Level 17:{/b} Ancestry feat, skill increase, level 17 runes, additional maximum etched rune"
-                    + "\r\n{b}Level 18:{/b} Runesmith feat"
-                    + "\r\n{b}Level 19:{/b} General feat, legendary in runesmith DC, master in light and medium armor and in unarmored defense, skill increase, additional level 19 rune known"
-                    + "\r\n{b}Level 20:{/b} Attribute boosts, runesmith feat"),
+                "\r\n{b}Level 8:{/b} Runesmith feat"
+                    + (Constants.CharacterLevelCap > 8 ? "\r\n(INCOMPLETE CONTENT BEYOND THIS POINT: level 9 & 17 runes, level 10+ class feats)\r\n{b}Level 9:{/b} Ancestry feat, "+ModTooltips.FeatureAssuredRunicCrafter("assured runic crafter")+", skill increase, level 9 runes, additional maximum etched rune" : null)
+                    + (Constants.CharacterLevelCap > 9 ? "\r\n{b}Level 10:{/b} Attribute boosts, runesmith feat" : null)
+                    + (Constants.CharacterLevelCap > 10 ? "\r\n{b}Level 11:{/b} General feat, skill increase, " + ModTooltips.FeatureSmithsEndurance("smith's endurance") + ", additional level 9 rune known" : null)
+                    + (Constants.CharacterLevelCap > 11 ? "\r\n{b}Level 12:{/b} Runesmith feat" : null)
+                    + (Constants.CharacterLevelCap > 12 ? "\r\n{b}Level 13:{/b} Ancestry feat, expert in light and medium armor and in unarmored defense, expert in Perception, skill increase, master in simple and martial weapons and in unarmed attacks, additional level 9 rune known, additional maximum etched rune" : null)
+                    + (Constants.CharacterLevelCap > 13 ? "\r\n{b}Level 14:{/b} Runesmith feat" : null)
+                    + (Constants.CharacterLevelCap > 14 ? "\r\n{b}Level 15:{/b} Attribute boosts, general feat, " + ModTooltips.FeatureRunicOptimization("greater runic optimization") + ", master in runesmith DC, skill increase, additional level 9 rune known": null)
+                    + (Constants.CharacterLevelCap > 15 ? "\r\n{b}Level 16:{/b} Runesmith feat": null)
+                    + (Constants.CharacterLevelCap > 16 ? "\r\n{b}Level 17:{/b} Ancestry feat, skill increase, level 17 runes, additional maximum etched rune" : null)
+                    + (Constants.CharacterLevelCap > 17 ? "\r\n{b}Level 18:{/b} Runesmith feat" : null)
+                    + (Constants.CharacterLevelCap > 18 ? "\r\n{b}Level 19:{/b} General feat, legendary in runesmith DC, master in light and medium armor and in unarmored defense, skill increase, additional level 19 rune known" : null)
+                    + (Constants.CharacterLevelCap > 19 ? "\r\n{b}Level 20:{/b} Attribute boosts, runesmith feat" : null),
                 null)
             .WithOnSheet(values =>
             {
