@@ -879,6 +879,31 @@ public static class CommonRuneRules
 
     #region Misc
     /// <summary>
+    /// <para>Sets its DrawnOn to the new DrawnOn and moves the DrawnRune from its old Owner to its new Owner.</para>
+    /// <para>Use Case: the Transpose Etching feat which allows you to move a rune from one target to another.</para>
+    /// <para>WARNING: Does no legality-checking. Just saves a few lines of code.</para>
+    /// </summary>
+    /// <param name="rune">(DrawnRune) The rune to move.</param>
+    /// <param name="newOwner">(Creature) The creature who will own the DrawnRune.</param>
+    /// <param name="newDrawnOn">(Creature, DrawnRune, Item) The new "real" target from the newOwner to apply the DrawnRune to, such as an item wielded by the newOwner, the creature itself, or another DrawnRune.</param>
+    public static async void MoveRuneToTarget(DrawnRune rune, Creature newOwner, object? newDrawnOn)
+    {
+        // Might need expanded functionality in the future.
+        
+        if (newDrawnOn != null)
+        {
+            rune.DrawnOn = newDrawnOn;
+            if (newDrawnOn is DrawnRune dr)
+                dr.AttachedDiacritic = rune;
+        }
+        if (rune.Owner != newOwner)
+        {
+            rune.Owner.RemoveAllQEffects(qf => qf == rune);
+            newOwner.AddQEffect(rune);
+        }
+    }
+    
+    /// <summary>
     /// Decider attempts to select drawn runes on any creatures in battle. Does not require that the decider owns the runes.
     /// </summary>
     /// <param name="decider">The creature deciding which drawn rune to select.</param>
