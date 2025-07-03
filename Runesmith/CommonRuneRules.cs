@@ -878,7 +878,6 @@ public static class CommonRuneRules
     #endregion
 
     #region Misc
-
     /// <summary>
     /// Decider attempts to select drawn runes on any creatures in battle. Does not require that the decider owns the runes.
     /// </summary>
@@ -936,6 +935,7 @@ public static class CommonRuneRules
         return chosenRune;
 
     }
+    
     public static Skill? GetSkillFromTraditionTrait(Trait traditionTrait)
     {
         switch (traditionTrait)
