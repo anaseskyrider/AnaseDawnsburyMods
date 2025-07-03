@@ -9,6 +9,7 @@ using Dawnsbury.Core.Intelligence;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
@@ -27,8 +28,11 @@ public static class Ready
     
     public static void LoadReady()
     {
-        // TODO: "Readying an attack is useful under two circumstances. First, an enemy comes within reach/range. This would be easy to implement. Second, an enemy is made flat-footed or flanked (most relevant for rogues)." - Dinglebob
-        
+        // TODO: SilchasRuin — 2:59 AM
+        // maybe make ranged attack when an enemy no longer has cover?
+        // not sure how easy thatd be to program
+        // also make ranged attack when enemy enters first range increment
+        // maybe combine em
         
         // Option to move Ready into submenus
         ModManager.RegisterBooleanSettingsOption("MoreBasicActions.ReadyInSubmenus",
@@ -62,7 +66,11 @@ public static class Ready
                             new PossibilitySection("Ready")
                             {
                                 PossibilitySectionId = ModData.PossibilitySectionIds.Ready,
-                                Possibilities = [new ActionPossibility(CreateReadyBrace(cr), PossibilitySize.Full)],
+                                Possibilities = [
+                                    new ActionPossibility(CreateReadyBrace(cr)),
+                                    new ActionPossibility(CreateReadySeize(cr)),
+                                    new ActionPossibility(CreateReadyFootwork(cr)),
+                                ],
                             },
                         },
                         SpellIfAny = new CombatAction(
@@ -81,6 +89,123 @@ public static class Ready
         });
     }
 
+    public static CombatAction CreateReadyFootwork(Creature owner)
+    {
+        CombatAction footworkAction = new CombatAction(
+                owner,
+                IllustrationName.TwoActions,
+                "Ready (Footwork)",
+                [Trait.Concentrate, Trait.Basic],
+                "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy ends a move action adjacent to you\n\nMake a Step or Stride.\n\nStep actions and other similar actions do not trigger this reaction.",
+                Target.Self())
+            .WithActionCost(2)
+            .WithActionId(ModData.ActionIds.Ready)
+            .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
+            {
+                QEffect readiedFootwork = new QEffect(
+                    "Evading Footwork",
+                    "When an enemy ends a move action adjacent to you, you can make a Step or Stride as a reaction.",
+                    ExpirationCondition.ExpiresAtStartOfYourTurn,
+                    caster,
+                    ModData.Illustrations.Ready)
+                {
+                    DoNotShowUpOverhead = true,
+                    Value = caster.Actions.AttackedThisManyTimesThisTurn,
+                    EndOfYourTurnBeneficialEffect = async (qfThis, self) =>
+                    {
+                        qfThis.Value = self.Actions.AttackedThisManyTimesThisTurn;
+                    },
+                }
+                .AddGrantingOfTechnical(cr => !cr.FriendOf(caster),
+                    qfTech =>
+                    {
+                        qfTech.AfterYouTakeAction = async (qfThis, provokingAction) =>
+                        {
+                            if (!provokingAction.HasTrait(Trait.Move) || provokingAction.HasTrait(Trait.DoesNotProvoke) || provokingAction.ActionId == ActionId.Step || provokingAction.TilesMoved == 0 || !qfThis.Owner.IsAdjacentTo(caster))
+                                return;
+
+                            if (await caster.AskToUseReaction($"{{b}}Ready (Footwork) {{icon:Reaction}}{{/b}}\n{{Blue}}{qfThis.Owner.Name}{{/Blue}} has ended their {{Blue}}{provokingAction.Name}{{/Blue}} action adjacent to you.\nStep or Stride?"))
+                            {
+                                if (!await caster.StrideAsync("Make a Step or Stride.", allowStep: true, allowCancel: true, allowPass: true))
+                                    caster.Actions.RefundReaction();
+                            }
+                        };
+                    });
+                caster.AddQEffect(readiedFootwork);
+            });
+
+        return footworkAction;
+    }
+
+    public static CombatAction CreateReadySeize(Creature owner)
+    {
+        CombatAction seizeAction = new CombatAction(
+                owner,
+                IllustrationName.TwoActions,
+                "Ready (Seize Opportunity)",
+                [Trait.Concentrate, Trait.Basic],
+                "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy within your range or your reach becomes flat-footed to you\n\nYou make a Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
+                Target.Self())
+            .WithActionCost(2)
+            .WithActionId(ModData.ActionIds.Ready)
+            .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
+            {
+
+                QEffect readiedSeize = new QEffect(
+                    "Seeking Opportunity",
+                    "When an enemy becomes flat-footed to you, you can Strike the triggering creature as a reaction.",
+                    ExpirationCondition.ExpiresAtStartOfYourTurn,
+                    caster,
+                    ModData.Illustrations.Ready)
+                {
+                    DoNotShowUpOverhead = true,
+                    Value = caster.Actions.AttackedThisManyTimesThisTurn,
+                    EndOfYourTurnBeneficialEffect = async (qfThis, self) =>
+                    {
+                        qfThis.Value = self.Actions.AttackedThisManyTimesThisTurn;
+                    },
+                    StateCheckWithVisibleChanges = async qfThis =>
+                    {
+                        Creature self = qfThis.Owner;
+                        
+                        if (self.PrimaryWeaponIncludingRanged == null)
+                            return;
+                        
+                        List<Creature> provokeQueue = (qfThis.Tag as List<Creature>)!;
+
+                        foreach (Creature cr in self.Battle.AllCreatures.Where(cr => !cr.FriendOf(self)))
+                        {
+                            if (cr.IsFlatfootedToBecause(self, null) == null && !FlankingRules.IsFlanking(self, cr))
+                            {
+                                provokeQueue.Remove(cr);
+                                continue;
+                            }
+
+                            if (provokeQueue.Contains(cr))
+                                continue;
+                            
+                            await OfferAndMakeReactiveStrike2(
+                                self,
+                                cr,
+                                $"{{b}}Ready (Seize Opportunity) {{icon:Reaction}}{{/b}}\n{{Blue}}{cr.Name}{{/Blue}} has become flat-footed to you.\nMake a Strike?",
+                                "ready (seize opportunity)",
+                                1,
+                                qfThis.Value,
+                                false);
+                            
+                            provokeQueue.Add(cr);
+                        }
+                    },
+                    Tag = caster.Battle.AllCreatures
+                        .Where(cr => cr.IsFlatfootedToBecause(caster, null) == null && !FlankingRules.IsFlanking(caster, cr))
+                        .ToList(), // Creatures who've been made off-guard since last reaction-prompt
+                };
+                caster.AddQEffect(readiedSeize);
+            });
+
+        return seizeAction;
+    }
+
     public static CombatAction CreateReadyBrace(Creature owner)
     {
         // In order for creatures to provoke reactions only when they enter your reach, two things need to occur.
@@ -92,7 +217,7 @@ public static class Ready
             IllustrationName.TwoActions,
             "Ready (Brace)",
             [Trait.Concentrate, Trait.Basic],
-            "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} A creature moves into your reach\n\nYou make a melee Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
+            "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy moves into your reach\n\nYou make a melee Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
             Target.Self())
             .WithActionCost(2)
             .WithActionId(ModData.ActionIds.Ready)
@@ -101,23 +226,20 @@ public static class Ready
                 // AoO tile icons are inaccurate. Nothing I can do to fix it.
                 QEffect readiedBrace = new QEffect(
                     "Bracing",
-                    "When an enemy moves within your reach, you can make a melee Strike against the triggering creature.",
+                    "When an enemy moves within your reach, you can make a melee Strike against the triggering creature as a reaction.",
                     ExpirationCondition.ExpiresAtStartOfYourTurn,
                     caster,
                     ModData.Illustrations.Ready)
                 {
-                    Value = caster.Actions.AttackedThisManyTimesThisTurn,
-                    Id = QEffectId.AttackOfOpportunity, // Tells the game to attempt to asynchronously provoke mid-movement
-                    Tag = new List<Creature>(), // Creatures queued to trigger reaction from movement
                     DoNotShowUpOverhead = true,
+                    Value = caster.Actions.AttackedThisManyTimesThisTurn,
                     EndOfYourTurnBeneficialEffect = async (qfThis, self) =>
                     {
                         qfThis.Value = self.Actions.AttackedThisManyTimesThisTurn;
                     },
-                    StateCheck = async qfThis =>
+                    StateCheckWithVisibleChanges = async qfThis =>
                     {
-                        // Each state check, look for creatures currently in my reach. If that creature has a movement history in which the previous tile was outside my reach, then add it to a queue, using the AttackOfOpportunity built-in behavior to provoke reactions asynchronously.
-                        // In addition, give it a QEffect that tells it to provoke a reaction from me when it completes that action inside my reach.
+                        // Each state check, look for creatures currently in my reach. If that creature has a movement history in which the previous tile was outside my reach, then it provokes a custom-built reaction attack.
 
                         Creature self = qfThis.Owner;
                         
@@ -125,15 +247,20 @@ public static class Ready
                             return;
                         
                         int reach = self.PrimaryWeapon.HasTrait(Trait.Reach) ? 2 : 1;
-                        List<Creature> provokeQueue = (qfThis.Tag as List<Creature>)!;
+                        Dictionary<Creature,int> provokeQueue = (qfThis.Tag as Dictionary<Creature,int>)!;
                         
-                        // For each creature currently in my reach,
-                        foreach (Creature cr in self.Battle.AllCreatures.Where(cr =>
-                                     cr.DistanceTo(self) <= reach && cr != self))
+                        // For each enemy currently in my reach,
+                        foreach (Creature cr in self.Battle.AllCreatures.Where(cr => !cr.FriendOf(self)))
                         {
+                            if (cr.DistanceTo(self) > reach)
+                            {
+                                provokeQueue.Remove(cr);
+                                continue;
+                            }
+                            
                             // who is currently moving,
                             LongMovement? move = cr.AnimationData.LongMovement;
-                            if (move is null || move.Path is null || move.Path.Count < 1)
+                            if (move?.Path is null || move.Path.Count < 1 || move.CombatAction?.TilesMoved == 0)
                                 continue;
                             
                             // and whose last movement was outside my reach,
@@ -144,27 +271,17 @@ public static class Ready
                             if (previousTile.DistanceTo(self.Occupies) <= reach)
                                 continue;
                             
-                            // add it to the provokeQueue in case it continues to exit that tile,
-                            provokeQueue.Add(cr);
+                            // and didn't just prompt on the same movement,
+                            if (provokeQueue.TryGetValue(cr, out int pathLength) && pathLength == move.Path.Count)
+                                continue;
                             
-                            // and give it a QEffect for when it stops in that tile.
-                            cr.AddQEffect(new QEffect(ExpirationCondition.Ephemeral)
-                            {
-                                AfterYouTakeAction = async (qfThis2, action) =>
-                                {
-                                    if (action == move.CombatAction)
-                                    {
-                                        await ProvokeBraceReaction(qfThis.Owner, qfThis2.Owner, action, provokeQueue, qfThis.Value);
-                                    }
-                                }
-                            });
+                            // prompt a strike against it,
+                            if (await ProvokeBraceReaction(qfThis.Owner, cr, move.CombatAction, qfThis.Value))
+                                // and add it to the queue if it was actually prompted
+                                provokeQueue[cr] = move.Path.Count;
                         }
                     },
-                    WhenProvoked = async (qfThis, provokingAction) =>
-                    {
-                        List<Creature> provokeQueue = (qfThis.Tag as List<Creature>)!;
-                        await ProvokeBraceReaction(qfThis.Owner, provokingAction.Owner, provokingAction, provokeQueue, qfThis.Value);
-                    },
+                    Tag = new Dictionary<Creature,int>(), // used to prevent some double-prompts
                 };
                 caster.AddQEffect(readiedBrace);
             });
@@ -172,11 +289,10 @@ public static class Ready
         return braceAction;
     }
 
-    public static async Task ProvokeBraceReaction(
+    public static async Task<bool> ProvokeBraceReaction(
         Creature reactor,
         Creature provoker,
         CombatAction? provokingAction,
-        List<Creature> provokeQueue,
         int attacksMade = 0)
     {
         if (reactor.PrimaryWeapon == null
@@ -185,19 +301,17 @@ public static class Ready
             || provokingAction.TilesMoved == 0
             || provokingAction.ActionId == ActionId.Step
             || provokingAction.HasTrait(Trait.DoesNotProvoke))
-            return;
-                        
-        if (!provokeQueue.Contains(provoker))
-            return;
+            return false;
                         
         await OfferAndMakeReactiveStrike2(
             reactor,
             provoker,
-            $"{{b}}Ready (Brace) {{icon:Reaction}}\n{{Blue}}{provoker.Name}{{/Blue}} enters your reach using {{Blue}}{provokingAction.Name}{{/Blue}}.\nMake a melee Strike?",
+            $"{{b}}Ready (Brace) {{icon:Reaction}}{{/b}}\n{{Blue}}{provoker.Name}{{/Blue}} enters your reach using {{Blue}}{provokingAction.Name}{{/Blue}}.\nMake a melee Strike?",
             "ready (brace)",
             1,
             attacksMade);
-        provokeQueue.Remove(provokingAction.Owner);
+
+        return true;
     }
     
     public static async Task<CheckResult?> OfferAndMakeReactiveStrike2(
@@ -206,21 +320,24 @@ public static class Ready
       string question,
       string overhead,
       int numberOfStrikes,
-      int attacksMade)
+      int attacksMade,
+      bool meleeOnly = true)
     {
-        List<CombatAction> possibleStrikes = attacker.MeleeWeapons
+        IEnumerable<Item> listToUse = meleeOnly ? attacker.MeleeWeapons : attacker.Weapons;
+        Item? primaryWeapon = meleeOnly ? attacker.PrimaryWeapon : attacker.PrimaryWeaponIncludingRanged;
+        List<CombatAction> possibleStrikes = listToUse
             .Select(CreateReactiveAttackFromWeapon)
             .Where(IsStrikeOk)
             .ToList();
-        CombatAction? combatAction = attacker.PrimaryWeapon != null
-            ? CreateReactiveAttackFromWeapon(attacker.PrimaryWeapon)
+        CombatAction? combatAction = primaryWeapon != null
+            ? CreateReactiveAttackFromWeapon(primaryWeapon)
             : null;
 
         if (combatAction != null && !IsStrikeOk(combatAction))
           combatAction = null;
 
         if (possibleStrikes.Count == 0)
-            return new CheckResult?();
+            return null;
 
         CombatAction? selectedStrike;
         bool flag;
@@ -240,21 +357,29 @@ public static class Ready
             {
                 Item? obj1 = strike.Item;
                 Item obj2;
-                return "With " + (obj1 != null ? (!Items.TryGetItemTemplate(obj1.ItemName, out obj2) ? (!(obj1.Name == "fist") ? obj1.Illustration.IllustrationAsIconString + " " + obj1.Name : "{icon:Kick} kick") : (!(obj2.Name == "fist") ? obj1.Illustration.IllustrationAsIconString + " " + obj2.Name : "{icon:Kick} kick")) : "??");
+                return "With "
+                       + (obj1 != null
+                           ? !Items.TryGetItemTemplate(obj1.ItemName, out obj2)
+                               ? !(obj1.Name == "fist")
+                                   ? obj1.Illustration.IllustrationAsIconString + " " + obj1.Name
+                                   : "{icon:Kick} kick"
+                               : !(obj2.Name == "fist")
+                                   ? obj1.Illustration.IllustrationAsIconString + " " + obj2.Name
+                                   : "{icon:Kick} kick" : "??");
             }).ToArray());
             flag = useReaction.HasValue;
             selectedStrike = useReaction.HasValue ? possibleStrikes[useReaction.Value] : null;
         }
       
         if (!flag || selectedStrike == null)
-            return new CheckResult?();
+            return null;
       
         // Do not capture MAP
         //int map = attacker.Actions.AttackedThisManyTimesThisTurn;
       
         attacker.Occupies.Overhead(overhead, Color.White);
       
-        CheckResult? bestCheckResult = new CheckResult?();
+        CheckResult? bestCheckResult = null;
         for (int i = 0; i < numberOfStrikes; ++i)
         {
             CheckResult checkResult = await attacker.MakeStrike(selectedStrike, target);
