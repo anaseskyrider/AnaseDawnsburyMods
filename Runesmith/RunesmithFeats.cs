@@ -34,13 +34,6 @@ namespace Dawnsbury.Mods.RunesmithPlaytest;
 
 public static class RunesmithFeats
 {
-    // TODO: More enums for stuff, per Sudo's recommendations.
-    /* public static readonly QEffectId HitTheDirt = ModManager.RegisterEnumMember<QEffectId>("Hit the Dirt QEID");
-    caster.AddQEffect(new QEffect() { Id = HitTheDirt; }
-    caster.RemoveAllQEffects(qe => qe.Id == HitTheDirt);*/
-    // Dinglebob:
-    // public readonly static QEffectId FormID = ModManager.RegisterEnumMember<QEffectId>("ShifterForm");
-    
     public static void CreateFeats()
     {
         #region 1st-Level Feats
@@ -1031,7 +1024,7 @@ public static class RunesmithFeats
                                 {
                                     DrawnRune pretendNewRune = (await chosenRune.Rune.NewDrawnRune!.Invoke(transposeAction, caster, chosenCreature, chosenRune.Rune))!;
                                     Sfxs.Play(ModData.SfxNames.TransposeEtchingEnd);
-                                    /*await*/ chosenRune.MoveRuneToTarget(chosenCreature, pretendNewRune.DrawnOn);
+                                    /*await*/ CommonRuneRules.MoveRuneToTarget(chosenRune, chosenCreature, pretendNewRune.DrawnOn);
                                 }
                                 else
                                     transposeAction.RevertRequested = true;

@@ -179,7 +179,7 @@ public class DrawnRune : QEffect
                     if (allCreature == this.Owner) // Don't move if they already have the QF.
                         continue; 
                     
-                    /*await*/ this.MoveRuneToTarget(allCreature, this.DrawnOn); // Move to the new creature without changing the item target.
+                    /*await*/ CommonRuneRules.MoveRuneToTarget(this, allCreature, this.DrawnOn); // Move to the new creature without changing the item target.
                     break;
                 }
             }
@@ -228,7 +228,7 @@ public class DrawnRune : QEffect
                         if (allCreature == this.Owner) // Don't move if they already have the QF.
                             continue;
 
-                        /*await*/ this.MoveRuneToTarget(allCreature, this.DrawnOn); // Move to the new creature without changing the item target.
+                        /*await*/ CommonRuneRules.MoveRuneToTarget(this, allCreature, this.DrawnOn); // Move to the new creature without changing the item target.
                         break;
                     }
                 }
@@ -269,7 +269,7 @@ public class DrawnRune : QEffect
                     if (allCreature == this.Owner) // Don't move if they already have the QF.
                         continue;
                     
-                    /*await*/ this.MoveRuneToTarget(allCreature, runeTarget);
+                    /*await*/ CommonRuneRules.MoveRuneToTarget(this, allCreature, runeTarget);
                     break;
                 }
             }
@@ -296,33 +296,6 @@ public class DrawnRune : QEffect
         };
         
         return this;
-    }
-    #endregion
-    
-    #region Task Methods
-    // TODO: move this function
-    /// <summary>
-    /// <para>Sets its DrawnOn to the new DrawnOn and moves the DrawnRune from its old Owner to its new Owner.</para>
-    /// <para>Use Case: the Transpose Etching feat which allows you to move a rune from one target to another.</para>
-    /// <para>WARNING: Does no legality-checking. Just saves a few lines of code.</para>
-    /// </summary>
-    /// <param name="newOwner">(Creature) The creature who will own the DrawnRune.</param>
-    /// <param name="newDrawnOn">(Creature, DrawnRune, Item) The new "real" target from the newOwner to apply the DrawnRune to, such as an item wielded by the newOwner, the creature itself, or another DrawnRune.</param>
-    public async void MoveRuneToTarget(Creature newOwner, object? newDrawnOn)
-    {
-        // Might need expanded functionality in the future.
-        
-        if (newDrawnOn != null)
-        {
-            this.DrawnOn = newDrawnOn;
-            if (newDrawnOn is DrawnRune dr)
-                dr.AttachedDiacritic = this;
-        }
-        if (this.Owner != newOwner)
-        {
-            this.Owner.RemoveAllQEffects(qf => qf == this);
-            newOwner.AddQEffect(this);
-        }
     }
     #endregion
 
