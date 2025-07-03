@@ -510,6 +510,7 @@ public static class RunesmithClass
                     values2.SetProficiency(Trait.Unarmed, Proficiency.Master);
                     values2.SetProficiency(Trait.Simple, Proficiency.Master);
                     values2.SetProficiency(Trait.Martial, Proficiency.Master);
+                    values2.SetProficiency(ModData.Traits.ArtisansHammer, Proficiency.Expert);
                     
                     RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values2)!;
                     repertoire.IncreaseEtchLimit(13, 1);
