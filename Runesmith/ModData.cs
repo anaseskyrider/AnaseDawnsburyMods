@@ -153,6 +153,9 @@ public static class ModData
         public static readonly FeatName EtchRune = ModManager.RegisterFeatName("RunesmithPlaytest.EtchRune", "Etch Rune");
         
         public static readonly FeatName RunicCrafter = ModManager.RegisterFeatName("RunesmithPlaytest.RunicCrafter", "Runic Crafter");
+        
+        public static readonly FeatName AssuredRunicCrafter = ModManager.RegisterFeatName("RunesmithPlaytest.AssuredRunicCrafter", "Assured Runic Crafter");
+        public static readonly string AssuredRunicCrafterChoice = "RunesmithPlaytest.AssuredRunicCrafterChoice";
         #endregion
 
         #region Class Feats
