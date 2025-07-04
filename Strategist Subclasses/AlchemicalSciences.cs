@@ -3,6 +3,7 @@ using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.StrategistSubclasses;
@@ -34,7 +35,7 @@ public static class AlchemicalSciences
         Feat alchemicalSciences = new Feat(
                 ModData.FeatNames.AlchemicalSciences,
                 "Your methodology emphasizes chemical and alchemical analysis, collecting information from unusual particles and fluids found on the scene. You possess enough alchemical know-how to whip up a few tinctures to help you with your cases.",
-                "You're trained in Crafting.\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}Modding{/b} If the {i}Bundle of Backgrounds{/i} mod is installed and loaded before this mod, you also gain that mod's Concoct Poultice action, which you can use once per encounter instead of once per day.",
+                "You're trained in Crafting.\n\n" + new ModdedIllustration(ModData.Illustrations.DDSunPath).IllustrationAsIconString + " {b}Modding{/b} If the {i}Bundle of Backgrounds{/i} mod is installed, you also gain its Concoct Poultice action, which you can use once per encounter instead of once per day.",
                 [ModData.Traits.StrategistSubclasses],
                 [])
             .WithOnSheet(values =>

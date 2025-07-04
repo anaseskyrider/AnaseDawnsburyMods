@@ -39,6 +39,7 @@
     </ItemGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopExport)\CustomModsV3"/>
     <Copy SourceFiles="OGL copyright notice.html" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
+    <Copy SourceFiles="optional-dependencies.txt" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
     <Copy SourceFiles="@(StrategistSubclassesAssets)" DestinationFolder="$(WorkshopExport)\CustomModsV3\StrategistSubclassesAssets\%(RecursiveDir)"/>
   </Target>
 </Project>

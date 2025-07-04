@@ -19,7 +19,7 @@ public static class Interrogation
         Feat interrogation = new Feat(
                 ModData.FeatNames.Interrogation,
                 "People can't help but trust you, whether through your inherent likableness or your firm insistence on sticking to the truth. You have a way about you that gets others talking, and you've developed interrogative techniques to help you get to the truth of your investigations.",
-                "You are trained in Diplomacy. At the start of combat, you can use Declare Person of Interest as a {icon:FreeAction} free action.\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " {b}Modding{b} If you have the {i}Bundle of Backgrounds{/i} mod installed and loaded before this one, you gain its No Cause for Alarm skill feat.",
+                "You are trained in Diplomacy. At the start of combat, you can use Declare Person of Interest as a {icon:FreeAction} free action.\n\n" + new ModdedIllustration(ModData.Illustrations.DDSunPath).IllustrationAsIconString + " {b}Modding{b} If you have the {i}Bundle of Backgrounds{/i} mod installed, you gain its No Cause for Alarm skill feat.",
                 [ModData.Traits.StrategistSubclasses],
                 [])
             .WithOnSheet(values =>

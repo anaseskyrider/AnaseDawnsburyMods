@@ -41,7 +41,8 @@ public static class ModData
 
     public static class Illustrations
     {
-        public static readonly Illustration DawnsburySun = new ModdedIllustration("RunesmithAssets/PatreonSunTransparent.png");
+        //public static readonly Illustration DawnsburySun = new ModdedIllustration("StrategistSubclassesAssets/PatreonSunTransparent.png");
+        public static readonly string DDSunPath = "StrategistSubclassesAssets/PatreonSunTransparent.png";
         public static readonly Illustration ExpeditiousInspection = new ModdedIllustration("StrategistSubclassesAssets/searching.png");
     }
 
