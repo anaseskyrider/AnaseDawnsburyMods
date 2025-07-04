@@ -1641,5 +1641,76 @@ public static class RunesmithFeats
             });
         ModManager.AddFeat(readTheBones);
         #endregion
+        
+        // Easiest to hardest implementations, in roughly this order (first glance):
+        // - Expanded Glossary
+        // - Living Lexicon
+        // - Shades of Meaning
+        // - Dance of Bloody Ink
+        // - Annihilating Composite Invocation
+        // - Astral Composite Invocation
+        // - Clashing Composite Invocation
+        // - Distant Invocation
+        // - Define the Canvas
+        // - Chain of Words
+        // - By Your Name
+        // - Overloaded Ammunition
+        // - Henge Gate
+        // - Return Unto Runes
+        // - Forge New Word
+        
+        #region 10th-Level Feats
+        
+        // Chain of Words
+        
+        // Clashing Composite Invocation <--- Priority
+        
+        // Overloaded Ammunition
+        
+        #endregion
+        
+        #region 12th-Level Feats
+        
+        // Astral Composite Invocation <--- Priority
+        
+        // Distant Invocation
+        
+        // Expanded Glossary <--- Priority
+        
+        #endregion
+        
+        #region 14th-Level Feats
+        
+        // Dance of Bloody Ink <--- Priority
+        
+        // Define the Canvas <--- Priority
+        
+        // Henge Gate
+        
+        #endregion
+        
+        #region 16th-Level Feats
+        
+        // By Your Name <--- Priority
+        
+        // Return Unto Runes
+        
+        #endregion
+        
+        #region 18th-Level Feats
+        
+        // Annihilating Composite Invocation <--- Priority
+        
+        // Living Lexicon <--- Priority
+        
+        #endregion
+        
+        #region 20th-Level Feats
+        
+        // Forge New Word
+        
+        // Shades of Meaning <--- Priority
+        
+        #endregion
     }
 }

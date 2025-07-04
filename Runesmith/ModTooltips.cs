@@ -63,7 +63,7 @@ public static class ModTooltips
         
         ModManager.RegisterInlineTooltip(
             "Runesmith.Features.AssuredRunicCrafter",
-            "{b}Assured Runic Crafter{/b}\n{i}Level 9 Runesmith feature{/i}\nYou can select one ally to gain the benefits of your Runic Crafter feature.");
+            "{b}Assured Runic Crafter{/b}\n{i}Level 9 Runesmith feature{/i}\nYou can select one ally to gain the benefits of your Runic Crafter feature as a precombat preparation.");
         
         ModManager.RegisterInlineTooltip(
             "Runesmith.Features.SmithsEndurance",
@@ -82,7 +82,7 @@ public static class ModTooltips
          
         ModManager.RegisterInlineTooltip(
             "Runesmith.Feats.WordsFlyFree",
-            "{b}Words, Fly Free {icon:Action}{/b}\n{i}Manipulate, Runesmith{/i}\n(Requires your Runic Tattoo isn't faced)\nYou fling your hand out, the rune from your Runic Tattoo flowing down it and flying through the air in a crescent. You trace the rune onto all creatures or objects within a 15-foot cone that match the rune's usage requirement. The rune then returns to you, faded.");
+            "{b}Words, Fly Free {icon:Action}{/b}\n{i}Manipulate, Runesmith{/i}\n(Requires your Runic Tattoo isn't faded)\nYou fling your hand out, the rune from your Runic Tattoo flowing down it and flying through the air in a crescent. You trace the rune onto all creatures or objects within a 15-foot cone that match the rune's usage requirement. The rune then returns to you, faded.");
         
         //////////
         // Misc //

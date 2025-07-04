@@ -46,7 +46,8 @@ public static class RunesmithRunes
         
         // TODO: Consolidate item-targeting routines with task functions in CommonRuneRules
 
-        // Level 1 Runes
+        #region Level 1 Runes
+
         Rune runeAtryl = new Rune(
                 "Atryl, Rune of Fire",
                 ModData.Traits.Atryl,
@@ -1522,7 +1523,10 @@ public static class RunesmithRunes
             .WithWillSaveInvocationTechnical();
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneZohk", runeZohk);
 
-        // Level 9 Runes
+        #endregion
+
+        #region Level 9 Runes
+
         Rune runeEnDiacritic = new Rune(
                 "En-, Diacritic Rune of Expansion",
                 ModData.Traits.EnDiacritic,
@@ -1782,6 +1786,9 @@ public static class RunesmithRunes
                 },
             };
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneIchelsu", runeIchelsu);*/
+        
+        // Rune runeInthDiacritic = new Rune();
+        // AddRuneAsRuneFeat("RunesmithPlaytest.RuneInthDiacritic", runeInthDiacritic);
 
         Rune runeJurroz = new Rune(
                 "Jurroz, Rune of Dragon Fury",
@@ -2078,6 +2085,21 @@ public static class RunesmithRunes
             .WithReflexSaveInvocationTechnical()
             .WithTargetDoesNotSaveTechnical();
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneKojastri", runeKojastri);
+        
+        // Rune runeTrolistri = new Rune();
+        // AddRuneAsRuneFeat("RunesmithPlaytest.RuneTrolistri", runeTrolistri);
+
+        #endregion
+        
+        #region Level 17 Runes
+        
+        // Rune runeAiuen = new Rune();
+        // AddRuneAsRuneFeat("RunesmithPlaytest.RuneAiuen", runeAiuen);
+        
+        // Rune runeRovan = new Rune();
+        // AddRuneAsRuneFeat("RunesmithPlaytest.RuneRovan", runeRovan);
+        
+        #endregion
     }
 
     /// <summary>
