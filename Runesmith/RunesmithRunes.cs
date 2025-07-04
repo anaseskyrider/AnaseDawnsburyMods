@@ -27,6 +27,7 @@ using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
+using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
 
@@ -161,72 +162,72 @@ public static class RunesmithRunes
                 DrawnRune? MakeEsvadirPassive(Item targetItem)
                 {
                     DrawnRune esvadirPassive = new DrawnRune(
-                        thisRune,
-                        $"The target item or piercing and slashing unarmed strikes deal 2 persistent bleed damage per weapon damage die.",
-                        caster)
-                    {
-                        Name = $"{thisRune.Name} ({targetItem.Name})", // Custom name
-                        AfterYouTakeAction = async (QEffect qfSelf, CombatAction action) => // Add bleed
+                            thisRune,
+                            $"The target item or piercing and slashing unarmed strikes deal 2 persistent bleed damage per weapon damage die.",
+                            caster)
                         {
-                            if ((qfSelf as DrawnRune)!.Disabled)
-                                return;
-
-                            Item? qfItem = (qfSelf as DrawnRune)?.DrawnOn as Item;
-                            Item? actionItem = action.Item;
-
-                            // This many complex conditionals is really hard to work out so I did it the long way.
-                            // Fail to bleed if,
-                            if (actionItem == null || qfItem == null || // either item is blank
-                                !action.HasTrait(Trait.Strike) || // or the action isn't a strike
-                                action.ChosenTargets.ChosenCreature == null || // or null targets
-                                action.ChosenTargets.ChosenCreature ==
-                                qfSelf.Owner || // or I'm my target for any reason
-                                !(actionItem.DetermineDamageKinds().Contains(DamageKind.Piercing) ||
-                                  actionItem.DetermineDamageKinds()
-                                      .Contains(DamageKind
-                                          .Slashing))) // or it's not piercing or slashing damage
-                                return;
-                            // Fail to bleed if,
-                            if (actionItem.HasTrait(Trait.Unarmed)) // attacking with an unarmed,
+                            Name = $"{thisRune.Name} ({targetItem.Name})", // Custom name
+                            AfterYouTakeAction = async (QEffect qfSelf, CombatAction action) => // Add bleed
                             {
-                                if (!qfItem.HasTrait(Trait.Unarmed)) // that is unbuffed.
+                                if ((qfSelf as DrawnRune)!.Disabled)
                                     return;
-                            }
-                            else // attacking with a regular weapon,
-                            {
-                                if (actionItem != qfItem) // that is unbuffed.
+
+                                Item? qfItem = (qfSelf as DrawnRune)?.DrawnOn as Item;
+                                Item? actionItem = action.Item;
+
+                                // This many complex conditionals is really hard to work out so I did it the long way.
+                                // Fail to bleed if,
+                                if (actionItem == null || qfItem == null || // either item is blank
+                                    !action.HasTrait(Trait.Strike) || // or the action isn't a strike
+                                    action.ChosenTargets.ChosenCreature == null || // or null targets
+                                    action.ChosenTargets.ChosenCreature ==
+                                    qfSelf.Owner || // or I'm my target for any reason
+                                    !(actionItem.DetermineDamageKinds().Contains(DamageKind.Piercing) ||
+                                      actionItem.DetermineDamageKinds()
+                                          .Contains(DamageKind
+                                              .Slashing))) // or it's not piercing or slashing damage
                                     return;
-                            }
+                                // Fail to bleed if,
+                                if (actionItem.HasTrait(Trait.Unarmed)) // attacking with an unarmed,
+                                {
+                                    if (!qfItem.HasTrait(Trait.Unarmed)) // that is unbuffed.
+                                        return;
+                                }
+                                else // attacking with a regular weapon,
+                                {
+                                    if (actionItem != qfItem) // that is unbuffed.
+                                        return;
+                                }
 
 
-                            // Determine weapon damage dice count
-                            string weaponDamageDiceCount =
-                                actionItem.WeaponProperties!.DamageDieCount.ToString();
-                            if (action.TrueDamageFormula is { } trueDamage)
-                            {
-                                Capture diceCountCapture =
-                                    Regex.Match(trueDamage.ToString(), @"(\d+)d\d+").Groups[1];
-                                if (diceCountCapture.Value != "")
-                                    weaponDamageDiceCount = diceCountCapture.Value;
-                            }
+                                // Determine weapon damage dice count
+                                string weaponDamageDiceCount =
+                                    actionItem.WeaponProperties!.DamageDieCount.ToString();
+                                if (action.TrueDamageFormula is { } trueDamage)
+                                {
+                                    Capture diceCountCapture =
+                                        Regex.Match(trueDamage.ToString(), @"(\d+)d\d+").Groups[1];
+                                    if (diceCountCapture.Value != "")
+                                        weaponDamageDiceCount = diceCountCapture.Value;
+                                }
 
-                            DiceFormula bleedAmount = DiceFormula.FromText(
-                                (2 * int.Parse(weaponDamageDiceCount) *
-                                 (action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1)).ToString(),
-                                thisRune.Name);
+                                DiceFormula bleedAmount = DiceFormula.FromText(
+                                    (2 * int.Parse(weaponDamageDiceCount) *
+                                     (action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1)).ToString(),
+                                    thisRune.Name);
 
-                            //DiceFormula bleedAmount = DiceFormula.FromText(
-                            //((action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1) * 2 * actionItem.WeaponProperties!.DamageDieCount).ToString(),
-                            //thisRune.Name);
+                                //DiceFormula bleedAmount = DiceFormula.FromText(
+                                //((action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1) * 2 * actionItem.WeaponProperties!.DamageDieCount).ToString(),
+                                //thisRune.Name);
 
-                            if (action.CheckResult >= CheckResult.Success)
-                            {
-                                action.ChosenTargets.ChosenCreature.AddQEffect(
-                                    QEffect.PersistentDamage(bleedAmount, DamageKind.Bleed));
-                            }
-                        },
-                    }
-                    .WithItemOrUnarmedRegulator(targetItem);
+                                if (action.CheckResult >= CheckResult.Success)
+                                {
+                                    action.ChosenTargets.ChosenCreature.AddQEffect(
+                                        QEffect.PersistentDamage(bleedAmount, DamageKind.Bleed));
+                                }
+                            },
+                        }
+                        .WithItemOrUnarmedRegulator(targetItem);
 
                     return esvadirPassive;
                 }
@@ -1019,7 +1020,7 @@ public static class RunesmithRunes
                     SpawnsAura = qfThis =>
                         new MagicCircleAuraAnimation(
                             IllustrationName.AngelicHaloCircle,
-                            Microsoft.Xna.Framework.Color.Gold, emanationSize),
+                            Color.Gold, emanationSize),
                     StateCheck = qfThis =>
                     {
                         qfThis.Owner.DetectionStatus.Undetected = false;
@@ -1210,32 +1211,32 @@ public static class RunesmithRunes
                 DrawnRune? CreateSunPassive(DrawnRune targetRune)
                 {
                     DrawnRune drawnSun = new DrawnRune(
-                        thisRune,
-                        "The base rune is automatically Traced again after being invoked.",
-                        caster)
-                    {
-                        Name = $"{thisRune.Name} ({targetRune.Name})", // Custom name
-                        BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
+                            thisRune,
+                            "The base rune is automatically Traced again after being invoked.",
+                            caster)
                         {
-                            if (thisDr.Disabled)
-                                return;
-                            /*CombatAction sunRedraw = CombatAction.CreateSimple(
+                            Name = $"{thisRune.Name} ({targetRune.Name})", // Custom name
+                            BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
+                            {
+                                if (thisDr.Disabled)
+                                    return;
+                                /*CombatAction sunRedraw = CombatAction.CreateSimple(
                                 drInvoked.Source!,
                                 "Sun, Diacritic Rune of Preservation",
                                 [ModData.Traits.Traced]); // <- Even if it WAS etched before, it's now traced.*/
-                            CombatAction? sunRedraw = CommonRuneRules.CreateTraceAction(drInvoked.Source!, drInvoked.Rune, 0, 99);
-                            if (sunRedraw == null)
-                            {
-                                thisDr.Owner.Battle.Log("Sun- failed to trace rune due to unknown reason. Usage of Sun was not consumed.");
-                                return;
-                            }
-                            if (await CommonRuneRules.DrawRuneOnTarget(sunRedraw, thisDr.Source!,
-                                    drInvoked.Owner, drInvoked.Rune, false) != null)
-                                Sfxs.Play(ModData.SfxNames.InvokedSun);
-                            thisDr.Source!.PersistentUsedUpResources.UsedUpActions.Add("SunDiacritic");
-                        },
-                    }
-                    .WithDiacriticRegulator(targetRune);
+                                CombatAction? sunRedraw = CommonRuneRules.CreateTraceAction(drInvoked.Source!, drInvoked.Rune, 0, 99);
+                                if (sunRedraw == null)
+                                {
+                                    thisDr.Owner.Battle.Log("Sun- failed to trace rune due to unknown reason. Usage of Sun was not consumed.");
+                                    return;
+                                }
+                                if (await CommonRuneRules.DrawRuneOnTarget(sunRedraw, thisDr.Source!,
+                                        drInvoked.Owner, drInvoked.Rune, false) != null)
+                                    Sfxs.Play(ModData.SfxNames.InvokedSun);
+                                thisDr.Source!.PersistentUsedUpResources.UsedUpActions.Add("SunDiacritic");
+                            },
+                        }
+                        .WithDiacriticRegulator(targetRune);
                     return drawnSun;
                 }
 
@@ -1596,12 +1597,12 @@ public static class RunesmithRunes
                             sourceAction2.WithExtraTrait(ModData.Traits.InvokeAgainstGivenTarget);
 
                             CombatAction emanationTargeting = new CombatAction(
-                                drInvoked.Owner,
-                                thisDr.Rune.Illustration,
-                                thisDr.Rune.Name,
-                                [..thisDr.Traits, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName],
-                                "",
-                                Target.Emanation(3))
+                                    drInvoked.Owner,
+                                    thisDr.Rune.Illustration,
+                                    thisDr.Rune.Name,
+                                    [..thisDr.Traits, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName],
+                                    "",
+                                    Target.Emanation(3))
                                 .WithSoundEffect(ModData.SfxNames.InvokeRune)
                                 .WithProjectileCone(VfxStyle.BasicProjectileCone(drInvoked.Rune.Illustration))
                                 .WithActionCost(0);
@@ -1627,7 +1628,6 @@ public static class RunesmithRunes
             .WithDrawnOnRuneTechnical();
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneEnDiacritic", runeEnDiacritic);
         
-        // PETR: With increased level caps, include heightening behavior.
         Rune runeFeikris = new Rune(
                 "Feikris, Rune of Gravity",
                 ModData.Traits.Feikris,
@@ -1638,18 +1638,25 @@ public static class RunesmithRunes
                 "The rune-bearer gains a +2 item bonus to Athletics checks." /* and gains the benefits of the Titan Wrestler feat.*/,
                 invocationText:
                 "All creatures in a 15-foot emanation around the rune-bearer must succeed at a Fortitude save or be pulled 5 feet towards the rune-bearer (or 10 feet on a critical failure).",
-                /*levelText: "The item bonus increases to +3.",*/
+                levelText: "The item bonus increases to +3.",
                 additionalTraits: [Trait.Arcane])
-            //.WithHeightenedText("17th")
+            .WithHeightenedText(
+                (thisRune, charLevel) =>
+                {
+                    int bonus = charLevel >= 17 ? 3 : 2;
+                    return $"The rune-bearer gains a +{bonus} item bonus to Athletics checks.";
+                },
+                null,
+                "17th")
             .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
                 DrawnRune feikrisPassive = new DrawnRune(
                     thisRune,
-                    "You have a +2 item bonus to Athletics checks.",
+                    $"You have a +{(caster.Level >= 17 ? 3 : 2)} item bonus to Athletics checks.",
                     caster)
                 {
                     BonusToSkills = skill =>
-                        skill is Skill.Athletics ? new Bonus(caster.Level == 17 ? 3 : 2, BonusType.Item, "Feikris") : null,
+                        skill is Skill.Athletics ? new Bonus(caster.Level >= 17 ? 3 : 2, BonusType.Item, "Feikris") : null,
                 };
                 return feikrisPassive;
             })
@@ -1777,15 +1784,15 @@ public static class RunesmithRunes
         AddRuneAsRuneFeat("RunesmithPlaytest.RuneIchelsu", runeIchelsu);*/
 
         Rune runeJurroz = new Rune(
-            "Jurroz, Rune of Dragon Fury",
-            ModData.Traits.Jurroz,
-            IllustrationName.CorrosiveRunestone,
-            9,
-            $"etched onto a creature ({new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString} cannot be traced)", //or armor",
-            "This angular rune channels the fury of dragon kind.",
-            "Whenever a creature Strikes the rune-bearer, draconic sanction fully focuses on them, causing the striking creature to become off-guard for 1 round.",
-            invocationText: "As a {icon:FreeAction} free action, the rune-bearer can Fly up to 60 feet toward a creature that has damaged them in the last minute. If they end this movement adjacent to the creature, the creature becomes off-guard until the end of the rune-bearer's next turn.",
-            additionalTraits: [Trait.Dragon])
+                "Jurroz, Rune of Dragon Fury",
+                ModData.Traits.Jurroz,
+                IllustrationName.CorrosiveRunestone,
+                9,
+                $"etched onto a creature ({new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString} cannot be traced)", //or armor",
+                "This angular rune channels the fury of dragon kind.",
+                "Whenever a creature Strikes the rune-bearer, draconic sanction fully focuses on them, causing the striking creature to become off-guard for 1 round.",
+                invocationText: "As a {icon:FreeAction} free action, the rune-bearer can Fly up to 60 feet toward a creature that has damaged them in the last minute. If they end this movement adjacent to the creature, the creature becomes off-guard until the end of the rune-bearer's next turn.",
+                additionalTraits: [Trait.Dragon])
             .WithUsageCondition(Rune.UsabilityConditions.UsableOnAllies())
             .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
@@ -1835,7 +1842,7 @@ public static class RunesmithRunes
                                 return true;
                             })
                             .CreateActions(true)
-                        .FirstOrDefault(pw => pw.Action.ActionId == ActionId.Stride) as CombatAction)
+                            .FirstOrDefault(pw => pw.Action.ActionId == ActionId.Stride) as CombatAction)
                         ?.WithActionCost(0);
                     IList<Tile> floodFill = Pathfinding.Floodfill(target, target.Battle, new PathfindingDescription()
                         {
@@ -1927,7 +1934,6 @@ public static class RunesmithRunes
                 });
         });
         
-        // PETR: With increased level caps, include heightening behavior.
         Rune runeKojastri = new Rune(
                 "Kojastri, Rune of Insulation",
                 ModData.Traits.Kojastri,
@@ -1937,9 +1943,25 @@ public static class RunesmithRunes
                 "This rune insulates from harmful energy of all kinds.",
                 "The rune-bearer gains resistance 5 to your choice of cold, electricity, or fire, and any other creature that touches them or damages them with a melee unarmed attack or non-reach melee weapon takes 2d6 damage. The rune has the trait of the energy type chosen and deals damage of that type.",
                 invocationText: "Any creature that has the rune-bearer grabbed or restrained takes 4d6 damage with a basic Reflex save. On a failure, it also releases the rune-bearer." /*releases the armor's wearer.*/ /*engulfed, grabbed, restrained, or swallowed whole*/,
-                //levelText: "The resistance increases by 5, and the damage increases by 1d6, or 2d6 for the invocation.",
+                levelText: "The resistance increases by 5, and the damage increases by 1d6, or 2d6 for the invocation.",
                 additionalTraits: [Trait.Arcane])
-            //.WithHeightenedText(null, null, "+4")
+            .WithHeightenedText(
+                (thisRune, charLevel) =>
+                {
+                    int currentLevel = Math.Max(charLevel, 9);
+                    int bonusLevel = (currentLevel - 9) / 4;
+                    int resistAmount = 5 + (bonusLevel * 5);
+                    int damageAmount = 2 + (bonusLevel * 1);
+                    return $"The rune-bearer gains resistance {S.HeightenedVariable(resistAmount, 5)} to your choice of cold, electricity, or fire, and any other creature that touches them or damages them with a melee unarmed attack or non-reach melee weapon takes {S.HeightenedVariable(damageAmount, 2)}d6 damage. The rune has the trait of the energy type chosen and deals damage of that type.";
+                },
+                (thisRune, charLevel) =>
+                {
+                    int currentLevel = Math.Max(charLevel, 9);
+                    int bonusLevel = (currentLevel - 9) / 4;
+                    int damageAmount = 4 + (bonusLevel * 2);
+                    return $"Any creature that has the rune-bearer grabbed or restrained takes {S.HeightenedVariable(damageAmount, 4)}d6 damage with a basic Reflex save. On a failure, it also releases the rune-bearer.";
+                },
+                "+4")
             .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
                 ChoiceButtonOption choice = await caster.AskForChoiceAmongButtons(
@@ -2003,12 +2025,12 @@ public static class RunesmithRunes
 
                 // Local functions
                 int GetResistanceAmount(int level) {
-                    int currentLevel = Math.Min(level, 9);
+                    int currentLevel = Math.Max(level, 9);
                     int bonusLevel = (currentLevel - 9) / 4;
                     return 5 + (bonusLevel * 5);
                 }
                 string GetPassiveDamageAmount(int level) {
-                    int currentLevel = Math.Min(level, 9);
+                    int currentLevel = Math.Max(level, 9);
                     int bonusLevel = (currentLevel - 9) / 4;
                     return (2 + (bonusLevel * 1)) + "d6";
                 }
@@ -2042,10 +2064,11 @@ public static class RunesmithRunes
                 });
                 CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
                 return;
-
+                
+                // Local function
                 string GetInvocationDamageAmount(int level)
                 {
-                    int currentLevel = Math.Min(level, 9);
+                    int currentLevel = Math.Max(level, 9);
                     int bonusLevel = (currentLevel - 9) / 4;
                     return (4 + (bonusLevel * 2)) + "d6";
                 }
