@@ -88,29 +88,29 @@ _Disclaimer: the Runesmith's runes are unrelated to the runes from the shop. You
 In general, if a small element of a feature doesn't exist in DD, then that text is removed for simplicity and clarity.
 
 #### Features
-- **Etching Runes** This is a free activity at the start of combat, targeting only yourself and your allies.
-- **Runic Crafter** Crafting isn't a thing. So instead, you automatically gain the effects of the highest level fundamental weapon and armor runes for your level. Just the item bonuses, not the actual runes, so you still want Weapon Potency for property runes. At level 9, the Assured Runic Crafter feature allows you to choose an ally before combat begins to gain the benefits of this feature.
-- **Runic Magic - Tradition Traits** Manually assigning traits is clunky. For ease of play, feats like Ghostly Resonance require that either the rune has the right trait, or that you simply have the right tradition-skill for generic runes (essentially, this is ephemerally and retroactively giving your drawn runes upwards of multiple tradition traits).
-- **Runic Optimization** Functions as weapon specialization. Greater Runic Optimization provides +2 damage instead of 2x the original damage, as normal.
-- **Trace Rune** Because Trace Rune requires a free hand, any activity which includes Trace Rune also requires a free hand unless stated otherwise (I've made it explicit throughout the other feats).
+- **Etching Runes:** This is a free activity at the start of combat, targeting only yourself and your allies.
+- **Runic Crafter:** Crafting isn't a thing. So instead, you automatically gain the effects of the highest level fundamental weapon and armor runes for your level. Just the item bonuses, not the actual runes, so you still want Weapon Potency for property runes. At level 9, the Assured Runic Crafter feature allows you to choose an ally before combat begins to gain the benefits of this feature.
+- **Runic Magic - Tradition Traits:** Manually assigning traits is clunky. For ease of play, feats like Ghostly Resonance require that either the rune has the right trait, or that you simply have the right tradition-skill for generic runes (essentially, this is ephemerally and retroactively giving your drawn runes upwards of multiple tradition traits).
+- **Runic Optimization:** Functions as weapon specialization. Greater Runic Optimization provides +2 damage instead of 2x the original damage, as normal.
+- **Trace Rune:** Because Trace Rune requires a free hand, any activity which includes Trace Rune also requires a free hand unless stated otherwise (I've made it explicit throughout the other feats).
 
 #### Feats
-- **Artist's Attendance** My interpretation: you qualify as a rune-bearer within your reach, and your reach can be determined by any source of reach. This might not be intended behavior by Paizo, but it's playtest.
-- **Backup Runic Enhancement** The tradition is always arcane, for ease of implementation. Lemme know if that causes issues.
-- **Remote Detonation** This is constructed as a meta-strike just like Engraving Strike. Doesn't affect mechanics, just improves UEX.
-- **Elemental Revision** Too difficult (if at all possible) implement accurately -- so like Battle Medicine, the creature becomes immune to Elemental Revision for a day. Yes, you CAN waste actions to trading items around to avoid this.
-- **Engraving Strike** The wording implies the only runes that could be traced are those targeting creatures. I intentionally allow you to also Trace onto any of its items. Due to the lack of free-hand weapons, this is also buffed to be usable with any unarmed strike.
-- **Invisible Ink** Conceal an Object can't exist in the game. This is a 2-action activity to Trace a Rune and Hide/Sneak. Tracing a Rune also can no longer break stealth.
-- **Read the Bones** Augury can't exist in the game. This is a +1 status bonus to initiative.
+- **Artist's Attendance:** My interpretation: you qualify as a rune-bearer within your reach, and your reach can be determined by any source of reach. This might not be intended behavior by Paizo, but it's playtest.
+- **Backup Runic Enhancement:** The tradition is always arcane, for ease of implementation. Lemme know if that causes issues.
+- **Remote Detonation:** This is constructed as a meta-strike just like Engraving Strike. Doesn't affect mechanics, just improves UEX.
+- **Elemental Revision:** Too difficult (if at all possible) implement accurately -- so like Battle Medicine, the creature becomes immune to Elemental Revision for a day. Yes, you CAN waste actions to trading items around to avoid this.
+- **Engraving Strike:** The wording implies the only runes that could be traced are those targeting creatures. I intentionally allow you to also Trace onto any of its items. Due to the lack of free-hand weapons, this is also buffed to be usable with any unarmed strike.
+- **Invisible Ink:** Conceal an Object can't exist in the game. This is a 2-action activity to Trace a Rune and Hide/Sneak. Tracing a Rune also can no longer break stealth.
+- **Read the Bones:** Augury can't exist in the game. This is a +1 status bonus to initiative.
 
 #### Specific Runes
 - Runes which are drawn on armor are instead drawn on a creature.
-- **Atryl, Rune of Fire** Due to lack of mechanical utility, this rune cannot be drawn on items.
-- **Ranshu, Rune of Thunder** Due to lack of mechanical utility, this rune cannot be drawn on items.
-- **Kojastri, Rune of Insulation** In spite of the playtest wording, I've made it so you can't damage yourself by using touch abilities with yourself on this rune. Your allies still can take damage, though.
-- **Oljinex, Rune of Coward's Bane** Due to technical limitations, the invocation imposes a DC 5 flat check on move actions -- DC 11 if it's to move away from the bearer. Its +1 AC status bonus currently applies to any ranged attack, not just physical (pending update).
-- **Pluuna, Rune of Illumination** The game doesn't do lightning mechanics. The existence of the light (both the passive and invocation effect) makes the bearer unable to be Undetected (they can still be Hidden).
-- **Zohk, Rune of Homecoming** The passive effect is a bespoke Stride used during your turn, rather than a benefit to any Stride.
+- **Atryl, Rune of Fire:** Due to lack of mechanical utility, this rune cannot be drawn on items.
+- **Ranshu, Rune of Thunder:** Due to lack of mechanical utility, this rune cannot be drawn on items.
+- **Kojastri, Rune of Insulation:** In spite of the playtest wording, I've made it so you can't damage yourself by using touch abilities with yourself on this rune. Your allies still can take damage, though.
+- **Oljinex, Rune of Coward's Bane:** Due to technical limitations, the invocation imposes a DC 5 flat check on move actions -- DC 11 if it's to move away from the bearer. Its +1 AC status bonus currently applies to any ranged attack, not just physical (pending update).
+- **Pluuna, Rune of Illumination:** The game doesn't do lightning mechanics. The existence of the light (both the passive and invocation effect) makes the bearer unable to be Undetected (they can still be Hidden).
+- **Zohk, Rune of Homecoming:** The passive effect is a bespoke Stride used during your turn, rather than a benefit to any Stride.
 
 ### Attributions:
 - <a href="https://www.flaticon.com/free-icons/feather" title="feather icons">Feather icons created by Freepik - Flaticon</a>
