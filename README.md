@@ -84,22 +84,24 @@ Level 8: Runesmith feat
 - **(1st)** Atryl, Rune of Fire; Esvadir, Rune of Whetstones; Holtrik, Rune of Dwarven Ramparts; Marssyl, Rune of Impact; Oljinex, Rune of Cowards' Bane; Pluuna, Rune of Illumination; Ranshu, Rune of Thunder; Sun-, Diacritic Rune of Preservation; Ur-, Diacritic Rune of Intensity; Zohk, Rune of Homecoming
 
 ### Differences from Tabletop
-- **Applying Runes - Etched** (class feature) This is a free activity at the start of combat, targeting only yourself and your allies.
-- **Artist's Attendance** (class feat) My interpretation: you qualify as a rune-bearer within your reach, and your reach can be determined by any source of reach. This might not be intended behavior by Paizo, but it's playtest.
-- **Backup Runic Enhancement** (class feat) The tradition is always arcane, for ease of implementation. Lemme know if that causes issues.
-- **Remote Detonation** (class feat) This is constructed as a meta-strike just like Engraving Strike. This doesn't affect mechanics, just improves UEX.
-- **Elemental Revisio**n (class feat) If it's possible to implement accurately, it's too difficult -- so like Battle Medicine, the creature becomes immune to Elemental Revision for 24hrs. Yes, you can trade items around to get around this, but the action cost makes it not much of an exploit.
-- **Engraving Strike** (class feat) The wording implies the only runes that could be traced are those targeting creatures. I intentionally allow you to also Trace onto any of its items.
-- **Invisible Ink** (class feat) Conceal an Object doesn't exist in DD, so this instead prevents Tracing a Rune from breaking stealth.
-- **Oljinex, Rune of Coward's Bane** (runesmith rune) Due to technical limitations, the invocation imposes a DC 5 flat check on move actions -- DC 11 if it's to move away from the bearer. Its +1 AC status bonus currently applies to any ranged attack, not just physical (pending update).
-- **Pluuna, Rune of Illumination** (runesmith rune) DD doesn't do lighting. So, the existence of the light (both the passive and invocation effect) makes the bearer unable to be Undetected (they can still be Hidden).
-- **Read the Bones** (class feat) Augury can't exist in DD, so this is a +1 status bonus to initiative.
-- **Runic Crafter** (class feature) Crafting isn't a thing. Current implementation: you automatically gain the effects of the highest level fundamental weapon and armor runes for your level. Just the item bonuses, not the actual runes, so you still want Weapon Potency for property runes.
-- **Runic Magic - Tradition Traits** (class feature) Manually assigning traits is clunky. For ease of play, feats like Ghostly Resonance require that either the rune has the right trait, or that you simply have the right tradition-skill for generic runes (essentially, this is ephemerally and retroactively giving your drawn runes upwards of multiple tradition traits).
-- **Runic Optimization** (class feature) It's just regular weapon specialization (I might make it tabletop-accurate later).
-- **Runic Tattoo** (class feat) Doesn't let you select a rune learned at a later level without taking it in a higher level slot. I tried very hard to make it work. To be fixed in a later update, if possible.
-- **Trace Rune** (class feature) Because Trace Rune requires a free hand, any activity which includes Trace Rune also requires a free hand unless stated otherwise (I've made it explicit throughout the other feats).
-- **Zohk, Rune of Homecoming** (runesmith rune) The exact text of the conditions for the speed bonus is tricky or even impossible to implement. The current implementation is to grant a special Stride action which includes the status bonus and filters out any squares that are further away from the caster than you are when you use the action. I do have alternative ideas, including one that might be closer to tabletop, potentially for a future update.
+- If a small element of a feature doesn't exist in DD, then that text is removed for simplicity and clarity.
+- Runes which are drawn on armor are instead drawn on a creature.
+- **Etching Runes** (_class feature_) This is a free activity at the start of combat, targeting only yourself and your allies.
+- **Artist's Attendance** (_class feat_) My interpretation: you qualify as a rune-bearer within your reach, and your reach can be determined by any source of reach. This might not be intended behavior by Paizo, but it's playtest.
+- **Backup Runic Enhancement** (_class feat_) The tradition is always arcane, for ease of implementation. Lemme know if that causes issues.
+- **Remote Detonation** (_class feat_) This is constructed as a meta-strike just like Engraving Strike. Doesn't affect mechanics, just improves UEX.
+- **Elemental Revision** (_class feat)_ Too difficult (if at all possible) implement accurately -- so like Battle Medicine, the creature becomes immune to Elemental Revision for a day. Yes, you CAN waste actions to trading items around to avoid this.
+- **Engraving Strike** (_class feat_) The wording implies the only runes that could be traced are those targeting creatures. I intentionally allow you to also Trace onto any of its items. Due to the lack of free-hand weapons, this is also buffed to be usable with any unarmed strike.
+- **Invisible Ink** (_class feat_) Conceal an Object doesn't exist in DD. This is a 2-action activity to Trace a Rune and Hide/Sneak. Tracing a Rune also can no longer break stealth.
+- **Kojastri, Rune of Insulation** (_runesmith rune_) In spite of the playtest wording, I've made it so you can't damage yourself by using touch abilities with yourself on this rune. Your allies still can take damage, though.
+- **Oljinex, Rune of Coward's Bane** (_runesmith rune_) Due to technical limitations, the invocation imposes a DC 5 flat check on move actions -- DC 11 if it's to move away from the bearer. Its +1 AC status bonus currently applies to any ranged attack, not just physical (pending update).
+- **Pluuna, Rune of Illumination** (_runesmith rune_) DD doesn't do lighting. So, the existence of the light (both the passive and invocation effect) makes the bearer unable to be Undetected (they can still be Hidden).
+- **Read the Bones** (_class feat_) Augury can't exist in DD. This is a +1 status bonus to initiative.
+- **Runic Crafter** (_class feature_) Crafting isn't a thing. So instead, you automatically gain the effects of the highest level fundamental weapon and armor runes for your level. Just the item bonuses, not the actual runes, so you still want Weapon Potency for property runes.
+- **Runic Magic - Tradition Traits** (_class feature_) Manually assigning traits is clunky. For ease of play, feats like Ghostly Resonance require that either the rune has the right trait, or that you simply have the right tradition-skill for generic runes (essentially, this is ephemerally and retroactively giving your drawn runes upwards of multiple tradition traits).
+- **Runic Optimization** (_class feature_) Functions as weapon specialization. Greater Runic Optimization provides +2 damage instead of 2x the original damage, as normal.
+- **Trace Rune** (_class feature_) Because Trace Rune requires a free hand, any activity which includes Trace Rune also requires a free hand unless stated otherwise (I've made it explicit throughout the other feats).
+- **Zohk, Rune of Homecoming** (_runesmith rune_) A bespoke stride used during your turn, rather than a benefit to any stride.
 
 Attributions:
 - <a href="https://www.flaticon.com/free-icons/feather" title="feather icons">Feather icons created by Freepik - Flaticon</a>
