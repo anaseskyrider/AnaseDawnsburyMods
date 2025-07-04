@@ -30,8 +30,8 @@ public static class ModData
 
     public static class ActionIds
     {
-        public static readonly ActionId PrepareToAid = ModManager.RegisterEnumMember<ActionId>("PrepareToAid");
-        public static readonly ActionId AidReaction = ModManager.RegisterEnumMember<ActionId>("AidReaction");
+        public static ActionId PrepareToAid;
+        public static ActionId AidReaction;
         public static readonly ActionId Ready = ModManager.RegisterEnumMember<ActionId>("Ready");
         public static readonly ActionId HelpUp = ModManager.RegisterEnumMember<ActionId>("HelpUp");
         public static readonly ActionId QuickRepair = ModManager.RegisterEnumMember<ActionId>("QuickRepair");

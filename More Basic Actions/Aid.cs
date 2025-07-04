@@ -24,6 +24,9 @@ namespace Dawnsbury.Mods.MoreBasicActions;
 
 // TODO: Stacking DC penalties for repeat Aid.
 
+/// <summary>
+/// Contains all the logic for the Aid basic action. Any modder looking to make a feature that's compatible with Aiding should look for the <see cref="ModData.ActionIds.PrepareToAid"/> and <see cref="ModData.ActionIds.AidReaction"/> action IDs. By using <see cref="ModManager.TryParse(string technicalName, out T enumValue)"/>, it will be compatible regardless of load order. See <see cref="MoreBasicActions.LoadMod()"/> for usable code.
+/// </summary>
 public static class Aid
 {
     public static readonly string BasicPrepareToAidDescription = "{i}You prepare to help your ally with a task outside your turn.{/i}\n\nChoose an adjacent ally or enemy. When that ally makes a skill check or attack roll while adjacent to you, or that enemy is targeted by an attack roll while adjacent to you, you can use the aid {icon:Reaction} reaction for that check as the trigger.";
