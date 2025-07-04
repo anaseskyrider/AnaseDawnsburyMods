@@ -58,50 +58,61 @@ These runes can be Traced an unlimited number of times, so the Runesmith is abou
 _Disclaimer: the Runesmith's runes are unrelated to the runes from the shop. You are not tracing a +1 Weapon Potency rune in the middle of combat._
 
 ### Class Features
-**Key Attribute** Intelligence
-**Perception** trained
-**Offenses** up to martial weapons
-**Defenses** 8 HP, up to medium armor; trained Reflex, expert Fortitude & Will
-**Skills** 2 + Crafting + 1 of Arcana/Nature/Occultism/Religion + Intelligence
+**Key Attribute** Intelligence  
+**Perception** trained  
+**Offenses** up to martial weapons  
+**Defenses** 8 HP, up to medium armor; trained Reflex, expert Fortitude & Will  
+**Skills** 2 + Crafting + 1 of Arcana/Nature/Occultism/Religion + Intelligence  
 
-Level 1: Runic Repertoire (4 runes), Trace Rune, Invoke Rune, Etch Rune (2 runes), Runesmith feat, Shield Block
-Level 2: Runesmith feat, Runic Crafter
-Level 3: General feat, skill increase, additional rune known (level 1)
-Level 4: Runesmith feat
-Level 5: Attribute boosts, ancestry feat, skill increase, Smith's Weapon Expertise (expert in unarmed/simple/martial weapons), additional rune known (level 1), Etch Rune (3 runes)
-Level 6: Runesmith feat
-Level 7: General feat, Runic Optimization, additional rune known (level 1)
-Level 8: Runesmith feat
+**Level 1:** Runic Repertoire (4 runes), Trace Rune, Invoke Rune, Etch Rune (2 runes), Runesmith feat, Shield Block  
+**Level 2:** Runesmith feat, Runic Crafter  
+**Level 3:** General feat, skill increase, additional rune known (level 1)  
+**Level 4:** Runesmith feat  
+**Level 5:** Attribute boosts, ancestry feat, skill increase, Smith's Weapon Expertise (expert in unarmed/simple/martial weapons), additional rune known (level 1), Etch Rune (3 runes)  
+**Level 6:** Runesmith feat  
+**Level 7:** General feat, Runic Optimization, additional rune known (level 1)  
+**Level 8:** Runesmith feat  
 
 ### Class Feats
 - **(1st)** Backup Runic Enhancement, Engraving Strike, Remote Detonation, Rune-Singer
 - **(2nd)** Fortifying Knock, Invisible Ink, Runic Tattoo, Smithing Weapons Familiarity
 - **(4th)** Artist's Attendance, Ghostly Resonance, Terrifying Invocation, Transpose Etching
 - **(6th)** Runic Reprisal, Tracing Trance, Vital Composite Invocation, "Words, Fly Free"
-- **(8th)** Drawn In Red, Elemental Revision, Read the Bones
+- **(8th)** Drawn In Red, Elemental Revision, Read the Bones, (Homebrew) Early Access
 
 ### Runesmith's Runes
 - **(1st)** Atryl, Rune of Fire; Esvadir, Rune of Whetstones; Holtrik, Rune of Dwarven Ramparts; Marssyl, Rune of Impact; Oljinex, Rune of Cowards' Bane; Pluuna, Rune of Illumination; Ranshu, Rune of Thunder; Sun-, Diacritic Rune of Preservation; Ur-, Diacritic Rune of Intensity; Zohk, Rune of Homecoming
+- **(9th)** (accessible with a homebrew feat) En-, Diacritic Rune of Expansion; Feikris, Rune of Gravity; Jurroz, Rune of Dragon Fury; Kojastri, Rune of Insulation
 
 ### Differences from Tabletop
-- **Applying Runes - Etched** (class feature) This is a free activity at the start of combat, targeting only yourself and your allies.
-- **Artist's Attendance** (class feat) My interpretation: you qualify as a rune-bearer within your reach, and your reach can be determined by any source of reach. This might not be intended behavior by Paizo, but it's playtest.
-- **Backup Runic Enhancement** (class feat) The tradition is always arcane, for ease of implementation. Lemme know if that causes issues.
-- **Remote Detonation** (class feat) This is constructed as a meta-strike just like Engraving Strike. This doesn't affect mechanics, just improves UEX.
-- **Elemental Revisio**n (class feat) If it's possible to implement accurately, it's too difficult -- so like Battle Medicine, the creature becomes immune to Elemental Revision for 24hrs. Yes, you can trade items around to get around this, but the action cost makes it not much of an exploit.
-- **Engraving Strike** (class feat) The wording implies the only runes that could be traced are those targeting creatures. I intentionally allow you to also Trace onto any of its items.
-- **Invisible Ink** (class feat) Conceal an Object doesn't exist in DD, so this instead prevents Tracing a Rune from breaking stealth.
-- **Oljinex, Rune of Coward's Bane** (runesmith rune) Due to technical limitations, the invocation imposes a DC 5 flat check on move actions -- DC 11 if it's to move away from the bearer. Its +1 AC status bonus currently applies to any ranged attack, not just physical (pending update).
-- **Pluuna, Rune of Illumination** (runesmith rune) DD doesn't do lighting. So, the existence of the light (both the passive and invocation effect) makes the bearer unable to be Undetected (they can still be Hidden).
-- **Read the Bones** (class feat) Augury can't exist in DD, so this is a +1 status bonus to initiative.
-- **Runic Crafter** (class feature) Crafting isn't a thing. Current implementation: you automatically gain the effects of the highest level fundamental weapon and armor runes for your level. Just the item bonuses, not the actual runes, so you still want Weapon Potency for property runes.
-- **Runic Magic - Tradition Traits** (class feature) Manually assigning traits is clunky. For ease of play, feats like Ghostly Resonance require that either the rune has the right trait, or that you simply have the right tradition-skill for generic runes (essentially, this is ephemerally and retroactively giving your drawn runes upwards of multiple tradition traits).
-- **Runic Optimization** (class feature) It's just regular weapon specialization (I might make it tabletop-accurate later).
-- **Runic Tattoo** (class feat) Doesn't let you select a rune learned at a later level without taking it in a higher level slot. I tried very hard to make it work. To be fixed in a later update, if possible.
-- **Trace Rune** (class feature) Because Trace Rune requires a free hand, any activity which includes Trace Rune also requires a free hand unless stated otherwise (I've made it explicit throughout the other feats).
-- **Zohk, Rune of Homecoming** (runesmith rune) The exact text of the conditions for the speed bonus is tricky or even impossible to implement. The current implementation is to grant a special Stride action which includes the status bonus and filters out any squares that are further away from the caster than you are when you use the action. I do have alternative ideas, including one that might be closer to tabletop, potentially for a future update.
+In general, if a small element of a feature doesn't exist in DD, then that text is removed for simplicity and clarity.
 
-Attributions:
+#### Features
+- **Etching Runes:** This is a free activity at the start of combat, targeting only yourself and your allies.
+- **Runic Crafter:** Crafting isn't a thing. So instead, you automatically gain the effects of the highest level fundamental weapon and armor runes for your level. Just the item bonuses, not the actual runes, so you still want Weapon Potency for property runes. At level 9, the Assured Runic Crafter feature allows you to choose an ally before combat begins to gain the benefits of this feature.
+- **Runic Magic - Tradition Traits:** Manually assigning traits is clunky. For ease of play, feats like Ghostly Resonance require that either the rune has the right trait, or that you simply have the right tradition-skill for generic runes (essentially, this is ephemerally and retroactively giving your drawn runes upwards of multiple tradition traits).
+- **Runic Optimization:** Functions as weapon specialization. Greater Runic Optimization provides +2 damage instead of 2x the original damage, as normal.
+- **Trace Rune:** Because Trace Rune requires a free hand, any activity which includes Trace Rune also requires a free hand unless stated otherwise (I've made it explicit throughout the other feats).
+
+#### Feats
+- **Artist's Attendance:** My interpretation: you qualify as a rune-bearer within your reach, and your reach can be determined by any source of reach. This might not be intended behavior by Paizo, but it's playtest.
+- **Backup Runic Enhancement:** The tradition is always arcane, for ease of implementation. Lemme know if that causes issues.
+- **Remote Detonation:** This is constructed as a meta-strike just like Engraving Strike. Doesn't affect mechanics, just improves UEX.
+- **Elemental Revision:** Too difficult (if at all possible) implement accurately -- so like Battle Medicine, the creature becomes immune to Elemental Revision for a day. Yes, you CAN waste actions to trading items around to avoid this.
+- **Engraving Strike:** The wording implies the only runes that could be traced are those targeting creatures. I intentionally allow you to also Trace onto any of its items. Due to the lack of free-hand weapons, this is also buffed to be usable with any unarmed strike.
+- **Invisible Ink:** Conceal an Object can't exist in the game. This is a 2-action activity to Trace a Rune and Hide/Sneak. Tracing a Rune also can no longer break stealth.
+- **Read the Bones:** Augury can't exist in the game. This is a +1 status bonus to initiative.
+
+#### Specific Runes
+- Runes which are drawn on armor are instead drawn on a creature.
+- **Atryl, Rune of Fire:** Due to lack of mechanical utility, this rune cannot be drawn on items.
+- **Ranshu, Rune of Thunder:** Due to lack of mechanical utility, this rune cannot be drawn on items.
+- **Kojastri, Rune of Insulation:** In spite of the playtest wording, I've made it so you can't damage yourself by using touch abilities with yourself on this rune. Your allies still can take damage, though.
+- **Oljinex, Rune of Coward's Bane:** Due to technical limitations, the invocation imposes a DC 5 flat check on move actions -- DC 11 if it's to move away from the bearer. Its +1 AC status bonus currently applies to any ranged attack, not just physical (pending update).
+- **Pluuna, Rune of Illumination:** The game doesn't do lightning mechanics. The existence of the light (both the passive and invocation effect) makes the bearer unable to be Undetected (they can still be Hidden).
+- **Zohk, Rune of Homecoming:** The passive effect is a bespoke Stride used during your turn, rather than a benefit to any Stride.
+
+### Attributions:
 - <a href="https://www.flaticon.com/free-icons/feather" title="feather icons">Feather icons created by Freepik - Flaticon</a>
 - <a href="https://www.flaticon.com/free-icons/rune" title="rune icons">Rune icons created by bearicons - Flaticon</a>
 - <a href="https://www.flaticon.com/free-icons/rune" title="rune icons">Rune icons created by Freepik - Flaticon</a>
@@ -132,7 +143,7 @@ When an adjacent ally is prone, you can spend an action to let them Stand as a f
 
 _(Mod options allow you to adjust whether the ally actually takes a move action, or simply ceases to be prone)_
 
-Attributions
+### Attributions
 - <a href="https://www.flaticon.com/free-icons/help" title="help icons">Help icons created by Freepik - Flaticon</a>
 - <a href="https://www.flaticon.com/free-icons/protection" title="protection icons">Protection icons created by Freepik - Flaticon</a>
 - <a href="https://www.flaticon.com/free-icons/reaction" title="reaction icons">Reaction icons created by Freepik - Flaticon</a>
