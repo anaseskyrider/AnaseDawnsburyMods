@@ -58,20 +58,20 @@ These runes can be Traced an unlimited number of times, so the Runesmith is abou
 _Disclaimer: the Runesmith's runes are unrelated to the runes from the shop. You are not tracing a +1 Weapon Potency rune in the middle of combat._
 
 ### Class Features
-**Key Attribute** Intelligence
-**Perception** trained
-**Offenses** up to martial weapons
-**Defenses** 8 HP, up to medium armor; trained Reflex, expert Fortitude & Will
-**Skills** 2 + Crafting + 1 of Arcana/Nature/Occultism/Religion + Intelligence
+**Key Attribute** Intelligence  
+**Perception** trained  
+**Offenses** up to martial weapons  
+**Defenses** 8 HP, up to medium armor; trained Reflex, expert Fortitude & Will  
+**Skills** 2 + Crafting + 1 of Arcana/Nature/Occultism/Religion + Intelligence  
 
-Level 1: Runic Repertoire (4 runes), Trace Rune, Invoke Rune, Etch Rune (2 runes), Runesmith feat, Shield Block
-Level 2: Runesmith feat, Runic Crafter
-Level 3: General feat, skill increase, additional rune known (level 1)
-Level 4: Runesmith feat
-Level 5: Attribute boosts, ancestry feat, skill increase, Smith's Weapon Expertise (expert in unarmed/simple/martial weapons), additional rune known (level 1), Etch Rune (3 runes)
-Level 6: Runesmith feat
-Level 7: General feat, Runic Optimization, additional rune known (level 1)
-Level 8: Runesmith feat
+**Level 1:** Runic Repertoire (4 runes), Trace Rune, Invoke Rune, Etch Rune (2 runes), Runesmith feat, Shield Block  
+**Level 2:** Runesmith feat, Runic Crafter  
+**Level 3:** General feat, skill increase, additional rune known (level 1)  
+**Level 4:** Runesmith feat  
+**Level 5:** Attribute boosts, ancestry feat, skill increase, Smith's Weapon Expertise (expert in unarmed/simple/martial weapons), additional rune known (level 1), Etch Rune (3 runes)  
+**Level 6:** Runesmith feat  
+**Level 7:** General feat, Runic Optimization, additional rune known (level 1)  
+**Level 8:** Runesmith feat  
 
 ### Class Feats
 - **(1st)** Backup Runic Enhancement, Engraving Strike, Remote Detonation, Rune-Singer
