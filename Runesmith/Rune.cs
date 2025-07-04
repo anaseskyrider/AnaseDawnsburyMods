@@ -291,6 +291,7 @@ public class Rune
     {
         this.PassiveTextWithHeightening = passiveText ??= (thisRune, _) => thisRune.PassiveText;
         this.InvocationTextWithHeightening = invocationText ??= (thisRune, _) => thisRune.PassiveText;
+        this.LevelFormat = levelFormat;
         return this;
     }
 
