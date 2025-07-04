@@ -46,10 +46,10 @@ public static class CommonRuneRules
         string? epilogueText = null)
     {
         int lvl = traceAction.Owner.Level;
-        string usageText = rune.WithUsageTextFormatting() + afterUsageText;
-        string? flavorText = (withFlavorText ? rune.WithFlavorTextFormatting() : null) + afterFlavorText;
+        string usageText = rune.GetFormattedUsageText() + afterUsageText;
+        string? flavorText = (withFlavorText ? rune.GetFormattedFlavorText() : null) + afterFlavorText;
         string passiveText = rune.PassiveTextWithHeightening(rune, lvl) + afterPassiveText;
-        string? invocationText = rune.WithInvocationTextFormatting(rune.InvocationTextWithHeightening(rune, lvl)) + afterInvocationText;
+        string? invocationText = rune.GetFormattedInvocationText(rune.InvocationTextWithHeightening(rune, lvl)) + afterInvocationText;
         //string? levelText = this.WithLevelTextFormatting(); // Should have heightening, so this shouldn't be necessary.
         return (!string.IsNullOrEmpty(prologueText) ? $"{prologueText}\n" : null)
                + (!string.IsNullOrEmpty(flavorText) ? $"{flavorText}\n\n": null)
@@ -63,16 +63,16 @@ public static class CommonRuneRules
     /// Gets the full description block for the Rune with formatting, optionally with the flavor text.
     /// </summary>
     /// <param name="rune">The rune to use.</param>
-    /// <param name="withFlavorText">Whether to include <see cref="Rune.WithFlavorTextFormatting"/> in the return.</param>
+    /// <param name="withFlavorText">Whether to include <see cref="Rune.GetFormattedFlavorText"/> in the return.</param>
     /// <returns>(string) The full description with formatting.</returns>
     public static string GetFormattedFeatDescription(Rune rune, bool withFlavorText = true)
     {
         string description = 
-            (withFlavorText ? rune.WithFlavorTextFormatting() + "\n\n" : null) +
-            rune.WithUsageTextFormatting() + "\n\n" +
+            (withFlavorText ? rune.GetFormattedFlavorText() + "\n\n" : null) +
+            rune.GetFormattedUsageText() + "\n\n" +
             rune.PassiveText +
-            (rune.WithInvocationTextFormatting() != null ? "\n\n" + rune.WithInvocationTextFormatting() : null) +
-            (rune.WithLevelTextFormatting() != null ? "\n\n" + rune.WithLevelTextFormatting() : null);
+            (rune.InvocationText != null ? "\n\n" + rune.GetFormattedInvocationText() : null) +
+            (rune.LevelText != null ? "\n\n" + rune.GetFormattedLevelText() : null);
         return description;
     }
 
@@ -457,7 +457,7 @@ public static class CommonRuneRules
                 string tooltip = CombatActionExecution.BreakdownSavingThrowForTooltip(thisInvokeAction, target,
                     new SavingThrow(def, RunesmithClass.RunesmithDC(caster))).TooltipDescription;
                 return initialDescription
-                       + rune.WithInvocationTextFormatting(rune.InvocationTextWithHeightening(rune, caster.Level))
+                       + rune.GetFormattedInvocationText(rune.InvocationTextWithHeightening(rune, caster.Level))
                        + "\n" + tooltip;
             });
         }

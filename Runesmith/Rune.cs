@@ -185,7 +185,7 @@ public class Rune
 
     /// <summary>Gets the rune's <see cref="UsageText"/> with bolded formatting.</summary>
     /// <returns>(string) The original text prepended with "{b}Usage{/b} ".</returns>
-    public string WithUsageTextFormatting(string? text = null)
+    public string GetFormattedUsageText(string? text = null)
     {
         return "{b}Usage{/b} " + (text ?? this.UsageText);
     }
@@ -194,7 +194,7 @@ public class Rune
     public string? FlavorText { get; set; }
 
     /// <summary>Gets the rune's <see cref="FlavorText"/> with italics formatting.</summary>
-    public string WithFlavorTextFormatting(string? text = null)
+    public string GetFormattedFlavorText(string? text = null)
     {
         return "{i}" + (text ?? this.FlavorText) + "{/i}";
     }
@@ -224,7 +224,7 @@ public class Rune
     /// Gets the rune's <see cref="InvocationText"/> with formatting.
     /// </summary>
     /// <returns>(string) The original text prepended with "{b}Invocation{/b} ".</returns>
-    public string? WithInvocationTextFormatting(string? text = null)
+    public string? GetFormattedInvocationText(string? text = null)
     {
         string? invocationText = text ?? (this.InvocationText ?? null);
         return invocationText != null ? "{b}Invocation{/b} " + invocationText : null;
@@ -255,7 +255,7 @@ public class Rune
     /// Get the rune's <see cref="LevelText"/> with formatting.
     /// </summary>
     /// <returns>(string) The original text prepended with "{b}Level (<see cref="LevelFormat"/>){/b} ".</returns>
-    public string? WithLevelTextFormatting(string? text = null)
+    public string? GetFormattedLevelText(string? text = null)
     {
         string? levelText = text ?? (this.LevelText ?? null);
         return levelText != null ? "{b}Level (" + this.LevelFormat + "){/b} " + levelText : null;
