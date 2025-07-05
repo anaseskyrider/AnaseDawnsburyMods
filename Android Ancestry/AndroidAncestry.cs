@@ -10,6 +10,7 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Display.Illustrations;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
@@ -24,9 +25,9 @@ public static class AndroidAncestry
         List<Feat> androidHeritages = [..LoadAndReturnHeritages()];
         
         Feat androidAncestry = new AncestrySelectionFeat(
-            Enums.FeatNames.AndroidAncestry,
+            ModData.FeatNames.AndroidAncestry,
             "Technological wonders from another world, androids have synthetic bodies and living souls. Their dual nature makes them quick-thinking and calm under pressure, but comfortable in stillness and solitude.\n\nAndroids tend to be logical introverts, rational and contemplative. Insatiably curious, with an urge to understand themselves and the world around them, androids place great value on intellectual pursuits. They have difficulty interpreting and expressing emotions, both in themselves and in others, which makes them seem distant and uncaring. While androids can forge emotional bonds, they find it more difficult to connect with non-androids.",
-            [Enums.Traits.AndroidAncestry, Trait.Humanoid],
+            [ModData.Traits.AndroidAncestry, Trait.Humanoid],
             8,
             5,
             [new EnforcedAbilityBoost(Ability.Dexterity), new EnforcedAbilityBoost(Ability.Intelligence), new FreeAbilityBoost()],
@@ -49,7 +50,7 @@ public static class AndroidAncestry
         // Darkvision? :sob:
         
         Feat constructedFeature = new Feat(
-                Enums.FeatNames.Constructed,
+                ModData.FeatNames.Constructed,
                 "Your synthetic body resists ailments better than those of purely biological organisms.",
                 "You gain a +1 circumstance bonus to saving throws against diseases and poisons." /* and radiation */,
                 [],
@@ -72,7 +73,7 @@ public static class AndroidAncestry
         yield return constructedFeature;
 
         Feat emotionallyUnawareFeature = new Feat(
-                Enums.FeatNames.EmotionallyUnaware,
+                ModData.FeatNames.EmotionallyUnaware,
                 "You find it difficult to understand and express complex emotions.",
                 "You take a –1 circumstance penalty to Diplomacy and Performance checks." /* and on Perception checks to Sense Motive.*/,
                 [],
@@ -91,9 +92,9 @@ public static class AndroidAncestry
     public static IEnumerable<Feat> LoadAndReturnHeritages()
     {
         Feat artisanHeritage = new HeritageSelectionFeat(
-            Enums.FeatNames.ArtisanHeritage,
+            ModData.FeatNames.ArtisanHeritage,
             "Your body was originally designed to create works of art, complex tools, or maintain advanced machinery, giving you insight into weaknesses and flaws.",
-            "You become trained in Crafting (or another skill if you're already trained in Crafting).\n\n{b}Other Mods{/b} If you have the {i}DawnniExpanded{/i} mod installed and loaded before {i}Android Ancestry{/i}, you also gain that mod's In-depth Weakness general feat, even if you don't meet its prerequisites.")
+            "You become trained in Crafting (or another skill if you're already trained in Crafting).\n\n" + new ModdedIllustration(ModData.Illustrations.DDSunPath).IllustrationAsIconString + " {b}Modding{/b} If the {i}DawnniExpanded{/i} mod is installed, you also gain its In-depth Weakness general feat, even if you don't meet the prerequisites.")
             .WithOnSheet(values =>
             {
                 values.TrainInThisOrSubstitute(Skill.Crafting);
@@ -107,7 +108,7 @@ public static class AndroidAncestry
         yield return artisanHeritage;
         
         Feat deceiverHeritage = new HeritageSelectionFeat(
-            Enums.FeatNames.DeceiverHeritage,
+            ModData.FeatNames.DeceiverHeritage,
             "Your body was augmented with processes and an appearance intended to manipulate humans more easily.",
             "You become trained in Deception (or another skill if you're already trained in Deception), and you gain the Lengthy Diversion skill feat.")
             .WithOnSheet(values =>
@@ -119,9 +120,9 @@ public static class AndroidAncestry
         yield return deceiverHeritage;
         
         Feat laborerHeritage = new HeritageSelectionFeat(
-            Enums.FeatNames.LaborerHeritage,
+            ModData.FeatNames.LaborerHeritage,
             "Your body is adapted to endure physical hardships or perform hard labor for long periods of time.",
-            "You become trained in Athletics (or another skill if you're already trained in Athletics).\n\n{b}Other Mods{/b} If you have the {i}Bundle of Backgrounds{/i} mod installed and loaded before {i}Android Ancestry{/i}, you also gain that mod's Hefty Hauler skill feat.")
+            "You become trained in Athletics (or another skill if you're already trained in Athletics).\n\n" + new ModdedIllustration(ModData.Illustrations.DDSunPath).IllustrationAsIconString + " {b}Modding{/b} If the {i}Bundle of Backgrounds{/i} mod is installed, you also gain its Hefty Hauler skill feat.")
             .WithOnSheet(values =>
             {
                 values.TrainInThisOrSubstitute(Skill.Athletics);
@@ -134,9 +135,9 @@ public static class AndroidAncestry
         yield return laborerHeritage;
         
         Feat polymathHeritage = new HeritageSelectionFeat(
-            Enums.FeatNames.PolymathHeritage,
+            ModData.FeatNames.PolymathHeritage,
             "You were preprogrammed with a multitude of mathematical proficiencies, likely to act as a calculator.",
-            "You become trained in Society (or another skill if you're already trained in Society).\n\n{b}Other Mods{/b} If you have the {i}Bundle of Backgrounds{/i} mod installed and loaded before {i}Android Ancestry{/i}, you also gain that mod's Fount of Knowledge skill feat.")
+            "You become trained in Society (or another skill if you're already trained in Society).\n\n" + new ModdedIllustration(ModData.Illustrations.DDSunPath).IllustrationAsIconString + " {b}Modding{/b} If the {i}Bundle of Backgrounds{/i} mod is installed, you also gain its Fount of Knowledge skill feat.")
             .WithOnSheet(values =>
             {
                 values.TrainInThisOrSubstitute(Skill.Society);
@@ -149,7 +150,7 @@ public static class AndroidAncestry
         yield return polymathHeritage;
         
         Feat warriorHeritage = new HeritageSelectionFeat(
-            Enums.FeatNames.WarriorHeritage,
+            ModData.FeatNames.WarriorHeritage,
             "Your body was originally created to function as a security officer or soldier, making you a naturally gifted warrior preprogrammed for combat.",
             "You're trained in all simple and martial weapons.")
             .WithOnSheet(values =>
@@ -163,7 +164,7 @@ public static class AndroidAncestry
 
     public static bool CanUseNanites(Creature cr)
     {
-        return cr.QEffects.All(qf => (qf.Tag is QEffectId id ? id : QEffectId.Unspecified) != Enums.QEffectIds.NanitesUnusable);
+        return cr.QEffects.All(qf => (qf.Tag is QEffectId id ? id : QEffectId.Unspecified) != ModData.QEffectIds.NanitesUnusable);
     }
 
     /// <summary>
@@ -185,7 +186,7 @@ public static class AndroidAncestry
             return false;
         
         // Use hidden action with traits to provoke reactions.
-        CombatAction nanitePhantom = CombatAction.CreateSimple(reactor, "[Phantom nanite surge CombatAction]", Enums.Traits.AndroidAncestry, Trait.Concentrate, Enums.Traits.Nanites)
+        CombatAction nanitePhantom = CombatAction.CreateSimple(reactor, "[Phantom nanite surge CombatAction]", ModData.Traits.AndroidAncestry, Trait.Concentrate, ModData.Traits.Nanites)
             .WithActionCost(0)
             .WithExtraTrait(Trait.DoNotShowInCombatLog)
             .WithExtraTrait(Trait.DoNotShowOverheadOfActionName)
@@ -196,7 +197,7 @@ public static class AndroidAncestry
                 // Automatically has Target.Self() from helper function.
                 caster.AddQEffect(benefit);
                 caster.AddQEffect(new QEffect() 
-                    { Id = Enums.QEffectIds.NaniteSurgeImmunity });
+                    { Id = ModData.QEffectIds.NaniteSurgeImmunity });
                 caster.AddQEffect(new QEffect(ExpirationCondition.ExpiresAtStartOfYourTurn)
                     { 
                         SpawnsAura = qfThis =>

@@ -9,7 +9,7 @@ using Dawnsbury.Modding;
 
 namespace AndroidAncestry;
 
-public static class Enums
+public static class ModData
 {
     public static class Traits
     {
@@ -66,13 +66,21 @@ public static class Enums
         public static readonly FeatName NaniteShroud = ModManager.RegisterFeatName("AndroidAncestry.NaniteShroud", "Nanite Shroud");
         
         public static readonly FeatName ProtectiveSubroutine = ModManager.RegisterFeatName("AndroidAncestry.ProtectiveSubroutine", "Protective Subroutine");
+        
+        public static readonly FeatName DeployableFins = ModManager.RegisterFeatName("AndroidAncestry.DeployableFins", "Deployable Fins");
+        
+        public static readonly FeatName OffensiveSubroutine = ModManager.RegisterFeatName("AndroidAncestry.OffensiveSubroutine", "Offensive Subroutine");
+        
+        public static readonly FeatName RepairModule = ModManager.RegisterFeatName("AndroidAncestry.RepairModule", "Repair Module");
+        
+        public static readonly FeatName ConsistentSurge = ModManager.RegisterFeatName("AndroidAncestry.ConsistentSurge", "Consistent Surge");
+        
+        public static readonly FeatName RevivificationProtocol = ModManager.RegisterFeatName("AndroidAncestry.RevivificationProtocol", "Revivification Protocol");
         #endregion
     }
     
     public static class QEffectIds
     {
-        //public static readonly QEffectId Effectily = ModManager.RegisterEnumMember<QEffectId>("Include Spaces In This One");
-        
         public static readonly QEffectId InternalCompartment = ModManager.RegisterEnumMember<QEffectId>("Internal Compartment");
         
         public static readonly QEffectId NaniteSurgeImmunity = ModManager.RegisterEnumMember<QEffectId>("Nanite Surge Immunity");
@@ -89,6 +97,7 @@ public static class Enums
 
     public static class Illustrations
     {
+        public static readonly string DDSunPath = "StrategistSubclassesAssets/PatreonSunTransparent.png";
         public static readonly Illustration RadiantCircuitry = new ModdedIllustration("AndroidAncestryAssets/idea.png");
     };
 
