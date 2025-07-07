@@ -1191,7 +1191,7 @@ public static class RunesmithRunes
                 "After the base rune is invoked, the rune automatically Traces itself back upon the same target.\n\n{b}Special{/b} You can have only one copy of {i}sun-, diacritic rune of preservation{/i} applied at a given time, and once you invoke it, you cannot Etch or Trace it again this combat.",
                 additionalTraits: [ModData.Traits.Diacritic])
             .WithUsageCondition(Rune.UsabilityConditions.CombinedUsability(
-                (atk, _) => atk.PersistentUsedUpResources.UsedUpActions.Contains("SunDiacritic")
+                (atk, _) => atk.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.SunDiacritic)
                     ? Usability.NotUsable("already invoked this combat")
                     : Usability.Usable,
                 Rune.UsabilityConditions.UsableOnDiacritics(dr => !dr.Traits.Contains(ModData.Traits.Diacritic))))
@@ -1234,7 +1234,7 @@ public static class RunesmithRunes
                                 if (await CommonRuneRules.DrawRuneOnTarget(sunRedraw, thisDr.Source!,
                                         drInvoked.Owner, drInvoked.Rune, false) != null)
                                     Sfxs.Play(ModData.SfxNames.InvokedSun);
-                                thisDr.Source!.PersistentUsedUpResources.UsedUpActions.Add("SunDiacritic");
+                                thisDr.Source!.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.SunDiacritic);
                             },
                         }
                         .WithDiacriticRegulator(targetRune);

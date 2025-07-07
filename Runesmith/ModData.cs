@@ -19,6 +19,19 @@ public static class ModData
         
         public const string UnrestrictedTrace = "RunesmithPlaytest.UnrestrictedTrace";
     }
+
+    public static class PossibilityGroups
+    {
+        public const string DrawingRunes = "Draw runes";
+        public const string InvokingRunes = "Invoke runes";
+    }
+
+    public static class PersistentActions
+    {
+        public const string RunicTattoo = "RunicTattoo";
+        public const string ElementalRevision = "ElementalRevision";
+        public const string SunDiacritic = "SunDiacritic";
+    }
     
     public static class Traits
     {
@@ -186,6 +199,8 @@ public static class ModData
     {
         public static readonly QEffectId RuneSinger = ModManager.RegisterEnumMember<QEffectId>("Rune-Singer");
         public static readonly QEffectId RuneSingerCreator = ModManager.RegisterEnumMember<QEffectId>("RuneSingerCreator");
+        /// The DrawnRune that is tattooed
+        public static readonly QEffectId TattooedRune = ModManager.RegisterEnumMember<QEffectId>("TattooedRune");
         public static readonly QEffectId DrawnInRed = ModManager.RegisterEnumMember<QEffectId>("Drawn in Red");
         public static readonly QEffectId JurrozDamageTracker = ModManager.RegisterEnumMember<QEffectId>("JurrozDamageTracker");
     }

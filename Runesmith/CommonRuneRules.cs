@@ -115,7 +115,7 @@ public static class CommonRuneRules
         return $"{{b}}Traditions{{/b}} {string.Join(", ", traditions)}\n{{b}}DC{{/b}} {DC}"
             + (etchLim > 0 ? $"; {{b}}etch limit{{/b}} {etchLim}" : null)
             + (tattoo != null ? $"\n{{b}}Tattoo{{/b}} {{i}}{tattoo}{{/i}}" : null)
-            + (owner.PersistentUsedUpResources.UsedUpActions.Contains("RunicTattoo") ? " (expended)" : null)
+            + (owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.RunicTattoo) ? " (faded)" : null)
             + $"\n{runesKnown}";
         
         /*

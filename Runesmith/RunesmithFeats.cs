@@ -571,7 +571,8 @@ public static class RunesmithFeats
                                     new ActionPossibility(inkHide), new ActionPossibility(inkSneak)
                                 ]
                             }
-                        ]
+                        ],
+                        PossibilityGroup = ModData.PossibilityGroups.DrawingRunes,
                     };
                     return inkMenu;
 
@@ -644,7 +645,7 @@ public static class RunesmithFeats
                         qfFeat.Name = $"Runic Tattoo ({runeFeat.Rune.RuneId.ToStringOrTechnical()})";
                         qfFeat.StartOfCombat = async qfThis =>
                         {
-                            if (runesmith.PersistentUsedUpResources.UsedUpActions.Contains("RunicTattoo"))
+                            if (runesmith.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.RunicTattoo))
                                 return;
 
                             if (qfThis.UsedThisTurn)
@@ -672,11 +673,13 @@ public static class RunesmithFeats
 
                             if (appliedRune != null)
                             {
-                                qfThis.Tag = appliedRune;
+                                // No longer tracking the tattoo with the featQF's tag.
+                                //qfThis.Tag = appliedRune;
+                                appliedRune.Id = ModData.QEffectIds.TattooedRune;
                                 appliedRune.AfterInvokingRune += async (thisDrawnRune, sourceAction, invokedRune) =>
                                 {
                                     if (invokedRune == thisDrawnRune)
-                                        invokedRune.Owner.PersistentUsedUpResources.UsedUpActions.Add("RunicTattoo");
+                                        invokedRune.Owner.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.RunicTattoo);
                                 };
                                 appliedRune.Description = appliedRune.Description!.Replace(
                                     "Etched: lasts until the end of combat.",
@@ -728,24 +731,22 @@ public static class RunesmithFeats
                         return null;
 
                     CombatAction attendAction = new CombatAction(
-                        qfThis.Owner,
-                        new SideBySideIllustration(IllustrationName.FleetStep, ModData.Illustrations.TraceRune),
-                        "Artist's Attendance",
-                        [ModData.Traits.Runesmith, Trait.Basic],
-                        "{i}Your runes call you to better attend to your art.{/i}\n\n{b}Frequency{/b} once per round\n\nStride twice. If you end your movement within reach of a creature that is bearing one of your runes, you can Trace a Rune upon any creature adjacent to you (even a different creature).",
-                        Target.Self())
+                            qfThis.Owner,
+                            new SideBySideIllustration(IllustrationName.FleetStep, ModData.Illustrations.TraceRune),
+                            "Artist's Attendance",
+                            [ModData.Traits.Runesmith, Trait.Basic],
+                            "{i}Your runes call you to better attend to your art.{/i}\n\n{b}Frequency{/b} once per round\n\nStride twice. If you end your movement within reach of a creature that is bearing one of your runes, you can Trace a Rune upon any creature adjacent to you (even a different creature).",
+                            Target.Self())
                         .WithActionCost(2)
                         .WithSoundEffect(SfxName.Footsteps)
                         .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
                         {
-                            if (!await caster.StrideAsync("Choose where to Stride with Artist's Attendance. (1/2)"))
+                            if (!await caster.StrideAsync("Choose where to Stride with Artist's Attendance. (1/2)", allowCancel: true))
                                 thisAction.RevertRequested = true;
-                            else
+                            else if (await caster.StrideAsync(
+                                         "Choose where to Stride with Artist's Attendance. You should end your movement within reach of a rune-bearer. (2/2)",
+                                         allowPass: true))
                             {
-                                await caster.StrideAsync(
-                                    "Choose where to Stride with Artist's Attendance. You should end your movement within reach of a rune-bearer. (2/2)",
-                                    allowPass: true);
-                                
                                 // Find highest reach
                                 int reach = 1;
                                 foreach (Item heldItem in caster.HeldItems)
@@ -773,9 +774,16 @@ public static class RunesmithFeats
                                 }
                                 qfThis.UsedThisTurn = true;
                             }
+                            else
+                            {
+                                caster.Battle.Log("Artist's Attendance was converted to a simple Stride.");
+                                thisAction.SpentActions = 1;
+                                thisAction.RevertRequested = true;
+                            }
                         });
 
-                    return new ActionPossibility(attendAction, PossibilitySize.Full);
+                    return new ActionPossibility(attendAction)
+                        .WithPossibilityGroup(ModData.PossibilityGroups.DrawingRunes);
                 };
             });
         ModManager.AddFeat(artistsAttendance);
@@ -928,7 +936,8 @@ public static class RunesmithFeats
 
                     scaryInvoke = CommonRuneRules.WithImmediatelyRemovesImmunity(scaryInvoke);
                     
-                    return new ActionPossibility(scaryInvoke, PossibilitySize.Full);
+                    return new ActionPossibility(scaryInvoke)
+                        .WithPossibilityGroup(ModData.PossibilityGroups.InvokingRunes);
                 };
             });
         ModManager.AddFeat(terrifyingInvocation);
@@ -945,7 +954,8 @@ public static class RunesmithFeats
                 qfFeat.ProvideMainAction = qfThis =>
                 {
                     CombatAction transposeAction = CreateTransposeAction(qfThis);
-                    return new ActionPossibility(transposeAction, PossibilitySize.Half);
+                    return new ActionPossibility(transposeAction)
+                        .WithPossibilityGroup(ModData.PossibilityGroups.DrawingRunes);
                 };
                 qfFeat.AddGrantingOfTechnical(
                     cr =>
@@ -1327,7 +1337,8 @@ public static class RunesmithFeats
                         });
                     CommonRuneRules.WithImmediatelyRemovesImmunity(vci);
                     
-                    return new ActionPossibility(vci);
+                    return new ActionPossibility(vci)
+                        .WithPossibilityGroup(ModData.PossibilityGroups.InvokingRunes);
                 };
             });
         ModManager.AddFeat(vitalCompositeInvocation);
@@ -1345,45 +1356,36 @@ public static class RunesmithFeats
                 {
                     qfFeat.ProvideMainAction = qfThis =>
                     {
-                        if (qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains("RunicTattoo") || runicTattoo.Subfeats == null)
+                        if (qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.RunicTattoo))
                             return null;
-                        
-                        Feat? selectedTattoo = null;
-                        foreach (Feat ft in runicTattoo.Subfeats.Where(ft => qfThis.Owner.HasFeat(ft.FeatName)))
-                            selectedTattoo = ft;
 
-                        if (selectedTattoo is not { Tag: Rune tattooedRune })
+                        // Can't find it the easy way due to not being found in the private QIDs list
+                        // (possibly due to its ID being edited after being applied)
+                        /*if (qfThis.Owner.FindQEffect(ModData.QEffectIds.TattooedRune) is not DrawnRune tattooedRune)
+                            return null;*/
+
+                        if (qfThis.Owner.QEffects.FirstOrDefault(qf => qf.Id == ModData.QEffectIds.TattooedRune) is not DrawnRune tattooedRune)
                             return null;
                         
                         CombatAction flyFreeAction = new CombatAction(
-                            qfThis.Owner,
-                            new SideBySideIllustration(selectedTattoo.Illustration ?? IllustrationName.Action, IllustrationName.SeekCone),
-                            "Words, Fly Free",
-                            [Trait.Manipulate, ModData.Traits.Runesmith, ModData.Traits.Traced, Trait.Basic],
-                            "{i}Just because your runes are tattooed on your body doesn't mean they need to remain there.{/i}\n\n{b}Requirements{/b} Your Runic Tattoo is not faded.\n\nYou fling your hand out, the rune from your Runic Tattoo flowing down it and flying through the air in a crescent. You trace the rune onto all creatures or objects within a 15-foot cone that match the rune's usage requirement. The rune then returns to you, faded.",
-                            Target.Cone(3))
+                                qfThis.Owner,
+                                new SideBySideIllustration(tattooedRune?.Illustration ?? IllustrationName.Action, IllustrationName.SeekCone),
+                                "Words, Fly Free",
+                                [Trait.Manipulate, ModData.Traits.Runesmith, ModData.Traits.Traced, Trait.Basic],
+                                "{i}Just because your runes are tattooed on your body doesn't mean they need to remain there.{/i}\n\n{b}Requirements{/b} Your Runic Tattoo is not faded.\n\nYou fling your hand out, the rune from your Runic Tattoo flowing down it and flying through the air in a crescent. You trace the rune onto all creatures or objects within a 15-foot cone that match the rune's usage requirement. The rune then returns to you, faded.",
+                                Target.Cone(3))
                             .WithActionCost(1)
-                            .WithProjectileCone(VfxStyle.BasicProjectileCone(selectedTattoo.Illustration ?? IllustrationName.Action))
+                            .WithProjectileCone(VfxStyle.BasicProjectileCone(tattooedRune?.Illustration ?? IllustrationName.Action))
                             .WithSoundEffect(ModData.SfxNames.WordsFlyFree)
                             .WithEffectOnEachTarget( async (thisAction, caster, target, result) =>
                             {
-                                await CommonRuneRules.DrawRuneOnTarget(thisAction, caster, target, tattooedRune, false);
-                                
-                                // Find the tattoo feat QF
-                                if (qfThis.Owner.QEffects.FirstOrDefault(qf => qf.Name != null && qf.Name.Contains("Runic Tattoo"))
-                                    is { } tattooQf)
-                                {
-                                    // get the associated etched DrawnRune
-                                    if (tattooQf.Tag is DrawnRune tattooRuneQf)
-                                    {
-                                        caster.RemoveAllQEffects(qf => qf == tattooRuneQf);
-                                    }
-                                }
-                                
-                                qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Add("RunicTattoo");
+                                await CommonRuneRules.DrawRuneOnTarget(thisAction, caster, target, tattooedRune!.Rune, false);
+                                tattooedRune.ExpiresAt = ExpirationCondition.Immediately;
+                                qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.RunicTattoo);
                             });
                         
-                        return new ActionPossibility(flyFreeAction, PossibilitySize.Full);
+                        return new ActionPossibility(flyFreeAction)
+                            .WithPossibilityGroup(ModData.PossibilityGroups.DrawingRunes);
                     };
                 });
         ModManager.AddFeat(wordsFlyFree);
@@ -1538,7 +1540,7 @@ public static class RunesmithFeats
                         Target.RangedFriend(1) // Ranged 1 is used instead of adjacent in order to avoid an animation.
                             .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
                             {
-                                if (defender.PersistentUsedUpResources.UsedUpActions.Contains("ElementalRevision"))
+                                if (defender.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.ElementalRevision))
                                     return Usability.NotUsableOnThisCreature("immune");
                                 
                                 foreach (Item item in defender.HeldItems)
@@ -1584,7 +1586,7 @@ public static class RunesmithFeats
                                                     Item newItem = RunestoneRules.RecreateWithUnattachedSubitem(item, runestone, true);
                                                     newItem.WithModificationRune(runestoneOption);
                                                     target.HeldItems[target.HeldItems.IndexOf(item)] = newItem;
-                                                    target.PersistentUsedUpResources.UsedUpActions.Add("ElementalRevision");
+                                                    target.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.ElementalRevision);
                                                     Sfxs.Play(ModData.SfxNames.ElementalRevision);
                                                     await caster.FictitiousSingleTileMove(target.Occupies);
                                                     target.Occupies.Overhead(newItem.Name, Color.Black);

@@ -135,7 +135,8 @@ public static class RunesmithClass
                         Subsections = { new PossibilitySection("Trace Rune")
                         {
                             Possibilities = traceRunePossibilities,
-                        }}
+                        }},
+                        PossibilityGroup = ModData.PossibilityGroups.DrawingRunes,
                     };
                     return traceRuneMenu;
                 };
@@ -218,7 +219,8 @@ public static class RunesmithClass
                             }
                         });
                     CommonRuneRules.WithImmediatelyRemovesImmunity(invokeRuneAction); 
-                    return new ActionPossibility(invokeRuneAction);
+                    return new ActionPossibility(invokeRuneAction)
+                        .WithPossibilityGroup(ModData.PossibilityGroups.InvokingRunes);
                 };
             });
         ModManager.AddFeat(invokeRune);
