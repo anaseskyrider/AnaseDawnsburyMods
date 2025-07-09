@@ -59,6 +59,7 @@ public static class AlchemicalSciences
                     });
                 }
             });
+        ModManager.AddFeat(alchemicalSciences);
         return alchemicalSciences;
     }
 }

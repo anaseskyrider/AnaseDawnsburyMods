@@ -99,6 +99,7 @@ public static class Empiricism
                     .WithActionCost(0);
                 return inspect;
             });
+        ModManager.AddFeat(empiricism);
         return empiricism;
     }
 }

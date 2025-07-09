@@ -62,6 +62,7 @@ public static class Interrogation
                     await chosenOption.Action();
                 };
             });
+        ModManager.AddFeat(interrogation);
         return interrogation;
     }
 }
