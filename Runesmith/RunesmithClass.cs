@@ -270,7 +270,6 @@ public static class RunesmithClass
                         $"{qfThis.Owner.Name} begins {{b}}Etching Runes{{/b}}.",
                         "Etch Rune",
                         $"{{i}}An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.{{/i}}\n\nAt the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to {etchLimit} runes.",
-                        true,
                         new Traits([Trait.Manipulate, Trait.DoesNotProvoke, ModData.Traits.Runesmith]));
 
                     for (int i = 0; i < etchLimit; i++)

@@ -37,7 +37,8 @@ public static class RunesmithArchetype
                         "Initial level 1 runes",
                         values.CurrentLevel,
                         ft =>
-                            ft is RuneFeat, 2)
+                            ft is RuneFeat { Rune.BaseLevel: <= 8 },
+                        2)
                     .WithIsOptional());
                 values.GrantFeat(ModData.FeatNames.TraceRune);
                 values.GrantFeat(ModData.FeatNames.InvokeRune);
