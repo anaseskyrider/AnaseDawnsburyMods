@@ -52,6 +52,7 @@ public static class ArchetypeMartialArtist
                     Id = QEffectId.PowerfulFist
                 });
             });
+        martialArtistDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
         ModManager.AddFeat(martialArtistDedication);
         
         // Powder Punch Stance
@@ -1158,6 +1159,7 @@ public static class ArchetypeMartialArtist
         ModManager.AddFeat(tangledStance);
     }
     
+    /// Exists to resolve issues with the way QEffectIds are referenced for generating strings, which don't work with modded QFids (unlike base game IDs).
     public static Feat CreateMonkStance2(
         FeatName featName,
         string displayName,

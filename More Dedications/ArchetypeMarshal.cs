@@ -420,6 +420,9 @@ public static class ArchetypeMarshal
 
         // Back to Back @lv8
         // Can this even be implemented?
+        
+        // "You excel at watching your allies' backs and helping them watch yours."
+        // "As long as you aren't flanked at the same time as any of your adjacent allies, you and all allies adjacent to you gain the benefits of All-Around Vision."
 
         // To Battle!
         Feat toBattle = new TrueFeat(

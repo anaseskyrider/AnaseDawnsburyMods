@@ -53,7 +53,7 @@ public static class ArchetypeBlessedOne
         ModManager.AddFeat(blessedOneDedication);
         
         // Blessed Sacrifice
-        var protectorsSacrifice = ModManager.RegisterNewSpell(
+        ModData.SpellIds.ProtectorsSacrifice = ModManager.RegisterNewSpell(
             "ProtectorsSacrifice",
             1,
             (spellId, spellcaster, spellLevel, inCombat, spellInformation) =>
@@ -97,7 +97,7 @@ public static class ArchetypeBlessedOne
                                         cleric.Overhead(
                                             "-"+taken, Color.Red,
                                             $"{cleric.Name} redirects {taken} damage to themselves.", "Damage",
-                                            $"{{b}}{reduction} of {dStuff.Amount}{{/b}} Protector's sacrifice\n{{b}}= {taken}{{/b}}\n\n{{b}}{taken}{{/b}} Total damage", true);
+                                            $"{{b}}{reduction} of {dStuff.Amount}{{/b}} Protector's sacrifice\n{{b}}= {taken}{{/b}}\n\n{{b}}{taken}{{/b}} Total damage");
 
                                         return new ReduceDamageModification(reduction, "Protector's sacrifice");
                                     };
@@ -109,19 +109,19 @@ public static class ArchetypeBlessedOne
             ModData.FeatNames.BlessedSacrifice,
             4,
             null,
-            $"You gain the {AllSpells.CreateSpellLink(protectorsSacrifice, Trait.Champion)} domain spell as a devotion spell. Increase the number of Focus Points in your focus pool by 1.",
+            $"You gain the {AllSpells.CreateSpellLink(ModData.SpellIds.ProtectorsSacrifice, Trait.Champion)} domain spell as a devotion spell. Increase the number of Focus Points in your focus pool by 1.",
             [ModData.Traits.MoreDedications])
             .WithAvailableAsArchetypeFeat(ModData.Traits.BlessedOneArchetype)
             .WithOnSheet(values =>
             {
                 // DD code safeguards allow you to learn a focus spell multiple times, so...
-                if (values.FocusSpells.TryGetValue(Trait.Champion, out FocusSpells? champSpells) && champSpells.Spells.Any(spell => spell.SpellId == protectorsSacrifice))
+                if (values.FocusSpells.TryGetValue(Trait.Champion, out FocusSpells? champSpells) && champSpells.Spells.Any(spell => spell.SpellId == ModData.SpellIds.ProtectorsSacrifice))
                     values.FocusPointCount = Math.Min(values.FocusPointCount+1, 3);
                 else
                     values.AddFocusSpellAndFocusPoint(
                         Trait.Champion, // "devotion spells" == champion spells, so, Champion trait instead of Blessed One.
                         Ability.Charisma,
-                        protectorsSacrifice);
+                        ModData.SpellIds.ProtectorsSacrifice);
             });
         ModManager.AddFeat(blessedSacrifice);
         
