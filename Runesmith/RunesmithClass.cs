@@ -264,7 +264,7 @@ public static class RunesmithClass
                     List<Rune> runesKnown = repertoire.GetRunesKnown(qfFeat.Owner);
                     int etchLimit = repertoire.GetEtchLimit(qfThis.Owner.Level);
                     
-                    qfThis.Owner.Occupies.Overhead(
+                    qfThis.Owner.Overhead(
                         "Etching Runes",
                         Color.Black,
                         $"{qfThis.Owner.Name} begins {{b}}Etching Runes{{/b}}.",
@@ -884,7 +884,7 @@ public static class RunesmithClass
     {
         if (target.WeaknessAndResistance.ImmunityToForcedMovement)
         {
-            target.Occupies.Overhead("{i}immune{/i}", Color.White, target + " is immune to forced movement and can't be pulled.");
+            target.Overhead("{i}immune{/i}", Color.White, target + " is immune to forced movement and can't be pulled.");
             return;
         }
         

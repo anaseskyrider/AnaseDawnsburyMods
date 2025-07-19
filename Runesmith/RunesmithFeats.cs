@@ -1589,7 +1589,7 @@ public static class RunesmithFeats
                                                     target.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.ElementalRevision);
                                                     Sfxs.Play(ModData.SfxNames.ElementalRevision);
                                                     await caster.FictitiousSingleTileMove(target.Occupies);
-                                                    target.Occupies.Overhead(newItem.Name, Color.Black);
+                                                    target.Overhead(newItem.Name, Color.Black);
                                                     await caster.FictitiousSingleTileMove(caster.Occupies);
                                                 })
                                             .WithTooltip(newRunestone.Description!)

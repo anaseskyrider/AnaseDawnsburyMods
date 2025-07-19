@@ -390,7 +390,7 @@ public static class ArchetypeMarshal
                                                 return;
                                             
                                             cr2.GainTemporaryHP(cr.Abilities.Charisma);
-                                            cr2.Occupies.Overhead(cr.Abilities.Charisma.WithPlus(), Color.Aquamarine);
+                                            cr2.Overhead(cr.Abilities.Charisma.WithPlus(), Color.Aquamarine);
                                         });
                                     }
                                 };

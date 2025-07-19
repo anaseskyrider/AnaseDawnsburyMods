@@ -94,7 +94,7 @@ public static class ArchetypeBlessedOne
                                         int taken = Math.Min(dStuff.Amount, reduction);
                                         
                                         cleric.TakeDamage(taken);
-                                        cleric.Occupies.Overhead(
+                                        cleric.Overhead(
                                             "-"+taken, Color.Red,
                                             $"{cleric.Name} redirects {taken} damage to themselves.", "Damage",
                                             $"{{b}}{reduction} of {dStuff.Amount}{{/b}} Protector's sacrifice\n{{b}}= {taken}{{/b}}\n\n{{b}}{taken}{{/b}} Total damage", true);
