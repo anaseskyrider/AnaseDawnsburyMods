@@ -26,7 +26,6 @@ public static class Ready
 {
     public static readonly string ReadyBasicDescription = "{i}You prepare to use an action that will occur outside your turn.{/i}\n\nChoose one of the given options, which include both a trigger and an action you take in response using your {icon:Reaction} reaction.\n\nIf you readied an attack, this attack {Red}applies your multiple attack penalty{/Red} from your turn.";
     public static readonly string ReadyBraceDescription = "";
-    public static readonly Trait Brace = ModManager.RegisterTrait("Brace", new TraitProperties("Brace", true, "When you Ready to Strike an opponent that moves within your reach, until the start of your next turn Strikes with the brace weapon deal an additional 2 precision damage for each weapon damage die it has."));
 
     public static void LoadReady()
     {
@@ -236,6 +235,20 @@ public static class Ready
                 {
                     DoNotShowUpOverhead = true,
                     Value = caster.Actions.AttackedThisManyTimesThisTurn,
+                    YouDealDamageWithStrike = (qfThis, action, formula, defender) =>
+                    {
+                        if (!defender.IsImmuneTo(Trait.PrecisionDamage)
+                            && (action.Item?.HasTrait(ModData.Traits.Brace) ?? false)
+                            && action.HasTrait(ModData.Traits.ReactiveAttackWithMAP))
+                        {
+                            int braceBonus = (action.Item.WeaponProperties?.DamageDieCount ?? 0) * 2;
+                            if (braceBonus > 0)
+                                return formula.Add(DiceFormula.FromText(
+                                    braceBonus.ToString(),
+                                    "Brace (precision)"));
+                        }
+                        return formula;
+                    },
                     EndOfYourTurnBeneficialEffect = async (qfThis, self) =>
                     {
                         qfThis.Value = self.Actions.AttackedThisManyTimesThisTurn;
@@ -287,20 +300,6 @@ public static class Ready
                     Tag = new Dictionary<Creature,int>(), // used to prevent some double-prompts
                 };
                 caster.AddQEffect(readiedBrace);
-                if (caster.PrimaryWeapon?.HasTrait(Brace) ?? false)
-                {
-                    caster.AddQEffect(new QEffect(ExpirationCondition.ExpiresAtStartOfSourcesTurn)
-                    {
-                        YouDealDamageWithStrike = (q, action, diceFormula, defender) =>
-                        {
-                            if (!defender.IsImmuneTo(Trait.PrecisionDamage) && action?.Item?.WeaponProperties is not null)
-                            {
-                                return diceFormula.Add(DiceFormula.FromText((action.Item.WeaponProperties.DamageDieCount * 2).ToString(), "Brace"));
-                            }
-                            return diceFormula;
-                        }
-                    });
-                }
             });
 
         return braceAction;
@@ -426,6 +425,7 @@ public static class Ready
                 .WithActionCost(0);
             //attackFromWeapon.Traits.Add(Trait.AttackOfOpportunity);
             //attackFromWeapon.Traits.Add(Trait.ReactiveAttack);
+            attackFromWeapon.Traits.Add(ModData.Traits.ReactiveAttackWithMAP);
             return attackFromWeapon;
         }
 
