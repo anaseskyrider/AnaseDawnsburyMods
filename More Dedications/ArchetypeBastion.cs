@@ -41,6 +41,7 @@ public class ArchetypeBastion
             {
                 values.GrantFeat(FeatName.ReactiveShield);
             }) as TrueFeat)!;
+        bastionDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
         ModManager.AddFeat(bastionDedication);
 
         // Add Agile Shield Grip to Bastion

@@ -48,6 +48,7 @@ public static class ArchetypeMauler
                         qfThis.Owner.Proficiencies.Get(weapon.Traits) >= Proficiency.Expert;
                 })
             .WithDemandsAbility14(Ability.Strength) as TrueFeat)!;
+        maulerDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
         ModManager.AddFeat(maulerDedication);
         
         // Add Knockdown to Mauler

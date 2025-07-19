@@ -49,6 +49,7 @@ public static class ArchetypeBlessedOne
                         Ability.Charisma,
                         ChampionFocusSpells.LayOnHands);
             });
+        blessedOneDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
         ModManager.AddFeat(blessedOneDedication);
         
         // Blessed Sacrifice
@@ -63,7 +64,7 @@ public static class ArchetypeBlessedOne
                 return Spells.CreateModern(
                     ModData.Illustrations.ProtectorsSacrifice,
                     "Protector's Sacrifice",
-                    [Trait.Uncommon, Trait.Cleric, Trait.Focus, Trait.SomaticOnly],
+                    [ModData.Traits.MoreDedications, Trait.Uncommon, Trait.Cleric, Trait.Focus, Trait.SomaticOnly],
                     "You protect your ally by suffering in their stead.",
                     description/*
                         + S.HeightenText(spellLevel, 1, inCombat, "{b}Heightened (+1){/b} The damage you redirect increases by 3.")*/,

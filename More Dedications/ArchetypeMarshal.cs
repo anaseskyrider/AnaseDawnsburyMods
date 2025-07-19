@@ -82,6 +82,7 @@ public static class ArchetypeMarshal
                 "Must be trained in martial weapons")
             .WithPrerequisite(values =>
                 values.HasFeat(FeatName.Diplomacy) || values.HasFeat(FeatName.Intimidation), "Must be trained in Diplomacy or Intimidation");
+        marshalDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
         ModManager.AddFeat(marshalDedication);
         
         // Dread Marshal Stance
@@ -352,7 +353,7 @@ public static class ArchetypeMarshal
                 6,
                 "Your fearless charge into battle reinvigorates your allies to carry on the fight.",
                 "You Stride up to your Speed and make a melee Strike. If your Strike hits and damages an enemy, each ally within 60 feet"+/*" who saw you hit"+*/" gains temporary Hit Points equal to your Charisma modifier."/*+" These temporary Hit Points last until the start of your next turn."*/,
-                [Trait.Open, Trait.Visual])
+                [ModData.Traits.MoreDedications, Trait.Open, Trait.Visual])
             .WithActionCost(2)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
             .WithPermanentQEffect("Stride and then make a melee Strike, granting temp HP to allies within 60 feet.", qfFeat =>
