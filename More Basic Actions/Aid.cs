@@ -64,6 +64,7 @@ public static class Aid
         {
             QEffect aidLoader = new QEffect()
             {
+                Name = "AidLoader",
                 ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
                     PossibilitySectionId sectionId =
@@ -75,8 +76,7 @@ public static class Aid
                     
                     SubmenuPossibility aidMenu = new SubmenuPossibility(
                         ModData.Illustrations.Aid,
-                        "Prepare to Aid",
-                        PossibilitySize.Full)
+                        "Prepare to Aid")
                     {
                         SubmenuId = ModData.SubmenuIds.PrepareToAid,
                         Subsections =
