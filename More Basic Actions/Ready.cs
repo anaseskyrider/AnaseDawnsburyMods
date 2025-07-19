@@ -14,6 +14,7 @@ using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
@@ -25,7 +26,8 @@ public static class Ready
 {
     public static readonly string ReadyBasicDescription = "{i}You prepare to use an action that will occur outside your turn.{/i}\n\nChoose one of the given options, which include both a trigger and an action you take in response using your {icon:Reaction} reaction.\n\nIf you readied an attack, this attack {Red}applies your multiple attack penalty{/Red} from your turn.";
     public static readonly string ReadyBraceDescription = "";
-    
+    public static readonly Trait Brace = ModManager.RegisterTrait("Brace", new TraitProperties("Brace", true, "When you Ready to Strike an opponent that moves within your reach, until the start of your next turn Strikes with the brace weapon deal an additional 2 precision damage for each weapon damage die it has."));
+
     public static void LoadReady()
     {
         // TODO: SilchasRuin — 2:59 AM
@@ -33,13 +35,14 @@ public static class Ready
         // not sure how easy thatd be to program
         // also make ranged attack when enemy enters first range increment
         // maybe combine em
-        
+
         // Option to move Ready into submenus
         ModManager.RegisterBooleanSettingsOption("MoreBasicActions.ReadyInSubmenus",
             "More Basic Actions: Move Ready to Other Actions",
             "Enabling this option will move the Ready menu to the Other Actions submenu.",
             false);
-        
+
+
         // Add Prepare to Aid to every creature.
         ModManager.RegisterActionOnEachCreature(cr =>
         {
@@ -54,7 +57,7 @@ public static class Ready
                             : PossibilitySectionId.SkillActions;
                     if (section.PossibilitySectionId != sectionId)
                         return null;
-                    
+
                     SubmenuPossibility readyMenu = new SubmenuPossibility(
                         ModData.Illustrations.Ready,
                         "Ready",
@@ -167,10 +170,10 @@ public static class Ready
                     StateCheckWithVisibleChanges = async qfThis =>
                     {
                         Creature self = qfThis.Owner;
-                        
+
                         if (self.PrimaryWeaponIncludingRanged == null)
                             return;
-                        
+
                         List<Creature> provokeQueue = (qfThis.Tag as List<Creature>)!;
 
                         foreach (Creature cr in self.Battle.AllCreatures.Where(cr => !cr.FriendOf(self)))
@@ -183,7 +186,7 @@ public static class Ready
 
                             if (provokeQueue.Contains(cr))
                                 continue;
-                            
+
                             await OfferAndMakeReactiveStrike2(
                                 self,
                                 cr,
@@ -192,7 +195,7 @@ public static class Ready
                                 1,
                                 qfThis.Value,
                                 false);
-                            
+
                             provokeQueue.Add(cr);
                         }
                     },
@@ -211,7 +214,7 @@ public static class Ready
         // In order for creatures to provoke reactions only when they enter your reach, two things need to occur.
         // 1. The creature completing a non-AoO-triggering movement action in your reach provokes a reaction.
         // 2. Creatures with complex movement involving moving in and out of your reach provoke a reaction before they would leave it.
-        
+
         CombatAction braceAction = new CombatAction(
             owner,
             IllustrationName.TwoActions,
@@ -257,12 +260,12 @@ public static class Ready
                                 provokeQueue.Remove(cr);
                                 continue;
                             }
-                            
+
                             // who is currently moving,
                             LongMovement? move = cr.AnimationData.LongMovement;
                             if (move?.Path is null || move.Path.Count < 1 || move.CombatAction?.TilesMoved == 0)
                                 continue;
-                            
+
                             // and whose last movement was outside my reach,
                             int currentTileIndex = move.Path.IndexOf(cr.Occupies);
                             Tile previousTile = move.Path.Count > 1 && currentTileIndex > 0
@@ -270,11 +273,11 @@ public static class Ready
                                 : move.OriginalTile;
                             if (previousTile.DistanceTo(self.Occupies) <= reach)
                                 continue;
-                            
+
                             // and didn't just prompt on the same movement,
                             if (provokeQueue.TryGetValue(cr, out int pathLength) && pathLength == move.Path.Count)
                                 continue;
-                            
+
                             // prompt a strike against it,
                             if (await ProvokeBraceReaction(qfThis.Owner, cr, move.CombatAction, qfThis.Value))
                                 // and add it to the queue if it was actually prompted
@@ -284,8 +287,22 @@ public static class Ready
                     Tag = new Dictionary<Creature,int>(), // used to prevent some double-prompts
                 };
                 caster.AddQEffect(readiedBrace);
+                if (caster.PrimaryWeapon?.HasTrait(Brace) ?? false)
+                {
+                    caster.AddQEffect(new QEffect(ExpirationCondition.ExpiresAtStartOfSourcesTurn)
+                    {
+                        YouDealDamageWithStrike = (q, action, diceFormula, defender) =>
+                        {
+                            if (!defender.IsImmuneTo(Trait.PrecisionDamage) && action?.Item?.WeaponProperties is not null)
+                            {
+                                return diceFormula.Add(DiceFormula.FromText((action.Item.WeaponProperties.DamageDieCount * 2).ToString(), "Brace"));
+                            }
+                            return diceFormula;
+                        }
+                    });
+                }
             });
-        
+
         return braceAction;
     }
 
@@ -302,7 +319,7 @@ public static class Ready
             || provokingAction.ActionId == ActionId.Step
             || provokingAction.HasTrait(Trait.DoesNotProvoke))
             return false;
-                        
+
         await OfferAndMakeReactiveStrike2(
             reactor,
             provoker,
@@ -313,7 +330,7 @@ public static class Ready
 
         return true;
     }
-    
+
     public static async Task<CheckResult?> OfferAndMakeReactiveStrike2(
       Creature attacker,
       Creature target,
@@ -370,15 +387,15 @@ public static class Ready
             flag = useReaction.HasValue;
             selectedStrike = useReaction.HasValue ? possibleStrikes[useReaction.Value] : null;
         }
-      
+
         if (!flag || selectedStrike == null)
             return null;
-      
+
         // Do not capture MAP
         //int map = attacker.Actions.AttackedThisManyTimesThisTurn;
-      
-        attacker.Occupies.Overhead(overhead, Color.White);
-      
+
+        attacker.Overhead(overhead, Color.White);
+
         CheckResult? bestCheckResult = null;
         for (int i = 0; i < numberOfStrikes; ++i)
         {
