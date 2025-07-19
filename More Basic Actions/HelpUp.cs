@@ -26,13 +26,14 @@ public static class HelpUp
         {
             QEffect helpUpLoader = new QEffect()
             {
+                Name = "HelpUpLoader",
                 ProvideContextualAction = qfThis =>
                 {
-                    if (!qfThis.Owner.Battle.AllCreatures.Any(cr =>
-                            cr.IsAdjacentTo(qfThis.Owner) && cr.HasEffect(QEffectId.Prone)))
+                    if (!qfThis.Owner.Battle.AllCreatures.Any(cr2 =>
+                            cr2.IsAdjacentTo(qfThis.Owner) && !cr2.EnemyOf(qfThis.Owner) && cr2.HasEffect(QEffectId.Prone)))
                         return null;
                     
-                    return new ActionPossibility(CreateHelpUpAction(cr), PossibilitySize.Full);
+                    return new ActionPossibility(CreateHelpUpAction(cr));
                 },
             };
             cr.AddQEffect(helpUpLoader);
