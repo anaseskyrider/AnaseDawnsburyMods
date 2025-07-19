@@ -25,14 +25,13 @@ namespace Dawnsbury.Mods.MoreBasicActions;
 public static class Ready
 {
     public static readonly string ReadyBasicDescription = "{i}You prepare to use an action that will occur outside your turn.{/i}\n\nChoose one of the given options, which include both a trigger and an action you take in response using your {icon:Reaction} reaction.\n\nIf you readied an attack, this attack {Red}applies your multiple attack penalty{/Red} from your turn.";
-    public static readonly string ReadyBraceDescription = "";
-
+    
     public static void LoadReady()
     {
-        // TODO: SilchasRuin — 2:59 AM
-        // maybe make ranged attack when an enemy no longer has cover?
+        // SilchasRuin — 2:59 AM
+        // TODO: maybe make ranged attack when an enemy no longer has cover?
         // not sure how easy thatd be to program
-        // also make ranged attack when enemy enters first range increment
+        // TODO: also make ranged attack when enemy enters first range increment
         // maybe combine em
         
         // Option to move Ready into submenus
@@ -58,8 +57,7 @@ public static class Ready
                     
                     SubmenuPossibility readyMenu = new SubmenuPossibility(
                         ModData.Illustrations.Ready,
-                        "Ready",
-                        PossibilitySize.Full)
+                        "Ready")
                     {
                         SubmenuId = ModData.SubmenuIds.Ready,
                         Subsections =
@@ -374,10 +372,10 @@ public static class Ready
                 return "With "
                        + (obj1 != null
                            ? !Items.TryGetItemTemplate(obj1.ItemName, out obj2)
-                               ? !(obj1.Name == "fist")
+                               ? obj1.Name != "fist"
                                    ? obj1.Illustration.IllustrationAsIconString + " " + obj1.Name
                                    : "{icon:Kick} kick"
-                               : !(obj2.Name == "fist")
+                               : obj2.Name != "fist"
                                    ? obj1.Illustration.IllustrationAsIconString + " " + obj2.Name
                                    : "{icon:Kick} kick" : "??");
             }).ToArray());
