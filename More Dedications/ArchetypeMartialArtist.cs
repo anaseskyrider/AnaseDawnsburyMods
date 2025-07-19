@@ -1,14 +1,17 @@
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
+using Dawnsbury.Core.Animations;
 using Dawnsbury.Core.Animations.Movement;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Kineticist;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Spellbook;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes.Agnostic;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Specific;
+using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Creatures;
@@ -1068,8 +1071,98 @@ public static class ArchetypeMartialArtist
         ModManager.AddFeat(innerFire);
 
         // Wild Winds Initiate
+        // TODO: ignore cover
+        ModData.SpellIds.WildWindsStance = ModManager.RegisterNewSpell(
+            "WildWindsStance",
+            4,
+            (spellId, spellcaster, spellLevel, inCombat, spellInformation) =>
+            {
+                Illustration icon = ModData.Illustrations.WildWindsStance;
+                const string name = "Wild Winds Stance";
+                const string shortDescription = "You have a +2 circumstance bonus to AC against ranged attacks and can make wind crash Strikes from 30 feet away.";
+                string passiveBonus = "While in wild winds stance, you gain a +2 circumstance bonus to AC against ranged attacks.";
+                string describedAttack = "Also, you gain an additional attack option:\n"
+                    + Monk.DescribeAttack(WeaponProducer())
+                        .Replace("unaffectedbyconcealment,", "")
+                        .Replace("  ", " ")
+                        .Replace("ranged", "ranged (30 ft.)");
+                CombatAction wildWindsSpell = Spells.CreateModern(
+                        icon,
+                        name,
+                        [Trait.Air, Trait.Evocation, Trait.Focus, Trait.Manipulate, Trait.Monk, Trait.Stance, Trait.SomaticOnly],
+                        "You take on the stance of the flowing winds, sending out waves of energy at a distance.",
+                        "{b}Duration{/b} until you leave the stance\n\nEnter a stance.\n\n" + passiveBonus + "\n\n" + describedAttack + "\n\nWind crash Strikes ignore concealment and all (NYI)cover.",
+                        Target.Self()
+                            .WithAdditionalRestriction(self =>
+                            {
+                                if (self.HasEffect(ModData.QEffectIds.WildWindsStance))
+                                    return "You're already in this stance.";
+                                return null;
+                            }),
+                        4,
+                        null)
+                    .WithShortDescription("Enter a stance where " + shortDescription.Uncapitalize())
+                    .WithActionCost(1)
+                    .WithSoundEffect(SfxName.AirSpell)
+                    .WithEffectOnSelf(async self =>
+                    {
+                        QEffect stanceQF = KineticistCommonEffects.EnterStance(
+                            self,
+                            icon,
+                            name,
+                            shortDescription,
+                            ModData.QEffectIds.WildWindsStance);
+                        stanceQF.AdditionalUnarmedStrike = WeaponProducer();
+                        stanceQF.BonusToDefenses = (qfThis, action, def) =>
+                            action != null && action.HasTrait(Trait.Ranged) && def is Defense.AC
+                                ? new Bonus(2, BonusType.Circumstance, "Wild winds stance")
+                                : null;
+                    });
+                return wildWindsSpell;
+                
+                Item WeaponProducer() =>
+                    new Item(icon, "wind crash", [Trait.Agile, Trait.Brawling, Trait.Nonlethal, Trait.Propulsive, Trait.Unarmed, Trait.UnaffectedByConcealment])
+                        //.WithSoundEffect(SfxName.AirSpell)
+                        .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning)
+                            {
+                                VfxStyle = new VfxStyle(1, ProjectileKind.Arrow, icon),
+                                Sfx = SfxName.AirSpell,
+                            }
+                            .WithMaximumRange(30/5));
+            });
+        Feat wildWindsInitiate = CreateKiSpellFeat2(
+            ModData.FeatNames.WildWindsInitiate,
+            8,
+            "You learn a mystical stance that lets you attack from a distance.",
+            "While entering the stance is a ki spell, the wind crash Strikes the stance grants are not, so you can use them as often as you like while in the stance.",
+            "Wild Winds Stance",
+            ModData.SpellIds.WildWindsStance,
+            ModData.Illustrations.WildWindsStance,
+            true);
+        wildWindsInitiate.Traits.Insert(0, ModData.Traits.MoreDedications);
+        ModManager.AddFeat(wildWindsInitiate);
 
         // Jellyfish Stance
+        Feat jellyfishStance = CreateMonkStance2(
+            ModData.FeatNames.JellyfishStance,
+            "Jellyfish Stance",
+            8,
+            ModData.QEffectIds.JellyfishStance,
+            "You relax your posture and loosen your joints, allowing yourself to move with incredible fluidity.",
+            "While in this stance, you gain a +2 circumstance bonus to Reflex saves and on checks to Escape." /*and Squeeze*/,
+            "You can make stinging lash attacks and have a +2 circumstance bonus to Reflex saves and to Escape.",
+            () => new Item(IllustrationName.OchreJelly, "stinging lash", [Trait.Brawling, Trait.Finesse, Trait.Nonlethal, Trait.Reach, Trait.Unarmed])
+                .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Slashing)),
+            false,
+            qfStance =>
+            {
+                qfStance.BonusToDefenses = (qfThis, action, def) =>
+                    def is Defense.Reflex ? new Bonus(2, BonusType.Circumstance, "Jellyfish stance") : null;
+                qfStance.BonusToSkillChecks = (skill, action, target) =>
+                    action.ActionId is ActionId.Escape ? new Bonus(2, BonusType.Circumstance, "Jellyfish stance") : null;
+            });
+        jellyfishStance.Traits.Insert(0, ModData.Traits.MoreDedications);
+        ModManager.AddFeat(jellyfishStance);
 
         // Tangled Forest Stance
         Feat tangledStance = CreateMonkStance2(
@@ -1247,5 +1340,40 @@ public static class ArchetypeMartialArtist
                 })
             .WithIllustration(icon);
         return stanceFeat;
+    }
+
+    /// Exists to resolve issues with needing to create feats that reference spells which haven't been added yet by the mod manager process.
+    public static Feat CreateKiSpellFeat2(
+        FeatName featName,
+        int level,
+        string flavorText,
+        string rulesText,
+        string spellName,
+        SpellId spellId,
+        Illustration icon,
+        bool mustHaveFocusPool = false)
+    {
+        string description = "You gain the {i}" + spellName.ToLower() + "{/i} ki spell. " + (mustHaveFocusPool
+            ? "Increase the number of focus points in your focus pool by 1, up to a maximum of 3."
+            : "You also gain 1 focus point, up to a maximum of 3.");
+        Feat kiSpellFeat = new TrueFeat(
+                featName,
+                level,
+                flavorText,
+                description + (rulesText[0] is '\\' && rulesText[1] is 'n' ? null : " ") + rulesText.TrimStart(),
+                [Trait.Monk])
+            .WithOnSheet(sheet =>
+            {
+                sheet.SetProficiency(Trait.Spell, Proficiency.Trained);
+                sheet.AddFocusSpellAndFocusPoint(Trait.Monk, Ability.Wisdom, spellId);
+            })
+            .WithRulesBlockForSpell(spellId, Trait.Monk)
+            .WithIllustration(icon);
+        if (mustHaveFocusPool)
+            kiSpellFeat = kiSpellFeat.WithPrerequisite(
+                sheet =>
+                    sheet.FocusSpells.Any(spellByClass => spellByClass.Key is Trait.Monk && spellByClass.Value.Spells.Count > 0),
+                "Must know at least one ki spell.");
+        return kiSpellFeat;
     }
 }
