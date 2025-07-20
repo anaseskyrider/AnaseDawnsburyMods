@@ -614,6 +614,7 @@ public static class RunesmithFeats
             })
             .WithPermanentQEffect(null, qfFeat =>
             {
+                // Error detection system
                 qfFeat.StartOfCombat = async qfThis =>
                 {
                     SelectionOption? foundSelection = qfThis.Owner.PersistentCharacterSheet?.Calculated.SelectionOptions
@@ -627,7 +628,7 @@ public static class RunesmithFeats
                     if (foundSelection != null && !foundTattoo)
                     {
                         qfThis.Owner.Battle.Log(
-                            $"{{Red}}ERROR:{{/Red}} Runic Tattoo failed to apply.",
+                            "{Red}ERROR:{/Red} Runic Tattoo failed to apply.",
                             "Runic Tattoo Error",
                             $"{qfThis.Owner}'s {{b}}Runic Tattoo{{/b}} failed to apply when it should have. This can happen for one of the following reasons:\n\n1. The {{i}}Tattooed Rune{{i}} selection is empty.\n\n2. You are in Free Encounter Mode and selected a rune that's known at a higher level than the encounter's level.");
                     }
