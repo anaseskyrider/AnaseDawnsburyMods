@@ -5,6 +5,7 @@ using Dawnsbury.Core;
 using Dawnsbury.Core.Animations.AuraAnimations;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Spellbook;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
@@ -594,7 +595,6 @@ public static class RunesmithFeats
         ModManager.AddFeat(invisibleInk);
         
         // Runic Tattoo
-        // BUG: Feature fails to apply without warning if the chosen option is too high for your current level in free encounter mode.
         Feat runicTattoo = new TrueFeat(
                 ModData.FeatNames.RunicTattoo, // "RunesmithPlaytest.FeatRunicTattoo"
                 2,
@@ -609,7 +609,29 @@ public static class RunesmithFeats
                     values.Sheet.MaximumLevel,
                     ft =>
                         ft.Tag is Rune rune
+                        && (RunicRepertoireFeat.GetRepertoireOnSheet(values)?.KnowsRune(values, rune) ?? false)
                         && ft.ToTechnicalName().Contains("FeatTattooed")));
+            })
+            .WithPermanentQEffect(null, qfFeat =>
+            {
+                qfFeat.StartOfCombat = async qfThis =>
+                {
+                    SelectionOption? foundSelection = qfThis.Owner.PersistentCharacterSheet?.Calculated.SelectionOptions
+                        .FirstOrDefault(opt =>
+                            opt.Key.Contains("RunesmithPlaytest.RunicTattooSelection"));
+                    bool foundTattoo = AllFeats.All
+                        .Where(ft =>
+                            ft.ToTechnicalName().Contains("FeatTattooed"))
+                        .Any(ft =>
+                            qfThis.Owner.HasFeat(ft.FeatName));
+                    if (foundSelection != null && !foundTattoo)
+                    {
+                        qfThis.Owner.Battle.Log(
+                            $"{{Red}}ERROR:{{/Red}} Runic Tattoo failed to apply.",
+                            "Runic Tattoo Error",
+                            $"{qfThis.Owner}'s {{b}}Runic Tattoo{{/b}} failed to apply when it should have. This can happen for one of the following reasons:\n\n1. The {{i}}Tattooed Rune{{i}} selection is empty.\n\n2. You are in Free Encounter Mode and selected a rune that's known at a higher level than the encounter's level.");
+                    }
+                };
             });
         foreach (RuneFeat runeFeat in RunesmithRunes.AllRuneFeats)
         {
@@ -650,14 +672,7 @@ public static class RunesmithFeats
 
                             if (qfThis.UsedThisTurn)
                                 return;
-
-                            if (RunicRepertoireFeat.GetRepertoireOnCreature(runesmith) is not {} rep
-                                || !rep.KnowsRune(runesmith, runeFeat.Rune))
-                            {
-                                // BUG: see previous bug at the top of this feat
-                                runesmith.Battle.Log($"{runesmith}'s Runic Tattoo failed to apply: {{i}}{runeFeat.Name}{{/i}} is not known at this level.");
-                                return;
-                            }
+                            
                             // Etch that rune at the start of combat
                             CombatAction etchTattoo = CommonRuneRules.CreateEtchAction(runesmith, runeFeat.Rune);
                             etchTattoo.Name = "Runic Tattoo";
