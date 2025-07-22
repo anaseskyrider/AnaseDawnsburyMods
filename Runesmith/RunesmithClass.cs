@@ -422,54 +422,47 @@ public static class RunesmithClass
                 null)
             .WithOnSheet(values =>
             {
-                // extra skill
+                #region Level 1 Features
+                // Bonus skills
                 values.AddSelectionOption(new SingleFeatSelectionOption(
-                    "runesmithSkills",
-                    "Runesmith skill",
-                    1,
-                    ft =>
-                        ft.FeatName is FeatName.Arcana or FeatName.Nature or FeatName.Occultism or FeatName.Religion)
+                        "runesmithSkills",
+                        "Runesmith skill",
+                        1,
+                        ft =>
+                            ft.FeatName is FeatName.Arcana or FeatName.Nature or FeatName.Occultism or FeatName.Religion)
                     .WithIsOptional());
-                
-                // level 1 class feat
-                values.AddSelectionOption(new SingleFeatSelectionOption(
-                    "RunesmithFeat1",
-                    "Runesmith feat",
-                    1,
-                    ft =>
-                        ft.HasTrait(ModData.Traits.Runesmith)));
-                
-                // other feats
-                values.GrantFeat(FeatName.ShieldBlock);
-                
-                // runic repertoire
+                // Runic repertoire
                 values.GrantFeat(ModData.FeatNames.RunesmithRepertoire);
                 values.AddSelectionOption(new MultipleFeatSelectionOption(
-                    "initialRunes",
-                    "Initial level 1 runes",
-                    1,
-                    ft =>
-                        ft is RuneFeat { Rune.BaseLevel: <= 1 }, 4)
+                        "initialRunes",
+                        "Initial level 1 runes",
+                        1,
+                        ft =>
+                            ft is RuneFeat { Rune.BaseLevel: <= 1 }, 4)
                     .WithIsOptional());
-                for (int i=3; i<=7; i=i+2) // Gain a new Rune every other level.
+                for (int i=3; i<=7; i+=2) // Gain a new Rune every other level.
                 {
                     values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 1 rune", i, ft => ft is RuneFeat { Rune.BaseLevel: <= 8 }).WithIsOptional());
                 }
-                for (int i=9; i<=15; i=i+2) // Gain a new Rune every other level.
+                for (int i=9; i<=15; i+=2) // Gain a new Rune every other level.
                 {
                     values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 9 rune", i, ft => ft is RuneFeat { Rune.BaseLevel: <= 16 }).WithIsOptional());
                 }
-                for (int i=17; i<=19; i=i+2) // Gain a new Rune every other level.
+                for (int i=17; i<=19; i+=2) // Gain a new Rune every other level.
                 {
                     values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 17 rune", i, ft => ft is RuneFeat).WithIsOptional());
                 }
-                
-                // class features
+                // Class features
                 values.GrantFeat(traceRune.FeatName);
                 values.GrantFeat(invokeRune.FeatName);
                 values.GrantFeat(etchRune.FeatName);
+                // Bonus feats
+                values.GrantFeat(FeatName.ShieldBlock);
+                // Class feat
+                values.AddClassFeatOption("RunesmithFeat1", ModData.Traits.Runesmith, 1);
+                #endregion
                 
-                // higher levels
+                #region Higher Levels
                 values.AddAtLevel(2, values2 =>
                 {
                     values2.GrantFeat(runicCrafter.FeatName);
@@ -488,13 +481,18 @@ public static class RunesmithClass
                     values2.SetProficiency(Trait.Reflex, Proficiency.Expert);
                     values2.SetProficiency(ModData.Traits.Runesmith, Proficiency.Expert);
                 });
-                // Future content
+                #endregion
+                
+                #region Future Content
                 values.AddAtLevel(9, values2 =>
                 {
                     RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values2)!;
                     repertoire.IncreaseEtchLimit(9, 1);
                     values2.GrantFeat(assuredRunicCrafter.FeatName);
                 });
+                #endregion
+
+                #region Post-Game Content
                 values.AddAtLevel(11, values2 =>
                 {
                     values2.SetProficiency(Trait.Fortitude, Proficiency.Master);
@@ -533,16 +531,19 @@ public static class RunesmithClass
                     values2.SetProficiency(Trait.LightArmor, Proficiency.Master);
                     values2.SetProficiency(Trait.MediumArmor, Proficiency.Master);
                 });
+                #endregion
             })
             .WithOnCreature(cr =>
             {
+                #region Higher Levels
                 if (cr.Level >= 7)
                 {
                     QEffect optimize = RunicOptimization(cr.Level >= 15);
                     cr.AddQEffect(optimize);
                 }
-                
-                // Higher level content
+                #endregion
+
+                #region Post-Game Content
                 if (cr.Level >= 11)
                 {
                     cr.AddQEffect(new QEffect("Smith's Endurance", "When you roll a success on a Fortitude save, you get a critical success instead.")
@@ -554,6 +555,7 @@ public static class RunesmithClass
                     });
                     // See WithOnSheet for the Master proficiency increase.
                 }
+                #endregion
             });
         runesmithClassFeat.RulesText = runesmithClassFeat.RulesText
             .Replace("Key ability", "Key attribute")
