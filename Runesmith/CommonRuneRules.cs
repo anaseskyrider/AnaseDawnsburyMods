@@ -10,6 +10,7 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
@@ -366,11 +367,17 @@ public static class CommonRuneRules
         etchAction.Name = $"Etch {rune.Name}";
         etchAction.Description = CommonRuneRules.CreateTraceActionDescription(etchAction, rune, false, prologueText:"{Blue}Etched: lasts until the end of combat.{/Blue}\n");
         
-        // Usable across the whole map
-        etchAction.Target = Target.RangedFriend(99); // BUG: Is blocked by line of effect. I don't currently know a way around this.
-        // Do this again since we just replaced the target.
-        (etchAction.Target as CreatureTarget)!.WithAdditionalConditionOnTargetCreature(rune.UsageCondition);
-        // Don't add a free hand requirement; this "technically" happened "before" combat.
+        // Custom targeting; this "technically" happened "before" combat.
+        etchAction.Target = new CreatureTarget(
+            RangeKind.Ranged,
+            [
+                new MaximumRangeCreatureTargetingRequirement(99), // Usable across whole map,
+                new FriendOrSelfCreatureTargetingRequirement(),
+                new LegacyCreatureTargetingRequirement(rune.UsageCondition), // Repeat rune usage requirements,
+                // No line of effect requirement,
+                // No free-hand requirement,
+            ],
+            (_,_,_) => int.MinValue);
         
         return etchAction;
     }
