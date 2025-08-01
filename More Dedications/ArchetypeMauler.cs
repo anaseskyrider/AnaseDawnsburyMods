@@ -66,9 +66,9 @@ public static class ArchetypeMauler
                 [ModData.Traits.MoreDedications])
             .WithActionCost(2)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MaulerArchetype)
-            .WithPermanentQEffect("You put your body behind your massive weapon.", qfFeat =>
-            {
-                qfFeat.ProvideMainAction = qfThis =>
+            .WithPermanentQEffect(
+                "Attempt to Shove up to 5 adjacent creatures, then Stride without provoking reactions.",
+                qfFeat =>
                 {
                     qfFeat.ProvideMainAction = qfThis =>
                     {
