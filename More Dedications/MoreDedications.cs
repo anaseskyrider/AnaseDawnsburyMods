@@ -5,7 +5,7 @@ using Dawnsbury.Modding;
 //using Dawnsbury.Mods.DawnniExpanded;
 
 namespace Dawnsbury.Mods.MoreDedications;
-public class MoreDedications
+public static class MoreDedications
 {
     [DawnsburyDaysModMainMethod]
     public static void LoadMod()
