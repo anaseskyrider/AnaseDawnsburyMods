@@ -21,6 +21,7 @@ using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
@@ -352,6 +353,7 @@ public static class RunesmithFeats
         #endregion
         
         #region 2nd-Level Feats
+        bool isTraitParsed = ModManager.TryParse("Shield Action Feat", out Trait shieldActionFeat);
         Feat fortifyingKnock = new TrueFeat(
                 ModData.FeatNames.FortifyingKnock,
                 2,
@@ -365,7 +367,8 @@ public static class RunesmithFeats
                 // PETR: action into Raise Shield section
                 qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
-                    if (section.PossibilitySectionId != PossibilitySectionId.ItemActions)
+                    if (!(isTraitParsed && section.Name == "Raise shield")
+                        || (!isTraitParsed && section.PossibilitySectionId != PossibilitySectionId.ItemActions))
                         return null;
                     
                     RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(qfThis.Owner);
@@ -486,8 +489,7 @@ public static class RunesmithFeats
                     
                     SubmenuPossibility fortifyingKnockSubmenu = new SubmenuPossibility(
                         new SideBySideIllustration(shieldIll, ModData.Illustrations.TraceRune),
-                        "Fortifying Knock",
-                        PossibilitySize.Half)
+                        "Fortifying Knock")
                     {
                         SpellIfAny = new CombatAction(qfThis.Owner, new SideBySideIllustration(shieldIll, ModData.Illustrations.TraceRune), "Fortifying Knock", [ModData.Traits.Runesmith], "{i}Your shield is a natural canvas for your art.{/i}\n\n"+
                             "{b}Frequency{/b} once per round\n{b}Requirements{/b} You are wielding a shield and {i}(due to Trace Rune){/i} have a free hand\n\nIn one motion, you Raise a Shield and Trace a Rune on your shield.", Target.Self()).WithActionCost(1), // This doesn't DO anything, it's just to provide description to the menu.
@@ -497,6 +499,8 @@ public static class RunesmithFeats
                     return fortifyingKnockSubmenu;
                 };
             });
+        if (isTraitParsed)
+            fortifyingKnock.Traits.Add(shieldActionFeat);
         ModManager.AddFeat(fortifyingKnock);
         
         Feat invisibleInk = new TrueFeat(
@@ -1104,10 +1108,9 @@ public static class RunesmithFeats
                                 && reprisalRune.InvokeTechnicalTraits.Contains(Trait.IsHostile));
                             if (reprisalDr != null)
                             {
-                                
                                 if (await defender.Battle.AskForConfirmation(defender,
                                         reprisalDr.Illustration ?? ModData.Illustrations.InvokeRune,
-                                        $"{{b}}Runic Reprisal{{/b}}\nYou just Shield Blocked. Invoke {{Blue}}{reprisalDr.Rune.Name}{{/Blue}} from your shield against {attacker.Name}?",
+                                        $"{{b}}Runic Reprisal{{/b}}\nYou just Shield Blocked. Invoke {{Blue}}{reprisalDr.Rune.Name}{{/Blue}} from your shield against {{Blue}}{attacker.Name}{{/Blue}}?",
                                         "Invoke", "Pass"))
                                 {
                                     await attacker.FictitiousSingleTileMove(attacker.Occupies); // Move them back, so the invoke animation looks good
@@ -1127,6 +1130,62 @@ public static class RunesmithFeats
                             return result;
                         };
                     }
+                };
+                
+                // Compatibility for if my other mod, More Shields, is installed.
+                qfFeat.AfterYouTakeAction = async (qfThis, action) =>
+                {
+                    if (!ModManager.TryParse("ShieldBlock", out ActionId shieldBlock) || action.ActionId != shieldBlock)
+                        return;
+                    Creature self = qfThis.Owner;
+                    Creature? attacker = action.ChosenTargets.ChosenCreature;
+                    List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(self, self);
+                    DrawnRune? reprisalDr = drawnRunes.FirstOrDefault(dr => 
+                        dr.SourceAction != null
+                        && dr.SourceAction.Name.Contains("Knock")
+                        && dr.SourceAction.Tag is Rune reprisalRune
+                        && reprisalRune.InvokeTechnicalTraits.Contains(Trait.IsHostile));
+                    
+                    if (attacker == null
+                        || reprisalDr == null
+                        || !self.IsAdjacentTo(attacker) // Has to be an adjacent attacker
+                        || !await self.Battle.AskForConfirmation(self,
+                            reprisalDr?.Illustration ?? ModData.Illustrations.InvokeRune,
+                            $"{{b}}Runic Reprisal{{/b}}\nYou just used Shield Block. Invoke {{Blue}}{reprisalDr?.Rune.Name}{{/Blue}} from your shield against {{Blue}}{attacker.Name}{{/Blue}}?",
+                            "Invoke", "Pass"))
+                        return;
+                    
+                    CombatAction reprisalAction = new CombatAction(
+                            self,
+                            new SideBySideIllustration(action.Illustration, IllustrationName.Shove),
+                            "Runic Reprisal",
+                            [ModData.Traits.Invocation, ModData.Traits.Runesmith, Trait.UnaffectedByConcealment],
+                            "{i}When you raise your shield, you bury a runic trap into it, to be set off by the clash of an enemy weapon.{/i}\n\nWhen you use "+ModTooltips.FeatsFortifyingKnock("Fortifying Knock "+RulesBlock.GetIconTextFromNumberOfActions(1))+", you can trace a damaging rune on your shield, even if it could not normally be applied to a shield. The traced rune doesn't have its normal effect, instead fading into your shield. If you Shield Block "+RulesBlock.GetIconTextFromNumberOfActions(-2)+" with the shield against an adjacent target, you can "+ModTooltips.ActionInvokeRune("Invoke the Rune")+" as part of the reaction, causing the rune to detonate outwards and apply its invocation effect to the attacking creature.",
+                            Target.AdjacentCreature()
+                                .WithAdditionalConditionOnTargetCreature(new EnemyCreatureTargetingRequirement()))
+                        .WithActionCost(0)
+                        .WithEffectOnEachTarget(async (action2, caster, target, result) =>
+                        {
+                            CombatAction? invokeThisRune = CommonRuneRules.CreateInvokeAction(
+                                    null,
+                                    caster,
+                                    reprisalDr!,
+                                    reprisalDr!.Rune,
+                                    6,
+                                    true,
+                                    false)
+                                ?.WithExtraTrait(ModData.Traits.InvokeAgainstGivenTarget);
+                            
+                            if (invokeThisRune == null)
+                                return;
+                            
+                            await attacker.FictitiousSingleTileMove(attacker.Occupies); // Move them back, so the invoke animation looks good
+                                    
+                            //invokeThisRune.Name = $"Runic Reprisal ({reprisalDr.Name})";
+                            await caster.Battle.GameLoop.FullCast(invokeThisRune, ChosenTargets.CreateSingleTarget(target));
+                        });
+                    
+                    await self.Battle.GameLoop.FullCast(reprisalAction, ChosenTargets.CreateSingleTarget(attacker));
                 };
             });
         ModManager.AddFeat(runicReprisal);
