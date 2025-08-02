@@ -155,6 +155,7 @@ public static class ShieldPatches
         internal static void Postfix(ref QEffect __result)
         {
             __result.Innate = false;
+            __result.WithExpirationAtStartOfOwnerTurn();
             __result.StateCheck = qfThis =>
             {
                 if (NewShields.GetAvailableShields(qfThis.Owner).Count > 0)
