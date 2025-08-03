@@ -5,6 +5,7 @@ using Dawnsbury.Core.Animations.Movement;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.AbilityScores;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.Feats.Features;
 using Dawnsbury.Core.CharacterBuilder.Library;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
@@ -394,32 +395,40 @@ public static class RunesmithClass
                 [Trait.Perception, Trait.Reflex, Trait.Unarmed, Trait.Simple, Trait.Martial, Trait.UnarmoredDefense, Trait.LightArmor, Trait.MediumArmor, Trait.Crafting],
                 [Trait.Fortitude, Trait.Will],
                 2,
-                "{b}1. Runic Repertoire.{/b} A runesmith doesn't cast spells, but they can use "+ModTooltips.TraitRune("runesmith runes")+". You start with 4 runes of 1st level, and learn an additional rune every 2nd level. Your runes are the same level you are, regardless of when you learn them {i}(some runes increase in power at higher levels, as listed in their Level entry){/i}. Runes use your class DC, which is based on Intelligence. If a rune lists a tradition trait (such as Arcane), then it belongs to that tradition; it otherwise belongs to any tradition "+ModTooltips.FeatureTraditionSkill("whose skill")+" you're trained in for the purposes of abilities which require a rune of a specific tradition." +
-                "\r\n\r\n{b}2. Applying Runes.{/b} You can apply runes in one of two ways: {i}tracing{/i} the rune with the "+ModTooltips.ActionTraceRune("Trace Rune")+" action, or by {i}etching{/i} the rune at the start of combat with the "+ModTooltips.ActionEtchRune("Etch Rune")+" activity." +
-                "\r\n\r\n{b}3. Invoking Runes.{/b} You can activate one or more runes' invocation feature with the "+ModTooltips.ActionInvokeRune("Invoke Rune")+" action." +
-                "\r\n\r\n{b}4. Runesmith feat.{/b}" +
-                "\r\n\r\n{b}5. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks" +
-                "\r\n\r\n{b}At higher levels:{/b}" +
-                "\r\n{b}Level 2:{/b} Runesmith feat, "+ModTooltips.FeatureRunicCrafter("runic crafter") +
-                "\r\n{b}Level 3:{/b} General feat, skill increase, additional rune known ({i}level 1{/i})" +
-                "\r\n{b}Level 4:{/b} Runesmith feat" +
-                "\r\n{b}Level 5:{/b} Attribute boosts, ancestry feat, skill increase, expert in simple and martial weapons and in unarmed attacks, additional rune known ({i}level 1{/i}), etch limit increase ({i}3 runes{/i})" +
-                "\r\n{b}Level 6:{/b} Runesmith feat" +
-                "\r\n{b}Level 7:{/b} General feat, skill increase, expert in runesmith DC, expert in Reflex saves, "+ModTooltips.FeatureRunicOptimization("runic optimization")+", additional rune known ({i}level 1{/i})" +
-                "\r\n{b}Level 8:{/b} Runesmith feat"
-                    + (Constants.CharacterLevelCap > 8 ? "\r\n\r\n" + new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString + " (INCOMPLETE CONTENT BEYOND THIS POINT: level 9 & 17 runes, level 10+ class feats)\r\n\r\n{b}Level 9:{/b} Ancestry feat, "+ModTooltips.FeatureAssuredRunicCrafter("assured runic crafter")+", skill increase, additional rune known ({i}level 9{/i}), etch limit increase ({i}4 runes{/i})" : null)
-                    + (Constants.CharacterLevelCap > 9 ? "\r\n{b}Level 10:{/b} Attribute boosts, runesmith feat" : null)
-                    + (Constants.CharacterLevelCap > 10 ? "\r\n{b}Level 11:{/b} General feat, skill increase, " + ModTooltips.FeatureSmithsEndurance("smith's endurance") + ", additional rune known ({i}level 9{/i})" : null)
-                    + (Constants.CharacterLevelCap > 11 ? "\r\n{b}Level 12:{/b} Runesmith feat" : null)
-                    + (Constants.CharacterLevelCap > 12 ? "\r\n{b}Level 13:{/b} Ancestry feat, expert in light and medium armor and in unarmored defense, expert in Perception, skill increase, master in simple and martial weapons and in unarmed attacks, additional rune known ({i}level 9{/i}), etch limit increase ({i}5 runes{/i})" : null)
-                    + (Constants.CharacterLevelCap > 13 ? "\r\n{b}Level 14:{/b} Runesmith feat" : null)
-                    + (Constants.CharacterLevelCap > 14 ? "\r\n{b}Level 15:{/b} Attribute boosts, general feat, " + ModTooltips.FeatureRunicOptimization("greater runic optimization") + ", master in runesmith DC, skill increase, additional rune known ({i}level 9{/i})": null)
-                    + (Constants.CharacterLevelCap > 15 ? "\r\n{b}Level 16:{/b} Runesmith feat": null)
-                    + (Constants.CharacterLevelCap > 16 ? "\r\n{b}Level 17:{/b} Ancestry feat, skill increase, additional rune known ({i}level 17{/i}), etch limit increase ({i}6 runes{/i})" : null)
-                    + (Constants.CharacterLevelCap > 17 ? "\r\n{b}Level 18:{/b} Runesmith feat" : null)
-                    + (Constants.CharacterLevelCap > 18 ? "\r\n{b}Level 19:{/b} General feat, legendary in runesmith DC, master in light and medium armor and in unarmored defense, skill increase, additional rune known ({i}level 17{/i})" : null)
-                    + (Constants.CharacterLevelCap > 19 ? "\r\n{b}Level 20:{/b} Attribute boosts, runesmith feat" : null),
+                "{b}1. Runic Repertoire.{/b} A runesmith doesn't cast spells, but they can use "+ModData.Tooltips.TraitRune("runesmith runes")+". You start with 4 runes of 1st level, and learn an additional rune every 2nd level. Your runes are the same level you are, regardless of when you learn them {i}(some runes increase in power at higher levels, as listed in their Level entry){/i}. Runes use your class DC, which is based on Intelligence. If a rune lists a tradition trait (such as Arcane), then it belongs to that tradition; it otherwise belongs to any tradition "+ModData.Tooltips.FeatureTraditionSkill("whose skill")+" you're trained in for the purposes of abilities which require a rune of a specific tradition." 
+                + "\r\n\r\n{b}2. Applying Runes.{/b} You can apply runes in one of two ways: {i}tracing{/i} the rune with the "+ModData.Tooltips.ActionTraceRune("Trace Rune")+" action, or by {i}etching{/i} the rune at the start of combat with the "+ModData.Tooltips.ActionEtchRune("Etch Rune")+" activity."
+                + "\r\n\r\n{b}3. Invoking Runes.{/b} You can activate one or more runes' invocation feature with the "+ModData.Tooltips.ActionInvokeRune("Invoke Rune")+" action."
+                + "\r\n\r\n{b}4. Runesmith feat.{/b}"
+                + "\r\n\r\n{b}5. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks."
+                + (Constants.CharacterLevelCap > 8 ? "\r\n\r\n" + new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString + " (INCOMPLETE CONTENT: level 9 & 17 runes, level 10+ class feats) " + new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString : null),
                 null)
+            .WithClassFeatures(cf =>
+            {
+                // Features are listed in the order added for each level //
+                cf.AddFeature(2, ModData.Tooltips.FeatureRunicCrafter("runic crafter"));
+                cf.AddFeature(5, "Expert in weapons", "unarmed, simple, martial");
+                cf.AddFeature(7, WellKnownClassFeature.ExpertInClassDC);
+                cf.AddFeature(7, WellKnownClassFeature.ExpertInReflex);
+                cf.AddFeature(7, ModData.Tooltips.FeatureRunicOptimization("runic optimization"));
+                cf.AddFeature(9, ModData.Tooltips.FeatureAssuredRunicCrafter("assured runic crafter"));
+                cf.AddFeature(11, ModData.Tooltips.FeatureSmithsEndurance("smith's endurance"));
+                cf.AddFeature(13, "Expert in defenses", "unarmored, light, medium");
+                cf.AddFeature(13, WellKnownClassFeature.ExpertInPerception);
+                cf.AddFeature(13, "Master in weapons", "unarmed, simple, martial");
+                cf.AddFeature(15, ModData.Tooltips.FeatureRunicOptimization("greater runic optimization"));
+                cf.AddFeature(15, "Master in " + cf.ClassSelectionFeat.Name.ToLower() + " DC");
+                cf.AddFeature(19, "Legendary in " + cf.ClassSelectionFeat.Name.ToLower() + " DC");
+                cf.AddFeature(19, "Master in defenses", "unarmored, light, medium");
+                for (int lv = 1; lv <= 20; lv++)
+                {
+                    if (lv > 1 && lv % 2 == 1) // Levels 3, 5, 7, 9, 11, 13, 15, 17, 19
+                        cf.AddFeature(lv, "Additional rune known", "level " + (lv > 16 ? 17 : lv > 8 ? 9 : 1));
+                    if (lv > 1 && lv % 4 == 1) // Levels 5, 9, 13, 17
+                        cf.AddFeature(lv, "Etch limit increase", (2 + lv / 4) + " runes");
+                }
+                // cf.AddFeature(_, "Expert in simple and martial weapons and in unarmed attacks");
+                // cf.AddFeature(_, "Expert martial weapons", "Your proficiency ranks for simple weapons, martial weapons, and unarmed attacks increase to expert.");
+            })
             .WithOnSheet(values =>
             {
                 #region Level 1 Features
@@ -441,17 +450,14 @@ public static class RunesmithClass
                             ft is RuneFeat { Rune.BaseLevel: <= 1 }, 4)
                     .WithIsOptional());
                 for (int i=3; i<=7; i+=2) // Gain a new Rune every other level.
-                {
-                    values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 1 rune", i, ft => ft is RuneFeat { Rune.BaseLevel: <= 8 }).WithIsOptional());
-                }
+                    values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 1 rune", i, ft => ft is RuneFeat { Rune.BaseLevel: <= 8 })
+                        .WithIsOptional());
                 for (int i=9; i<=15; i+=2) // Gain a new Rune every other level.
-                {
-                    values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 9 rune", i, ft => ft is RuneFeat { Rune.BaseLevel: <= 16 }).WithIsOptional());
-                }
+                    values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 9 rune", i, ft => ft is RuneFeat { Rune.BaseLevel: <= 16 })
+                        .WithIsOptional());
                 for (int i=17; i<=19; i+=2) // Gain a new Rune every other level.
-                {
-                    values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 17 rune", i, ft => ft is RuneFeat).WithIsOptional());
-                }
+                    values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 17 rune", i, ft => ft is RuneFeat)
+                        .WithIsOptional());
                 // Class features
                 values.GrantFeat(traceRune.FeatName);
                 values.GrantFeat(invokeRune.FeatName);
@@ -980,29 +986,3 @@ public static class RunesmithClass
         return hero;
     }
 }
-
-// Kept just in case.
-/*Option runeOption = Option.ChooseCreature( // Add an option with this creature for its rune.
-    thisRune.Name,
-    crWithRune.Key,
-    async () =>
-    {
-        await thisRune.InvocationBehavior.Invoke(action, thisRune, self,
-            crWithRune.Key, runeQf);
-        Sfxs.Play(SfxName.DazzlingFlash);
-    })
-    .WithIllustration(thisRune.Illustration);
-options.Add(runeOption);*/
-
-/* QEffect Properties to utilize
- * .Key     for anti-stacking behavior
- * .AppliedThisStateCheck
- * .Hidden
- * .HideFromPortrait
- * .Tag
- * .UsedThisTurn
- * .Value
- * .Source
- * .SourceAction
- * .Owner
- */
