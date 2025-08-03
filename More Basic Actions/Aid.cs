@@ -182,7 +182,7 @@ public static class Aid
                 owner,
                 IllustrationName.Action,
                 "INCOMPLETE TEXT",
-                [Trait.DoNotShowOverheadOfActionName, Trait.Basic],
+                [Trait.DoNotShowOverheadOfActionName, Trait.DoNotShowInContextMenu, Trait.Basic],
                 "INCOMPLETE TEXT",
                 skill != null ? Target.AdjacentFriend() : Target.AdjacentCreature())
             .WithActionCost(1)
