@@ -69,8 +69,6 @@ public static class ModData
             "Runesmith.Misc.AllAroundVision",
             "{b}All-Around Vision{/b}\n{i}(Monster Ability){/i}\nThis monster can see in all directions simultaneously and therefore can't be flanked.");
 
-        You can now use the many new methods in the CommonQuestions class to add dialogue and other player interactivity choices. */
-        
         public static Func<string, string> RegisterTooltipInserter(string tooltipName, string tooltipDescription)
         {
             ModManager.RegisterInlineTooltip(tooltipName, tooltipDescription);
@@ -84,6 +82,7 @@ public static class ModData
     public static class BooleanOptions
     {
         public const string UnrestrictedTrace = "RunesmithPlaytest.UnrestrictedTrace";
+        //public const string HideRuneDialogs = "RunesmithPlaytest.HideRuneDialogs"; // Unused, but kept just in case.
     }
 
     public static class PossibilityGroups

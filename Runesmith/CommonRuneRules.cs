@@ -418,6 +418,7 @@ public static class CommonRuneRules
                 ModData.Traits.Invocation,
                 Trait.UnaffectedByConcealment,
                 Trait.Spell, // <- Should apply magic immunity.
+                Trait.DoNotShowOverheadOfActionName,
             ])
             .ToArray();
         
@@ -444,6 +445,18 @@ public static class CommonRuneRules
             .WithActionCost(0)
             .WithProjectileCone(VfxStyle.BasicProjectileCone(rune.Illustration))
             .WithSoundEffect(ModData.SfxNames.InvokeRune)
+            .WithPrologueEffectOnChosenTargetsBeforeRolls(async (thisInvokeAction, caster2, targets) =>
+            {
+                /*if (!PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.HideRuneDialogs))
+                    // Do not await; don't interrupt game execution
+                    caster2.Battle.Cinematics.ShowQuickBubble(
+                        caster2,
+                        runeTarget.Rune.Illustration.IllustrationAsIconString + " {b}"+runeTarget.Rune.BaseName+"!{/b}",
+                        null);*/
+                caster2.Overhead(
+                    runeTarget.Rune.Illustration.IllustrationAsIconString + "{b}"+runeTarget.Rune.BaseName+"!{/b}",
+                    Color.MediumPurple);
+            })
             .WithEffectOnEachTarget(async (thisInvokeAction, caster2, target, result) =>
             {
                 await CommonRuneRules.InvokeDrawnRune(thisInvokeAction, caster2, target, runeTarget);
