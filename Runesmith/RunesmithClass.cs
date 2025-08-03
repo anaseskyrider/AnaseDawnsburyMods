@@ -731,14 +731,6 @@ public static class RunesmithClass
             }
         }
     }
-    
-    // TODO: Use the new function, public int ClassDC(Trait classTrait)
-    public static int RunesmithDC(Creature runesmith)
-    {
-        return runesmith.PersistentCharacterSheet?.Class != null
-            ? runesmith.Proficiencies.Get([ModData.Traits.Runesmith]).ToNumber(runesmith.Level) + runesmith.Abilities.Intelligence + 10
-            : Checks.DetermineClassProficiencyFromMonsterLevel(runesmith.Level).ToNumber(runesmith.Level) + runesmith.Abilities.GetTop() + 10;
-    }
 
     /// <summary>Returns whether the Creature has a hand free for the purposes of tracing runes.</summary>
     public static bool IsRunesmithHandFree(Creature runesmith)

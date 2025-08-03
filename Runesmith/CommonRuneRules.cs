@@ -15,7 +15,9 @@ using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
+using Dawnsbury.IO;
 using Dawnsbury.Modding;
+using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
 
@@ -91,7 +93,7 @@ public static class CommonRuneRules
             traditions.Add("occult");
         if (owner.Skills.IsTrained(Skill.Nature))
             traditions.Add("primal");
-        int DC = RunesmithClass.RunesmithDC(owner);
+        int DC = owner.ClassDC(ModData.Traits.Runesmith);
         int etchLim = repertoire.GetEtchLimit(owner.Level);
         string? tattoo = (owner.PersistentCharacterSheet?.Calculated.AllFeats
                 .FirstOrDefault(ft => ft.FeatName.ToStringOrTechnical().Contains("FeatTattooed"))?.Tag as Rune)?.BaseName.ToLower() ?? null;
@@ -121,7 +123,7 @@ public static class CommonRuneRules
         
         /*
          // Kept old code just because
-        int DC = RunesmithClass.RunesmithDC(owner);
+        int DC = owner.ClassDC(ModData.Traits.Runesmith);
         string stats = $"DC {DC};";
         int etchLimitNum = this.GetEtchLimit(owner.Level);
         string etchLimit = etchLimitNum > 0 ? $"{{b}}etch limit{{/b}} ({etchLimitNum} runes); " : "";
@@ -462,7 +464,7 @@ public static class CommonRuneRules
             invokeThisRune.WithTargetingTooltip((thisInvokeAction, target, index) =>
             {
                 string tooltip = CombatActionExecution.BreakdownSavingThrowForTooltip(thisInvokeAction, target,
-                    new SavingThrow(def, RunesmithClass.RunesmithDC(caster))).TooltipDescription;
+                    new SavingThrow(def, caster.ClassDC(ModData.Traits.Runesmith))).TooltipDescription;
                 return initialDescription
                        + rune.GetFormattedInvocationText(rune.InvocationTextWithHeightening(rune, caster.Level))
                        + "\n" + tooltip;

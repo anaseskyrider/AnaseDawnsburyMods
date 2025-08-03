@@ -114,8 +114,11 @@ public static class RunesmithRunes
                 {
                     int roundHalfLevel = ((caster.Level - 1) / 2);
                     int damageAmount = 2 + roundHalfLevel * 2;
-                    CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude,
-                        RunesmithClass.RunesmithDC(caster));
+                    CheckResult result = CommonSpellEffects.RollSavingThrow(
+                        target,
+                        sourceAction,
+                        Defense.Fortitude,
+                        caster.ClassDC(ModData.Traits.Runesmith));
                     await CommonSpellEffects.DealBasicDamage(sourceAction, caster, target, result,
                         damageAmount + "d6", DamageKind.Fire);
                     Sfxs.Play(ModData.SfxNames.InvokedAtryl);
@@ -302,7 +305,7 @@ public static class RunesmithRunes
                     .WithActionCost(0)
                     //.WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
                     .WithSoundEffect(ModData.SfxNames.InvokedEsvadir)
-                    .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
+                    .WithSavingThrow(new SavingThrow(Defense.Fortitude, caster.ClassDC(ModData.Traits.Runesmith)))
                     .WithEffectOnEachTarget(async (selfAction, caster2, target2, result) =>
                     {
                         if (!CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
@@ -660,7 +663,7 @@ public static class RunesmithRunes
                             action.Owner.RemoveAllQEffects(qfToRemove => qfToRemove == qfSelf);
                             CheckResult result = CommonSpellEffects.RollSavingThrow(action.ChosenTargets.ChosenCreature,
                                 CombatAction.CreateSimple(action.Owner, $"Invoked {thisRune.Name}"), Defense.Fortitude,
-                                RunesmithClass.RunesmithDC(action.Owner));
+                                action.Owner.ClassDC(ModData.Traits.Runesmith));
                             int tilePush = result <= CheckResult.Failure
                                 ? (result == CheckResult.CriticalFailure ? 4 : 2)
                                 : 0;
@@ -978,7 +981,7 @@ public static class RunesmithRunes
                             .WithActiveRollSpecification(new ActiveRollSpecification(
                                 Checks.Perception(),
                                 (action, attacker, defender) =>
-                                    new CalculatedNumber(RunesmithClass.RunesmithDC(defender!), "Class DC", [])))
+                                    new CalculatedNumber(defender!.ClassDC(ModData.Traits.Runesmith), "Class DC", [])))
                             .WithActionId(ActionId.Seek)
                             .WithActionCost(1)
                             .WithEffectOnEachTarget(async (thisAction, caster2, target2, result) =>
@@ -1058,7 +1061,7 @@ public static class RunesmithRunes
                     .WithActionCost(0)
                     .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
                     .WithSoundEffect(ModData.SfxNames.InvokedPluuna)
-                    .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
+                    .WithSavingThrow(new SavingThrow(Defense.Fortitude, caster.ClassDC(ModData.Traits.Runesmith)))
                     .WithNoSaveFor((thisAction, cr) => CommonRuneRules.IsImmuneToThisInvocation(cr, thisRune))
                     .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
                     {
@@ -1166,8 +1169,11 @@ public static class RunesmithRunes
                 {
                     int numDice = 2 + (int)Math.Floor((caster.Level - thisRune.BaseLevel) / 2d) * 2;
                     DiceFormula invocationDamage = DiceFormula.FromText($"{numDice}d6");
-                    CheckResult result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Fortitude,
-                        RunesmithClass.RunesmithDC(caster));
+                    CheckResult result = CommonSpellEffects.RollSavingThrow(
+                        target,
+                        sourceAction,
+                        Defense.Fortitude,
+                        caster.ClassDC(ModData.Traits.Runesmith));
                     await CommonSpellEffects.DealBasicDamage(sourceAction, caster, target, result,
                         invocationDamage, DamageKind.Electricity);
                     Sfxs.Play(ModData.SfxNames.InvokedRanshu);
@@ -1479,8 +1485,11 @@ public static class RunesmithRunes
                     CheckResult result = CheckResult.Failure;
                     if (!target.FriendOf(caster))
                     {
-                        result = CommonSpellEffects.RollSavingThrow(target, sourceAction, Defense.Will,
-                            RunesmithClass.RunesmithDC(caster));
+                        result = CommonSpellEffects.RollSavingThrow(
+                            target,
+                            sourceAction,
+                            Defense.Will,
+                            caster.ClassDC(ModData.Traits.Runesmith));
                     }
 
                     if (result <= CheckResult.Failure)
@@ -1678,7 +1687,7 @@ public static class RunesmithRunes
                     .WithActionCost(0)
                     .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
                     .WithSoundEffect(ModData.SfxNames.InvokedFeikris)
-                    .WithSavingThrow(new SavingThrow(Defense.Fortitude, RunesmithClass.RunesmithDC(caster)))
+                    .WithSavingThrow(new SavingThrow(Defense.Fortitude, caster.ClassDC(ModData.Traits.Runesmith)))
                     .WithNoSaveFor((thisAction, cr) => cr == target || CommonRuneRules.IsImmuneToThisInvocation(cr, thisRune))
                     .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
                     {
@@ -2052,12 +2061,12 @@ public static class RunesmithRunes
 
                     Creature grappler = qf.Source!;
                     CombatAction invocationDetails = CombatAction.CreateSimple(caster, sourceAction.Name, [..invokedRune.Traits])
-                        .WithSavingThrow(new SavingThrow(Defense.Reflex, RunesmithClass.RunesmithDC(caster)));
+                        .WithSavingThrow(new SavingThrow(Defense.Reflex, caster.ClassDC(ModData.Traits.Runesmith)));
                     CheckResult result = CommonSpellEffects.RollSavingThrow(
                         grappler,
                         invocationDetails,
                         Defense.Reflex,
-                        RunesmithClass.RunesmithDC(caster));
+                        caster.ClassDC(ModData.Traits.Runesmith));
                     CommonSpellEffects.DealBasicDamage(
                         invocationDetails,
                         caster,
