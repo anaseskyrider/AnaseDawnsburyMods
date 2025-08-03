@@ -326,7 +326,7 @@ public static class RunesmithClass
                 ModData.FeatNames.AssuredRunicCrafter,
                 "You’re so used to tracing and etching runes in the field that when given the peace and quiet of a proper workshop, it’s hard for things to go astray.",
                 "{b}Precombat Preparations{/b}You can select one ally to gain the benefits of your " +
-                ModTooltips.FeatureRunicCrafter("Runic Crafter") + " feature.",
+                ModData.Tooltips.FeatureRunicCrafter("Runic Crafter") + " feature.",
                 [],
                 null)
             .WithOnSheet(values =>
@@ -352,7 +352,7 @@ public static class RunesmithClass
                 .WithNameCreator(_ =>
                     $"Grant Runic Crafter to {GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"}")
                 .WithRulesTextCreator(_ =>
-                    $"{GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"} will gain the benefits of your {ModTooltips.FeatureRunicCrafter("Runic Crafter")} feature at the start of combat.")
+                    $"{GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"} will gain the benefits of your {ModData.Tooltips.FeatureRunicCrafter("Runic Crafter")} feature at the start of combat.")
                 .WithIllustrationCreator(_ =>
                     GetCharacterSheetFromPartyMember(index)?.Illustration ?? ModData.Illustrations.TraceRune)
                 .WithTag("Assured Runic Crafter")

@@ -5,18 +5,84 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
+using Dawnsbury.IO;
 using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
 
 public static class ModData
 {
-    public static class BooleanOptions
+    public static void LoadData()
     {
-        /* Added the ability for mods to add settings options with  ModManager.RegisterBooleanSettingsOption(string technicalName, string caption, string longDescription, bool default) for registration API and PlayerProfile.Instance.IsBooleanOptionEnabled(string technicalName) for reading API.
+        /////////////////
+        // Mod Options //
+        /////////////////
+        ModManager.RegisterBooleanSettingsOption(
+            BooleanOptions.UnrestrictedTrace,
+            "Runesmith: Less Restrictive Rune Tracing",
+            "Enabling this option removes protections against \"bad decisions\" with tracing certain runes on certain targets.\n\nThe Runesmith is a class on the more advanced end of tactics and creativity. For example, you might want to trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy. Or you might trace Atryl on yourself as a 3rd action so that you can move it with Transpose Etching (just 1 action) on your next turn, because you're a ranged build.\n\nThis option is for those players.",
+            true);
+    }
+    
+    public static class Tooltips
+    {
+        public static readonly Func<string, string> TraitRune = RegisterTooltipInserter(
+            "Runesmith.Trait.Rune",
+            "{b}Rune{/b}\n{i}Trait{/i}\nVarious magical effects can be applied through runes, and they're affected by things which also affect spells. Runes can be applied via etching or tracing. Etched runes are applied outside of combat and last indefinitely, while traced runes last only until the end of your next turn. Their effects, however, are the same. Several abilities refer to creatures bearing one of your runes, known as rune-bearers: this is any creature who has one of your runes applied to its body or to any gear it is holding.");
+        public static readonly Func<string, string> TraitInvocation = RegisterTooltipInserter(
+            "Runesmith.Trait.Invocation",
+            "{b}Invocation{/b}\n{i}Trait{/i}\nAn invocation action allows a runesmith to surge power through a rune by uttering its true name. Invocation requires you to be able to speak clearly in a strong voice and requires that you be within 30 feet of the target rune or runes unless another ability changes this. The target rune then fades away immediately after the action resolves.");
+        public static readonly Func<string, string> ActionTraceRune = RegisterTooltipInserter(
+            "Runesmith.Action.TraceRune",
+            "{b}Trace Rune {icon:Action}–{icon:TwoActions}{/b}\n{i}Concentrate, Magical, Manipulate{i}\n(Requires a free hand)\nYou apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend {icon:TwoActions} two actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.");
+        public static readonly Func<string, string> ActionInvokeRune = RegisterTooltipInserter(
+            "Runesmith.Action.InvokeRune",
+            "{b}Invoke Rune {icon:Action}{/b}\n{i}Invocation, Magical{i}\nYou utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed.\n\nYou can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are {Red}affected only once{/Red}, as normal for duplicate effects.");
+        public static readonly Func<string, string> ActionEtchRune = RegisterTooltipInserter(
+            "Runesmith.Action.EtchRune",
+            "{b}Etch Rune{/b}\n{i}Out of combat ability{/i}\nAt the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to 2 runes, and you can etch an additional rune at levels 5, 9, 13, and 17.");
+        public static readonly Func<string, string> FeatureTraditionSkill = RegisterTooltipInserter(
+            "Runesmith.Features.TraditionSkill",
+            "{b}Traditions of Magic and Skills{/b}\nCertain skills belong to certain traditions of magic. The arcane tradition is related to the arcana skill. The divine tradition is related to the religion skill. The occult tradition is related to the occultism skill. The primal tradition is related to the nature skill.");
+        public static readonly Func<string, string> FeatureRunicCrafter = RegisterTooltipInserter(
+            "Runesmith.Features.RunicCrafter",
+            "{b}Runic Crafter{/b}\n{i}Level 2 Runesmith feature{/i}\nYour equipment gains the effects of the highest level fundamental armor and weapon runes for your level.");
+        public static readonly Func<string, string> FeatureRunicOptimization = RegisterTooltipInserter(
+            "Runesmith.Features.RunicOptimization",
+            "{b}Runic Optimization{/b}\n{i}Level 7 Runesmith feature{/i}\nYou deal an additional 2 damage with weapons and unarmed attacks in which you have expert proficiency. This damage increases to 3 if you're a master, and 4 if you're legendary.\n\nAt level 15, you gain Greater Runic Optimization, which increases these bonuses by 2.");
+        public static readonly Func<string, string> FeatureAssuredRunicCrafter = RegisterTooltipInserter(
+            "Runesmith.Features.AssuredRunicCrafter",
+            "{b}Assured Runic Crafter{/b}\n{i}Level 9 Runesmith feature{/i}\nYou can select one ally to gain the benefits of your Runic Crafter feature as a precombat preparation.");
+        public static readonly Func<string, string> FeatureSmithsEndurance = RegisterTooltipInserter(
+            "Runesmith.Features.SmithsEndurance",
+            "{b}Smith's Endurance{/b}\n{i}Level 11 Runesmith feature{/i}\nYour proficiency rank for Fortitude saves increases to master. When you roll a success on a Fortitude save, you get a critical success instead.");
+        public static readonly Func<string, string> FeatsFortifyingKnock = RegisterTooltipInserter(
+            "Runesmith.Feats.FortifyingKnock",
+            "{b}Fortifying Knock {icon:Action}{/b}\n{i}Runesmith{/i}\n(Requires you to wield a shield and have a free hand)\n(Usable once per round)\nIn one motion, you Raise a Shield and Trace a Rune on your shield.");
+        public static readonly Func<string, string> FeatsRunicTattoo = RegisterTooltipInserter(
+            "Runesmith.Feats.RunicTattoo",
+            "{b}Runic Tattoo{b}\n{i}Runesmith{/i}\nChoose one rune you know, which you apply as a tattoo to your body. The rune is etched at the beginning of combat and doesn't count toward your maximum limit of etched runes. You can invoke this rune like any of your other runes, but once invoked, the rune fades significantly and is drained of power until your next daily preparations.");
+        public static readonly Func<string, string> FeatsWordsFlyFree = RegisterTooltipInserter(
+            "Runesmith.Feats.WordsFlyFree",
+            "{b}Words, Fly Free {icon:Action}{/b}\n{i}Manipulate, Runesmith{/i}\n(Requires your Runic Tattoo isn't faded)\nYou fling your hand out, the rune from your Runic Tattoo flowing down it and flying through the air in a crescent. You trace the rune onto all creatures or objects within a 15-foot cone that match the rune's usage requirement. The rune then returns to you, faded.");
+        public static readonly Func<string, string> MiscAllAroundVision = RegisterTooltipInserter(
+            "Runesmith.Misc.AllAroundVision",
+            "{b}All-Around Vision{/b}\n{i}(Monster Ability){/i}\nThis monster can see in all directions simultaneously and therefore can't be flanked.");
 
         You can now use the many new methods in the CommonQuestions class to add dialogue and other player interactivity choices. */
         
+        public static Func<string, string> RegisterTooltipInserter(string tooltipName, string tooltipDescription)
+        {
+            ModManager.RegisterInlineTooltip(tooltipName, tooltipDescription);
+            return input => "{tooltip:" + tooltipName + "}" + input + "{/}";
+        }
+    }
+    
+    /// <summary>
+    /// "Added the ability for mods to add settings options with <see cref="ModManager.RegisterBooleanSettingsOption(string technicalName, string caption, string longDescription, bool default)"/> for registration API and <see cref="PlayerProfile.Instance.IsBooleanOptionEnabled(string technicalName)"/> for reading API."
+    /// </summary>
+    public static class BooleanOptions
+    {
         public const string UnrestrictedTrace = "RunesmithPlaytest.UnrestrictedTrace";
     }
 
