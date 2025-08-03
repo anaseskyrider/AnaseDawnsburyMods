@@ -59,20 +59,40 @@ public static class RunesmithArchetype
         Feat runesmithLearnRune = new TrueFeat(
                 ModManager.RegisterFeatName("RunesmithPlaytest.Archetype.ExpandKnowledge", "Expand Knowledge"),
                 2,
-                null,
-                "You add a 1st-level runesmith rune of your choice to your runic repertoire.",
+                "You've memorized additional runes.",
+                "Add a 1st-level rune to your runic repertoire. If you are an expert in runesmith class DC, you can select a 9th-level rune instead.",
                 [])
             .WithMultipleSelection()
             .WithAvailableAsArchetypeFeat(ModData.Traits.Runesmith)
             .WithOnSheet(values =>
             {
+                int maxRuneLevel = values.GetProficiency(ModData.Traits.Runesmith) >= Proficiency.Expert ? 9 : 1;
                 values.AddSelectionOption(new SingleFeatSelectionOption(
                         "rune"+values.CurrentLevel,
-                        "Level 1 rune",
+                        "Level "+maxRuneLevel+" rune",
                         values.CurrentLevel,
-                        ft => ft is RuneFeat { Rune.BaseLevel: 1 })
+                        ft => ft is RuneFeat rFeat && rFeat.Rune.BaseLevel <= maxRuneLevel)
                     .WithIsOptional());
             });
         ModManager.AddFeat(runesmithLearnRune);
+
+        Feat runesmithExpertDC = new TrueFeat(
+                ModManager.RegisterFeatName("RunesmithPlaytest.Archetype.ExpertRunicApplication", "Expert Runic Application"),
+                12,
+                "Your expertise in magical scripting lends further power to your runic magic.", // "Expert Runes" level 7 feature flavor-text
+                "You become an expert in runesmith class DC. Add a 1st- or 9th-level rune to your runic repertoire.",
+                [])
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Runesmith)
+            .WithOnSheet(values =>
+            {
+                values.SetProficiency(ModData.Traits.Runesmith, Proficiency.Expert);
+                values.AddSelectionOption(new SingleFeatSelectionOption(
+                        "rune"+values.CurrentLevel,
+                        "Level 9 rune",
+                        values.CurrentLevel,
+                        ft => ft is RuneFeat { Rune.BaseLevel: <= 9 })
+                    .WithIsOptional());
+            });
+        ModManager.AddFeat(runesmithExpertDC);
     }
 }
