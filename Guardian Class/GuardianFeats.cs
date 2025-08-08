@@ -24,6 +24,7 @@ using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
+using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.GuardianClass;
 
@@ -56,7 +57,6 @@ public static class GuardianFeats
     {
         #region Level 1
         // Bodyguard <---- High priority
-        // Defensive Advance ???
         // Larger Than Life?????????
         // Long-Distance Taunt
         yield return new TrueFeat(
@@ -541,6 +541,116 @@ public static class GuardianFeats
             .WithEquivalent(values => values.AllFeats.Any(ft => ft.BaseName is "Attack of Opportunity" or "Reactive Strike" or "Opportunist"));
         // Reflexive Shield, from More Dedications, probably needs More Shields compatibility, oops I forgot about that one too
         // Retaliating Rescue <---- High priority
+        yield return new TrueFeat(
+                ModData.FeatNames.RetaliatingRescue,
+                6,
+                "When an ally is in danger, you can hustle to reach them and punish the foe threatening them.",
+                "Stride up to your Speed. You must end this movement adjacent to an ally who is within an enemy’s reach. Then, you push your ally up to 5 feet (as normal for forced movement, this movement doesn't trigger reactions) and make a melee Strike against an enemy within your reach. If your ally was in that enemy's reach and your push moved them out of it, you gain a +2 circumstance bonus to your attack roll.",
+                [ModData.Traits.Guardian])
+            .WithActionCost(2)
+            .WithPermanentQEffect(
+                null,
+                qfFeat =>
+                {
+                    ModLoader.DisplaysAsOffenseAction(
+                        qfFeat,
+                        "Retaliating Rescue",
+                        "Stride to an ally in danger, push them, and Strike.",
+                        2);
+                    qfFeat.ProvideMainAction = qfThis =>
+                    {
+                        // TODO: Check tile.Neighbors for logic efficiency
+                        CombatAction rescue = new CombatAction(
+                                qfFeat.Owner,
+                                new SideBySideIllustration(IllustrationName.QuickenTime, IllustrationName.KineticRam),
+                                "Retaliating Rescue",
+                                [Trait.Basic, ModData.Traits.Guardian],
+                                "{i}When an ally is in danger, you can hustle to reach them and punish the foe threatening them.{/i}\n\nStride up to your Speed. You must end this movement adjacent to an ally who is within an enemy’s reach. Then, you push your ally up to 5 feet (as normal for forced movement, this movement doesn't trigger reactions) and make a melee Strike against an enemy within your reach. If your ally was in that enemy's reach and your push moved them out of it, you gain a +2 circumstance bonus to your attack roll.",
+                                Target.Tile(
+                                        (self, t) =>
+                                        {
+                                            List<Creature> allies = self.Battle.AllCreatures
+                                                .Where(self.FriendOfAndNotSelf)
+                                                .ToList();
+                                            List<Creature> enemies = self.Battle.AllCreatures
+                                                .Where(self.EnemyOf)
+                                                .ToList();
+                                            return t.LooksFreeTo(self) // Tile is free to me
+                                                   && allies
+                                                       .Where(ally => ally.Occupies.IsAdjacentTo(t)) // Has adjacent allies
+                                                       .Any(ally => 
+                                                           enemies.Any(enemy => 
+                                                               enemy.DistanceTo(ally) == (enemy.WieldsItem(Trait.Reach) ? 2 : 1))); // Who is in reach to any enemy
+                                        },
+                                        (_,_) => int.MinValue)
+                                    .WithPathfindingGuidelines(cr =>
+                                        new PathfindingDescription() { Squares = cr.Speed }))
+                            .WithActionCost(2)
+                            .WithEffectOnChosenTargets(async (action, caster, targets) =>
+                            {
+                                // Enact stride towards preselected tile
+                                //caster.MoveToUsingEarlierFloodfill()
+                                if (!await caster.StrideAsync("Choose where to Stride with Retaliating Rescue. (1/2)", strideTowards: targets.ChosenTile))
+                                    action.RevertRequested = true;
+                                
+                                // Choose an ally to push
+                                Creature? pushedAlly = await caster.Battle.AskToChooseACreature(
+                                    caster,
+                                    caster.Battle.AllCreatures
+                                        .Where(cr => cr.FriendOfAndNotSelf(caster) && cr.IsAdjacentTo(caster)),
+                                    IllustrationName.Shove,
+                                    "Choose an ally to push 5 feet. For each enemy your ally is no longer in reach of, your attack gains a +2 circumstance bonus.",
+                                    "Push 5 feet directly away.",
+                                    "Abort and convert to simple Stride");
+
+                                if (pushedAlly == null)
+                                {
+                                    caster.Battle.Log("Retaliating Rescue was converted to a simple Stride.");
+                                    action.SpentActions = 1;
+                                    action.RevertRequested = true;
+                                    return;
+                                }
+                                
+                                // Record who the ally was adjacent to before the push
+                                List<Creature> adjacentFoes = caster.Battle.AllCreatures
+                                    .Where(cr => cr.EnemyOf(caster) && cr.IsAdjacentTo(pushedAlly))
+                                    .ToList();
+
+                                // Push ally
+                                Sfxs.Play(SfxName.Shove);
+                                pushedAlly.Overhead("*Pushed*", Color.Black);
+                                await caster.PushCreature(pushedAlly, 1);
+                                
+                                // Record who they are no longer adjacent to
+                                List<Creature> bonusAgainstWho = adjacentFoes
+                                    .Where(cr => !cr.IsAdjacentTo(pushedAlly))
+                                    .ToList();
+                                
+                                // Apply bonus
+                                QEffect bonusAgainst = new QEffect(ExpirationCondition.ExpiresAtEndOfYourTurn)
+                                {
+                                    Name = "[RETALIATING RESCUE BONUS]",
+                                    BonusToAttackRolls = (qfBonus, actionStrike, target) =>
+                                        actionStrike.HasTrait(Trait.Attack)
+                                        && target != null
+                                        && bonusAgainstWho.Contains(target)
+                                            ? new Bonus(2, BonusType.Circumstance, "Retaliating rescue")
+                                            : null,
+                                };
+                                caster.AddQEffect(bonusAgainst);
+                                
+                                // Make Strike
+                                await CommonCombatActions.StrikeAdjacentCreature(
+                                    caster,
+                                    adjacentFoes.Contains);
+
+                                // Remove bonus
+                                bonusAgainst.ExpiresAt = ExpirationCondition.Immediately;
+                            });
+
+                        return (ActionPossibility)rescue;
+                    };
+                });
         // Ring Their Bell
         // Stomp Ground
         yield return new TrueFeat(
