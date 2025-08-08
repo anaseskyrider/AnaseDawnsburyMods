@@ -626,7 +626,8 @@ public static class GuardianFeats
                     ModLoader.DisplaysAsOffenseAction(
                         qfFeat,
                         "Juggernaut Charge",
-                        "Stride, make a melee Strike, and Stride again. On a hit, drag the target with you.");
+                        "Stride, make a melee Strike, and Stride again. On a hit, drag the target with you.",
+                        2);
                     qfFeat.ProvideMainAction = qfThis =>
                     {
                         CombatAction jugCharge = new CombatAction(

@@ -41,7 +41,7 @@ public class ModLoader
     }
 
     /// <summary>Causes a QEffect to put an action in the Offense section with the given short description, but without listing any attack statistics.</summary>
-    public static void DisplaysAsOffenseAction(QEffect qfFeat, string actionName, string shortDescription)
+    public static void DisplaysAsOffenseAction(QEffect qfFeat, string actionName, string shortDescription, int cost = 1)
     {
         qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
         {
@@ -52,7 +52,8 @@ public class ModLoader
                     qfThis.Owner,
                     actionName,
                     [])
-                .WithShortDescription(shortDescription);
+                .WithShortDescription(shortDescription)
+                .WithActionCost(cost);
             statBlockOnly.Illustration = IllustrationName.None;
             return new ActionPossibility(statBlockOnly);
         }; 
