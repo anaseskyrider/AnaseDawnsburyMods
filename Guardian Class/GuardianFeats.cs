@@ -247,6 +247,7 @@ public static class GuardianFeats
                         if (shields.MaxBy(MoreShields.NewShields.GetShieldAC) is not { } shield)
                             return null;
                         
+                        // Used for targeting logic
                         CombatAction aTaunt = GuardianClass.CreateTaunt(guardian, true, Trait.Auditory)
                             .WithActionCost(0);
                         
@@ -276,8 +277,11 @@ public static class GuardianFeats
                                 caster.Battle.GameLoopCallback.AfterActiveCreaturePossibilitiesRegenerated();
                                 await caster.Battle.GameLoop.OfferOptions(caster, actions, true);
                                 
-                                // Taunt (auditory)
-                                await caster.Battle.GameLoop.FullCast(aTaunt, ChosenTargets.CreateSingleTarget(target));
+                                // Used for actual execution
+                                // Not doing it twice results in usage errors
+                                CombatAction aTaunt2 = GuardianClass.CreateTaunt(guardian, true, Trait.Auditory)
+                                    .WithActionCost(0);
+                                await caster.Battle.GameLoop.FullCast(aTaunt2, ChosenTargets.CreateSingleTarget(target));
                             });
 
                         return (ActionPossibility)shieldTaunt;
@@ -290,6 +294,7 @@ public static class GuardianFeats
                 "The force of your blow causes your enemy to focus their attention on you.",
                 "Make a Strike. Regardless of whether the Strike hits, you Taunt the target. Your Taunt gains the visual trait.",
                 [Trait.Flourish, ModData.Traits.Guardian])
+            .WithActionCost(1)
             .WithPermanentQEffect(
                 null,
                 qfFeat =>
