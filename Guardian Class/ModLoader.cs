@@ -1,6 +1,9 @@
-﻿using Dawnsbury.Core;
+﻿using Dawnsbury.Campaign.Path;
+using Dawnsbury.Core;
+using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
+using Dawnsbury.Core.CharacterBuilder.Library;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
@@ -57,5 +60,17 @@ public class ModLoader
             statBlockOnly.Illustration = IllustrationName.None;
             return new ActionPossibility(statBlockOnly);
         }; 
+    }
+    
+    /// <summary>If a character sheet is available at the execution time of this function, it will return a character sheet of a party member either during campaign play or in free encounter play.</summary>
+    /// <param name="index">The 0th-indexed party member.</param>
+    public static CharacterSheet? GetCharacterSheetFromPartyMember(int index)
+    {
+        CharacterSheet? hero = null;
+        if (CampaignState.Instance is { } campaign)
+            hero = campaign.Heroes[index].CharacterSheet;
+        else if (CharacterLibrary.Instance is { } library)
+            hero = library.SelectedRandomEncounterParty[index];
+        return hero;
     }
 }

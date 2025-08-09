@@ -93,6 +93,11 @@ public static class ModData
         #region Features
         
         #endregion
+    
+        #region Feats
+        public static readonly Trait BodyguardCharge = ModManager.RegisterTrait("Bodyguard's Charge",
+            new TraitProperties("Bodyguard's Charge", false));
+        #endregion
     }
     
     public static class FeatNames
@@ -111,6 +116,8 @@ public static class ModData
         #endregion
         
         #region Class Feats
+        public static readonly FeatName Bodyguard = ModManager.RegisterFeatName("GuardianClass.Bodyguard", "Bodyguard");
+        public static readonly string BodyguardChargeChoice = "GuardianClass.BodyguardChargeChoice";
         public static readonly FeatName LargerThanLife = ModManager.RegisterFeatName("GuardianClass.LargerThanLife", "Larger Than Life");
         public static readonly FeatName LongDistanceTaunt = ModManager.RegisterFeatName("GuardianClass.LongDistanceTaunt", "Long-Distance Taunt");
         public static readonly FeatName PunishingShove = ModManager.RegisterFeatName("GuardianClass.PunishingShove", "Punishing Shove");
@@ -152,6 +159,7 @@ public static class ModData
     public static class QEffectIds
     {
         public static readonly QEffectId TauntTarget = ModManager.RegisterEnumMember<QEffectId>("TauntTarget");
+        public static readonly QEffectId BodyguardCharge = ModManager.RegisterEnumMember<QEffectId>("Bodyguard's Charge");
     }
 
     public static class CommonQFKeys

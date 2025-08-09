@@ -5,6 +5,7 @@ using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
+using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Requests;
@@ -56,7 +57,68 @@ public static class GuardianFeats
     public static IEnumerable<Feat> CreateFeats()
     {
         #region Level 1
-        // Bodyguard <---- High priority
+        // Bodyguard
+        for (int i = 0; i < 4; i++)
+        {
+            int index = i;
+            Feat chargeChoice = new Feat(
+                    ModManager.RegisterFeatName(ModData.FeatNames.BodyguardChargeChoice + (i + 1),
+                        "Player Character " + (i + 1)),
+                    null,
+                    "",
+                    [ModData.Traits.BodyguardCharge],
+                    null)
+                .WithNameCreator(_ =>
+                    $"Choose {ModLoader.GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"} as your charge.")
+                .WithRulesTextCreator(_ =>
+                    $"Your Taunt's penalty will increase to -2 against {ModLoader.GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"}.")
+                .WithIllustrationCreator(_ =>
+                    ModLoader.GetCharacterSheetFromPartyMember(index)?.Illustration ?? ModData.Illustrations.Taunt)
+                .WithTag(i)
+                .WithPermanentQEffect(
+                    $"The penalty for Taunt increases to -2 against {{Blue}}{ModLoader.GetCharacterSheetFromPartyMember(index)?.Name ?? "a chosen ally"}{{/Blue}}.",
+                    qfFeat =>
+                    {
+                        qfFeat.StartOfCombat = async qfThis =>
+                        {
+                            if (ModLoader.GetCharacterSheetFromPartyMember(index) is {} hero
+                                && qfThis.Owner.Battle.AllCreatures.FirstOrDefault(cr2 =>
+                                    cr2 != qfThis.Owner &&
+                                    cr2.PersistentCharacterSheet == hero) is { } chosenCreature)
+                            {
+                                QEffect charge = new QEffect()
+                                {
+                                    Name = "[Bodyguard's Charge]",
+                                    Description = $"The penalty to {{Blue}}{qfFeat.Owner}{{/Blue}}'s Taunt increases to -2 against you.",
+                                    Illustration = IllustrationName.SunderShield,
+                                    Id = ModData.QEffectIds.BodyguardCharge,
+                                    Source = qfFeat.Owner,
+                                    DoNotShowUpOverhead = true,
+                                };
+                                chosenCreature.AddQEffect(charge);
+                            }
+                        };
+                    })
+                .WithPrerequisite(values => // Can't select yourself
+                    ModLoader.GetCharacterSheetFromPartyMember(index) != values.Sheet,
+                    "Can't select yourself");
+            ModManager.AddFeat(chargeChoice);
+        }
+        yield return new TrueFeat(
+                ModData.FeatNames.Bodyguard,
+                1,
+                "You swear a vow to protect one of your allies at all costs, regardless of the risk this might pose to you.",
+                "Choose one of your allies as your charge. When you Taunt, the penalty your taunted enemy takes increases to –2 against your charge.\n\n{b}Precombat preparations:{/b} You can choose which ally is your charge at any time outside combat.",
+                [ModData.Traits.Guardian])
+            .WithOnSheet(values =>
+            {
+                values.AddSelectionOption(new SingleFeatSelectionOption(
+                        "GuardianClass.BodyguardCharge",
+                        "Bodyguard's Charge",
+                        SelectionOption.PRECOMBAT_PREPARATIONS_LEVEL,
+                        ft => ft.HasTrait(ModData.Traits.BodyguardCharge))
+                    .WithIsOptional());
+            });
         // Larger Than Life?????????
         // Long-Distance Taunt
         yield return new TrueFeat(
@@ -434,7 +496,7 @@ public static class GuardianFeats
                         return proudNail;
                     };
                 });
-        // Shielded Attrition <---- High priority
+        // Shielded Attrition <---- High priority. QEffectId.IgnoreAoOWhenMoving.
         #endregion
         
         #region Level 6

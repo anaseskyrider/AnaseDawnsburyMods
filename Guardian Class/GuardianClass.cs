@@ -535,7 +535,6 @@ public static class GuardianClass
     /// <summary>The "taunted enemy" QEffect.</summary>
     public static QEffect TauntedTarget(Creature taunter, Creature tauntee)
     {
-        int penalty = -1; // TODO: Adjustable, but not yet.
         return new QEffect(
             "Taunted",
             $"Hostile actions that don't include {{Blue}}{taunter.Name}{{/Blue}} take a -1 circumstance penalty to any of its attack rolls and DCs, and you become off-guard until the start of your next turn.",
@@ -554,13 +553,16 @@ public static class GuardianClass
                     return null;
                 if (!ActionTriggersTaunt(action, taunter))
                     return null;
-                return TauntPenalty(penalty);
+                return TauntPenalty(target);
             },
             BonusToSpellSaveDCsForSpecificSpell = (qfThis2, action) =>
             {
                 if (!ActionTriggersTaunt(action, taunter))
                     return null;
-                return TauntPenalty(penalty);
+                return TauntPenalty(action.ChosenTargets.ChosenCreatures
+                    .Union(action.ChosenTargets.AllCreaturesInArea)
+                    .FirstOrDefault(cr => cr.QEffects.Any(qf =>
+                        qf.Id == ModData.QEffectIds.BodyguardCharge && qf.Source == taunter)));
             },
             YouBeginAction = async (qfThis, action) =>
             {
@@ -576,14 +578,25 @@ public static class GuardianClass
                 if (!action.HasTrait(Trait.Spell))
                 {
                     action.WithBonusToSave((action2, attacker, defender) =>
-                        new Bonus(1, BonusType.Untyped, "Untyped (Taunt, temporary solution)"));
+                        TauntPenalty(
+                            defender,
+                            BonusType.Untyped,
+                            "Untyped (Taunt, temporary solution)",
+                            true));
                 }
             }
         };
 
-        Bonus TauntPenalty(int amount, string name = "Taunt")
+        Bonus TauntPenalty(Creature? target, BonusType type = BonusType.Circumstance, string name = "Taunt", bool invert = false)
         {
-            return new Bonus(amount, BonusType.Circumstance, name, false);
+            int amount;
+            if (taunter.HasFeat(ModData.FeatNames.Bodyguard)
+                && (target?.QEffects.Any(qf =>
+                    qf.Id == ModData.QEffectIds.BodyguardCharge && qf.Source == taunter) ?? false))
+                amount = -2;
+            else
+                amount = -1;
+            return new Bonus(amount * (invert?-1:1), BonusType.Circumstance, name, invert ? null : true);
         }
 
         bool ActionTriggersTaunt(CombatAction action, Creature guardian)
@@ -615,7 +628,7 @@ public static class GuardianClass
             "Intercept Attack",
             [Trait.Basic, ModData.Traits.Guardian, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName],
             "{i}You fling yourself in the way of oncoming harm to protect an ally.{/i}\n\nYou can Step, but you must end your movement adjacent to the triggering ally. You take the damage instead of the triggering ally. Apply your own immunities, weaknesses, and resistances to the damage, not the ally's.\n\n{b}Special{/b} You can extend this ability to an ally within 15 feet of you if the damage comes from your taunted enemy. If this ally is farther than you can Step to reach, you can Stride instead of Stepping; you still must end the movement adjacent to your ally.",
-            Target.Self())
+            Target.Self()) // TODO: Use what was learned from Juggernaut Charge & Retaliating Rescue to update target functionality.
         .WithActionCost(0)
         .WithActionId(ModData.ActionIds.InterceptAttack)
         .WithEffectOnSelf(async (action, self) =>
@@ -627,11 +640,11 @@ public static class GuardianClass
                 self.Battle.Map.AllTiles.Where(tile =>
                     tile.IsAdjacentTo(ally.Occupies)
                     && tile.LooksFreeTo(self)
-                    && (canStride || self.HasEffect(QEffectId.FeatherStep) || !tile.DifficultTerrain)
+                    && (canStride || self.HasEffect(QEffectId.FeatherStep) || !tile.CountsAsNonignoredDifficultTerrainFor(self))
                     && self.Occupies.DistanceTo(tile) <= (canStride ? self.Speed : stepSpeed)),
                 ModData.Illustrations.InterceptAttack,
                 question,
-                "TEST!",
+                "Move here",
                 true,
                 true,
                 "Don\'t move");
@@ -639,6 +652,7 @@ public static class GuardianClass
             if ((chosenTile == null || await self.StrideAsync(question, allowStep: true, strideTowards: chosenTile) == false)
                 && !self.IsAdjacentTo(ally))
             {
+                self.Battle.Log("Reaction refunded: ally was not in range.");
                 self.Actions.RefundReaction();
                 return;
             }
