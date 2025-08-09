@@ -22,5 +22,6 @@ public class MoreBasicActions
         Ready.LoadReady();
         HelpUp.LoadHelpUp();
         QuickRepair.LoadFeat();
+        LongJump.LoadLongJump();
     }
 }

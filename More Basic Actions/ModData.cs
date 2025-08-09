@@ -38,6 +38,7 @@ public static class ModData
         public static readonly ActionId Ready = ModManager.RegisterEnumMember<ActionId>("Ready");
         public static readonly ActionId HelpUp = ModManager.RegisterEnumMember<ActionId>("HelpUp");
         public static readonly ActionId QuickRepair = ModManager.RegisterEnumMember<ActionId>("QuickRepair");
+        public static readonly ActionId LongJump = ModManager.RegisterEnumMember<ActionId>("LongJump");
     };
 
     public static class Illustrations
