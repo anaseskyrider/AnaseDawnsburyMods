@@ -307,11 +307,12 @@ public static class GuardianClass
                                 Creature guardian = qfFeat.Owner;
                                 Creature ally = qfTech2.Owner;
                                 Creature attacker = @event.Source;
+                                bool isCritical = @event.CheckResult is CheckResult.CriticalSuccess or CheckResult.CriticalFailure;
                                 if (@event.KindedDamages.Any(IsTriggerableDamageType)
                                     && ally.DistanceTo(guardian) <= interceptRange - (attacker.HasEffect(ModData.QEffectIds.TauntTarget) ? 0 : 1)
                                     && await guardian.Battle.AskToUseReaction(
                                         guardian,
-                                        $"{{b}}Intercept Attack{{/b}} {{icon:Reaction}}\n{{Blue}}{attacker}{{/Blue}} is about to deal damage to {{Blue}}{ally}{{/Blue}}. Take the damage instead?",
+                                        $"{{b}}Intercept Attack{{/b}} {{icon:Reaction}}\n{{Blue}}{attacker}{{/Blue}} is about to deal {(isCritical ? "{Red}critical{/Red} " : null)}damage to {{Blue}}{ally}{{/Blue}}. Take the damage instead?",
                                         ModData.Illustrations.InterceptAttack))
                                 {
                                     CombatAction interceptAttack = CreateInterceptAttack(guardian, ally, attacker, @event);
