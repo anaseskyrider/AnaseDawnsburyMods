@@ -6,6 +6,7 @@ using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
@@ -33,6 +34,7 @@ public static class NewShields
         ModData.ItemNames.FortressShield,
     ];
     
+    /// <summary>Load new shields into Dawnsbury Days. Called by <see cref="ModLoader"/>.</summary>
     public static void LoadShields()
     {
         // Automates the creation of attack options for the thrown 30 ft trait.
@@ -128,110 +130,5 @@ public static class NewShields
                 .WithShieldProperties(3)
                 .WithStoresItem((bag, heldItem) =>
                     !heldItem.HasTrait(Trait.Scroll) || bag.StoredItems.Count >= 1 ? "This shield can only hold 1 spell scroll." : null));*/
-    }
-
-    /// <summary>Gets a list of shields being wielded or worn by a creature.</summary>
-    public static List<Item> GetAvailableShields(Creature owner)
-    {
-        List<Item> heldShields = owner.HeldItems
-            .Where(it => it.HasTrait(Trait.Shield))
-            .ToList();
-        return owner.HasFreeHand ||
-               owner.HeldItems.Any(held => !held.HasTrait(Trait.Weapon) && !held.HasTrait(Trait.Grapplee))
-            ? heldShields
-                .Union(owner.CarriedItems
-                    .Where(it => it.HasTrait(Trait.Shield) && it.IsWorn))
-                .ToList()
-            : heldShields;
-    }
-
-    /// <summary>Gets the circumstance bonus to AC of an item, if it's a shield.</summary>
-    public static int? GetShieldAC(Item shield)
-    {
-        if (!shield.HasTrait(Trait.Shield)/* && !shield.HasTrait(Trait.AlwaysOfferShieldBlock)*/)
-            return null;
-        if (shield.HasTrait(ModData.Traits.HeavyShield))
-            return 3;
-        if (shield.HasTrait(ModData.Traits.MediumShield))
-            return 2;
-        if (shield.HasTrait(ModData.Traits.LightShield))
-            return 1;
-        return 2; // Fallback value.
-    }
-
-    /// <summary>
-    /// New version of the local function contained in <see cref="Fighter.CreateRaiseShield"/>.
-    /// </summary>
-    /// <param name="self">The creature raising a shield.</param>
-    /// <param name="shield">The shield being raised.</param>
-    /// <param name="hasShieldBlock">You should pass Creature.HasFeat(FeatName.ShieldBlock) in most instances.</param>
-    public static CombatAction CreateRaiseShieldCore(Creature self, Item shield, bool hasShieldBlock)
-    {
-        int acBonus = (int)GetShieldAC(shield)!; // Suppress. Only gets called on an item that is a shield.
-        return new CombatAction(
-                self,
-                shield.Illustration,
-                $"Raise {shield.BaseHumanName.ToLower()}",
-                [Trait.Basic, Trait.DoNotShowOverheadOfActionName],
-                $"{{i}}You position your shield to protect yourself.{{/i}}\n\nUntil the start of your next turn, you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC"
-                + (hasShieldBlock
-                    ? (" and you can use the Shield Block " +
-                       RulesBlock.GetIconTextFromNumberOfActions(Constants.ACTION_COST_REACTION)
-                       + " reaction")
-                    : null)
-                + ".",
-                Target.Self((_,ai) => ai.GainBonusToAC(acBonus)))
-            .WithActionCost(shield.HasTrait(ModData.Traits.Hefty14) && self.Abilities.Strength < 2 ? 2 : 1)
-            .WithActionId(ActionId.RaiseShield)
-            .WithSoundEffect(SfxName.RaiseShield)
-            .WithEffectOnEachTarget(async (action, caster, target, result) =>
-            {
-                QEffect qfRaisedShield = QEffect.RaisingAShield(hasShieldBlock);
-                caster.AddQEffect(qfRaisedShield);
-            });
-    }
-
-    /// <summary>
-    /// Creates a shield block action with a cost of 0. Doesn't do much mechanically. This gets FullCast in order to trigger events that key off of taking the Shield Block reaction.
-    /// </summary>
-    /// <param name="owner">The creature doing the shield blocking.</param>
-    /// <param name="shield">The shield being blocked with.</param>
-    /// <param name="blockedAction">The action being defended against.</param>
-    public static CombatAction CreateShieldBlock(Creature owner, Item shield, CombatAction? blockedAction)
-    {
-        return new CombatAction(
-                owner,
-                shield.Illustration,
-                "Shield Block",
-                [Trait.General, ModData.Traits.ReactiveAction, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.DoNotShowInCombatLog],
-                $"{{i}}You snap your shield in place to ward off a blow.{{/i}}\n\n{{b}}Trigger{{/b}} While you have your shield raised, you would take damage from a physical attack.\n\nYour shield prevents you from taking up to {{Blue}}{shield.Hardness}{{/Blue}} damage. You take any remaining damage.",
-                new CreatureTarget(
-                    RangeKind.Ranged,
-                    [ // No line of effect requirement
-                        new MaximumRangeCreatureTargetingRequirement(99), // Usable across whole map
-                    ],
-                    (_,_,_) => int.MinValue))
-            .WithItem(shield)
-            .WithProjectileCone(VfxStyle.NoAnimation()) // WithItem adds an animation, this removes it.
-            .WithTag(blockedAction)
-            .WithActionId(ModData.ActionIds.ShieldBlock)
-            //.WithSoundEffect(ModData.SfxNames.ShieldBlockWooodenImpact) // Plays too late.
-            .WithActionCost(0);
-    }
-
-    /// <summary>
-    /// Performs a Shield Block for a <see cref="QEffect.YouAreDealtDamage"/> event.
-    /// </summary>
-    /// <param name="qfDealtDamage">The creature who owns the QEffect, and is being dealt damage to.</param>
-    /// <param name="attacker">The creature dealing the damage (from YouAreDealtDamage).</param>
-    /// <param name="dStuff">The DamageStuff from YouAreDealtDamage.</param>
-    /// <param name="shieldBlocker">The creature shield blocking the damage (can be the YouAreDealtDamage defender, or another creature).</param>
-    /// <returns></returns>
-    public static async Task<DamageModification?> BlockWithShield(QEffect qfDealtDamage, Creature attacker, DamageStuff dStuff, Creature shieldBlocker)
-    {
-        QEffect? shieldBlock = shieldBlocker.FindQEffect(QEffectId.ShieldBlock);
-        if (shieldBlock == null)
-            return null;
-        return await shieldBlock.YouAreDealtDamage?.Invoke(qfDealtDamage, attacker, dStuff, shieldBlocker)! ?? null;
     }
 }

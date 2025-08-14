@@ -3,6 +3,7 @@ using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
@@ -42,7 +43,7 @@ public static class ShieldPatches
 
             Traverse TravPoss = Traverse.Create(typeof(Possibilities));
             
-            foreach (Item shield in NewShields.GetAvailableShields(self)
+            foreach (Item shield in CommonShieldRules.GetWieldedShields(self)
                          .Where(shield => shield.HasTrait(Trait.Worn)))
             {
                 // Shield bash
@@ -83,7 +84,7 @@ public static class ShieldPatches
             bool hasShieldBlock = self.HasFeat(FeatName.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
             
             // Create action
-            CombatAction raiseShield = NewShields.CreateRaiseShieldCore(self, shield, hasShieldBlock);
+            CombatAction raiseShield = CommonShieldRules.CreateRaiseShieldCore(self, shield, hasShieldBlock);
             Possibility possibleShield = new ActionPossibility(raiseShield)
                 .WithPossibilityGroup(Constants.POSSIBILITY_GROUP_ITEM_IN_HAND);
             
@@ -117,11 +118,11 @@ public static class ShieldPatches
         {
             __result.StateCheck = qfThis =>
             {
-                if (NewShields.GetAvailableShields(qfThis.Owner) is { Count: > 0 } shields)
+                if (CommonShieldRules.GetWieldedShields(qfThis.Owner) is { Count: > 0 } shields)
                 {
                     qfThis.Description = qfThis.Description?.Replace(
                         "+2",
-                        "+" + shields.Max(NewShields.GetShieldAC));
+                        "+" + shields.Max(CommonShieldRules.GetAC));
                     return;
                 }
                 qfThis.ExpiresAt = ExpirationCondition.Immediately;
@@ -137,9 +138,9 @@ public static class ShieldPatches
                         || !attackAction.HasTrait(Trait.Spell)))
                     return null;
                 // Finds best shield
-                List<Item> shields = NewShields.GetAvailableShields(qfThis.Owner);
-                if (shields.Count == 0 || shields.MaxBy(NewShields.GetShieldAC) is not { } shield
-                    || NewShields.GetShieldAC(shield) is not { } shieldAC)
+                List<Item> shields = CommonShieldRules.GetWieldedShields(qfThis.Owner);
+                if (shields.Count == 0 || shields.MaxBy(CommonShieldRules.GetAC) is not { } shield
+                    || CommonShieldRules.GetAC(shield) is not { } shieldAC)
                     return null;
                 // Checks if it's a CoverShield instead of a TowerShield.
                 return shield.HasTrait(ModData.Traits.CoverShield) && qfThis.Owner.HasEffect(QEffectId.TakingCover)
@@ -149,7 +150,7 @@ public static class ShieldPatches
         }
     }
 
-    /// <summary>The ShieldBlock QEffect is now the effect that handles triggering your reaction. Executes a slightly-delayed FullCast of <see cref="NewShields.CreateShieldBlock"/>, and upgrades Sparkling Targe to scale with Greater Weapon Specialization.</summary>
+    /// <summary>The ShieldBlock QEffect is now the effect that handles triggering your reaction. Executes a slightly-delayed FullCast of <see cref="CommonShieldRules.CreateShieldBlock"/>, and upgrades Sparkling Targe to scale with Greater Weapon Specialization.</summary>
     [HarmonyPatch(typeof(QEffect), nameof(QEffect.ShieldBlock))]
     internal static class PatchShieldBlock
     {
@@ -169,57 +170,119 @@ public static class ShieldPatches
                     return;
                 }
                 
-                if (NewShields.GetAvailableShields(qfThis.Owner).Count > 0)
+                if (CommonShieldRules.GetWieldedShields(qfThis.Owner).Count > 0)
                     return;
                 qfThis.ExpiresAt = ExpirationCondition.Immediately;
             };
+            
             // qfThis.Owner is the creature receiving damage reduction.
             // defender is the creature reducing the damage.
             // ShieldWarden passes the shield-user as the defender to the effect-owner.
             __result.YouAreDealtDamage = async (qfThis, attacker, damageStuff, defender) =>
             {
+                // Still performs standard checks for standard shield blocking
                 if ((!damageStuff.Kind.IsPhysical()
                      || damageStuff.Power == null
                      || !damageStuff.Power.HasTrait(Trait.Attack))
                     && !Magus.DoesSparklingTargeShieldBlockApply(damageStuff, defender))
                     return null;
+
+                // Uses new generic function for shield blocking.
+                return await CommonShieldRules.BlockWithShield(attacker, defender, damageStuff, defender);
+            };
+        }
+    }
+
+    /// <summary>Improves the behavior of Reactive Shield. Now checks against other circumstances bonuses to see if raising a shield would downgrade a threshold. Now raises a shield properly, allowing you to Shield Block (if you have an extra reaction to do so). Now FullCasts an action for reaction integration purposes.</summary>
+    [HarmonyPatch(typeof(QEffect), nameof(QEffect.ReactiveShield))]
+    internal static class PatchReactiveShield
+    {
+        internal static void Postfix(ref QEffect __result)
+        {
+            __result.YouAreTargetedByARoll = async (qfThis, action, breakdownResult) =>
+            {
+                if (breakdownResult.CheckResult < CheckResult.Success
+                    || !action.HasTrait(Trait.Strike)
+                    || action.ActiveRollSpecification == null
+                    || !action.HasTrait(Trait.Melee))
+                    return false;
                 
-                Item shield = NewShields.GetAvailableShields(defender).MaxBy(itm => itm.Hardness)!; // Suppressed. This cannot normally be called without having a shield.
-                CombatAction shieldBlock = NewShields.CreateShieldBlock(defender, shield, damageStuff.Power);
+                Creature defender = qfThis.Owner;
+                Creature attacker = action.Owner;
                 
-                int preventHowMuch = Math.Min(
-                    shield.Hardness
-                        + (defender.HasEffect(QEffectId.ShieldAlly) ? 2 : 0)
-                        + (Magus.DoesSparklingTargeShieldBlockApply(damageStuff, defender) ? (defender.Level >= 15 ? 3 : defender.Level >= 7 ? 2 : 1) : 0),
-                    damageStuff.Amount);
+                // Get the best raisable shield.
+                if (CommonShieldRules.GetWieldedShields(defender) is not {} shields
+                    || shields.Count == 0
+                    || shields.Max(CommonShieldRules.GetAC) is not {} bestShield)
+                    return false;
                 
+                // Find the highest circumstance bonuses, if any
+                int highestCircumstance = action.ActiveRollSpecification.TaggedDetermineDC.CalculatedNumberProducer
+                    .Invoke(action, attacker, qfThis.Owner)
+                    .Bonuses
+                    .Where(bonus => bonus is { BonusType: BonusType.Circumstance, Amount: > 0 })
+                    .MaxBy(bonus => bonus?.Amount)
+                    ?.Amount ?? 0;
+                
+                // Find threshold
+                int threshold = Math.Max(0, bestShield - highestCircumstance);
+                
+                // Create CombatAction
+                CombatAction reactiveShield = new CombatAction(
+                        defender,
+                        IllustrationName.Reaction,
+                        "Reactive Shield",
+                        [..AllFeats.GetFeatByFeatName(FeatName.ReactiveShield).Traits, ModData.Traits.ReactiveAction, Trait.DoNotShowOverheadOfActionName, Trait.DoNotShowInCombatLog], // Adds class traits to action
+                        "{i}You can snap your shield into place just as you would take a blow, avoiding the hit at the last second.{/i}\n\nIf you'd be hit by a melee Strike, you immediately Raise a Shield as a reaction.",
+                        Target.Self())
+                    .WithActionCost(0);
+                
+                // Check if it can downgrade
+                if (shields.Count <= 0
+                    || defender.HasEffect(QEffectId.RaisingAShield)
+                    || threshold <= 0
+                    || breakdownResult.ThresholdToDowngrade > threshold)
+                    return false;
+                
+                CheckResult input = breakdownResult.CheckResult - 1;
+                
+                // Check for possible FreeAction instead.
                 if (!await ReactionsExpanded.AskToUseReaction2(
                         defender.Battle,
                         defender,
-                        $"{{b}}Shield Block{{/b}} {{icon:Reaction}}\n{(qfThis.Owner == defender ? "You are" : qfThis.Owner + " is")} about to be dealt {damageStuff.Amount} damage by {{Blue}}{damageStuff.Power?.Name}{{/Blue}}.\nUse Shield Block to prevent {(preventHowMuch == damageStuff.Amount ? "all" : preventHowMuch) + " of that damage?"}",
-                        shieldBlock))
-                    return null;
-                
-                // Use a delay so that the action will "complete" after the damage is reduced.
-                // Alternative design if this doesn't work: Give the attacker a QF at the end of their next action which makes you FullCast shield block.
-                defender.AddQEffect(new QEffect()
-                {
-                    Name = "Delayed Shield Block FullCast",
-                    StateCheckWithVisibleChanges = async qfThis2 =>
+                        $"{{b}}Reactive Shield{{/b}} {{icon:Reaction}}\nYou're about to be hit by {{Blue}}{action.Name}{{/Blue}}.\nUse reactive shield to Raise a Shield and downgrade the {breakdownResult.CheckResult.HumanizeLowerCase2()} into a {input.HumanizeLowerCase2()}?",
+                        reactiveShield))
+                    return false;
+                    
+                /*reactiveShieldEffect.Owner.Overhead(
+                        "reactive shield",
+                        Color.Lime,
+                        reactiveShieldEffect.Owner + " raises a shield as a reaction.");
+                    qfThis.Owner.AddQEffect(QEffect.RaisingAShield(false));*/
+                    
+                // Custom overhead (includes reaction symbol in the log)
+                qfThis.Owner.Overhead(
+                    "reactive shield",
+                    Color.Lime,
+                    defender + " uses {b}Reactive Shield{/b}.",
+                    reactiveShield.Name +" {icon:Reaction}",
+                    reactiveShield.Description,
+                    reactiveShield.Traits);
+                    
+                await CommonShieldRules.OfferToRaiseAShield(qfThis.Owner);
+                    
+                // Use a delay so that the action will "complete" after the reaction occurs.
+                /*defender.AddQEffect(new QEffect()
                     {
-                        qfThis2.ExpiresAt = ExpirationCondition.Immediately;
-                        await defender.Battle.GameLoop.FullCast(shieldBlock, ChosenTargets.CreateSingleTarget(attacker));
-                    }
-                });
-                defender.Overhead(
-                    "shield block",
-                    Color.White,
-                    defender + " uses {b}Shield Block{/b} to mitigate {b}" + preventHowMuch + "{/b} damage.",
-                    shieldBlock.Name +" {icon:Reaction}",
-                    shieldBlock.Description,
-                    shieldBlock.Traits);
-                Sfxs.Play(ModData.SfxNames.ShieldBlockWooodenImpact);
-                return new ReduceDamageModification(preventHowMuch, "Shield block");
+                        Name = "Delayed Reactive Shield FullCast",
+                        StateCheckWithVisibleChanges = async qfThis2 =>
+                        {
+                            qfThis2.ExpiresAt = ExpirationCondition.Immediately;
+                            await defender.Battle.GameLoop.FullCast(reactiveShield);
+                        }
+                    });*/
+                        
+                return await defender.Battle.GameLoop.FullCast(reactiveShield); // true;
             };
         }
     }
@@ -261,7 +324,7 @@ public static class ShieldPatches
                 return;
 
             // Formatted AC
-            int? acBonus = NewShields.GetShieldAC(item); // Suppressed. Would never execute unless it was a shield.
+            int? acBonus = CommonShieldRules.GetAC(item); // Suppressed. Would never execute unless it was a shield.
             string? acString = acBonus != null ? "{b}AC{/b} +" + acBonus + (item.HasTrait(ModData.Traits.CoverShield) ? " (+4)" : null) + "\n" : null;
             
             // Formatted speed penalty

@@ -4,6 +4,7 @@ using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
@@ -14,10 +15,12 @@ using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.StatBlocks.Monsters.L5;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
+using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.MoreShields;
 
@@ -119,7 +122,7 @@ public static class OldShields
                     {
                         qfTech.Id = QEffectId.DevotedGuardian; // The potentially-defended creature how has this effect ID, instead of the feat owner.
                         qfTech.YouAreDealtDamage = async (qfThis, attacker, damageStuff, defender) =>
-                            await NewShields.BlockWithShield(qfThis, attacker, damageStuff, qfFeat.Owner);
+                            await CommonShieldRules.BlockWithShield(attacker, defender, damageStuff, qfFeat.Owner);
                     });
             });
         
@@ -145,15 +148,15 @@ public static class OldShields
                           && !raise.Name.Contains("Devoted Guardian")))
                         return null;
                     
-                    if (NewShields.GetAvailableShields(qfThis.Owner) is not {} shields
+                    if (CommonShieldRules.GetWieldedShields(qfThis.Owner) is not {} shields
                         || shields.Count == 0
-                        || shields.MaxBy(NewShields.GetShieldAC) is not { } shield
-                        || NewShields.GetShieldAC(shield) is not { } shieldAC)
+                        || shields.MaxBy(CommonShieldRules.GetAC) is not { } shield
+                        || CommonShieldRules.GetAC(shield) is not { } shieldAC)
                         return null;
 
                     int theirBonus = shield.HasTrait(ModData.Traits.CoverShield) ? 2 : 1;
 
-                    CombatAction raiseGuardian = NewShields.CreateRaiseShieldCore(
+                    CombatAction raiseGuardian = CommonShieldRules.CreateRaiseShieldCore(
                             qfThis.Owner,
                             shield,
                             qfThis.Owner.HasFeat(FeatName.ShieldBlock))
@@ -193,7 +196,7 @@ public static class OldShields
                 };
             });
         
-        // Disarming Block (Bastion Dedication, modded)
+        // Disarming Block (More Dedications, Bastion Dedication, modded)
         Feat? disarmingBlock = AllFeats.All.FirstOrDefault(feat => feat.Name.Contains("Disarming Block"));
         if (disarmingBlock is not null)
         {
@@ -263,6 +266,56 @@ public static class OldShields
                             });
                         
                         await self.Battle.GameLoop.FullCast(disarmingAction, ChosenTargets.CreateSingleTarget(attacker));
+                    };
+                });
+        }
+        
+        // Reflexive Shield (More Dedications, Bastion Dedication, modded)
+        Feat? reflexiveShield = AllFeats.All.FirstOrDefault(feat => feat.Name.Contains("Reflexive Shield"));
+        if (reflexiveShield is not null)
+        {
+            reflexiveShield.OnCreature = null;
+            reflexiveShield.WithPermanentQEffect(
+                "Raise a Shield benefits your Reflex saves. If you have Shield Block, you can block any damage from a Reflex save.",
+                qfFeat =>
+                {
+                    // Apply shield AC to Reflex saves.
+                    qfFeat.BonusToDefenses = (qfThis, action, defense) =>
+                    {
+                        Creature defender = qfThis.Owner;
+                        
+                        if (!defender.HasEffect(QEffectId.ShieldBlock))
+                            return null;
+                        if (defense != Defense.Reflex)
+                            return null;
+
+                        List<Item> shields = CommonShieldRules.GetWieldedShields(defender);
+                        Item? bestShield = shields.MaxBy(CommonShieldRules.GetAC);
+                        if (bestShield is null)
+                            return null;
+
+                        int acBonus =
+                            bestShield.HasTrait(ModData.Traits.CoverShield)
+                            && defender.HasEffect(QEffectId.TakingCover)
+                            ? 4
+                            : CommonShieldRules.GetAC(bestShield) ?? 0;
+
+                        return new Bonus(
+                            acBonus,
+                            BonusType.Circumstance,
+                            "raised shield" + (acBonus == 4 ? " in cover" : null));
+                    };
+
+                    // Shield Block a Reflex save
+                    qfFeat.YouAreDealtDamage = async (qfThis, attacker, dealt, defender) =>
+                    {
+                        if (dealt.Power is not { } action
+                            || (action.SavingThrow is not { Defense: Defense.Reflex }
+                                && (action.ActiveRollSpecification is not { } rollSpec
+                                    || rollSpec.TaggedDetermineDC.InvolvedDefense != Defense.Reflex)))
+                            return null;
+
+                        return await CommonShieldRules.BlockWithShield(attacker, defender, dealt, defender);
                     };
                 });
         }

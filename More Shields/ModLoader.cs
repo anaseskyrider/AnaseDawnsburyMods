@@ -4,8 +4,6 @@ using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Modding;
 using HarmonyLib;
 
-//using Dawnsbury.Mods.DawnniExpanded;
-
 namespace Dawnsbury.Mods.MoreShields;
 public class ModLoader
 {
