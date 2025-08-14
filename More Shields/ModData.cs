@@ -122,6 +122,7 @@ public static class ModData
     public static class ActionIds
     {
         public static readonly ActionId ShieldBlock = ModManager.RegisterEnumMember<ActionId>("ShieldBlock");
+        public static readonly ActionId ReactiveShield = ModManager.RegisterEnumMember<ActionId>("ReactiveShield");
     }
 
     public static class Illustrations

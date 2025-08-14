@@ -235,7 +235,8 @@ public static class ShieldPatches
                         [..AllFeats.GetFeatByFeatName(FeatName.ReactiveShield).Traits, ModData.Traits.ReactiveAction, Trait.DoNotShowOverheadOfActionName, Trait.DoNotShowInCombatLog], // Adds class traits to action
                         "{i}You can snap your shield into place just as you would take a blow, avoiding the hit at the last second.{/i}\n\nIf you'd be hit by a melee Strike, you immediately Raise a Shield as a reaction.",
                         Target.Self())
-                    .WithActionCost(0);
+                    .WithActionCost(0)
+                    .WithActionId(ModData.ActionIds.ReactiveShield);
                 
                 // Check if it can downgrade
                 if (shields.Count <= 0
