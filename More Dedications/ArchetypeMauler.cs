@@ -159,7 +159,8 @@ public static class ArchetypeMauler
                             }
 
                             CombatAction shoveAction = CombatManeuverPossibilities
-                                .CreateShoveAction(owner, primaryWeapon).WithActionCost(0);
+                                .CreateShoveAction(owner, primaryWeapon)
+                                .WithActionCost(0);
                             shoveAction.Traits.Add(Trait
                                 .AttackDoesNotIncreaseMultipleAttackPenalty); // Might not be necessary.
 

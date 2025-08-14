@@ -243,7 +243,9 @@ public static class OldShields
                                 {
                                     Item disarmWeapon =
                                         caster.HeldItems.FirstOrDefault(item => item.HasTrait(Trait.Disarm))!;
-                                    CombatAction specialDisarm = CombatManeuverPossibilities.CreateDisarmAction(caster, disarmWeapon);
+                                    CombatAction specialDisarm = CombatManeuverPossibilities
+                                        .CreateDisarmAction(caster, disarmWeapon)
+                                        .WithActionCost(0);
                                     await caster.Battle.GameLoop.FullCast(specialDisarm,
                                         ChosenTargets.CreateSingleTarget(target));
                                 }

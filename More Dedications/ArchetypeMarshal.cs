@@ -85,6 +85,9 @@ public static class ArchetypeMarshal
         marshalDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
         ModManager.AddFeat(marshalDedication);
         
+        // Devrin's Cunning Stance?
+        // License Firebrands!!!
+        
         // Dread Marshal Stance
         Feat dreadStance = new TrueFeat(
                 ModData.FeatNames.DreadMarshalStance,

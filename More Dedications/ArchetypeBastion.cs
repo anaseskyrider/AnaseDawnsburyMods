@@ -50,6 +50,7 @@ public class ArchetypeBastion
             ModData.Traits.BastionArchetype, 4));
 
         // Disarming Block
+        // TODO: Adjust held items so that you can only disarm them of the attacking weapon
         TrueFeat disarmingBlockFeat = (new TrueFeat(
             ModData.FeatNames.DisarmingBlock,
             4,
@@ -90,7 +91,9 @@ public class ArchetypeBastion
                             {
                                 Item disarmWeapon =
                                     defender.HeldItems.FirstOrDefault(item => item.HasTrait(Trait.Disarm))!;
-                                CombatAction specialDisarm = CombatManeuverPossibilities.CreateDisarmAction(defender, disarmWeapon);
+                                CombatAction specialDisarm = CombatManeuverPossibilities
+                                    .CreateDisarmAction(defender, disarmWeapon)
+                                    .WithActionCost(0);
                                 await defender.Battle.GameLoop.FullCast(specialDisarm,
                                     ChosenTargets.CreateSingleTarget(attacker));
                             }
