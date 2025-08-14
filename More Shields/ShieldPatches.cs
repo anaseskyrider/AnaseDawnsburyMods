@@ -46,6 +46,7 @@ public static class ShieldPatches
                          .Where(shield => shield.HasTrait(Trait.Worn)))
             {
                 // Shield bash
+                // TODO: Prevent shield bash with worn shields if no free hands
                 Traverse? CreateStrike = TravPoss.Method(
                     "CreateItemStrikePossibility",
                     new Type[] { typeof(Creature), typeof(Item) });
@@ -158,6 +159,16 @@ public static class ShieldPatches
             __result.WithExpirationAtStartOfOwnerTurn();
             __result.StateCheck = qfThis =>
             {
+                // If this QEffect is gained as part of creature creation,
+                // instead of as part of raising a shield (new modded functionality),
+                // then give it the feat directly and remove this QF instead.
+                if (qfThis.Owner.Actions.ActionHistoryThisEncounter.Count == 0)
+                {
+                    qfThis.ExpiresAt = ExpirationCondition.Immediately;
+                    qfThis.Owner.WithFeat(FeatName.ShieldBlock);
+                    return;
+                }
+                
                 if (NewShields.GetAvailableShields(qfThis.Owner).Count > 0)
                     return;
                 qfThis.ExpiresAt = ExpirationCondition.Immediately;
