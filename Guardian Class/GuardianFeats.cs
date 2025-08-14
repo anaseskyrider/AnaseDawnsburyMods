@@ -397,6 +397,33 @@ public static class GuardianFeats
         
         #region Level 4
         // Area Armor
+        yield return new TrueFeat(
+                ModData.FeatNames.AreaArmor,
+                4,
+                "The armor you wear protects you and shelters your allies against explosions and other large-scale assaults.",
+                "While you're wearing medium or heavy armor, allies adjacent to you gain a +1 circumstance bonus to Reflex saves against area effects. If you're a master in the armor, the bonus is +2 instead.",
+                [ModData.Traits.Guardian])
+            .WithPermanentQEffect(
+                "Adjacent allies get a bonus to Reflex saves against area effects.",
+                qfFeat =>
+                {
+                    Creature guardian = qfFeat.Owner;
+                    qfFeat.AddGrantingOfTechnical(
+                        cr => cr.IsAdjacentTo(guardian) && cr.FriendOfAndNotSelf(guardian),
+                        qfTech =>
+                        {
+                            qfTech.BonusToDefenses = (qfThis, action, def) =>
+                                def is Defense.Reflex
+                                && action?.Target is AreaTarget
+                                && guardian.BaseArmor is {} armor
+                                && (armor.HasTrait(Trait.MediumArmor) || armor.HasTrait(Trait.HeavyArmor))
+                                    ? new Bonus(
+                                        guardian.Proficiencies.Get(armor.Traits) >= Proficiency.Master ? 2 : 1,
+                                        BonusType.Circumstance,
+                                        "Area armor")
+                                    : null;
+                        });
+                });
         // Armored Courage
         yield return new TrueFeat(
                 ModData.FeatNames.ArmoredCourage,
