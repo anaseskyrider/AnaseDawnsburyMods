@@ -125,10 +125,12 @@ public static class ShieldModifications
     {
         if (addedTraits.Length == 0)
             throw new ArgumentException("You must provide at least one Trait", nameof(addedTraits));
-        string traitDescription = humanizedTraits + " trait" +
-                                  (humanizedTraits.Contains("and") || humanizedTraits.Contains(",")
-                                      ? "s"
-                                      : null);
+        string traitDescription =
+            humanizedTraits
+            + " trait"
+            + (humanizedTraits.Contains("and") || humanizedTraits.Contains(",")
+                ? "s"
+                : null);
         string variantName = technicalName.Replace("ShieldAugmentation", "").ToLower();
         return ModManager.RegisterNewItemIntoTheShop(
             technicalName,
