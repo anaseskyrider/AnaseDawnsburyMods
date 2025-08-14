@@ -6,14 +6,19 @@ using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Requests;
+using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
+using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
+using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Dawnsbury.Mods.Template;
 
@@ -70,6 +75,7 @@ public static class ModLoader
             (15/5),
             _ => {},
             () => new Item(IllustrationName.DragonClaws, "Fangs", [Trait.Brawling, Trait.Unarmed, Trait.Polymorph, Trait.Magical])
+                    {Tag = ModData.QEffectIds.WereShape}
                 .WithWeaponProperties(new WeaponProperties("1d8", DamageKind.Piercing)),
             null,
             false,
@@ -84,8 +90,10 @@ public static class ModLoader
             (25/5),
             _ => {},
             () => new Item(IllustrationName.Jaws, "Jaws", [Trait.Brawling, Trait.Unarmed, Trait.Polymorph, Trait.Magical])
+                    {Tag = ModData.QEffectIds.WereShape}
                 .WithWeaponProperties(new WeaponProperties("1d8", DamageKind.Piercing)),
             () => new Item(IllustrationName.DragonClaws, "Claw", [Trait.Agile, Trait.Brawling, Trait.Unarmed, Trait.Polymorph, Trait.Magical])
+                    {Tag = ModData.QEffectIds.WereShape}
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Slashing)));
         ModManager.AddFeat(werebear);
         yield return werebear;
@@ -97,6 +105,7 @@ public static class ModLoader
             (30/5),
             _ => {},
             () => new Item(IllustrationName.Jaws, "Tusk", [Trait.Brawling, Trait.Sweep, Trait.Unarmed, Trait.Polymorph, Trait.Magical])
+                    {Tag = ModData.QEffectIds.WereShape}
                 .WithWeaponProperties(new WeaponProperties("1d8", DamageKind.Piercing)));
         ModManager.AddFeat(wereboar);
         yield return wereboar;
@@ -114,6 +123,7 @@ public static class ModLoader
                             : null;
                 },
             () => new Item(IllustrationName.Jaws, "Jaws", [Trait.Brawling, Trait.Unarmed, Trait.Polymorph, Trait.Magical])
+                    {Tag = ModData.QEffectIds.WereShape}
                 .WithWeaponProperties(new WeaponProperties("1d8", DamageKind.Piercing)),
             null,
             true,
@@ -129,6 +139,7 @@ public static class ModLoader
             (25/5),
             _ => {},
             () => new Item(IllustrationName.Jaws, "Antler", [Trait.Brawling, Trait.Shove, Trait.Unarmed, Trait.Polymorph, Trait.Magical])
+                    {Tag = ModData.QEffectIds.WereShape}
                 .WithWeaponProperties(new WeaponProperties("1d8", DamageKind.Piercing)));
         ModManager.AddFeat(weremoose);
         yield return weremoose;
@@ -140,6 +151,7 @@ public static class ModLoader
             (25/5),
             _ => {},
             () => new Item(IllustrationName.Jaws, "Jaws", [Trait.Brawling, Trait.Finesse, Trait.Unarmed, Trait.Polymorph, Trait.Magical])
+                    {Tag = ModData.QEffectIds.WereShape}
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Piercing)),
             () => new Item(IllustrationName.DragonClaws, "Claw", [Trait.Agile, Trait.Brawling, Trait.Finesse, Trait.Unarmed, Trait.Polymorph])
                 .WithWeaponProperties(new WeaponProperties("1d4", DamageKind.Slashing)));
@@ -163,6 +175,7 @@ public static class ModLoader
                 };
             },
             () => new Item(IllustrationName.Jaws, "Jaws", [Trait.Brawling, Trait.Unarmed, Trait.Polymorph, Trait.Magical])
+                    {Tag = ModData.QEffectIds.WereShape}
                 .WithWeaponProperties(new WeaponProperties("1d8", DamageKind.Piercing)),
             null,
             true,
@@ -178,8 +191,10 @@ public static class ModLoader
             (25/5),
             _ => {},
             () => new Item(IllustrationName.Jaws, "Jaws", [Trait.Brawling, Trait.Unarmed, Trait.Polymorph, Trait.Magical])
+                    {Tag = ModData.QEffectIds.WereShape}
                 .WithWeaponProperties(new WeaponProperties("1d8", DamageKind.Piercing)),
             () => new Item(IllustrationName.DragonClaws, "Claw", [Trait.Agile, Trait.Brawling, Trait.Unarmed, Trait.Polymorph, Trait.Magical])
+                    {Tag = ModData.QEffectIds.WereShape}
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Slashing)));
         ModManager.AddFeat(weretiger);
         yield return weretiger;
@@ -191,6 +206,7 @@ public static class ModLoader
             (30/5),
             _ => {},
             () => new Item(IllustrationName.Jaws, "Jaws", [Trait.Brawling, Trait.Trip, Trait.Unarmed, Trait.Polymorph, Trait.Magical])
+                    {Tag = ModData.QEffectIds.WereShape}
                 .WithWeaponProperties(new WeaponProperties("1d8", DamageKind.Piercing)));
         ModManager.AddFeat(werewolf);
         yield return werewolf;
@@ -307,7 +323,7 @@ public static class ModLoader
         
         // beastkin resilience // lmao no
         
-        // feral senses // hmm maybe
+        // feral senses // hmm maybe?
         
         // antler rush
         Feat antlerRush = new TrueFeat(
@@ -399,27 +415,55 @@ public static class ModLoader
                 {
                     qfFeat.YouBeginAction = async (qfThis, action) =>
                     {
-                        // Track last action as werebear claw strike
-                        // Set qfThis.Tag = true;
+                        // Track last action is werebear claw strike
+                        qfThis.Tag =
+                            action.HasTrait(Trait.Strike)
+                            && action.Item != null
+                            && action.Item.Name.ToLower().Contains("claw")
+                            && action.Item.Tag is QEffectId id
+                            && id == ModData.QEffectIds.WereShape
+                                ? action
+                                : null;
                     };
-                    qfFeat.ProvideMainAction = qfThis =>
+                    qfFeat.ProvideStrikeModifier = item =>
                     {
-
-                        CombatAction hugAction = new CombatAction(
-                                qfThis.Owner,
-                                IllustrationName.DragonClaws,
-                                "Bear Hug",
-                                [Trait.Archetype, Trait.Basic],
-                                "",
-                                Target.ReachWithWeaponOfTrait());
-                        return null;
+                        if (!item.Name.ToLower().Contains("claw") || item.Tag is not QEffectId id || id != ModData.QEffectIds.WereShape)
+                            return null;
+                        
+                        Creature? clawTarget =
+                            qfFeat.Tag is CombatAction { CheckResult: > CheckResult.Failure } oldAction
+                                ? oldAction.ChosenTargets.ChosenCreature
+                                : null;
+                        
+                        CombatAction clawStrike = qfFeat.Owner.CreateStrike(item)
+                            .WithExtraTrait(Trait.Archetype)
+                            .WithExtraTrait(Trait.Basic)
+                            .WithActionCost(2);
+                        clawStrike.Name = "Bear Hug";
+                        clawStrike.Illustration = new SideBySideIllustration(clawStrike.Illustration, IllustrationName.Grapple);
+                        clawStrike.Description = StrikeRules.CreateBasicStrikeDescription4(
+                            clawStrike.StrikeModifiers,
+                            prologueText: "{b}Requirements{/b} You're in your werebear animal or hybrid shape, and your last action was a successful claw Strike.\n",
+                            additionalSuccessText: "Grab the target using your free hand.");
+                        clawStrike.StrikeModifiers.OnEachTarget = async (caster, target2, checkResult) =>
+                        {
+                            if (checkResult < CheckResult.Success)
+                                return;
+                            await CommonAbilityEffects.Grapple(caster, target2);
+                        };
+                        ((CreatureTarget) clawStrike.Target).WithAdditionalConditionOnTargetCreature((self, target2) => !self.HasEffect(ModData.QEffectIds.WereShape) ? Usability.NotUsable("No animal or hybrid shape") : Usability.Usable);
+                        ((CreatureTarget) clawStrike.Target).WithAdditionalConditionOnTargetCreature(new AdjacencyCreatureTargetingRequirement());
+                        ((CreatureTarget) clawStrike.Target).WithAdditionalConditionOnTargetCreature((self, target2) => !self.HasFreeHand ? Usability.CommonReasons.NoFreeHandForManeuver : Usability.Usable);
+                        ((CreatureTarget) clawStrike.Target).WithAdditionalConditionOnTargetCreature((self, target2) => clawTarget is null ? Usability.NotUsable("Invalid last action") : Usability.Usable);
+                        
+                        return clawStrike;
                     };
                 });
         ModManager.AddFeat(bearHug);
 
         // death roll
 
-        // echolocation // hmm maybe
+        // echolocation // hmm maybe?
 
         // fearful symmetry
 
