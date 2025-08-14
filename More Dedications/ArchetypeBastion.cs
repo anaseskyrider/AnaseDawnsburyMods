@@ -20,7 +20,7 @@ using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.MoreDedications;
 
-public class ArchetypeBastion
+public static class ArchetypeBastion
 {
     
     //public static readonly FeatName DedicationFeat = ModManager.RegisterFeatName("MoreDedications.Archetype.Bastion.Dedication", "Bastion Dedication");

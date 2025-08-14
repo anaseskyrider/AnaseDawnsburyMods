@@ -628,7 +628,6 @@ public static class GuardianFeats
                 self.AddQEffect(reactiveStrike);
             })
             .WithEquivalent(values => values.AllFeats.Any(ft => ft.BaseName is "Attack of Opportunity" or "Reactive Strike" or "Opportunist"));
-        // Reflexive Shield, from More Dedications, probably needs More Shields compatibility, oops I forgot about that one too
         // Retaliating Rescue <---- High priority
         yield return new TrueFeat(
                 ModData.FeatNames.RetaliatingRescue,
