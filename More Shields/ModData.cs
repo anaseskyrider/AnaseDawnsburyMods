@@ -88,7 +88,8 @@ public static class ModData
         /// <summary>
         /// Hidden technical trait. A feat with this trait tells the action possibility generator to make a menu for Raise a Shield instead of just generating the action directly, allowing items to be added to the "Raise shield" menu.
         /// </summary>
-        public static readonly Trait ShieldActionFeat = ModManager.RegisterTrait("Shield Action Feat");
+        public static readonly Trait ShieldActionFeat = ModManager.RegisterTrait("Shield Action Feat",
+            new TraitProperties("Shield Action Feat", false));
             
         public static readonly Trait Hefty14 = ModManager.RegisterTrait("Hefty14", 
             new TraitProperties("Hefty 14", true, "Raising a Shield with the Hefty trait takes more effort, costing an extra action if your Strength score is below the number with the trait."));
