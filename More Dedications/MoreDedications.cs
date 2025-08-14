@@ -24,6 +24,7 @@ public static class MoreDedications
         // Updated Archetypes //
         ////////////////////////
         ArchetypeArcher.LoadMod();
+        // TODO: Update Sentinel to add the resting-armor feat.
         
         ////////////////////
         // New Archetypes //
