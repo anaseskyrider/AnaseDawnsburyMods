@@ -302,11 +302,11 @@ public static class GuardianFeats
                         
                         Creature guardian = qfFeat.Owner;
 
-                        if (MoreShields.NewShields.GetAvailableShields(guardian) is not { } shields)
+                        if (MoreShields.CommonShieldRules.GetWieldedShields(guardian) is not { } shields)
                             return null;
                         if (shields.Count == 0)
                             return null;
-                        if (shields.MaxBy(MoreShields.NewShields.GetShieldAC) is not { } shield)
+                        if (shields.MaxBy(MoreShields.CommonShieldRules.GetAC) is not { } shield)
                             return null;
                         
                         // Used for targeting logic
@@ -547,11 +547,11 @@ public static class GuardianFeats
                         
                         Creature guardian = qfFeat.Owner;
 
-                        if (MoreShields.NewShields.GetAvailableShields(guardian) is not { } shields)
+                        if (MoreShields.CommonShieldRules.GetWieldedShields(guardian) is not { } shields)
                             return null;
                         if (shields.Count == 0)
                             return null;
-                        if (shields.MaxBy(MoreShields.NewShields.GetShieldAC) is not { } shield)
+                        if (shields.MaxBy(MoreShields.CommonShieldRules.GetAC) is not { } shield)
                             return null;
                         
                         CombatAction guardAdvance = new CombatAction(

@@ -604,8 +604,8 @@ public static class GuardianClass
             var chosenCr = action.ChosenTargets.ChosenCreatures;
             var chosenArea = action.ChosenTargets.AllCreaturesInArea;
             return
-                (!chosenCr.Contains(guardian) && chosenCr.Any(cr => cr.FriendOf(guardian)))
-                || (!chosenArea.Contains(guardian) && chosenArea.Any(cr => cr.FriendOf(guardian)));
+                (!chosenCr.Contains(guardian) && chosenCr.Any(guardian.FriendOf))
+                || (!chosenArea.Contains(guardian) && chosenArea.Any(guardian.FriendOf));
         }
     }
 
