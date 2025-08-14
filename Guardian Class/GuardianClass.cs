@@ -616,7 +616,6 @@ public static class GuardianClass
     /// <param name="ally"></param>
     /// <param name="attacker"></param>
     /// <param name="dEvent"></param>
-    /// <returns></returns>
     public static CombatAction CreateInterceptAttack(Creature owner, Creature ally, Creature attacker, DamageEvent dEvent)
     {
         bool canStride = attacker.HasEffect(ModData.QEffectIds.TauntTarget);
