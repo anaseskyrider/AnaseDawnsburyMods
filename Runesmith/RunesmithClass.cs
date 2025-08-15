@@ -320,7 +320,7 @@ public static class RunesmithClass
                 "Your equipment gains the effects of the highest level fundamental armor and weapon runes for your level. This does not count as having runes for the purposes of other rules (you must still have potency runes to apply property runes).",
                 [],
                 null)
-            .WithOnCreature(AddRunicCrafterEffect);
+            .WithOnCreature(RunicCrafterEffect);
         ModManager.AddFeat(runicCrafter);
 
         Feat assuredRunicCrafter = new Feat(
@@ -368,9 +368,10 @@ public static class RunesmithClass
                                     cr2 != qfThis.Owner &&
                                     cr2.PersistentCharacterSheet == hero) is { } chosenCreature)
                             {
-                                QEffect crafter = AddRunicCrafterEffect(chosenCreature);
+                                QEffect crafter = RunicCrafterEffect(chosenCreature);
                                 crafter.Name = "Assured Runic Crafter";
                                 crafter.DoNotShowUpOverhead = false;
+                                chosenCreature.AddQEffect(crafter);
                             }
                         };
                     })
@@ -596,7 +597,7 @@ public static class RunesmithClass
         };
     }
     
-    public static QEffect AddRunicCrafterEffect(Creature owner)
+    public static QEffect RunicCrafterEffect(Creature owner)
     {
         // Uses code from ABP //
         QEffect RCFX = new QEffect("Runic Crafter", "INCOMPLETE", ExpirationCondition.Never, owner, IllustrationName.None)
@@ -622,7 +623,7 @@ public static class RunesmithClass
                 // AC Potency
                 if (defense == Defense.AC && defensePotency > 0)
                 {
-                    var itemBonus = qfThis.Owner.Armor.Item?.ArmorProperties?.ItemBonus ?? 0;
+                    int itemBonus = qfThis.Owner.Armor.Item?.ArmorProperties?.ItemBonus ?? 0;
                     if (defensePotency > itemBonus)
                     {
                         return new Bonus(defensePotency - itemBonus, BonusType.Untyped, "Runic Crafter");
@@ -669,21 +670,19 @@ public static class RunesmithClass
         description += ".";
         
         RCFX.Description = description;
-        
-        owner.AddQEffect(RCFX);
 
         // Add Striking
         if (owner.Level >= 4)
-            AddCumulativeStriking(owner, 1);
+            owner.AddQEffect(CumulativeStriking(owner, 1));
         if (owner.Level >= 12)
-            AddCumulativeStriking(owner, 2);
+            owner.AddQEffect(CumulativeStriking(owner, 2));
         if (owner.Level >= 19)
-            AddCumulativeStriking(owner, 3);
+            owner.AddQEffect(CumulativeStriking(owner, 3));
         
         return RCFX;
         
         // Locals
-        QEffect AddCumulativeStriking(Creature owner2, int bonusDice)
+        QEffect CumulativeStriking(Creature owner2, int bonusDice)
         {
             QEffect striking = new QEffect("Runic Crafter (Striking)", "INCOMPLETE", ExpirationCondition.Never,
                 owner2, IllustrationName.None)
@@ -691,7 +690,6 @@ public static class RunesmithClass
                 IncreaseItemDamageDieCount = (qfSelf, item) =>
                     item.WeaponProperties?.DamageDieCount <= bonusDice,
             };
-            owner2.AddQEffect(striking);
             return striking;
         }
         int GetAttackPotency(int level)
