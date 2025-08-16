@@ -68,7 +68,8 @@ public static class RunesmithClass
                         bool hasRuneSinger = qfThis.Owner.HasEffect(ModData.QEffectIds.RuneSinger);
                         if (!hasRuneSinger)
                         {
-                            CombatAction? oneActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 1);
+                            CombatAction? oneActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 1)
+                                ?.WithExtraTrait(Trait.Basic);
                             if (oneActionTraceRune == null)
                                 continue;
                             oneActionTraceRune.ContextMenuName = "{icon:Action} " + oneActionTraceRune.Name;
@@ -82,7 +83,8 @@ public static class RunesmithClass
                             specificRunePossibilities.Add(traceRunePossibility1);
                         }
                         
-                        CombatAction? twoActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 2);
+                        CombatAction? twoActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 2)
+                            ?.WithExtraTrait(Trait.Basic);
                         if (twoActionTraceRune == null)
                             continue;
                         if (!hasRuneSinger)
