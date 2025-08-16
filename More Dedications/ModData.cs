@@ -22,6 +22,7 @@ public static class ModData
         public static readonly Trait MarshalArchetype = ModManager.RegisterTrait("MoreDedications.Marshal", new TraitProperties("Marshal", true));
         public static readonly Trait BlessedOneArchetype = ModManager.RegisterTrait("MoreDedications.BlessedOne", new TraitProperties("Blessed One", true));
         public static readonly Trait ScoutArchetype = ModManager.RegisterTrait("MoreDedications.Scout", new TraitProperties("Scout", true));
+        public static readonly Trait AssassinArchetype = ModManager.RegisterTrait("MoreDedications.Assassin", new TraitProperties("Assassin", true));
     }
     
     public static class FeatNames
@@ -82,6 +83,17 @@ public static class ModData
         public static readonly FeatName ScoutsPounce = ModManager.RegisterFeatName("MoreDedications.Archetype.Scout.ScoutsPounce", "Scout's Pounce");
         #endregion
         
+        #region Assassin
+        public static readonly FeatName ExpertBackstabber = ModManager.RegisterFeatName("MoreDedications.Archetype.Assassin.ExpertBackstabber", "Expert Backstabber");
+        public static FeatName PoisonResistance; // Set later
+        public static readonly FeatName SurpriseAttack = ModManager.RegisterFeatName("MoreDedications.Archetype.Assassin.SurpriseAttack", "Surprise Attack");
+        public static readonly FeatName PoisonWeapon = ModManager.RegisterFeatName("PoisonWeapon", "Poison Weapon");
+        public static FeatName PoisonWeaponAssassin; // Set later
+        public static FeatName SneakAttacker; // Set later
+        public static readonly FeatName ImprovedPoisonWeapon = ModManager.RegisterFeatName("ImprovedPoisonWeapon", "Improved Poison Weapon");
+        public static FeatName ImprovedPoisonWeaponAssassin; // Set later
+        #endregion
+        
         #region Bonus Stances
         public static readonly FeatName StokedFlameStance = ModManager.RegisterFeatName("StokedFlameStance", "Stoked Flame Stance");
         public static readonly FeatName InnerFire = ModManager.RegisterFeatName("InnerFireSOM", "Inner Fire (SoM)");
@@ -107,6 +119,11 @@ public static class ModData
         public static readonly QEffectId DreadMarshalStance = ModManager.RegisterEnumMember<QEffectId>("Dread Marshal Stance");
         public static readonly QEffectId InspiringMarshalStance = ModManager.RegisterEnumMember<QEffectId>("Inspiring Marshal Stance");
         
+        // Assassin
+        public static readonly QEffectId MarkForDeathCaster = ModManager.RegisterEnumMember<QEffectId>("MarkForDeathCaster");
+        public static readonly QEffectId MarkForDeathTarget = ModManager.RegisterEnumMember<QEffectId>("MarkForDeathTarget");
+        public static readonly QEffectId ExpertBackstabber = ModManager.RegisterEnumMember<QEffectId>("ExpertBackstabber");
+        
         // Bonus stances
         public static readonly QEffectId StokedFlameStance = ModManager.RegisterEnumMember<QEffectId>("Stoked Flame Stance");
         public static readonly QEffectId WildWindsStance = ModManager.RegisterEnumMember<QEffectId>("Wild Winds Stance");
@@ -123,7 +140,12 @@ public static class ModData
         public static readonly ActionId DragonRoar = ModManager.RegisterEnumMember<ActionId>("DragonRoar");
         public static readonly ActionId TigerSlash = ModManager.RegisterEnumMember<ActionId>("TigerSlash");
     }
-
+    
+    public static class PersistentActions
+    {
+        public const string PoisonWeaponCharge = "PoisonWeaponCharge";
+    }
+    
     public static class SpellIds
     {
         public static SpellId WildWindsStance { get; set; }

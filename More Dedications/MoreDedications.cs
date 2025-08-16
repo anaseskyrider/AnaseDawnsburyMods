@@ -35,5 +35,6 @@ public static class MoreDedications
         ArchetypeMarshal.LoadMod();
         ArchetypeBlessedOne.LoadMod();
         ArchetypeScout.LoadMod();
+        ArchetypeAssassin.LoadMod();
     }
 }
