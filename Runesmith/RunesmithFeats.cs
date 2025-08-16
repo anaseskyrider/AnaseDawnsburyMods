@@ -100,18 +100,10 @@ public static class RunesmithFeats
             .WithActionCost(1)
             .WithPermanentQEffect(null, qfFeat =>
             {
-                qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
-                {
-                    if (section.PossibilitySectionId != PossibilitySectionId.InvisibleActions)
-                        return null;
-                    CombatAction statBlockOnly = CombatAction.CreateSimple(
-                            qfThis.Owner,
-                            "Engraving Strike",
-                            [])
-                        .WithShortDescription("Make a melee Strike. On a hit, Trace a Rune on the target.");
-                    statBlockOnly.Illustration = IllustrationName.None;
-                    return new ActionPossibility(statBlockOnly);
-                };
+                DisplaysAsOffenseAction(
+                    qfFeat,
+                    "Engraving Strike",
+                    "Make a melee Strike. On a hit, Trace a Rune on the target.");
                 
                 qfFeat.ProvideStrikeModifier = item =>
                 {
@@ -160,18 +152,10 @@ public static class RunesmithFeats
             .WithActionCost(1)
             .WithPermanentQEffect(null, qfFeat =>
             {
-                qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
-                {
-                    if (section.PossibilitySectionId != PossibilitySectionId.InvisibleActions)
-                        return null;
-                    CombatAction statBlockOnly = CombatAction.CreateSimple(
-                            qfThis.Owner,
-                            "Remote Detonation",
-                            [])
-                        .WithShortDescription("Make a ranged Strike. On a hit, invoke all your runes on the target. On a crit, its saving throws against your invocations take a -1 circumstance penalty.");
-                    statBlockOnly.Illustration = IllustrationName.None;
-                    return new ActionPossibility(statBlockOnly);
-                };
+                DisplaysAsOffenseAction(
+                    qfFeat,
+                    "Remote Detonation",
+                    "Make a ranged Strike. On a hit, invoke all your runes on the target. On a crit, its saving throws against your invocations take a -1 circumstance penalty.");
                 
                 qfFeat.ProvideStrikeModifier = item =>
                 {
@@ -180,6 +164,7 @@ public static class RunesmithFeats
 
                     CombatAction remoteDet = qfFeat.Owner.CreateStrike(item)
                         .WithActionCost(1)
+                        .WithExtraTrait(Trait.Basic)
                         .WithExtraTrait(ModData.Traits.Invocation)
                         .WithExtraTrait(ModData.Traits.Runesmith);
                     remoteDet.Name = "Remote Detonation";
@@ -1789,5 +1774,24 @@ public static class RunesmithFeats
         // Shades of Meaning <--- Priority
         
         #endregion
+    }
+
+    /// <summary>Causes a QEffect to put an action in the Offense section with the given short description, but without listing any attack statistics.</summary>
+    public static void DisplaysAsOffenseAction(QEffect qfFeat, string actionName, string shortDescription, int cost = 1)
+    {
+        qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+        {
+            // Inserts into invisible section
+            if (section.PossibilitySectionId != PossibilitySectionId.InvisibleActions)
+                return null;
+            CombatAction statBlockOnly = CombatAction.CreateSimple(
+                    qfThis.Owner,
+                    actionName,
+                    [])
+                .WithShortDescription(shortDescription)
+                .WithActionCost(cost);
+            statBlockOnly.Illustration = IllustrationName.None;
+            return new ActionPossibility(statBlockOnly);
+        }; 
     }
 }
