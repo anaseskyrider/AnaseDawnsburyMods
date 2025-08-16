@@ -28,7 +28,6 @@ public static class ArchetypeScout
                 "You visually or audibly warn your allies of danger.",
                 "Your allies (but not you) gain a +1 circumstance bonus to their initiative rolls.",
                 [ModData.Traits.MoreDedications, Trait.Ranger, Trait.Rogue])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.ScoutArchetype)
             .WithPermanentQEffect("Your allies gain a +1 circumstance bonus to their initiative rolls.", qfFeat =>
             {
                 qfFeat.StartOfCombat = async qfThis =>
