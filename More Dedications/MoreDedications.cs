@@ -29,7 +29,7 @@ public static class MoreDedications
         ////////////////////
         // New Archetypes //
         ////////////////////
-        ArchetypeMauler.LoadMod();
+        ArchetypeMauler.LoadMod(); // TODO: Include Two-Hand trait weapons.
         ArchetypeBastion.LoadMod();
         ArchetypeMartialArtist.LoadMod();
         ArchetypeMarshal.LoadMod();
