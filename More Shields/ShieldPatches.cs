@@ -1,4 +1,5 @@
 
+using System.Reflection;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
@@ -294,7 +295,15 @@ public static class ShieldPatches
     {
         internal static void Postfix(Creature __instance/*, ref int ___Speed*/)
         {
-            Traverse Speed = Traverse.Create(__instance).Property("Speed");
+            // Harmony Traverse causes errors with Thaumaturge's Mirror Reflection which is a subclass of Creature.
+            // Old code will be kept for austerity
+            
+            PropertyInfo? Speed = typeof(Creature).GetProperty("Speed", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            
+            //Traverse Speed = Traverse.Create(__instance).Property("Speed");
+
+            if (Speed is null)
+                return;
             
             bool unburdenedIron = __instance.HasEffect(QEffectId.UnburdenedIron);
             bool hasTowerShield = __instance.HeldItems.Any(itm => itm.HasTrait(Trait.TowerShield));
@@ -302,14 +311,19 @@ public static class ShieldPatches
             
             int worstPenalty = hasFortressShield ? -2 : hasTowerShield ? -1 : 0;
             int finalPenalty = unburdenedIron ? Math.Min(worstPenalty+1, 0) : worstPenalty;
-            
-            if (hasTowerShield && !unburdenedIron && Speed.GetValue() is int value1)
+
+            /*if (hasTowerShield && !unburdenedIron && Speed.GetValue() is int value1)
                 Speed.SetValue(value1 + 1); // reverse the original Tower Shield penalty
             if (Speed.GetValue() is int value2)
-                Speed.SetValue(value2 + finalPenalty); // Apply final penalty
+                Speed.SetValue(value2 + finalPenalty); // Apply final penalty*/
+            
+            if (hasTowerShield && !unburdenedIron && Speed.GetValue(__instance) is int value1)
+                Speed.SetValue(__instance, value1 + 1); // reverse the original Tower Shield penalty
+            if (Speed.GetValue(__instance) is int value2)
+                Speed.SetValue(__instance, value2 + finalPenalty); // Apply final penalty
         }
     }
-
+    
     /// Improves the item description of shields.
     [HarmonyPatch(typeof(RulesBlock), nameof(RulesBlock.GetItemDescriptionWithoutUsability))]
     internal static class PatchShieldDescriptions
