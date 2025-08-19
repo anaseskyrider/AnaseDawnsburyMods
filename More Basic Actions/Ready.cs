@@ -368,10 +368,9 @@ public static class Ready
             int? useReaction = await attacker.Battle.AskToUseReaction(attacker, question, IllustrationName.Reaction, possibleStrikes.Select(strike =>
             {
                 Item? obj1 = strike.Item;
-                Item obj2;
                 return "With "
                        + (obj1 != null
-                           ? !Items.TryGetItemTemplate(obj1.ItemName, out obj2)
+                           ? !Items.TryGetItemTemplate(obj1.ItemName, out Item? obj2)
                                ? obj1.Name != "fist"
                                    ? obj1.Illustration.IllustrationAsIconString + " " + obj1.Name
                                    : "{icon:Kick} kick"
