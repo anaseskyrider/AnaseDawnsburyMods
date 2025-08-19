@@ -5,6 +5,7 @@ using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
@@ -205,55 +206,49 @@ public static class ShieldPatches
                 if (breakdownResult.CheckResult < CheckResult.Success
                     || !action.HasTrait(Trait.Strike)
                     || action.ActiveRollSpecification == null
-                    || !action.HasTrait(Trait.Melee))
+                    || !action.HasTrait(Trait.Melee)) // Basic validity check
                     return false;
                 
                 Creature defender = qfThis.Owner;
                 Creature attacker = action.Owner;
                 
-                // Get the best raisable shield.
                 if (CommonShieldRules.GetWieldedShields(defender) is not {} shields
                     || shields.Count == 0
-                    || shields.Max(CommonShieldRules.GetAC) is not {} bestShield)
+                    || shields.Max(CommonShieldRules.GetAC) is not {} bestShield) // Get the best raisable shield.
                     return false;
                 
-                // Find the highest circumstance bonuses, if any
                 int highestCircumstance = action.ActiveRollSpecification.TaggedDetermineDC.CalculatedNumberProducer
                     .Invoke(action, attacker, qfThis.Owner)
                     .Bonuses
                     .Where(bonus => bonus is { BonusType: BonusType.Circumstance, Amount: > 0 })
                     .MaxBy(bonus => bonus?.Amount)
-                    ?.Amount ?? 0;
+                    ?.Amount ?? 0; // Find the highest circumstance bonuses, if any
                 
-                // Find threshold
-                int threshold = Math.Max(0, bestShield - highestCircumstance);
+                int threshold = Math.Max(0, bestShield - highestCircumstance); // Find threshold
                 
-                // Create CombatAction
                 CombatAction reactiveShield = new CombatAction(
                         defender,
                         IllustrationName.Reaction,
                         "Reactive Shield",
                         [..AllFeats.GetFeatByFeatName(FeatName.ReactiveShield).Traits, ModData.Traits.ReactiveAction, Trait.DoNotShowOverheadOfActionName, Trait.DoNotShowInCombatLog], // Adds class traits to action
                         "{i}You can snap your shield into place just as you would take a blow, avoiding the hit at the last second.{/i}\n\nIf you'd be hit by a melee Strike, you immediately Raise a Shield as a reaction.",
-                        Target.Self())
+                        Target.Self()) // Create CombatAction
                     .WithActionCost(0)
                     .WithActionId(ModData.ActionIds.ReactiveShield);
                 
-                // Check if it can downgrade
                 if (shields.Count <= 0
                     || defender.HasEffect(QEffectId.RaisingAShield)
                     || threshold <= 0
-                    || breakdownResult.ThresholdToDowngrade > threshold)
+                    || breakdownResult.ThresholdToDowngrade > threshold) // Check if it can downgrade
                     return false;
                 
                 CheckResult input = breakdownResult.CheckResult - 1;
                 
-                // Check for possible FreeAction instead.
                 if (!await ReactionsExpanded.AskToUseReaction2(
                         defender.Battle,
                         defender,
                         $"{{b}}Reactive Shield{{/b}} {{icon:Reaction}}\nYou're about to be hit by {{Blue}}{action.Name}{{/Blue}}.\nUse reactive shield to Raise a Shield and downgrade the {breakdownResult.CheckResult.HumanizeLowerCase2()} into a {input.HumanizeLowerCase2()}?",
-                        reactiveShield))
+                        reactiveShield)) // Check for possible FreeAction instead.
                     return false;
                     
                 /*reactiveShieldEffect.Owner.Overhead(
@@ -283,7 +278,7 @@ public static class ShieldPatches
                             await defender.Battle.GameLoop.FullCast(reactiveShield);
                         }
                     });*/
-                        
+                
                 return await defender.Battle.GameLoop.FullCast(reactiveShield); // true;
             };
         }
