@@ -11,6 +11,26 @@ namespace Dawnsbury.Mods.MoreBasicActions;
 
 public static class ModData
 {
+    public static void LoadData()
+    {
+        ////////////////
+        // Action IDs //
+        ////////////////
+        // Ensures compatibility with other mods registering the same ID, regardless of load order.
+        ActionIds.PrepareToAid = ModManager.TryParse("PrepareToAid", out ActionId prepareAid)
+            ? prepareAid
+            : ModManager.RegisterEnumMember<ActionId>("PrepareToAid");
+        
+        ActionIds.AidReaction = ModManager.TryParse("AidReaction", out ActionId aidReaction)
+            ? aidReaction
+            : ModManager.RegisterEnumMember<ActionId>("AidReaction");
+        
+        ActionIds.Reposition = ModManager.TryParse("Reposition", out ActionId reposition)
+            ? reposition
+            : ModManager.RegisterEnumMember<ActionId>("Reposition");
+        
+    }
+    
     public static class Traits
     {
         public static readonly Trait MoreBasicActions = ModManager.RegisterTrait("MoreBasicActions", new TraitProperties("More Basic Actions", true));
@@ -39,6 +59,7 @@ public static class ModData
         public static readonly ActionId HelpUp = ModManager.RegisterEnumMember<ActionId>("HelpUp");
         public static readonly ActionId QuickRepair = ModManager.RegisterEnumMember<ActionId>("QuickRepair");
         public static readonly ActionId LongJump = ModManager.RegisterEnumMember<ActionId>("LongJump");
+        public static ActionId Reposition;
     };
 
     public static class Illustrations
@@ -48,8 +69,9 @@ public static class ModData
         public static readonly Illustration Aid = new ModdedIllustration("MoreBasicActionsAssets/protection.png");
         public static readonly Illustration Ready = new ModdedIllustration("MoreBasicActionsAssets/chronometer.png");
         public static readonly Illustration HelpUp = new ModdedIllustration("MoreBasicActionsAssets/helping-hand.png");
-        public static readonly Illustration QuickRepair = IllustrationName.Adamantine;
         //new ModdedIllustration("MoreBasicActionsAssets/helping-hand.png");
+        public static readonly Illustration QuickRepair = IllustrationName.Adamantine;
+        public static readonly Illustration Reposition = new ModdedIllustration("MoreBasicActionsAssets/person (cropped).png");
     };
 
     public static class SubmenuIds
