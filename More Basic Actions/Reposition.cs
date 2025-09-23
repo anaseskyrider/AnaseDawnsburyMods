@@ -72,7 +72,11 @@ public static class Reposition
                     .WithAdditionalConditionOnTargetCreature((_,d) =>
                         d.WeaknessAndResistance.ImmunityToForcedMovement
                             ? Usability.NotUsableOnThisCreature("immune to forced movement")
-                            : Usability.Usable))
+                            : Usability.Usable)
+                    .WithAdditionalConditionOnTargetCreature((a,_) =>
+                        a.HasFreeHand
+                            ? Usability.Usable
+                            : Usability.CommonReasons.NoFreeHandForManeuver))
             .WithActionCost(1)
             .WithSoundEffect(SfxName.Shove)
             .WithActionId(ModData.ActionIds.Reposition)

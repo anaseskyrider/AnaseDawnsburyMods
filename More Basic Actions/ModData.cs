@@ -28,7 +28,6 @@ public static class ModData
         ActionIds.Reposition = ModManager.TryParse("Reposition", out ActionId reposition)
             ? reposition
             : ModManager.RegisterEnumMember<ActionId>("Reposition");
-        
     }
     
     public static class Traits
