@@ -2,6 +2,7 @@ using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations.Movement;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
@@ -52,31 +53,22 @@ public static class Reposition
                 ModData.Illustrations.Reposition,
                 "Reposition",
                 [Trait.Basic, ModData.Traits.MoreBasicActions, Trait.Attack, Trait.AttackDoesNotTargetAC],
-                "{i}You forcefully relocate a creature.{/i}\n\n{b}Requirements{/b} You have a free hand or are holding the target.\n\nMake an Athletics check against the target's Fortitude DC."
+                "{i}You forcefully relocate a creature.{/i}\n\n{b}Requirements{/b} You have a free hand, are holding the target, or have a grapple weapon.\n\nMake an Athletics check against the target's Fortitude DC."
                 + S.FourDegreesOfSuccess("You move the creature up to 10 feet along any unobstructed path within your reach.",
                 "As critical success, but you move the creature 5 feet.",
                 null,
                 "The target Repositions you to a random square instead, as if a success.")
                 + "\n\n{b}Special{/b} You automatically get one degree of success better when targeting an ally with Reposition.",
-                /*new CreatureTarget(
-                    RangeKind.Melee,
-                    [
-                        new GrappleCreatureTargetingRequirement(),
-                        new LegacyCreatureTargetingRequirement((_,d) =>
-                            d.WeaknessAndResistance.ImmunityToForcedMovement
-                                ? Usability.NotUsableOnThisCreature("immune to forced movement")
-                                : Usability.Usable)
-                    ],
-                    (_,_,_) => int.MinValue)*/
-                Target.AdjacentCreature()
+                new CreatureTarget( // Custom target that will let you target allies
+                        RangeKind.Melee, 
+                        [
+                            MeleeReachCreatureTargetingRequirement.WithWeaponOfTrait(Trait.Grapple)
+                        ],
+                        (_, _, _) => int.MinValue)
                     .WithAdditionalConditionOnTargetCreature((_,d) =>
                         d.WeaknessAndResistance.ImmunityToForcedMovement
                             ? Usability.NotUsableOnThisCreature("immune to forced movement")
-                            : Usability.Usable)
-                    .WithAdditionalConditionOnTargetCreature((a,_) =>
-                        a.HasFreeHand
-                            ? Usability.Usable
-                            : Usability.CommonReasons.NoFreeHandForManeuver))
+                            : Usability.Usable))
             .WithActionCost(1)
             .WithSoundEffect(SfxName.Shove)
             .WithActionId(ModData.ActionIds.Reposition)
@@ -104,9 +96,7 @@ public static class Reposition
     
     public static async Task ExecuteRepositionLogic(Creature attacker, Creature defender, int distance, bool randomTile = false)
     {
-        int reach = 1 /*attacker.MeleeWeapons.Any(item => item.HasTrait(Trait.Reach))
-            ? 2
-            : 1*/;
+        int reach = GrappleTag.GetGrappleReach(attacker);
         List<Tile> tiles = attacker.Battle.Map.AllTiles
             .Where(tile =>
                 tile.IsTrulyGenuinelyFreeTo(defender)
