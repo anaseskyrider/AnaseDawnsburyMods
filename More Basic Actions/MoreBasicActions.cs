@@ -15,5 +15,6 @@ public class MoreBasicActions
         QuickRepair.LoadFeat();
         LongJump.LoadLongJump();
         Reposition.LoadReposition();
+        DropProne.LoadDropProne();
     }
 }
