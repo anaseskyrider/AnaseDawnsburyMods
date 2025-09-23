@@ -11,6 +11,8 @@ namespace Dawnsbury.Mods.MoreBasicActions;
 
 public static class ModData
 {
+    public const string IdPrepend = "MoreBasicActions.";
+    
     public static void LoadData()
     {
         ////////////////
@@ -40,8 +42,8 @@ public static class ModData
     
     public static class FeatNames
     {
-        public static readonly FeatName CooperativeNature = ModManager.RegisterFeatName("MoreBasicActions.Human.CooperativeNature", "Cooperative Nature");
-        public static readonly FeatName QuickRepair = ModManager.RegisterFeatName("MoreBasicActions.QuickRepair", "Quick Repair");
+        public static readonly FeatName CooperativeNature = ModManager.RegisterFeatName(IdPrepend+"Human.CooperativeNature", "Cooperative Nature");
+        public static readonly FeatName QuickRepair = ModManager.RegisterFeatName(IdPrepend+"QuickRepair", "Quick Repair");
     }
     
     public static class QEffectIds
