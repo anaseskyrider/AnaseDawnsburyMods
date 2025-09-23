@@ -79,8 +79,8 @@ public static class LongJump
                 owner,
                 new SideBySideIllustration(IllustrationName.FleetStep, IllustrationName.Jump),
                 "Long Jump",
-                [Trait.Basic],
-                "{i}With a running start, you attempt to jump through the air.{/i}\n\nStride in a straight line. At the end of your Stride, Leap with a DC 15 Athletics check to increase the distance you jump, up to your Speed."+S.FourDegreesOfSuccess(
+                [Trait.Basic, Trait.Move, Trait.DoesNotProvoke],
+                "{i}With a running start, you attempt to jump through the air.{/i}\n\nStride in a straight line. At the end of your Stride, Leap with a DC 15 Athletics check to increase the distance you jump, up to your Speed." + S.FourDegreesOfSuccess(
                     null,   
                     "You Leap up to a distance equal to your check result (round down to the nearest square).",
                     "You Leap normally.",
@@ -109,7 +109,7 @@ public static class LongJump
                         caster,
                         IllustrationName.Jump,
                         "Leap",
-                        [Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName],
+                        [Trait.Move, Trait.Basic, Trait.ProvokesAsActionBegins, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName],
                         "[NO DESCRIPTION]",
                         Target.Line(owner.Speed)
                             .WithLesserDistanceIsOkay()
