@@ -211,12 +211,12 @@ public static class Ready
         // 2. Creatures with complex movement involving moving in and out of your reach provoke a reaction before they would leave it.
         
         CombatAction braceAction = new CombatAction(
-            owner,
-            IllustrationName.TwoActions,
-            "Ready (Brace)",
-            [Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
-            "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy moves into your reach\n\nYou make a melee Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
-            Target.Self())
+                owner,
+                IllustrationName.TwoActions,
+                "Ready (Brace)",
+                [Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
+                "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy moves into your reach\n\nYou make a melee Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
+                Target.Self())
             .WithActionCost(2)
             .WithActionId(ModData.ActionIds.Ready)
             .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
@@ -235,7 +235,9 @@ public static class Ready
                     {
                         if (!defender.IsImmuneTo(Trait.PrecisionDamage)
                             && (action.Item?.HasTrait(ModData.Traits.Brace) ?? false)
-                            && action.HasTrait(ModData.Traits.ReactiveAttackWithMAP))
+                            && (action.HasTrait(ModData.Traits.ReactiveAttackWithMAP)
+                            || action.HasTrait(Trait.AttackOfOpportunity)
+                            || action.HasTrait(Trait.ReactiveAttack)))
                         {
                             int braceBonus = (action.Item.WeaponProperties?.DamageDieCount ?? 0) * 2;
                             if (braceBonus > 0)
@@ -264,7 +266,7 @@ public static class Ready
                         // For each enemy currently in my reach,
                         foreach (Creature cr in self.Battle.AllCreatures.Where(cr => !cr.FriendOf(self)))
                         {
-                            if (cr.DistanceTo(self) > reach)
+                            if (cr.DistanceToReach(self) > reach)
                             {
                                 provokeQueue.Remove(cr);
                                 continue;
@@ -280,7 +282,7 @@ public static class Ready
                             Tile previousTile = move.Path.Count > 1 && currentTileIndex > 0
                                 ? move.Path[currentTileIndex-1]
                                 : move.OriginalTile;
-                            if (previousTile.DistanceTo(self.Occupies) <= reach)
+                            if (previousTile.DistanceToReach(self.Occupies) <= reach)
                                 continue;
                             
                             // and didn't just prompt on the same movement,
@@ -448,5 +450,25 @@ public static class Ready
                && !target.WeaknessAndResistance.Resistances.Any(wp => wp.DamageKind == weaponProperties.DamageKind)
                && !obj.HasTrait(Trait.Shield)
                && !attacker.HasTrait(Trait.Monk);
+    }
+
+    /// <summary>
+    /// Gets the distance to the target, treating the second diagonal as 10 feet instead of 15.
+    /// </summary>
+    public static int DistanceToReach(this Creature self, Creature target)
+    {
+        return self.Occupies.DistanceToReach(target.Occupies);
+    }
+
+    /// <summary>
+    /// Gets the distance to the target, treating the second diagonal as 10 feet instead of 15.
+    /// </summary>
+    public static int DistanceToReach(this Tile self, Tile target)
+    {
+        int distance = self.DistanceTo(target);
+        int reach = self.DistanceToReachSpecial(target);
+        return distance <= 3
+            ? reach
+            : distance;
     }
 }
