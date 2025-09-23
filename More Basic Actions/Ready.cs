@@ -34,12 +34,6 @@ public static class Ready
         // TODO: also make ranged attack when enemy enters first range increment
         // maybe combine em
         
-        // Option to move Ready into submenus
-        ModManager.RegisterBooleanSettingsOption("MoreBasicActions.ReadyInSubmenus",
-            "More Basic Actions: Move Ready to Other Actions",
-            "Enabling this option will move the Ready menu to the Other Actions submenu.",
-            false);
-        
         // Add Prepare to Aid to every creature.
         ModManager.RegisterActionOnEachCreature(cr =>
         {
@@ -49,7 +43,7 @@ public static class Ready
                 ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
                     PossibilitySectionId sectionId =
-                        PlayerProfile.Instance.IsBooleanOptionEnabled("MoreBasicActions.ReadyInSubmenus")
+                        PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.ReadyInSubmenus)
                             ? PossibilitySectionId.OtherManeuvers
                             : PossibilitySectionId.SkillActions;
                     if (section.PossibilitySectionId != sectionId)

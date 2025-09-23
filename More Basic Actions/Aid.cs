@@ -41,24 +41,6 @@ public static class Aid
 
     public static void LoadAid()
     {
-        // Option to allow untrained Prepare to Aid actions
-        ModManager.RegisterBooleanSettingsOption("MoreBasicActions.UntrainedAid",
-            "More Basic Actions: Untrained Prepare to Aid",
-            "Enable untrained Prepare to Aid options when choosing what skills to prepare to aid.",
-            false);
-        
-        // Option to lower Aid reaction DC
-        ModManager.RegisterBooleanSettingsOption("MoreBasicActions.AidDCIs15",
-            "More Basic Actions: Reduce Aid DC",
-            "The DC to Aid is normally 20. If enabled, the DC is reduced to 15 instead.",
-            false);
-        
-        // Option to move Prepare to Aid into submenus
-        ModManager.RegisterBooleanSettingsOption("MoreBasicActions.AidInSubmenus",
-            "More Basic Actions: Move Aid to Other Actions",
-            "Enabling this option will move the Aid menu to the Other Actions submenu.",
-            false);
-        
         // Add Prepare to Aid to every creature.
         ModManager.RegisterActionOnEachCreature(cr =>
         {
@@ -68,7 +50,7 @@ public static class Aid
                 ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
                     PossibilitySectionId sectionId =
-                        PlayerProfile.Instance.IsBooleanOptionEnabled("MoreBasicActions.AidInSubmenus")
+                        PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.AidInSubmenus)
                             ? PossibilitySectionId.OtherManeuvers
                             : PossibilitySectionId.SkillActions;
                     if (section.PossibilitySectionId != sectionId)
@@ -132,7 +114,7 @@ public static class Aid
         List<Possibility> possibilities = [];
         foreach (Skill skill in Skills.AllSkills)
         {
-            if (!PlayerProfile.Instance.IsBooleanOptionEnabled("MoreBasicActions.UntrainedAid") && owner.Proficiencies.Get(Skills.SkillToTrait(skill)) == Proficiency.Untrained)
+            if (!PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.UntrainedAid) && owner.Proficiencies.Get(Skills.SkillToTrait(skill)) == Proficiency.Untrained)
                 continue;
             ActionPossibility? skillAid = CreatePrepareToAidPossibility(owner, skill);
             if (skillAid != null)
@@ -482,6 +464,6 @@ public static class Aid
 
     public static int AidDC()
     {
-        return PlayerProfile.Instance.IsBooleanOptionEnabled("MoreBasicActions.AidDCIs15") ? 15 : 20;
+        return PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.AidDCIs15) ? 15 : 20;
     }
 }

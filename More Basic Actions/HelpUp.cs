@@ -15,12 +15,6 @@ public static class HelpUp
 {
     public static void LoadHelpUp()
     {
-        // Option to treat helping up as the target not moving
-        ModManager.RegisterBooleanSettingsOption("MoreBasicActions.HelpUpIsNotMove",
-            "More Basic Actions: Help Up Doesn't Move Ally",
-            "Helping an ally up from prone counts as you taking a manipulate action and the ally taking a move action. Enabling this action means the ally doesn't actually take the Stand Up action.",
-            false);
-        
         // Add Help Up to every creature.
         ModManager.RegisterActionOnEachCreature(cr =>
         {
@@ -42,7 +36,7 @@ public static class HelpUp
 
     public static CombatAction CreateHelpUpAction(Creature owner)
     {
-        bool doNotMove = PlayerProfile.Instance.IsBooleanOptionEnabled("MoreBasicActions.HelpUpIsNotMove");
+        bool doNotMove = PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.HelpUpIsNotMove);
 
         CombatAction helpUpAction = new CombatAction(
                 owner, 
