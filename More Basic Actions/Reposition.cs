@@ -43,11 +43,6 @@ public static class Reposition
 
     public static CombatAction CreateReposition(Creature owner)
     {
-        // PETR: When grappling is more well supported, expand logic for "what is my reach"
-        // and what is the reach of the weapon or free hand that is doing the repositioning.
-        // At minimum, if you have a creature grappled first, you should be able to reposition
-        // it with that weapon.
-        
         return new CombatAction(
                 owner,
                 ModData.Illustrations.Reposition,
