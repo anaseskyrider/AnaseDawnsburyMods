@@ -60,6 +60,10 @@ public static class Reposition
                             MeleeReachCreatureTargetingRequirement.WithWeaponOfTrait(Trait.Grapple)
                         ],
                         (_, _, _) => int.MinValue)
+                    .WithAdditionalConditionOnTargetCreature((a, _) =>
+                        !a.HasFreeHand && !a.WieldsItem(Trait.Grapple)
+                            ? Usability.CommonReasons.NoFreeHandForManeuver
+                            : Usability.Usable)
                     .WithAdditionalConditionOnTargetCreature((_,d) =>
                         d.WeaknessAndResistance.ImmunityToForcedMovement
                             ? Usability.NotUsableOnThisCreature("immune to forced movement")
