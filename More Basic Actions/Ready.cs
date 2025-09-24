@@ -70,7 +70,7 @@ public static class Ready
                             cr,
                             ModData.Illustrations.Ready,
                             "Ready",
-                            [Trait.Concentrate],
+                            [ModData.Traits.MoreBasicActions, Trait.Concentrate],
                             ReadyBasicDescription,
                             Target.Self()).WithActionCost(2),
                     };
@@ -88,7 +88,7 @@ public static class Ready
                 owner,
                 IllustrationName.TwoActions,
                 "Ready (Footwork)",
-                [Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
+                [ModData.Traits.MoreBasicActions, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
                 "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy ends a move action adjacent to you\n\nMake a Step or Stride.\n\nStep actions and other similar actions do not trigger this reaction.",
                 Target.Self())
             .WithActionCost(2)
@@ -136,7 +136,7 @@ public static class Ready
                 owner,
                 IllustrationName.TwoActions,
                 "Ready (Seize Opportunity)",
-                [Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
+                [ModData.Traits.MoreBasicActions, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
                 "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy within your range or your reach becomes flat-footed to you\n\nYou make a Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
                 Target.Self())
             .WithActionCost(2)
@@ -208,7 +208,7 @@ public static class Ready
                 owner,
                 IllustrationName.TwoActions,
                 "Ready (Brace)",
-                [Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
+                [ModData.Traits.MoreBasicActions, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
                 "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy moves into your reach\n\nYou make a melee Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
                 Target.Self())
             .WithActionCost(2)

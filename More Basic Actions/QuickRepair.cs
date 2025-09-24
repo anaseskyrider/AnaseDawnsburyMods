@@ -92,7 +92,7 @@ public static class QuickRepair
                 owner,
                 ModData.Illustrations.QuickRepair,
                 $"Quick Repair (DC {dc})",
-                [Trait.Manipulate, Trait.Basic],
+                [ModData.Traits.MoreBasicActions, Trait.Manipulate, Trait.Basic],
                 "{i}You can repair damage, even in combat.{/i}\n"
                     + "{b}Range{/b} touch\n{b}Requirements{/b} You must have a hand free.\n\nChoose a construct. Make a Crafting check against DC "+dc+"."
                     + S.FourDegreesOfSuccess(

@@ -78,7 +78,7 @@ public static class Aid
                             cr,
                             ModData.Illustrations.Aid,
                             "Prepare to Aid",
-                            [],
+                            [ModData.Traits.MoreBasicActions],
                             BasicPrepareToAidDescription+"\n\n"+BasicAidReactionDescription,
                             Target.AdjacentCreature()),
                     };
@@ -164,7 +164,7 @@ public static class Aid
                 owner,
                 IllustrationName.Action,
                 "INCOMPLETE TEXT",
-                [Trait.DoNotShowOverheadOfActionName, Trait.DoNotShowInContextMenu, Trait.Basic],
+                [ModData.Traits.MoreBasicActions, Trait.DoNotShowOverheadOfActionName, Trait.DoNotShowInContextMenu, Trait.Basic],
                 "INCOMPLETE TEXT",
                 skill != null ? Target.AdjacentFriend() : Target.AdjacentCreature())
             .WithActionCost(1)
@@ -354,7 +354,7 @@ public static class Aid
                         aider,
                         IllustrationName.None,
                         $"Aid ({skill.HumanizeTitleCase2()})",
-                        [],
+                        [ModData.Traits.MoreBasicActions],
                         CreateAidReactionDescription(rank).Replace("{b}Aid{b} {icon:Reaction}\n", ""),
                         Target.AdjacentCreature())
                     .WithActionCost(0)

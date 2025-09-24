@@ -108,7 +108,7 @@ public static class DropProne
                 owner,
                 IllustrationName.DropProne,
                 "Drop prone",
-                [Trait.Move, Trait.ProvokesAfterActionCompletion, Trait.Basic],
+                [ModData.Traits.MoreBasicActions, Trait.Move, Trait.ProvokesAfterActionCompletion, Trait.Basic],
                 "You fall prone.\n\nThis is {Red}largely disadvantageous{/Red} but situationally useful:\n"
                 + "\n• {b}Hit the deck.{/b} You can Take Cover {icon:Action} while prone to gain greater cover against ranged attacks."
                 + "\n• {b}Drop and roll.{/b} Make a recovery check to end persistent acid and fire damage. If you're standing or swimming in water, you automatically succeed instead. {i}(Can be repeated if you are already prone, without having to Stand.){/i}",
