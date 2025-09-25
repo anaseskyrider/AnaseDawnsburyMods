@@ -209,7 +209,7 @@ public static class GuardianClass
                     int amount = 1 + (self.Owner.Level / 2);
                     self.Owner.WeaknessAndResistance.AddSpecialResistance(
                         "physical",
-                        (_, dk) => dk.IsPhysical() || dk is DamageKind.Bleed,
+                        (_, dk) => dk.IsPhysical(),
                         amount,
                         null);
                 };
