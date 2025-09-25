@@ -1,5 +1,6 @@
 using Dawnsbury.Audio;
 using Dawnsbury.Core;
+using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
@@ -61,6 +62,11 @@ public static class ModData
                     && (armor1.HasTrait(Trait.MediumArmor) || armor1.HasTrait(Trait.HeavyArmor)))
                    || (cr.BaseArmor is {} armor2
                        && (armor2.HasTrait(Trait.MediumArmor) || armor2.HasTrait(Trait.HeavyArmor)));
+        }
+
+        public static bool HasInterceptAttack(CalculatedCharacterSheetValues values)
+        {
+            return values.HasFeat(FeatNames.InterceptAttack) || values.HasFeat(FeatNames.GuardiansIntercept);
         }
     }
     

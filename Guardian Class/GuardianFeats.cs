@@ -270,7 +270,7 @@ public static class GuardianFeats
                             additionalCriticalFailureText: "You are off-guard to the target's melee attacks until the end of your next turn.");
                         sCheck.Target = (sCheck.Target as CreatureTarget)!
                             .WithAdditionalConditionOnTargetCreature(
-                                ModData.CommonRequirements.WearingMediumOrHeavyArmor());
+                                ModData.CommonRequirements.MustWearMediumOrHeavyArmor());
 
                         return sCheck;
                     };
@@ -449,7 +449,7 @@ public static class GuardianFeats
                                 "{i}You take comfort in the safety of your armor.{/i}\n\n{b}Requirements{/b} You are wearing medium or heavy armor.\n{b}Frequency{/b} once per encounter\n\nYou gain {Blue}"+qfThis.Owner.Level+"{/Blue} temporary Hit Points. Reduce your frightened condition value by 1.",
                                 Target.Self()
                                     .WithAdditionalRestriction(cr =>
-                                        ModData.CommonRequirements.WearingMediumOrHeavyArmor()
+                                        ModData.CommonRequirements.MustWearMediumOrHeavyArmor()
                                             .Satisfied(cr, cr).UnusableReason))
                             .WithSoundEffect(SfxName.MinorAbjuration)
                             .WithEffectOnSelf(async self =>
@@ -474,7 +474,7 @@ public static class GuardianFeats
                 "You can use Intercept Attack to take energy damage, not just physical damage.",
                 qfFeat => {})
             .WithPrerequisite(
-                values => values.HasFeat(ModData.FeatNames.InterceptAttack),
+                ModData.CommonRequirements.HasInterceptAttack,
                 "You must have the guardian's Intercept Attack feature.");
         // Flying Tackle
         // Not So Fast!
@@ -516,7 +516,7 @@ public static class GuardianFeats
                             prologueText: "{b}Requirements{/b} Your taunted enemy is off-guard because it didn't target you or include you in an area effect.\n");
                         (proudNail.Target as CreatureTarget)! // Strikes always make CreatureTargets
                             .WithAdditionalConditionOnTargetCreature((a, d) => 
-                                d.QEffects.Any(qf => qf.Key == ModData.CommonQFKeys.OffGuardDueToTaunt+a.Name)
+                                d.QEffects.Any(qf => qf.Key == ModData.CommonQfKeys.OffGuardDueToTaunt+a.Name)
                                     ? Usability.Usable
                                     : Usability.NotUsableOnThisCreature("Hasn't ignored your Taunt"));
                         
@@ -841,7 +841,7 @@ public static class GuardianFeats
                                 "{i}As you move forward in a rush, you put the weight of your armor behind an attack that can drag a foe with you.{/i}\n\n{b}Requirements{/b} You are wearing medium or heavy armor.\n\nYou Stride. If you end your movement within melee reach of at least one enemy, you can make a melee Strike against that enemy, then Stride again.\n\nIf your Strike hit and dealt damage, that enemy is pulled with you and is moved the same direction and distance as your second Stride.",
                                 Target.Self()
                                     .WithAdditionalRestriction(cr =>
-                                        ModData.CommonRequirements.WearingMediumOrHeavyArmor()
+                                        ModData.CommonRequirements.MustWearMediumOrHeavyArmor()
                                             .Satisfied(cr, cr).UnusableReason))
                             .WithActionCost(2)
                             .WithSoundEffect(SfxName.Footsteps)
