@@ -104,6 +104,7 @@ public static class ModData
     {
         public static readonly FeatName CooperativeNature = ModManager.RegisterFeatName(IdPrepend+"Human.CooperativeNature", "Cooperative Nature");
         public static readonly FeatName QuickRepair = ModManager.RegisterFeatName(IdPrepend+"QuickRepair", "Quick Repair");
+        public static readonly FeatName QuickJump = ModManager.RegisterFeatName(IdPrepend+"QuickJump", "Quick Jump");
     }
 
     public static class Illustrations
@@ -115,6 +116,7 @@ public static class ModData
         public static readonly Illustration HelpUp = new ModdedIllustration("MoreBasicActionsAssets/helping-hand.png");
         //new ModdedIllustration("MoreBasicActionsAssets/helping-hand.png");
         public static readonly Illustration QuickRepair = IllustrationName.Adamantine;
+        public static readonly Illustration LongJump = new ModdedIllustration("MoreBasicActionsAssets/jumping.png");
         public static readonly Illustration Reposition = new ModdedIllustration("MoreBasicActionsAssets/person (cropped).png");
     }
     
