@@ -24,6 +24,7 @@ public class ModLoader
         ModData.LoadData();
         GuardianClass.LoadClass();
         GuardianFeats.LoadFeats();
+        GuardianArchetype.LoadArchetype();
         
         // Update class language
         LoadOrder.AtEndOfLoadingSequence += () =>

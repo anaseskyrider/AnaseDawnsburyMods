@@ -89,6 +89,10 @@ public static class GuardianClass
                 {
                     values2.GrantFeat(ModData.FeatNames.ToughToKill);
                 });
+                // I found a cool way to do this but I'm not going to risk refactors. Code kept in comments for future projects.
+                /*// Level 5
+                foreach (Trait trait in (Trait[])[Trait.MediumArmor, Trait.HeavyArmor, Trait.Simple, Trait.Martial, Trait.Unarmed])
+                    values.IncreaseProficiency(5, trait, Proficiency.Expert);*/
                 values.AddAtLevel(5, values2 =>
                 {
                     values2.SetProficiency(Trait.MediumArmor, Proficiency.Expert);
@@ -297,6 +301,8 @@ public static class GuardianClass
             .WithPermanentQEffect("Take damage for an adjacent ally, Stepping towards the ally if necessary, or Striding if the attacker is your taunted enemy.",
                 qfFeat =>
                 {
+                    if (qfFeat.Owner.HasFeat(ModData.FeatNames.GuardiansIntercept))
+                        qfFeat.Description = "{Green}(once per combat){/Green} " + qfFeat.Description;
                     const int interceptRange = 3;
                     qfFeat.AddGrantingOfTechnical(cr =>
                             qfFeat.Owner.FriendOfAndNotSelf(cr) && cr.DistanceTo(qfFeat.Owner) <= interceptRange,
@@ -308,6 +314,11 @@ public static class GuardianClass
                                 Creature ally = qfTech2.Owner;
                                 Creature attacker = @event.Source;
                                 bool isCritical = @event.CheckResult is CheckResult.CriticalSuccess or CheckResult.CriticalFailure;
+                                
+                                CombatAction interceptAttack = CreateInterceptAttack(guardian, ally, attacker, @event);
+                                if (!interceptAttack.CanBeginToUse(qfFeat.Owner))
+                                    return;
+                                
                                 if (@event.KindedDamages.Any(IsTriggerableDamageType)
                                     && ally.DistanceTo(guardian) <= interceptRange - (attacker.HasEffect(ModData.QEffectIds.TauntTarget) ? 0 : 1)
                                     && await guardian.Battle.AskToUseReaction(
@@ -315,8 +326,12 @@ public static class GuardianClass
                                         $"{{b}}Intercept Attack{{/b}} {{icon:Reaction}}\n{{Blue}}{attacker}{{/Blue}} is about to deal {(isCritical ? "{Red}critical{/Red} " : null)}damage to {{Blue}}{ally}{{/Blue}}. Take the damage instead?",
                                         ModData.Illustrations.InterceptAttack))
                                 {
-                                    CombatAction interceptAttack = CreateInterceptAttack(guardian, ally, attacker, @event);
+                                    //CombatAction interceptAttack = CreateInterceptAttack(guardian, ally, attacker, @event);
                                     await qfFeat.Owner.Battle.GameLoop.FullCast(interceptAttack);
+                                    if (qfFeat.Owner.HasFeat(ModData.FeatNames.GuardiansIntercept))
+                                        qfFeat.Description = qfFeat.Description?
+                                            .Replace("{Green}", "{Red}")
+                                            .Replace("{/Green}", "{/Red}");
                                 }
                             };
                         });
@@ -571,7 +586,7 @@ public static class GuardianClass
                 QEffect offguard = QEffect.FlatFooted("Taunt");
                 offguard.ExpiresAt = ExpirationCondition.ExpiresAtStartOfYourTurn;
                 offguard.Source = taunter;
-                offguard.Key = ModData.CommonQFKeys.OffGuardDueToTaunt+taunter;
+                offguard.Key = ModData.CommonQfKeys.OffGuardDueToTaunt+taunter;
                 qfThis.Owner.AddQEffect(offguard);
                 
                 // PETR: Temporary fix until all CombatActions which have a SavingThrow will let you apply DC penalties.

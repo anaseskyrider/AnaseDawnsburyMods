@@ -1,6 +1,7 @@
 using Dawnsbury.Audio;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations.Movement;
+using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
