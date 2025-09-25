@@ -1,10 +1,10 @@
 using Dawnsbury.Audio;
-using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
+using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Possibilities;
@@ -46,6 +46,11 @@ public static class ModData
         public static readonly string OffGuardDueToTaunt = "TauntOffGuard";
     }
 
+    public static class CommonReactionKeys
+    {
+        public const string ReactionTime = "ReactionTime";
+    }
+
     public static class CommonRequirements
     {
         public static CreatureTargetingRequirement MustWearMediumOrHeavyArmor()
@@ -67,6 +72,13 @@ public static class ModData
         public static bool HasInterceptAttack(CalculatedCharacterSheetValues values)
         {
             return values.HasFeat(FeatNames.InterceptAttack) || values.HasFeat(FeatNames.GuardiansIntercept);
+        }
+
+        public static bool IsInterceptableDamageType(Creature guardian, KindedDamage kd)
+        {
+            return kd.DamageKind.IsPhysical()
+                   || (guardian.HasFeat(FeatNames.EnergyInterceptor)
+                       && kd.DamageKind.IsEnergy());
         }
     }
     
@@ -161,6 +173,7 @@ public static class ModData
     public static class QEffectIds
     {
         public static readonly QEffectId TauntTarget = ModManager.RegisterEnumMember<QEffectId>("TauntTarget");
+        public static readonly QEffectId ReactionTime = ModManager.RegisterEnumMember<QEffectId>("ReactionTime");
         public static readonly QEffectId BodyguardCharge = ModManager.RegisterEnumMember<QEffectId>("Bodyguard's Charge");
     }
     

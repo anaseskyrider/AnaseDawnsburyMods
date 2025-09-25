@@ -1,3 +1,4 @@
+using Dawnsbury.Auxiliary;
 using Dawnsbury.Campaign.Encounters.Tutorial;
 using Dawnsbury.Campaign.Path;
 using Dawnsbury.Core;
@@ -9,6 +10,7 @@ using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Creatures.Parts;
+using Dawnsbury.Core.Intelligence;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Damage;
@@ -305,7 +307,8 @@ public static class GuardianClass
                         qfFeat.Description = "{Green}(once per combat){/Green} " + qfFeat.Description;
                     const int interceptRange = 3;
                     qfFeat.AddGrantingOfTechnical(cr =>
-                            qfFeat.Owner.FriendOfAndNotSelf(cr) && cr.DistanceTo(qfFeat.Owner) <= interceptRange,
+                            qfFeat.Owner.FriendOfAndNotSelf(cr)
+                            && cr.DistanceTo(qfFeat.Owner) <= interceptRange,
                         qfTech =>
                         {
                             qfTech.YouAreDealtDamageEvent = async (qfTech2, @event) =>
@@ -315,32 +318,29 @@ public static class GuardianClass
                                 Creature attacker = @event.Source;
                                 bool isCritical = @event.CheckResult is CheckResult.CriticalSuccess or CheckResult.CriticalFailure;
                                 
-                                CombatAction interceptAttack = CreateInterceptAttack(guardian, ally, attacker, @event);
+                                CombatAction interceptAttack = CreateInterceptAttack(
+                                    guardian,
+                                    attacker,
+                                    @event,
+                                    !guardian.Actions.ReactionsUsedUpThisRound.Contains(ModData.CommonReactionKeys.ReactionTime));
+                                
                                 if (!interceptAttack.CanBeginToUse(qfFeat.Owner))
                                     return;
                                 
-                                if (@event.KindedDamages.Any(IsTriggerableDamageType)
-                                    && ally.DistanceTo(guardian) <= interceptRange - (attacker.HasEffect(ModData.QEffectIds.TauntTarget) ? 0 : 1)
-                                    && await guardian.Battle.AskToUseReaction(
+                                if (await guardian.Battle.AskToUseReaction(
                                         guardian,
                                         $"{{b}}Intercept Attack{{/b}} {{icon:Reaction}}\n{{Blue}}{attacker}{{/Blue}} is about to deal {(isCritical ? "{Red}critical{/Red} " : null)}damage to {{Blue}}{ally}{{/Blue}}. Take the damage instead?",
-                                        ModData.Illustrations.InterceptAttack))
+                                        ModData.Illustrations.InterceptAttack,
+                                        [ModData.Traits.Guardian]))
                                 {
-                                    //CombatAction interceptAttack = CreateInterceptAttack(guardian, ally, attacker, @event);
-                                    await qfFeat.Owner.Battle.GameLoop.FullCast(interceptAttack);
-                                    if (qfFeat.Owner.HasFeat(ModData.FeatNames.GuardiansIntercept))
+                                    await guardian.Battle.GameLoop.FullCast(
+                                        interceptAttack, ChosenTargets.CreateSingleTarget(ally));
+                                    if (guardian.HasFeat(ModData.FeatNames.GuardiansIntercept))
                                         qfFeat.Description = qfFeat.Description?
-                                            .Replace("{Green}", "{Red}")
-                                            .Replace("{/Green}", "{/Red}");
+                                            .Replace("Green}", "Red}");
                                 }
                             };
                         });
-                    return;
-
-                    bool IsTriggerableDamageType(KindedDamage kd)
-                    {
-                        return kd.DamageKind.IsPhysical() || (qfFeat.Owner.HasFeat(ModData.FeatNames.EnergyInterceptor) && kd.DamageKind.IsEnergy());
-                    }
                 });
         // Tough to Kill
         yield return new TrueFeat(
@@ -414,18 +414,15 @@ public static class GuardianClass
             .WithPermanentQEffect("You gain an additional reaction you can use for guardian feats and features (including Shield Block).",
                 qfFeat =>
                 {
-                    qfFeat.StartOfCombat = async qfThis =>
-                    {
-                        qfThis.Owner.AddQEffect(MoreShields.ReactionsExpanded.ExtraReaction(
-                            "Reaction Time",
-                            "You can take an additional reaction for guardian feats and features each round.",
-                            null,
-                            reaction =>
-                                reaction.HasTrait(ModData.Traits.Guardian)
-                                || reaction.HasTrait(Trait.AttackOfOpportunity)
-                                || reaction.ActionId == MoreShields.ModData.ActionIds.ShieldBlock
-                            ));
-                    };
+                    qfFeat.Id = ModData.QEffectIds.ReactionTime;
+                    qfFeat.OfferExtraReaction = (qfThis, questionText, reactionTraits) => 
+                        reactionTraits.ContainsOneOf([
+                            ModData.Traits.Guardian,
+                            Trait.AttackOfOpportunity,
+                            Trait.ShieldBlock,
+                        ]) 
+                            ? ModData.CommonReactionKeys.ReactionTime
+                            : null;
                 });
         // Guardian Mastery
         yield return new TrueFeat(
@@ -631,8 +628,10 @@ public static class GuardianClass
     /// <param name="ally"></param>
     /// <param name="attacker"></param>
     /// <param name="dEvent"></param>
-    public static CombatAction CreateInterceptAttack(Creature owner, Creature ally, Creature attacker, DamageEvent dEvent)
+    /// <param name="refundBonusReaction">An additional parameter specifying whether to restore ReactionTime when refunding your reaction.</param>
+    public static CombatAction CreateInterceptAttack(Creature owner, Creature attacker, DamageEvent dEvent, bool refundBonusReaction = false)
     {
+        const int interceptRange = 3;
         bool canStride = attacker.HasEffect(ModData.QEffectIds.TauntTarget);
         int stepSpeed = owner.HasEffect(QEffectId.ElfStep) ? 2 : 1;
         
@@ -642,34 +641,60 @@ public static class GuardianClass
             "Intercept Attack",
             [Trait.Basic, ModData.Traits.Guardian, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName],
             "{i}You fling yourself in the way of oncoming harm to protect an ally.{/i}\n\nYou can Step, but you must end your movement adjacent to the triggering ally. You take the damage instead of the triggering ally. Apply your own immunities, weaknesses, and resistances to the damage, not the ally's.\n\n{b}Special{/b} You can extend this ability to an ally within 15 feet of you if the damage comes from your taunted enemy. If this ally is farther than you can Step to reach, you can Stride instead of Stepping; you still must end the movement adjacent to your ally.",
-            Target.Self()) // TODO: Use what was learned from Juggernaut Charge & Retaliating Rescue to update target functionality.
+            Target.RangedFriend(interceptRange - (canStride ? 0 : 1))
+                .WithAdditionalConditionOnTargetCreature((a,d) =>
+                {
+                    if (attacker == attacker.Battle.Pseudocreature)
+                        return Usability.NotUsable("Pseudocreature");
+                    /*if (d != ally)
+                        return Usability.NotUsableOnThisCreature("Not the target of Intercept Attack");*/
+                    if (!dEvent.KindedDamages.Any(kd =>
+                            ModData.CommonRequirements.IsInterceptableDamageType(a, kd)))
+                        return Usability.NotUsable("Damage does not trigger Intercept Attack");
+                    if (GetLegalTiles(a, d, canStride).Count == 0)
+                        return Usability.NotUsableOnThisCreature("Nowhere to move");
+                    return Usability.Usable;
+                }))
         .WithActionCost(0)
         .WithActionId(ModData.ActionIds.InterceptAttack)
-        .WithEffectOnSelf(async (action, self) =>
+        .WithEffectOnEachTarget(async (action, self, ally, _) =>
         {
             // Pick a tile
             string question = $"Choose where to Step{(canStride ? " or Stride" : null)} with Intercept Attack or right-click to continue. You must end your movement adjacent to the triggering ally.";
             Tile? chosenTile = await self.Battle.AskToChooseATile(
                 self,
-                self.Battle.Map.AllTiles.Where(tile =>
-                    tile.IsAdjacentTo(ally.Occupies)
-                    && tile.LooksFreeTo(self)
-                    && (canStride || self.HasEffect(QEffectId.FeatherStep) || !tile.CountsAsNonignoredDifficultTerrainFor(self))
-                    && self.Occupies.DistanceTo(tile) <= (canStride ? self.Speed : stepSpeed)),
+                Pathfinding.Floodfill(
+                        self, self.Battle, new PathfindingDescription()
+                        {
+                            Squares = self.Speed,
+                            Style =
+                            {
+                                MaximumSquares = self.Speed,
+                                PermitsStep = true
+                            }
+                        })
+                    .Where(tile => IsLegalTile(tile, self, ally, canStride)),
                 ModData.Illustrations.InterceptAttack,
-                question,
-                "Move here",
-                true,
-                true,
-                "Don\'t move");
+                question, "Move here",
+                true, true,
+                "Don\'t step" + (canStride ? " or stride" : null));
             // Step/Stride to that tile
-            if ((chosenTile == null || await self.StrideAsync(question, allowStep: true, strideTowards: chosenTile) == false)
-                && !self.IsAdjacentTo(ally))
+            if (chosenTile == null && !self.IsAdjacentTo(ally))
             {
-                self.Battle.Log("Reaction refunded: ally was not in range.");
-                self.Actions.RefundReaction();
+                string log = "reaction";
+                if (refundBonusReaction)
+                {
+                    self.Actions.ReactionsUsedUpThisRound.Remove(ModData.CommonReactionKeys.ReactionTime);
+                    log = "bonus " + log;
+                }
+                else
+                    self.Actions.RefundReaction();
+                self.Battle.Log(log.Capitalize() + " refunded: no square chosen, and not adjacent to ally.");
                 return;
             }
+
+            await self.StrideAsync(question, allowStep: true, strideTowards: chosenTile);
+                
             DamageEvent interceptedDamage = new DamageEvent(
                 dEvent.CombatAction,
                 owner,
@@ -681,23 +706,6 @@ public static class GuardianClass
                 //HalveDamage = dEvent.HalveDamage, // Halves twice
                 //Bonuses = @event.Bonuses, // Recalculates
             };
-            /*self.AddQEffect(new QEffect()
-            {
-                YouAreDealtDamage = async (qfThis, a, dStuff, d) =>
-                {
-                    if (dStuff.Power != interceptedDamage.CombatAction)
-                        return null;
-                    self.Overhead(
-                        "intercept attack",
-                        Color.White,
-                        self + " uses {b}Intercept Attack{/b} to take {b}" + dStuff.Amount + "{/b} damage.",
-                        action.Name +" {icon:Reaction}",
-                        action.Description,
-                        action.Traits);
-                    qfThis.ExpiresAt = ExpirationCondition.Immediately;
-                    return null;
-                }
-            });*/
             self.Overhead(
                 "intercept attack",
                 Color.White,
@@ -710,5 +718,21 @@ public static class GuardianClass
         });
         
         return interceptAttack;
+
+        List<Tile> GetLegalTiles(Creature guardian, Creature ally_2, bool canStride_2)
+        {
+            return guardian.Battle.Map.AllTiles
+                .Where(tile => IsLegalTile(tile, guardian, ally_2, canStride_2))
+                .ToList();
+        }
+
+        bool IsLegalTile(Tile tile, Creature guardian, Creature ally_2, bool canStride_2)
+        {
+            return tile.IsAdjacentTo(ally_2.Occupies)
+                    && tile.LooksFreeTo(guardian)
+                    && (canStride_2 || guardian.HasEffect(QEffectId.FeatherStep) ||
+                        !tile.CountsAsNonignoredDifficultTerrainFor(guardian))
+                    && guardian.DistanceTo(tile) <= (canStride_2 ? guardian.Speed : stepSpeed);
+        }
     }
 }
