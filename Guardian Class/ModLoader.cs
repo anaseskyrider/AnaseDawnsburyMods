@@ -6,14 +6,12 @@ using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.Library;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Requests;
-using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
-using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.GuardianClass;
-public class ModLoader
+public static class ModLoader
 {
     [DawnsburyDaysModMainMethod]
     public static void LoadMod()
@@ -47,7 +45,7 @@ public class ModLoader
     /// <summary>Causes a QEffect to put an action in the Offense section with the given short description, but without listing any attack statistics.</summary>
     public static void DisplaysAsOffenseAction(QEffect qfFeat, string actionName, string shortDescription, int cost = 1)
     {
-        qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+        qfFeat.ProvideActionIntoPossibilitySection += (qfThis, section) =>
         {
             // Inserts into invisible section
             if (section.PossibilitySectionId != PossibilitySectionId.InvisibleActions)

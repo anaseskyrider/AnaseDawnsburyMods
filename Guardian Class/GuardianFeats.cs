@@ -192,7 +192,7 @@ public static class GuardianFeats
                 "You hit a foe with your armor to throw them off balance.",
                 // fist, kick, gauntlet, or spiked gauntlet.
                 "Make a Strike with a fist or kick. The Strike gains the following additional results." + S.FourDegreesOfSuccess(
-                    "The target is off-guard against melee attacks you attempt against it until the end of your next turn",
+                    "The target is off-guard against melee attacks you attempt against it until the end of your next turn.",
                     "The target is off-guard against the next melee attack you attempt against it before the end of your current turn.",
                     null,
                     "You are off-guard against melee attacks the target attempts against you until the end of your next turn."),
@@ -494,7 +494,8 @@ public static class GuardianFeats
                     ModLoader.DisplaysAsOffenseAction(
                         qfFeat,
                         "Proud Nail",
-                        "Strike a foe who is off-guard due to ignoring your Taunt, dealing extra damage.");
+                        "Strike a foe who ignored your Taunt, dealing extra damage.");
+                    
                     qfFeat.ProvideStrikeModifier = item =>
                     {
                         int lvl = qfFeat.Owner.Level;
@@ -629,12 +630,12 @@ public static class GuardianFeats
                 self.AddQEffect(reactiveStrike);
             })
             .WithEquivalent(values => values.AllFeats.Any(ft => ft.BaseName is "Attack of Opportunity" or "Reactive Strike" or "Opportunist"));
-        // Retaliating Rescue <---- High priority
+        // Retaliating Rescue
         yield return new TrueFeat(
                 ModData.FeatNames.RetaliatingRescue,
                 6,
                 "When an ally is in danger, you can hustle to reach them and punish the foe threatening them.",
-                "Stride up to your Speed. You must end this movement adjacent to an ally who is within an enemy’s reach. Then, you push your ally up to 5 feet (as normal for forced movement, this movement doesn't trigger reactions) and make a melee Strike against an enemy within your reach. If your ally was in that enemy's reach and your push moved them out of it, you gain a +2 circumstance bonus to your attack roll.",
+                "Stride up to your Speed. You must end this movement adjacent to an ally who is within an enemy's reach. Then, you push your ally up to 5 feet (as normal for forced movement, this movement doesn't trigger reactions) and make a melee Strike against an enemy within your reach. If your ally was in that enemy's reach and your push moved them out of it, you gain a +2 circumstance bonus to your attack roll.",
                 [ModData.Traits.Guardian])
             .WithActionCost(2)
             .WithPermanentQEffect(
@@ -654,7 +655,7 @@ public static class GuardianFeats
                                 new SideBySideIllustration(IllustrationName.QuickenTime, IllustrationName.KineticRam),
                                 "Retaliating Rescue",
                                 [Trait.Basic, ModData.Traits.Guardian],
-                                "{i}When an ally is in danger, you can hustle to reach them and punish the foe threatening them.{/i}\n\nStride up to your Speed. You must end this movement adjacent to an ally who is within an enemy’s reach. Then, you push your ally up to 5 feet (as normal for forced movement, this movement doesn't trigger reactions) and make a melee Strike against an enemy within your reach. If your ally was in that enemy's reach and your push moved them out of it, you gain a +2 circumstance bonus to your attack roll.",
+                                "{i}When an ally is in danger, you can hustle to reach them and punish the foe threatening them.{/i}\n\nStride up to your Speed. You must end this movement adjacent to an ally who is within an enemy's reach. Then, you push your ally up to 5 feet (as normal for forced movement, this movement doesn't trigger reactions) and make a melee Strike against an enemy within your reach. If your ally was in that enemy's reach and your push moved them out of it, you gain a +2 circumstance bonus to your attack roll.",
                                 Target.Tile(
                                         (self, t) =>
                                         {
