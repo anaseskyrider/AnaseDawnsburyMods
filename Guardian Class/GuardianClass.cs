@@ -657,6 +657,7 @@ public static class GuardianClass
                 }))
         .WithActionCost(0)
         .WithActionId(ModData.ActionIds.InterceptAttack)
+        .WithTag(dEvent) // Store the damage event
         .WithEffectOnEachTarget(async (action, self, ally, _) =>
         {
             // Pick a tile
@@ -679,21 +680,24 @@ public static class GuardianClass
                 true, true,
                 "Don\'t step" + (canStride ? " or stride" : null));
             // Step/Stride to that tile
-            if (chosenTile == null && !self.IsAdjacentTo(ally))
+            if (chosenTile == null)
             {
-                string log = "reaction";
-                if (refundBonusReaction)
+                if (!self.IsAdjacentTo(ally))
                 {
-                    self.Actions.ReactionsUsedUpThisRound.Remove(ModData.CommonReactionKeys.ReactionTime);
-                    log = "bonus " + log;
+                    string log = "reaction";
+                    if (refundBonusReaction)
+                    {
+                        self.Actions.ReactionsUsedUpThisRound.Remove(ModData.CommonReactionKeys.ReactionTime);
+                        log = "bonus " + log;
+                    }
+                    else
+                        self.Actions.RefundReaction();
+                    self.Battle.Log(log.Capitalize() + " refunded: no square chosen, and not adjacent to ally.");
+                    return;
                 }
-                else
-                    self.Actions.RefundReaction();
-                self.Battle.Log(log.Capitalize() + " refunded: no square chosen, and not adjacent to ally.");
-                return;
             }
-
-            await self.StrideAsync(question, allowStep: true, strideTowards: chosenTile);
+            else
+                await self.StrideAsync(question, allowStep: true, strideTowards: chosenTile);
                 
             DamageEvent interceptedDamage = new DamageEvent(
                 dEvent.CombatAction,
