@@ -1,10 +1,11 @@
 using Dawnsbury.Audio;
+using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations.Movement;
-using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Kineticist;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
@@ -14,12 +15,15 @@ using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Intelligence;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
+using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.ReactiveAttacks;
 using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
+using Dawnsbury.Core.Mechanics.Zoning;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
@@ -206,6 +210,7 @@ public static class GuardianFeats
                         qfFeat,
                         "Shoulder Check",
                         "Make a fist Strike that can make a foe off-guard.");
+                    qfFeat.Id = QEffectId.AlwaysShowedUnarmedStrike;
                     qfFeat.ProvideStrikeModifier = item =>
                     {
                         if (!item.HasTrait(Trait.Fist))
@@ -281,6 +286,59 @@ public static class GuardianFeats
         #region Level 2
         // Covering Stance
         // Hampering Stance
+        yield return new TrueFeat(
+                ModData.FeatNames.HamperingStance,
+                2,
+                "You make it difficult for enemies to move past you.",
+                "While you are in this stance, squares in a 5-foot emanation are difficult terrain for your enemies.",
+                [Trait.Aura, ModData.Traits.Guardian, Trait.Stance])
+            .WithActionCost(1)
+            .WithPermanentQEffect(
+                qfFeat =>
+                {
+                    qfFeat.ProvideMainAction = qfThis =>
+                        new ActionPossibility(
+                            new CombatAction(
+                                    qfThis.Owner,
+                                    ModData.Illustrations.HamperingStance,
+                                    "Hampering Stance",
+                                    [Trait.Aura, ModData.Traits.Guardian, Trait.Stance],
+                                    "",
+                                    Target.Self()
+                                        .WithAdditionalRestriction(self =>
+                                            self.HasEffect(ModData.QEffectIds.HamperingStance)
+                                            ? "You're already in this stance." : null))
+                                .WithDescription(
+                                    "You make it difficult for enemies to move past you.",
+                                    "While you are in this stance, squares in a 5-foot emanation are difficult terrain for your enemies.")
+                                .WithShortDescription("Enter a stance that makes adjacent squares into difficult terrain for your enemies")
+                                .WithActionCost(1)
+                                .WithSoundEffect(SfxName.StandUp)
+                                .WithEffectOnEachTarget(async (_, caster, _, _) =>
+                                {
+                                    QEffect stance = KineticistCommonEffects.EnterStance(
+                                        caster,
+                                        ModData.Illustrations.HamperingStance,
+                                        "Hampering Stance",
+                                        "Squares adjacent to you are difficult terrain for your enemies.",
+                                        ModData.QEffectIds.HamperingStance);
+                                    Zone terrain = Zone.Spawn(stance, ZoneAttachment.Aura(1))
+                                        .With(zone =>
+                                        {
+                                            zone.TileEffectCreator = tile =>
+                                                new TileQEffect(tile)
+                                                {
+                                                    Illustration = ((IReadOnlyList<IllustrationName>)
+                                                    [
+                                                        IllustrationName.Rubble,
+                                                        IllustrationName.Rubble2
+                                                    ]).GetRandomVisualOnly(),
+                                                    StateCheck = tQf =>
+                                                        tile.DifficultTerrainToComputerControlledCreatures = true
+                                                };
+                                        });
+                                }));
+                });
         // Phalanx Formation
         // Raise Haft ???
         // Shield Your Eyes (useless?)
@@ -479,6 +537,161 @@ public static class GuardianFeats
                 "You must have the guardian's Intercept Attack feature.");
         // Flying Tackle
         // Not So Fast!
+        yield return new TrueFeat(
+                ModData.FeatNames.NotSoFast,
+                4,
+                "You lash out when foes try to get past you, possibly stopping them in their tracks.",
+                "{b}Requirements{/b} You are in Hampering Stance.\n{b}Trigger{/b} A creature within your reach leaves a square during a move action it's using.\n\nMake a melee Strike against the triggering creature. The Strike gains the following additional results."
+                + S.FourDegreesOfSuccess(
+                    "The target's movement is disrupted.",
+                    "The target takes a –10-foot circumstance penalty to its Speed for the rest of its triggering movement. This penalty might cause the triggering creature's movement to end immediately based on its affected Speed.",
+                    "As success, but the target instead takes a –5-foot circumstance penalty to its Speed.",
+                    "The target is unaffected."),
+                [ModData.Traits.Guardian])
+            .WithActionCost(-2)
+            .WithPrerequisite(ModData.FeatNames.HamperingStance, "Hampering Stance")
+            .WithOnCreature(self =>
+            {
+                AttackOfOpportunityMechanics mechanics = new AttackOfOpportunityMechanics()
+                {
+                    Name = "Not So Fast!", // QuestionText doesn't ask about the name
+                    Description = "While in Hampering Stance, creatures who leave a square in your reach provoke a reaction to Strike and slow them down.",
+                    RestrictToOnlyAgainstWhom = (qfReact, _) =>
+                        qfReact.Owner.HasEffect(ModData.QEffectIds.HamperingStance),
+                    OverheadName = "*not so fast!*",
+                    StandStill = true,
+                    StrikeAndReactionTraits = [ModData.Traits.Guardian, ModData.Traits.NotSoFastAttack, Trait.ReactiveAttack],
+                    NumberOfStrikes = 1,
+                };
+                QEffect notSoFast = AttackOfOpportunityMechanics.AttackOfOpportunity(mechanics);
+                var oldProvoke = notSoFast.WhenProvoked;
+                notSoFast.WhenProvoked = async (qfThis, action) =>
+                {
+                    // Must be exiting a square, not just any move action.
+                    if (action.TilesMoved == 0)
+                        return;
+                    await oldProvoke!.Invoke(qfThis, action);
+                };
+                notSoFast.AfterYouTakeAction = async (qfThis, action) =>
+                {
+                    if (!action.HasTrait(ModData.Traits.NotSoFastAttack))
+                        return;
+
+                    Creature provoker = action.ChosenTargets.ChosenCreature!;
+                    
+                    // Determine move disruption result
+                    int pen = 1;
+                    switch (action.CheckResult)
+                    {
+                        //
+                        // Disrupt on a crit success is handled by StandStill = true
+                        //
+                        case CheckResult.Success:
+                            pen = 2;
+                            goto case CheckResult.Failure;
+                        case CheckResult.Failure:
+                            // Apply the speed penalty
+                            QEffect speedPen = QEffect.PenaltyToSpeed(pen, BonusType.Circumstance);
+                            speedPen.ExpiresAt = ExpirationCondition.ExpiresAtEndOfYourTurn;
+                            speedPen.StateCheck += qfPen =>
+                            {
+                                if (qfPen.Owner.AnimationData.LongMovement is null)
+                                    qfPen.ExpiresAt = ExpirationCondition.Immediately;
+                            };
+                            provoker.AddQEffect(speedPen);
+
+                            // Determine disruption
+                            if (provoker.AnimationData.LongMovement is { Path: not null } move)
+                            {
+                                // Calculate the cost of every possible movement along its original path.
+                                IList<Tile>? recalculated = null;
+                                foreach (Tile tile in move.Path)
+                                {
+                                    IList<Tile> truncPath = move.Path
+                                        .Take(move.Path.IndexOf(tile) + 1)
+                                        .ToList();
+                                    int cost = CostOfPath(provoker, move.OriginalTile, truncPath);
+                                    if (cost <= provoker.Speed)
+                                        recalculated = truncPath; // Store the last path it could move to
+                                    else
+                                        break;
+                                }
+
+                                // Don't do anything if it errors
+                                if (recalculated is null)
+                                    break;
+
+                                // Disrupt immediately if
+                                if (!recalculated.Contains(provoker.Occupies) // They're already too far along
+                                    || ReferenceEquals(recalculated.LastOrDefault(),
+                                        provoker.Occupies)) // Can't move further
+                                    action.Disrupted = true;
+                                // Otherwise, disrupt when they reach their new furthest intended tile
+                                else if (recalculated.Last() is { } last
+                                         && !ReferenceEquals(last, move.Path.Last()))
+                                {
+                                    speedPen.StateCheck += qfPen =>
+                                    {
+                                        if (ReferenceEquals(qfPen.Owner.Occupies, last)) // Reaches the last tile
+                                        {
+                                            action.Disrupted = true;
+                                            qfPen.ExpiresAt = ExpirationCondition.Immediately;
+                                        }
+                                    };
+                                }
+                            }
+
+                            break;
+                    }
+                };
+                self.AddQEffect(notSoFast);
+
+                return;
+                
+                // Gets the movement cost for a MOVER who begins at the START tile and follows it along a PATH. Uses LongMovement.OriginalTile and LongMovement.Path.
+                int CostOfPath(Creature mover, Tile start, IList<Tile> path)
+                {
+                    int move = 0;
+                    var diagonals = 0;
+                    for (var index = 0; index < path.Count; index++)
+                    {
+                        Tile tile = path[index];
+                        var tiles = path.ToList();
+                        if (tile.GetWalkDifficulty(mover) >= 1)
+                            move += tile.GetWalkDifficulty(mover);
+                        switch (index)
+                        {
+                            case >= 1 when tiles.Count > 1:
+                                if (Equals(tile.Neighbours.BottomLeft?.Tile,
+                                        tiles[index - 1]) ||
+                                    Equals(tile.Neighbours.BottomRight?.Tile,
+                                        tiles[index - 1]) ||
+                                    Equals(tile.Neighbours.TopLeft?.Tile,
+                                        tiles[index - 1]) ||
+                                    Equals(tile.Neighbours.TopRight?.Tile,
+                                        tiles[index - 1]))
+                                    diagonals += 1;
+                                break;
+                            case 0 when tiles.Count > 1:
+                                if (Equals(tile.Neighbours.BottomLeft?.Tile,
+                                        start) ||
+                                    Equals(tile.Neighbours.BottomRight?.Tile,
+                                        start) ||
+                                    Equals(tile.Neighbours.TopLeft?.Tile,
+                                        start) ||
+                                    Equals(tile.Neighbours.TopRight?.Tile,
+                                        start))
+                                    diagonals += 1;
+                                break;
+                        }
+                    }
+
+                    if (diagonals > 1)
+                        move += diagonals / 2;
+
+                    return move;
+                }
+            });
         // Proud Nail
         yield return new TrueFeat(
                 ModData.FeatNames.ProudNail,
@@ -499,28 +712,24 @@ public static class GuardianFeats
                     qfFeat.ProvideStrikeModifier = item =>
                     {
                         int lvl = qfFeat.Owner.Level;
-                        
-                        CombatAction proudNail = qfFeat.Owner.CreateStrike(
-                                item,
-                                -1,
-                                new StrikeModifiers()
-                                {
-                                    AdditionalWeaponDamageDice = lvl >= 18 ? 3 : lvl >= 10 ? 2 : 1,
-                                })
+
+                        StrikeModifiers newMods = new StrikeModifiers()
+                        {
+                            AdditionalWeaponDamageDice = lvl >= 18 ? 3 : lvl >= 10 ? 2 : 1,
+                        };
+                        CombatAction proudNail = qfFeat.Owner.CreateStrike(item, -1, newMods)
                             .WithName("Proud Nail")
+                            .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
+                                newMods,
+                                prologueText: "{b}Requirements{/b} Your taunted enemy is off-guard because it didn't target you or include you in an area effect.\n"))
                             .WithExtraTrait(Trait.Basic)
-                            .WithExtraTrait(Trait.Flourish);
+                            .WithExtraTrait(Trait.Flourish)
+                            .WithExtraTrait(ModData.Traits.Guardian);
                         proudNail.Illustration = new SideBySideIllustration(
-                            proudNail.Illustration,
-                            IllustrationName.StarHit);
-                        proudNail.Description = StrikeRules.CreateBasicStrikeDescription4(
-                            proudNail.StrikeModifiers,
-                            prologueText: "{b}Requirements{/b} Your taunted enemy is off-guard because it didn't target you or include you in an area effect.\n");
-                        (proudNail.Target as CreatureTarget)! // Strikes always make CreatureTargets
-                            .WithAdditionalConditionOnTargetCreature((a, d) => 
-                                d.QEffects.Any(qf => qf.Key == ModData.CommonQfKeys.OffGuardDueToTaunt+a.Name)
-                                    ? Usability.Usable
-                                    : Usability.NotUsableOnThisCreature("Hasn't ignored your Taunt"));
+                            proudNail.Illustration, IllustrationName.StarHit);
+                        ((CreatureTarget)proudNail.Target) // Strikes always make CreatureTargets
+                            .WithAdditionalConditionOnTargetCreature(
+                                ModData.CommonRequirements.OffGuardDueToMyTaunt());
                         
                         return proudNail;
                     };
@@ -530,6 +739,72 @@ public static class GuardianFeats
         
         #region Level 6
         // Disarming Intercept
+        yield return new TrueFeat(
+                ModData.FeatNames.DisarmingIntercept,
+                6,
+                "When you catch a weapon in your armor, you can move your body to wrench it from your foe's grasp.",
+                "{b}Trigger{/b} You Intercept an Attack that was made with a melee weapon by a creature you're adjacent to.\n\nAfter Intercepting the Attack, attempt to Disarm the weapon used for that attack. You don't need to have a hand free, and you gain an item bonus to the Athletics check equal to the value of your armor's potency rune.",
+                [ModData.Traits.Guardian])
+            .WithActionCost(0)
+            .WithPrerequisite(
+                values => values.HasFeat(ModData.FeatNames.InterceptAttack),
+                "You must have the Intercept Attack feature.")
+            .WithPermanentQEffect(
+                "When you Intercept an Attack, you can attempt to Disarm the attacker.",
+                qfFeat =>
+                {
+                    qfFeat.AfterYouTakeAction = async (qfThis, action) =>
+                    {
+                        if (action.ActionId != ModData.ActionIds.InterceptAttack)
+                            return;
+
+                        if ((action.Tag as DamageEvent)?.CombatAction is not { } interceptedAttack)
+                            return;
+                            
+                        // Has to be a melee strike with a disarmable item
+                        if (!interceptedAttack.HasTrait(Trait.Melee) // Melee
+                            || !interceptedAttack.HasTrait(Trait.Strike) // Strike
+                            || interceptedAttack.Item is null // With a disarmable item
+                            || !interceptedAttack.Owner.IsAdjacentTo(qfThis.Owner)) // Who's adjacent
+                            return;
+                        
+                        // Store MAP
+                        int oldMAP = qfThis.Owner.Actions.AttackedThisManyTimesThisTurn;
+                        qfThis.Owner.Actions.AttackedThisManyTimesThisTurn = 0;
+
+                        // Use disarm weapon, or use free hand
+                        Item maneuverWeapon = qfThis.Owner.HeldItems.FirstOrDefault(item =>
+                            item.HasTrait(Trait.Disarm))
+                                              ?? qfThis.Owner.UnarmedStrike;
+                        CombatAction disarm = CombatManeuverPossibilities
+                            .CreateDisarmAction(qfThis.Owner, maneuverWeapon)
+                            .WithActionCost(0);
+                        // Remove free hand requirement by rebuilding targeting
+                        disarm.Target = Target.Reach(maneuverWeapon)
+                            .WithAdditionalConditionOnTargetCreature(new TargetWieldsAnItemCreatureTargetingRequirement());
+                        
+                        // Execute Disarm
+                        qfThis.Owner.AddQEffect(new QEffect()
+                        {
+                            BonusToSkillChecks = (skill, action2, target) =>
+                                skill is Skill.Athletics
+                                && action2 == disarm
+                                && action2.Owner.BaseArmor?.ArmorProperties?.ItemBonus is { } potency
+                                    ? new Bonus(potency, BonusType.Item, "Armor potency")
+                                    : null,
+                            AfterYouTakeAction = async (qfThis2, action2) =>
+                            {
+                                if (action2 == disarm)
+                                    qfThis2.ExpiresAt = ExpirationCondition.Immediately;
+                            },
+                        });
+                        await qfThis.Owner.Battle.GameLoop.FullCast(disarm,
+                            ChosenTargets.CreateSingleTarget(interceptedAttack.Owner));
+                        
+                        // Restore MAP
+                        qfThis.Owner.Actions.AttackedThisManyTimesThisTurn = oldMAP;
+                    };
+                });
         // Guarded Advance
         yield return new TrueFeat(
                 ModData.FeatNames.GuardedAdvance,
@@ -615,6 +890,120 @@ public static class GuardianFeats
                     };
                 });
         // Lock Down
+        yield return new TrueFeat(
+                ModData.FeatNames.LockDown,
+                6,
+                "You attack an enemy to ensure they can't move beyond your reach.",
+                "{b}Requirements{/b} You are in Hampering Stance.\n\nStrike an enemy within your reach. If you hit and deal damage, that enemy must make a DC 5 flat check to successfully use move actions, or DC 11 if the action is to move beyond the reach of the weapon or unarmed attack you used for the Strike.\n\nThis effect lasts until the beginning of your next turn, until you move, or until you use that weapon or unarmed attack to make another attack, whichever comes first.",
+                [Trait.Flourish, ModData.Traits.Guardian])
+            .WithActionCost(1)
+            .WithPrerequisite(ModData.FeatNames.HamperingStance, "Hampering Stance")
+            .WithPermanentQEffect(
+                null,
+                qfFeat =>
+                {
+                    ModLoader.DisplaysAsOffenseAction(
+                        qfFeat, "Lock Down",
+                        "(Requires Hampering Stance) Strike a creature, inhibiting their movement for 1 round, unless you move or Strike with that weapon again.");
+                    
+                    qfFeat.ProvideStrikeModifier = item =>
+                    {
+                        if (!item.HasTrait(Trait.Melee))
+                            return null;
+                        
+                        int reach = item.HasTrait(Trait.Reach) ? 2 : 1;
+                        StrikeModifiers newMods = new StrikeModifiers(){ };
+
+                        CombatAction lockDown = qfFeat.Owner
+                            .CreateStrike(item, -1, newMods)
+                            .WithName("Lock Down")
+                            .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
+                                newMods,
+                                additionalAttackRollText:
+                                "If you hit and deal damage, the target must make a DC 5 flat check to successfully use move actions, or DC 11 if the action is to move to a space beyond the reach of the weapon or unarmed attack you used for the Strike.\n\nThis effect lasts until the beginning of your next turn, until you move, or until you use that weapon or unarmed attack to make another attack, whichever comes first."))
+                            .WithExtraTrait(Trait.Basic)
+                            .WithExtraTrait(Trait.DoNotShowOverheadOfActionName)
+                            .WithExtraTrait(Trait.Flourish)
+                            .WithExtraTrait(ModData.Traits.Guardian)
+                            .WithHitAndDealDamage(async (caster, action, target) =>
+                            {
+                                QEffect lockDownPenalty = new QEffect(
+                                    "Locked Down",
+                                    "If you attempt a move action, you must succeed at a DC 5 flat check or it is lost. If the move action is to move to a space away from {Blue}" +
+                                    caster + "{/Blue}, the DC is 11.",
+                                    ExpirationCondition.ExpiresAtStartOfSourcesTurn,
+                                    caster,
+                                    ModData.Illustrations.LockDown)
+                                {
+                                    FizzleOutgoingActions = async (qfThis, action2, builder) =>
+                                    {
+                                        if (!action2.HasTrait(Trait.Move) ||
+                                            action2.ChosenTargets.ChosenTile is null)
+                                            return false;
+
+                                        int dc = action2.ChosenTargets.ChosenTile.DistanceTo(caster) > reach
+                                            ? 11
+                                            : 5;
+
+                                        (CheckResult, string) result = Checks.RollFlatCheck(dc);
+
+                                        builder.AppendLine($"Use move action while locked down: {result.Item2}" +
+                                                           $"\n\n{{b}}{dc} DC breakdown:\n5{{/b}} Flat DC");
+                                        if (dc == 11)
+                                            builder.AppendLine("{b}{Red}+6{/Red}{/b} moved further away");
+
+                                        if (result.Item1 < CheckResult.Success)
+                                            return true;
+
+                                        // Certain basic actions don't reach the code block where this log is announced,
+                                        // so this manually announces them anyway.
+                                        if (action2.ActionId is ActionId.Stride or ActionId.Step
+                                            or ActionId.StepByStepStride)
+                                            action2.Owner.Battle.Log(
+                                                "Flat check passed.",
+                                                action2.Name,
+                                                builder.ToString());
+
+                                        return false;
+                                    }
+                                };
+                                target.AddQEffect(lockDownPenalty);
+
+                                QEffect lockDownRequirements = new QEffect(
+                                    "Locking Down",
+                                    "Until the start of your next turn or until you move or attack with your {Blue}" +
+                                    item.Name + "{/Blue}, you have locked down {Blue}" + target + "{/Blue}.",
+                                    ExpirationCondition.ExpiresAtStartOfYourTurn,
+                                    caster,
+                                    ModData.Illustrations.LockDown)
+                                {
+                                    DoNotShowUpOverhead = true,
+                                    AfterYouTakeAction = async (qfThis, action2) =>
+                                    {
+                                        if (action2 == action)
+                                            return;
+                                        if (!action2.HasTrait(Trait.Move)
+                                            && !(action2.HasTrait(Trait.Attack) && action2.Item == item))
+                                            return;
+
+                                        lockDownPenalty.ExpiresAt = ExpirationCondition.Immediately;
+                                        qfThis.ExpiresAt = ExpirationCondition.Immediately;
+                                    }
+                                };
+                                caster.AddQEffect(lockDownRequirements);
+                            });
+                        lockDown.Illustration = new SideBySideIllustration(
+                            item.Illustration, ModData.Illustrations.LockDown);
+                        ((CreatureTarget)lockDown.Target).WithAdditionalConditionOnTargetCreature((a, d) =>
+                        {
+                            if (!a.HasEffect(ModData.QEffectIds.HamperingStance))
+                                return Usability.NotUsable("Must be in Hampering Stance");
+                            return Usability.Usable;
+                        });
+                        
+                        return lockDown;
+                    };
+                });
         // Reactive Strike
         yield return new TrueFeat(
                 ModData.FeatNames.ReactiveStrike,
@@ -742,6 +1131,83 @@ public static class GuardianFeats
                     };
                 });
         // Ring Their Bell
+        yield return new TrueFeat(
+                ModData.FeatNames.RingTheirBell,
+                6,
+                "Using your armor, you pummel a foe that isn't focused on you in the head or face to stagger them.",
+                "{b}Requirements{/b}You are wearing medium or heavy armor, and your taunted enemy is off-guard because it didn't target you or include you in an area effect.\n\nMake a Strike with a fist or kick against your taunted enemy. If the Strike hits and deals damage, the creature must attempt a Fortitude save against your class DC {i}(this is an incapacitation effect){/i}."
+                    + S.FourDegreesOfSuccess(
+                        "The creature is unaffected.",
+                        "The creature is stunned 1.",
+                        "The creature is stunned 2.",
+                        "The creature is stunned 3."),
+                [Trait.Flourish, ModData.Traits.Guardian])
+            .WithActionCost(1)
+            .WithPermanentQEffect(
+                null,
+                qfFeat =>
+                {
+                    ModLoader.DisplaysAsOffenseAction(
+                        qfFeat, "Ring Their Bell",
+                        "Strike a foe who ignored your Taunt, stunning them.");
+                    qfFeat.Id = QEffectId.AlwaysShowedUnarmedStrike;
+                    qfFeat.ProvideStrikeModifier = item =>
+                    {
+                        if (item.ItemName is not ItemName.Fist)
+                            return null;
+                        
+                        StrikeModifiers newMods = new StrikeModifiers() { };
+                        CombatAction ringTheirBell = qfFeat.Owner.CreateStrike(item, -1, newMods)
+                            .WithName("Ring Their Bell")
+                            .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
+                                newMods,
+                                prologueText: "{b}Requirements{/b} You are wearing medium or heavy armor, and your taunted enemy is off-guard because it didn't target you or include you in an area effect.\n",
+                                additionalSuccessText: "If you deal damage, the creature must attempt a Fortitude save against your class DC {i}(this is an incapacitation effect){/i}.",
+                                additionalCriticalSuccessText: "As success.",
+                                additionalAftertext: S.FourDegreesOfSuccess(
+                                    "The creature is unaffected.",
+                                    "The creature is stunned 1.",
+                                    "The creature is stunned 2.",
+                                    "The creature is stunned 3.")))
+                            .WithExtraTrait(Trait.Basic)
+                            .WithExtraTrait(Trait.Flourish)
+                            .WithExtraTrait(ModData.Traits.Guardian)
+                            .WithHitAndDealDamage(async (caster, action, target) =>
+                            {
+                                action.Traits.Add(Trait.Incapacitation);
+                                CheckResult result = CommonSpellEffects.RollSavingThrow(
+                                    target,
+                                    action,
+                                    Defense.Fortitude,
+                                    caster.ClassDC(ModData.Traits.Guardian));
+                                action.Traits.Remove(Trait.Incapacitation);
+                                int? value = null;
+                                switch (result)
+                                {
+                                    case CheckResult.Success:
+                                        value = 1;
+                                        goto case CheckResult.CriticalFailure;
+                                    case CheckResult.Failure:
+                                        value = 2;
+                                        goto case CheckResult.CriticalFailure;
+                                    case CheckResult.CriticalFailure:
+                                        value ??= 3;
+                                        QEffect stunned = QEffect.Stunned((int)value);
+                                        target.AddQEffect(stunned);
+                                        break;
+                                }
+                            });
+                        ringTheirBell.Illustration = new SideBySideIllustration(
+                            ringTheirBell.Illustration, IllustrationName.Stunned);
+                        ((CreatureTarget)ringTheirBell.Target) // Strikes always make CreatureTargets
+                            .WithAdditionalConditionOnTargetCreature(
+                                ModData.CommonRequirements.MustWearMediumOrHeavyArmor())
+                            .WithAdditionalConditionOnTargetCreature(
+                                ModData.CommonRequirements.OffGuardDueToMyTaunt());
+                        
+                        return ringTheirBell;
+                    };
+                });
         // Stomp Ground
         yield return new TrueFeat(
                 ModData.FeatNames.StompGround,
@@ -987,31 +1453,57 @@ public static class GuardianFeats
                             ? 2
                             : 1;
                         
-                        // BUG: (Not tested) Will probably apply QF even if the hit doesn't deal damage.
-                        CombatAction wallop = qfFeat.Owner.CreateStrike(item)
+                        StrikeModifiers newMods = new StrikeModifiers() { };
+                        CombatAction wallop = qfFeat.Owner.CreateStrike(item, -1, newMods)
                             .WithName("Shield Wallop")
+                            .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
+                                newMods,
+                                additionalSuccessText: $"The target is stupefied {baseValue}.",
+                                additionalCriticalSuccessText: $"The target is stupefied {baseValue+1}."))
                             .WithExtraTrait(Trait.Basic)
                             .WithExtraTrait(Trait.Flourish)
                             .WithExtraTrait(ModData.Traits.Guardian)
                             .WithActionCost(1)
-                            .WithEffectOnEachTarget(async (_, a, d, result) =>
+                            .WithHitAndDealDamage(async (caster, action, target) =>
                             {
-                                if (result >= CheckResult.Success)
-                                    d.AddQEffect(
-                                        QEffect.Stupefied(result == CheckResult.CriticalSuccess ? baseValue+1 : baseValue)
-                                            .WithExpirationAtStartOfSourcesTurn(a, 1));
+                                if (action.CheckResult >= CheckResult.Success)
+                                    target.AddQEffect(
+                                        QEffect.Stupefied(action.CheckResult == CheckResult.CriticalSuccess ? baseValue+1 : baseValue)
+                                            .WithExpirationAtStartOfSourcesTurn(caster, 1));
                             });
                         wallop.Illustration = new SideBySideIllustration(
                             item.Illustration,
                             IllustrationName.BrainDrain);
-                        wallop.Description = StrikeRules.CreateBasicStrikeDescription4(
-                            wallop.StrikeModifiers,
-                            additionalSuccessText: $"The target is stupefied {baseValue}.",
-                            additionalCriticalSuccessText: $"The target is stupefied {baseValue+1}.");
                         
                         return wallop;
                     };
                 });
         #endregion
+    }
+
+    public static CombatAction WithHitAndDealDamage(this CombatAction action, Func<Creature, CombatAction, Creature, Task> doWhat)
+    {
+        return action.WithPrologueEffectOnChosenTargetsBeforeRolls(async (innerAction, self, targets) =>
+        {
+            // Initialize to capture reference in scope
+            QEffect doAfter = new QEffect()
+            {
+                Name = "[AFTER YOU DEAL DAMAGE WITH" + innerAction.Name + "]",
+                ExpiresAt = ExpirationCondition.ExpiresAtEndOfYourTurn, // Fallback
+            };
+            doAfter.AfterYouDealDamage = async (self2, innerAction2, target) =>
+            {
+                if (innerAction2 != innerAction
+                    || target != targets.ChosenCreature
+                    || innerAction2.CheckResult < CheckResult.Success
+                    || innerAction2.Item != action.Item)
+                    return;
+
+                await doWhat.Invoke(self2, innerAction2, target);
+
+                doAfter.ExpiresAt = ExpirationCondition.Immediately;
+            };
+            self.AddQEffect(doAfter);
+        });
     }
 }

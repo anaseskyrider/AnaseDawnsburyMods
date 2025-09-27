@@ -61,6 +61,14 @@ public static class ModData
                     : Usability.NotUsable("must be wearing medium or heavy armor"));
         }
 
+        public static CreatureTargetingRequirement OffGuardDueToMyTaunt()
+        {
+            return new LegacyCreatureTargetingRequirement((a, d) =>
+                d.QEffects.Any(qf => qf.Key == CommonQfKeys.OffGuardDueToTaunt+a.Name)
+                    ? Usability.Usable
+                    : Usability.NotUsableOnThisCreature("Hasn't ignored your Taunt"));
+        }
+
         public static bool IsWearingMediumOrHeavyArmor(Creature cr)
         {
             return (cr.Armor.Item is {} armor1
@@ -148,10 +156,14 @@ public static class ModData
 
     public static class Illustrations
     {
-        public static readonly Illustration Taunt = new ModdedIllustration("GuardianClassAssets/intimidation.png");
-        public static readonly Illustration InterceptAttack = new ModdedIllustration("GuardianClassAssets/card-exchange.png");
-        public static readonly Illustration ArmoredCourage = new ModdedIllustration("GuardianClassAssets/armor-upgrade 2.png");
-        public static readonly Illustration StompGround = new ModdedIllustration("GuardianClassAssets/quake-stomp.png");
+        public const string ModFolder = "GuardianClassAssets/";
+        
+        public static readonly Illustration Taunt = new ModdedIllustration(ModFolder+"intimidation.png");
+        public static readonly Illustration InterceptAttack = new ModdedIllustration(ModFolder+"card-exchange.png");
+        public static readonly Illustration ArmoredCourage = new ModdedIllustration(ModFolder+"armor-upgrade 2.png");
+        public static readonly Illustration StompGround = new ModdedIllustration(ModFolder+"quake-stomp.png");
+        public static readonly Illustration HamperingStance = new ModdedIllustration(ModFolder+"banana-peel + hot-surface.png");
+        public static readonly Illustration LockDown = new ModdedIllustration(ModFolder+"foot-trip.png");
         public static readonly string DawnsburySunPath = "GuardianClassAssets/PatreonSunTransparent.png";
     }
 
@@ -175,6 +187,7 @@ public static class ModData
         public static readonly QEffectId TauntTarget = ModManager.RegisterEnumMember<QEffectId>("TauntTarget");
         public static readonly QEffectId ReactionTime = ModManager.RegisterEnumMember<QEffectId>("ReactionTime");
         public static readonly QEffectId BodyguardCharge = ModManager.RegisterEnumMember<QEffectId>("Bodyguard's Charge");
+        public static readonly QEffectId HamperingStance = ModManager.RegisterEnumMember<QEffectId>("HamperingStance");
     }
     
     public static class SfxNames
@@ -195,18 +208,15 @@ public static class ModData
     
     public static class Traits
     {
-        #region Class
+        /// <summary>Guardian class trait.</summary>
         public static readonly Trait Guardian = ModManager.RegisterTrait("Guardian", 
             new TraitProperties("Guardian", true) { IsClassTrait = true });
-        #endregion
-    
-        #region Features
-        
-        #endregion
     
         #region Feats
         public static readonly Trait BodyguardCharge = ModManager.RegisterTrait("Bodyguard's Charge",
             new TraitProperties("Bodyguard's Charge", false));
+        public static readonly Trait NotSoFastAttack = ModManager.RegisterTrait("NotSoFastAttack",
+            new TraitProperties("NotSoFastAttack", false));
         #endregion
     }
 
