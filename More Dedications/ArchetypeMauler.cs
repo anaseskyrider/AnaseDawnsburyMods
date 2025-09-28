@@ -11,21 +11,18 @@ using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
-//using Dawnsbury.Mods.DawnniExpanded;
 
 namespace Dawnsbury.Mods.MoreDedications;
 
 public static class ArchetypeMauler
 {
-    //public static readonly FeatName DedicationFeat = ModManager.RegisterFeatName("MoreDedications.Archetype.Mauler.Dedication", "Mauler Dedication");
-    
     public static void LoadMod()
     {
         // Dedication Feat
         TrueFeat maulerDedication = (ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.MaulerArchetype,
                 "You shove your way through legions of foes, knock enemies on all sides to the ground, and deal massive blows to anyone or anything that comes near.",
-                "You become trained in all simple and martial melee weapons that require two hands to wield.\n\nWhenever you become expert, master, or legendary in any weapon, you also gain that proficiency rank in these weapons.\n\nAs long as you're at least expert in such a weapon, that weapon triggers {tooltip:criteffect}critical specialization effects{/}.")
+                "You become trained in all simple and martial melee weapons that require two hands to wield or that have the two-hand trait.\n\nWhenever you become expert, master, or legendary in any weapon, you also gain that proficiency rank in these weapons.\n\nAs long as you're at least expert in such a weapon, that weapon triggers {tooltip:criteffect}critical specialization effects{/}.")
             .WithOnSheet(values =>
             {
                 values.Proficiencies.Set(
@@ -38,14 +35,39 @@ public static class ArchetypeMauler
                     [Trait.Simple, Trait.TwoHanded, Trait.Melee]);
                 values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
                     [Trait.Martial, Trait.TwoHanded, Trait.Melee]);
+                if (ModManager.TryParse("Two-Hand 1d12", out Trait thd12))
+                {
+                    values.Proficiencies.Set(
+                        [Trait.Simple, thd12, Trait.Melee],
+                        Proficiency.Trained);
+                    values.Proficiencies.Set(
+                        [Trait.Martial, thd12, Trait.Melee],
+                        Proficiency.Trained);
+                    values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
+                        [Trait.Simple, thd12, Trait.Melee]);
+                    values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
+                        [Trait.Martial, thd12, Trait.Melee]);
+                }
+                if (ModManager.TryParse("Two-Hand 1d10", out Trait thd10))
+                {
+                    values.Proficiencies.Set(
+                        [Trait.Simple, thd10, Trait.Melee],
+                        Proficiency.Trained);
+                    values.Proficiencies.Set(
+                        [Trait.Martial, thd10, Trait.Melee],
+                        Proficiency.Trained);
+                    values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
+                        [Trait.Simple, thd10, Trait.Melee]);
+                    values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
+                        [Trait.Martial, thd10, Trait.Melee]);
+                }
             })
             .WithPermanentQEffect(
                 "As long as you're at least expert in the two-handed melee weapon you're using, that triggers {tooltip:criteffect}critical specialization effects{/}.",
                 qfFeat =>
                 {
                     qfFeat.YouHaveCriticalSpecialization = (qfThis, weapon, _, _) =>
-                        weapon.HasTrait(Trait.Melee) && weapon.HasTrait(Trait.TwoHanded) &&
-                        qfThis.Owner.Proficiencies.Get(weapon.Traits) >= Proficiency.Expert;
+                        IsMaulerWeapon(weapon) && qfThis.Owner.Proficiencies.Get(weapon.Traits) >= Proficiency.Expert;
                 })
             .WithDemandsAbility14(Ability.Strength) as TrueFeat)!;
         maulerDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
@@ -186,5 +208,30 @@ public static class ArchetypeMauler
                 values => values.GetProficiency(Trait.Athletics) >= Proficiency.Expert,
                 "You must be expert in Athletics.") as TrueFeat)!;
         ModManager.AddFeat(shovingSweep);
+    }
+
+    public static bool IsMaulerWeapon(Item item)
+    {
+        return item.HasTrait(Trait.Melee) && (item.HasTrait(Trait.TwoHanded) || HasTwoHandTrait(item));
+    }
+
+    public static bool HasTwoHandTrait(Item item)
+    {
+        return HasTwoHandTrait(item.Traits);
+    }
+
+    public static bool HasTwoHandTrait(List<Trait> traits)
+    {
+        if (ModManager.TryParse("Two-Hand 1d12", out Trait thd12))
+        {
+            return traits.Contains(thd12);
+        }
+
+        if (ModManager.TryParse("Two-Hand 1d10", out Trait thd10))
+        {
+            return traits.Contains(thd10);
+        }
+
+        return false;
     }
 }
