@@ -16,10 +16,16 @@ namespace Dawnsbury.Mods.MoreDedications;
 
 public static class ArchetypeMauler
 {
-    public static void LoadMod()
+    public static void LoadArchetype()
+    {
+        foreach (Feat ft in CreateFeats())
+            ModManager.AddFeat(ft);
+    }
+
+    public static IEnumerable<Feat> CreateFeats()
     {
         // Dedication Feat
-        TrueFeat maulerDedication = (ArchetypeFeats.CreateAgnosticArchetypeDedication(
+        Feat maulerDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.MaulerArchetype,
                 "You shove your way through legions of foes, knock enemies on all sides to the ground, and deal massive blows to anyone or anything that comes near.",
                 "You become trained in all simple and martial melee weapons that require two hands to wield or that have the two-hand trait.\n\nWhenever you become expert, master, or legendary in any weapon, you also gain that proficiency rank in these weapons.\n\nAs long as you're at least expert in such a weapon, that weapon triggers {tooltip:criteffect}critical specialization effects{/}.")
@@ -69,18 +75,20 @@ public static class ArchetypeMauler
                     qfFeat.YouHaveCriticalSpecialization = (qfThis, weapon, _, _) =>
                         IsMaulerWeapon(weapon) && qfThis.Owner.Proficiencies.Get(weapon.Traits) >= Proficiency.Expert;
                 })
-            .WithDemandsAbility14(Ability.Strength) as TrueFeat)!;
+            .WithDemandsAbility14(Ability.Strength);
         maulerDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
-        ModManager.AddFeat(maulerDedication);
+        yield return maulerDedication;
         
         // Add Knockdown to Mauler
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.Knockdown, ModData.Traits.MaulerArchetype, 4));
+        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.Knockdown, ModData.Traits.MaulerArchetype, 4);
 
         // Add Power Attack to Mauler
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.PowerAttack, ModData.Traits.MaulerArchetype, 4));
+        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.PowerAttack, ModData.Traits.MaulerArchetype, 4);
 
         // Clear the Way
-        TrueFeat clearTheWay = new TrueFeat(
+        yield return new TrueFeat(
                 ModData.FeatNames.ClearTheWay,
                 6,
                 "You put your body behind your massive weapon and swing, shoving enemies to clear a wide path.",
@@ -148,10 +156,9 @@ public static class ArchetypeMauler
                         return new ActionPossibility(combatAction).WithPossibilityGroup("Abilities");
                     };
                 });
-        ModManager.AddFeat(clearTheWay);
 
         // Shoving Sweep
-        TrueFeat shovingSweep = (new TrueFeat(
+        yield return new TrueFeat(
                 ModData.FeatNames.ShovingSweep,
                 8,
                 "You swing your weapon at a fleeing foe, rebuffing them back.",
@@ -173,7 +180,7 @@ public static class ArchetypeMauler
                             && provokingAction.HasTrait(Trait.Move) && provokingAction.TilesMoved > 0)
                         {
                             bool hadShoveTrait = primaryWeapon.HasTrait(Trait.Shove);
-                            int storeItemBonus = primaryWeapon.WeaponProperties.ItemBonus;
+                            int storeItemBonus = primaryWeapon.WeaponProperties!.ItemBonus;
                             if (!hadShoveTrait)
                             {
                                 primaryWeapon.Traits.Add(Trait.Shove);
@@ -206,8 +213,7 @@ public static class ArchetypeMauler
                 })
             .WithPrerequisite(
                 values => values.GetProficiency(Trait.Athletics) >= Proficiency.Expert,
-                "You must be expert in Athletics.") as TrueFeat)!;
-        ModManager.AddFeat(shovingSweep);
+                "You must be expert in Athletics.");
     }
 
     public static bool IsMaulerWeapon(Item item)

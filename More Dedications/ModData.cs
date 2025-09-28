@@ -11,18 +11,19 @@ namespace Dawnsbury.Mods.MoreDedications;
 
 public static class ModData
 {
-    public static class Traits
+    public static void LoadData()
     {
-        public static readonly Trait MoreDedications = ModManager.RegisterTrait("MoreDedications", new TraitProperties("More Dedications", true));
-            
-        // Archetype Traits
-        public static readonly Trait MaulerArchetype = ModManager.RegisterTrait("MoreDedications.Mauler", new TraitProperties("Mauler", true));
-        public static readonly Trait BastionArchetype = ModManager.RegisterTrait("MoreDedications.Bastion", new TraitProperties("Bastion", true));
-        public static readonly Trait MartialArtistArchetype = ModManager.RegisterTrait("MoreDedications.MartialArtist", new TraitProperties("Martial Artist", true));
-        public static readonly Trait MarshalArchetype = ModManager.RegisterTrait("MoreDedications.Marshal", new TraitProperties("Marshal", true));
-        public static readonly Trait BlessedOneArchetype = ModManager.RegisterTrait("MoreDedications.BlessedOne", new TraitProperties("Blessed One", true));
-        public static readonly Trait ScoutArchetype = ModManager.RegisterTrait("MoreDedications.Scout", new TraitProperties("Scout", true));
-        public static readonly Trait AssassinArchetype = ModManager.RegisterTrait("MoreDedications.Assassin", new TraitProperties("Assassin", true));
+        // QEffects
+        QEffectIds.GreaterScoutActivity = ModManager.TryParse("GreaterScoutActivity", out QEffectId greaterScout)
+            ? greaterScout
+            : ModManager.RegisterEnumMember<QEffectId>("GreaterScoutActivity");
+    }
+
+    public static class ActionIds
+    {
+        public static readonly ActionId CraneFlutter = ModManager.RegisterEnumMember<ActionId>("CraneFlutter");
+        public static readonly ActionId DragonRoar = ModManager.RegisterEnumMember<ActionId>("DragonRoar");
+        public static readonly ActionId TigerSlash = ModManager.RegisterEnumMember<ActionId>("TigerSlash");
     }
     
     public static class FeatNames
@@ -102,6 +103,25 @@ public static class ModData
         public static readonly FeatName JellyfishStance = ModManager.RegisterFeatName("JellyfishStance", "Jellyfish Stance");
         #endregion
     }
+
+    public static class Illustrations
+    {
+        public static readonly string DawnsburySunPath = "MoreDedicationsAssets/PatreonSunTransparent.png";
+        public static readonly Illustration PowderPunchStance = IllustrationName.AlchemistsFire;
+        public static readonly Illustration StumblingStance = new ModdedIllustration("MoreDedicationsAssets/calabash.png");
+        public static readonly Illustration DreadMarshalStance = IllustrationName.HideousLaughter;
+        public static readonly Illustration InspiringMarshalStance = IllustrationName.WinningStreak;
+        public static readonly Illustration SteelYourself = new ModdedIllustration("MoreDedicationsAssets/heartburn.png");
+        public static readonly Illustration RallyingCharge = new SideBySideIllustration(IllustrationName.FleetStep, new ModdedIllustration("MoreDedicationsAssets/heart-wings.png"));
+        public static readonly Illustration ToBattle = new ModdedIllustration("MoreDedicationsAssets/flying-flag.png");
+        public static readonly Illustration ProtectorsSacrifice = new ModdedIllustration("MoreDedicationsAssets/protector's-sacrifice.png");
+        public static readonly Illustration WildWindsStance = IllustrationName.FourWinds;
+    }
+    
+    public static class PersistentActions
+    {
+        public const string PoisonWeaponCharge = "PoisonWeaponCharge";
+    }
     
     public static class QEffectIds
     {
@@ -133,18 +153,6 @@ public static class ModData
         // Misc
         public static QEffectId GreaterScoutActivity;
     }
-
-    public static class ActionIds
-    {
-        public static readonly ActionId CraneFlutter = ModManager.RegisterEnumMember<ActionId>("CraneFlutter");
-        public static readonly ActionId DragonRoar = ModManager.RegisterEnumMember<ActionId>("DragonRoar");
-        public static readonly ActionId TigerSlash = ModManager.RegisterEnumMember<ActionId>("TigerSlash");
-    }
-    
-    public static class PersistentActions
-    {
-        public const string PoisonWeaponCharge = "PoisonWeaponCharge";
-    }
     
     public static class SpellIds
     {
@@ -152,22 +160,36 @@ public static class ModData
         public static SpellId ProtectorsSacrifice { get; set; }
     }
 
-    public static class Illustrations
-    {
-        public static readonly string DawnsburySunPath = "MoreDedicationsAssets/PatreonSunTransparent.png";
-        public static readonly Illustration PowderPunchStance = IllustrationName.AlchemistsFire;
-        public static readonly Illustration StumblingStance = new ModdedIllustration("MoreDedicationsAssets/calabash.png");
-        public static readonly Illustration DreadMarshalStance = IllustrationName.HideousLaughter;
-        public static readonly Illustration InspiringMarshalStance = IllustrationName.WinningStreak;
-        public static readonly Illustration SteelYourself = new ModdedIllustration("MoreDedicationsAssets/heartburn.png");
-        public static readonly Illustration RallyingCharge = new SideBySideIllustration(IllustrationName.FleetStep, new ModdedIllustration("MoreDedicationsAssets/heart-wings.png"));
-        public static readonly Illustration ToBattle = new ModdedIllustration("MoreDedicationsAssets/flying-flag.png");
-        public static readonly Illustration ProtectorsSacrifice = new ModdedIllustration("MoreDedicationsAssets/protector's-sacrifice.png");
-        public static readonly Illustration WildWindsStance = IllustrationName.FourWinds;
-    }
-
     public static class Tooltips
     {
-        public static readonly Func<string?, string> LeveledDC = inline => "{tooltip:MoreDedications.LevelBasedDC}" + inline + "{/}";
+        public static readonly Func<string, string> LeveledDC = RegisterTooltipInserter(
+            "MoreDedications.LevelBasedDC",
+            "{b}Level-based DCs{/b}\nWhen a DC is based on your level, it uses one of the following values:\n{b}Level 1:{/b} 15\n{b}Level 2:{/b} 16\n{b}Level 3:{/b} 18\n{b}Level 4:{/b} 19\n{b}Level 5:{/b} 20\n{b}Level 6:{/b} 22\n{b}Level 7:{/b} 23\n{b}Level 8:{/b} 24\n{b}Level 9:{/b} 26");
+        
+        /// <summary>
+        /// Registers a tooltip, then returns a function that can be used to insert the tooltip with any arbitrary text.
+        /// </summary>
+        /// <param name="tooltipName">The registered name of the tooltip.</param>
+        /// <param name="tooltipDescription">The body text of the tooltip.</param>
+        /// <returns>(Func[string, string]) A function which takes in the text to insert, and returns a tooltip with the passed text.</returns>
+        public static Func<string, string> RegisterTooltipInserter(string tooltipName, string tooltipDescription)
+        {
+            ModManager.RegisterInlineTooltip(tooltipName, tooltipDescription);
+            return input => "{tooltip:" + tooltipName + "}" + input + "{/}";
+        }
+    }
+    
+    public static class Traits
+    {
+        public static readonly Trait MoreDedications = ModManager.RegisterTrait("MoreDedications", new TraitProperties("More Dedications", true));
+            
+        // Archetype Traits
+        public static readonly Trait MaulerArchetype = ModManager.RegisterTrait("MoreDedications.Mauler", new TraitProperties("Mauler", true));
+        public static readonly Trait BastionArchetype = ModManager.RegisterTrait("MoreDedications.Bastion", new TraitProperties("Bastion", true));
+        public static readonly Trait MartialArtistArchetype = ModManager.RegisterTrait("MoreDedications.MartialArtist", new TraitProperties("Martial Artist", true));
+        public static readonly Trait MarshalArchetype = ModManager.RegisterTrait("MoreDedications.Marshal", new TraitProperties("Marshal", true));
+        public static readonly Trait BlessedOneArchetype = ModManager.RegisterTrait("MoreDedications.BlessedOne", new TraitProperties("Blessed One", true));
+        public static readonly Trait ScoutArchetype = ModManager.RegisterTrait("MoreDedications.Scout", new TraitProperties("Scout", true));
+        public static readonly Trait AssassinArchetype = ModManager.RegisterTrait("MoreDedications.Assassin", new TraitProperties("Assassin", true));
     }
 }

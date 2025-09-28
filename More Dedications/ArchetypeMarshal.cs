@@ -31,12 +31,18 @@ public static class ArchetypeMarshal
             ? Usability.Usable
             : Usability.NotUsableOnThisCreature("not in marshal aura");
     
-    public static void LoadMod()
+    public static void LoadArchetype()
+    {
+        foreach (Feat ft in CreateFeats())
+            ModManager.AddFeat(ft);
+    }
+
+    public static IEnumerable<Feat> CreateFeats()
     {
         Feat marshalDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
-            ModData.Traits.MarshalArchetype,
-            "Marshals are leaders, first and foremost. Marshals can come from any class or background, though they all share a willingness to sacrifice their own glory for the greater good of the team.",
-            "Choose Diplomacy or Intimidation. You become trained in that skill or become an expert if you were already trained in it.\n\nIn addition, you're surrounded by a marshal's aura in a 10-foot emanation. Your aura has the emotion, mental, and visual traits and grants you and allies within the aura a +1 status bonus to saving throws against fear.")
+                ModData.Traits.MarshalArchetype,
+                "Marshals are leaders, first and foremost. Marshals can come from any class or background, though they all share a willingness to sacrifice their own glory for the greater good of the team.",
+                "Choose Diplomacy or Intimidation. You become trained in that skill or become an expert if you were already trained in it.\n\nIn addition, you're surrounded by a marshal's aura in a 10-foot emanation. Your aura has the emotion, mental, and visual traits and grants you and allies within the aura a +1 status bonus to saving throws against fear.")
             .WithOnSheet(values =>
             {
                 List<FeatName> options =
@@ -50,7 +56,8 @@ public static class ArchetypeMarshal
                 ];
                 values.AddSelectionOptionRightNow(new SingleFeatSelectionOption("Marshal.DedicationSkill", "Marshal skill", values.CurrentLevel, feat => options.Contains(feat.FeatName)));
             })
-            .WithPermanentQEffect("You have a marshal's aura which protects allies from fear effects.",
+            .WithPermanentQEffect(
+                "You have a marshal's aura which protects allies from fear effects.",
                 qfFeat =>
                 {
                     qfFeat.Name = "Marshal's Aura";
@@ -81,19 +88,20 @@ public static class ArchetypeMarshal
                 values.GetProficiency(Trait.Martial) > Proficiency.Untrained,
                 "Must be trained in martial weapons")
             .WithPrerequisite(values =>
-                values.HasFeat(FeatName.Diplomacy) || values.HasFeat(FeatName.Intimidation), "Must be trained in Diplomacy or Intimidation");
+                values.HasFeat(FeatName.Diplomacy) || values.HasFeat(FeatName.Intimidation),
+                "Must be trained in Diplomacy or Intimidation");
         marshalDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
-        ModManager.AddFeat(marshalDedication);
+        yield return marshalDedication;
         
         // Devrin's Cunning Stance?
         // License Firebrands!!!
         
         // Dread Marshal Stance
-        Feat dreadStance = new TrueFeat(
+        yield return new TrueFeat(
                 ModData.FeatNames.DreadMarshalStance,
                 4,
                 "Putting on a grim face for the battle ahead, you encourage your allies to strike fear into their foes with vicious attacks.",
-                "Attempt an Intimidation check. The DC is a standard-difficulty DC of your level. The effect depends on the result of your check."+S.FourDegreesOfSuccess(
+                "Attempt an Intimidation check. The DC is a standard-difficulty DC of your level. The effect depends on the result of your check." + S.FourDegreesOfSuccess(
                     "Your marshal's aura increases to a 20-foot emanation, and it grants you and allies a status bonus to damage rolls equal to the number of weapon damage dice of the unarmed attack or weapon you are wielding that has the most weapon damage dice. When you or an ally in the aura critically hits an enemy with a Strike, that enemy is frightened 1.",
                     "As critical success, but your aura's size doesn't increase.",
                     "You fail to enter the stance.",
@@ -101,107 +109,108 @@ public static class ArchetypeMarshal
                 [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Open, Trait.Stance])
             .WithActionCost(1)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
-            .WithPermanentQEffect("Enter a stance where your allies deal bonus damage and can frighten enemies with their Strikes.", qfFeat =>
-            {
-                qfFeat.ProvideMainAction = qfThis =>
+            .WithPermanentQEffect(
+                "Enter a stance where your allies deal bonus damage and can frighten enemies with their Strikes.",
+                qfFeat =>
                 {
-                    if (qfThis.Owner.HasEffect(ModData.QEffectIds.DreadMarshalStance))
-                        return null;
-
-                    CombatAction enterStance = new CombatAction(
-                            qfThis.Owner,
-                            ModData.Illustrations.DreadMarshalStance,
-                            "Dread Marshal Stance",
-                            [Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
-                            "{i}Putting on a grim face for the battle ahead, you encourage your allies to strike fear into their foes with vicious attacks.{/i}\n\n"
-                            + $"Attempt a {ModData.Tooltips.LeveledDC("DC " + Checks.LevelBasedDC(qfThis.Owner.Level))} Intimidation check." +
-                            S.FourDegreesOfSuccess(
-                                "Your marshal's aura increases to a 20-foot emanation, and it grants you and allies a status bonus to damage rolls equal to the number of weapon damage dice of the unarmed attack or weapon you are wielding that has the most weapon damage dice. When you or an ally in the aura critically hits an enemy with a Strike, that enemy is frightened 1.",
-                                "As critical success, but your aura's size doesn't increase.",
-                                "You fail to enter the stance.",
-                                "You fail to enter the stance and can't take this action again for the rest of the encounter."),
-                            Target.Self())
-                        .WithActionCost(1)
-                        .WithActiveRollSpecification(
-                            new ActiveRollSpecification(
-                                TaggedChecks.SkillCheck(Skill.Intimidation),
-                                new TaggedCalculatedNumberProducer((_, _, _) =>
-                                    new CalculatedNumber(Checks.LevelBasedDC(qfThis.Owner.Level), "Level-based DC",
-                                        []))))
-                        .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
-                        {
-                            switch (result)
-                            {
-                                case >= CheckResult.Success:
-                                {
-                                    // Increase the aura on a crit
-                                    if (result == CheckResult.CriticalSuccess && caster.FindQEffect(ModData.QEffectIds.MarshalsAuraProvider) is { } aura)
-                                    {
-                                        aura.Tag = 4;
-                                        aura.AssociatedAura?.MoveTo(aura.Tag as int? ?? 0f);
-                                    }
-                                
-                                    // Normal effects
-                                    QEffect dmStance = KineticistCommonEffects.EnterStance(
-                                            qfThis.Owner,
-                                            ModData.Illustrations.DreadMarshalStance,
-                                            "Dread Marshal Stance",
-                                            "You and all allies in your marshal aura have a status bonus to damage rolls equal to the number of weapon dice of your best unarmed attack or of a weapon you're wielding. On a critical hit with a Strike, the target is frightened 1.",
-                                            ModData.QEffectIds.DreadMarshalStance)
-                                        .AddGrantingOfTechnical(
-                                            cr => cr.HasEffect(ModData.QEffectIds.MarshalsAuraEffect),
-                                            qfTech =>
-                                            {
-                                                qfTech.Name = "Dread Marshal Aura";
-                                                qfTech.Description = $"You have a status bonus to damage rolls equal to the number of weapon dice of {qfThis.Owner}'s best unarmed attack or of a weapon they're wielding. On a critical hit with a Strike, the target is frightened 1.";
-                                                qfTech.Illustration = ModData.Illustrations.DreadMarshalStance;
-                                                qfTech.YouDealDamageEvent = async (qfThis2, dEvent) =>
-                                                {
-                                                    // Must deal rollable damage
-                                                    if (!dEvent.KindedDamages.Any(kd => kd.DiceFormula is {} df && df.ToString().Contains('d')))
-                                                        return;
-                                                    int amount = ((List<Item>)[..caster.HeldItems, caster.UnarmedStrike]).Max(item => item.WeaponProperties?.DamageDieCount ?? 1);
-                                                    dEvent.Bonuses.Add(new Bonus(amount, BonusType.Status, "dread marshal aura"));
-                                                };
-                                                qfTech.AfterYouTakeActionAgainstTarget =
-                                                    async (qfThis2, action, target2, result2) =>
-                                                    {
-                                                        if (action.HasTrait(Trait.Strike) && result2 == CheckResult.CriticalSuccess)
-                                                            target2.AddQEffect(QEffect.Frightened(1));
-                                                    };
-                                                qfTech.StateCheckLayer = 1;
-                                            });
-                                    dmStance.WhenExpires = async qfThis2 =>
-                                    {
-                                        if (caster.FindQEffect(ModData.QEffectIds.MarshalsAuraProvider) is not
-                                            { } aura) return;
-                                        aura.Tag = 2;
-                                        aura.AssociatedAura?.MoveTo(aura.Tag as int? ?? 0f);
-                                    };
-                                    dmStance.HideFromPortrait = true;
-                                    break;
-                                }
-                                // Can't use again if critical failure
-                                case CheckResult.CriticalFailure:
-                                    qfThis.Owner.RemoveAllQEffects(qf => qf == qfThis);
-                                    break;
-                            }
-                        });
-                    return new ActionPossibility(enterStance)
+                    qfFeat.ProvideMainAction = qfThis =>
                     {
-                        PossibilityGroup = "Enter a stance"
+                        if (qfThis.Owner.HasEffect(ModData.QEffectIds.DreadMarshalStance))
+                            return null;
+
+                        CombatAction enterStance = new CombatAction(
+                                qfThis.Owner,
+                                ModData.Illustrations.DreadMarshalStance,
+                                "Dread Marshal Stance",
+                                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
+                                "{i}Putting on a grim face for the battle ahead, you encourage your allies to strike fear into their foes with vicious attacks.{/i}\n\n"
+                                + $"Attempt a {ModData.Tooltips.LeveledDC("DC " + Checks.LevelBasedDC(qfThis.Owner.Level))} Intimidation check." +
+                                S.FourDegreesOfSuccess(
+                                    "Your marshal's aura increases to a 20-foot emanation, and it grants you and allies a status bonus to damage rolls equal to the number of weapon damage dice of the unarmed attack or weapon you are wielding that has the most weapon damage dice. When you or an ally in the aura critically hits an enemy with a Strike, that enemy is frightened 1.",
+                                    "As critical success, but your aura's size doesn't increase.",
+                                    "You fail to enter the stance.",
+                                    "You fail to enter the stance and can't take this action again for the rest of the encounter."),
+                                Target.Self())
+                            .WithActionCost(1)
+                            .WithActiveRollSpecification(
+                                new ActiveRollSpecification(
+                                    TaggedChecks.SkillCheck(Skill.Intimidation),
+                                    new TaggedCalculatedNumberProducer((_, _, _) =>
+                                        new CalculatedNumber(Checks.LevelBasedDC(qfThis.Owner.Level), "Level-based DC",
+                                            []))))
+                            .WithEffectOnEachTarget(async (_, caster, _, result) =>
+                            {
+                                switch (result)
+                                {
+                                    case >= CheckResult.Success:
+                                    {
+                                        // Increase the aura on a crit
+                                        if (result == CheckResult.CriticalSuccess && caster.FindQEffect(ModData.QEffectIds.MarshalsAuraProvider) is { } aura)
+                                        {
+                                            aura.Tag = 4;
+                                            aura.AssociatedAura?.MoveTo(aura.Tag as int? ?? 0f);
+                                        }
+                                    
+                                        // Normal effects
+                                        QEffect dmStance = KineticistCommonEffects.EnterStance(
+                                                qfThis.Owner,
+                                                ModData.Illustrations.DreadMarshalStance,
+                                                "Dread Marshal Stance",
+                                                "You and all allies in your marshal aura have a status bonus to damage rolls equal to the number of weapon dice of your best unarmed attack or of a weapon you're wielding. On a critical hit with a Strike, the target is frightened 1.",
+                                                ModData.QEffectIds.DreadMarshalStance)
+                                            .AddGrantingOfTechnical(
+                                                cr => cr.HasEffect(ModData.QEffectIds.MarshalsAuraEffect),
+                                                qfTech =>
+                                                {
+                                                    qfTech.Name = "Dread Marshal Aura";
+                                                    qfTech.Description = $"You have a status bonus to damage rolls equal to the number of weapon dice of {qfThis.Owner}'s best unarmed attack or of a weapon they're wielding. On a critical hit with a Strike, the target is frightened 1.";
+                                                    qfTech.Illustration = ModData.Illustrations.DreadMarshalStance;
+                                                    qfTech.YouDealDamageEvent = async (qfThis2, dEvent) =>
+                                                    {
+                                                        // Must deal rollable damage
+                                                        if (!dEvent.KindedDamages.Any(kd => kd.DiceFormula is {} df && df.ToString().Contains('d')))
+                                                            return;
+                                                        int amount = ((List<Item>)[..caster.HeldItems, caster.UnarmedStrike]).Max(item => item.WeaponProperties?.DamageDieCount ?? 1);
+                                                        dEvent.Bonuses.Add(new Bonus(amount, BonusType.Status, "dread marshal aura"));
+                                                    };
+                                                    qfTech.AfterYouTakeActionAgainstTarget =
+                                                        async (qfThis2, action, target2, result2) =>
+                                                        {
+                                                            if (action.HasTrait(Trait.Strike) && result2 == CheckResult.CriticalSuccess)
+                                                                target2.AddQEffect(QEffect.Frightened(1));
+                                                        };
+                                                    qfTech.StateCheckLayer = 1;
+                                                });
+                                        dmStance.WhenExpires = async qfThis2 =>
+                                        {
+                                            if (caster.FindQEffect(ModData.QEffectIds.MarshalsAuraProvider) is not
+                                                { } aura2) return;
+                                            aura2.Tag = 2;
+                                            aura2.AssociatedAura?.MoveTo(aura2.Tag as int? ?? 0f);
+                                        };
+                                        dmStance.HideFromPortrait = true;
+                                        break;
+                                    }
+                                    // Can't use again if critical failure
+                                    case CheckResult.CriticalFailure:
+                                        qfThis.Owner.RemoveAllQEffects(qf => qf == qfThis);
+                                        break;
+                                }
+                            });
+                        return new ActionPossibility(enterStance)
+                            .WithPossibilityGroup("Enter a stance");
                     };
-                };
-            })
-            .WithPrerequisite(values => values.HasFeat(FeatName.Intimidation), "Must be trained in Intimidation");
-        ModManager.AddFeat(dreadStance);
+                })
+            .WithPrerequisite(
+                values => values.HasFeat(FeatName.Intimidation),
+                "Must be trained in Intimidation");
         
         // Inspiring Marshal Stance
-        Feat inspiringStance = new TrueFeat(
+        yield return new TrueFeat(
                 ModData.FeatNames.InspiringMarshalStance,
                 4,
                 "You become a brilliant example of dedication and poise in battle, encouraging your allies to follow suit.",
-                "Attempt a Diplomacy check. The DC is a standard-difficulty DC of your level. The effect depends on the result of your check."+S.FourDegreesOfSuccess(
+                "Attempt a Diplomacy check. The DC is a standard-difficulty DC of your level. The effect depends on the result of your check." + S.FourDegreesOfSuccess(
                     "Your marshal's aura increases to a 20-foot emanation and grants you and allies a +1 status bonus to attack rolls and saves against mental effects.",
                     "As critical success, but your aura's size doesn't increase.",
                     "You fail to enter the stance.",
@@ -209,98 +218,99 @@ public static class ArchetypeMarshal
                 [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Open, Trait.Stance])
             .WithActionCost(1)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
-            .WithPermanentQEffect("Enter a stance where your allies deal bonus damage and can frighten enemies with their Strikes.", qfFeat =>
-            {
-                qfFeat.ProvideMainAction = qfThis =>
+            .WithPermanentQEffect(
+                "Enter a stance where your allies deal bonus damage and can frighten enemies with their Strikes.",
+                qfFeat =>
                 {
-                    if (qfThis.Owner.HasEffect(ModData.QEffectIds.InspiringMarshalStance))
-                        return null;
-
-                    CombatAction enterStance = new CombatAction(
-                            qfThis.Owner,
-                            ModData.Illustrations.InspiringMarshalStance,
-                            "Inspiring Marshal Stance",
-                            [Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
-                            "{i}You become a brilliant example of dedication and poise in battle, encouraging your allies to follow suit.{/i}\n\n"
-                            + $"Attempt a {ModData.Tooltips.LeveledDC("DC " + Checks.LevelBasedDC(qfThis.Owner.Level))} Diplomacy check." +
-                            S.FourDegreesOfSuccess(
-                                "Your marshal's aura increases to a 20-foot emanation and grants you and allies a +1 status bonus to attack rolls and saves against mental effects.",
-                                "As critical success, but your aura's size doesn't increase.",
-                                "You fail to enter the stance.",
-                                "You fail to enter the stance and can't take this action again for the rest of the encounter."),
-                            Target.Self())
-                        .WithActionCost(1)
-                        .WithActiveRollSpecification(
-                            new ActiveRollSpecification(
-                                TaggedChecks.SkillCheck(Skill.Diplomacy),
-                                new TaggedCalculatedNumberProducer((_, _, _) =>
-                                    new CalculatedNumber(Checks.LevelBasedDC(qfThis.Owner.Level), "Level-based DC",
-                                        []))))
-                        .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
-                        {
-                            switch (result)
-                            {
-                                case >= CheckResult.Success:
-                                {
-                                    // Increase the aura on a crit
-                                    if (result == CheckResult.CriticalSuccess && caster.FindQEffect(ModData.QEffectIds.MarshalsAuraProvider) is { } aura)
-                                    {
-                                        aura.Tag = 4;
-                                        aura.AssociatedAura?.MoveTo(aura.Tag as int? ?? 0f);
-                                    }
-                                
-                                    // Normal effects
-                                    QEffect dmStance = KineticistCommonEffects.EnterStance(
-                                            qfThis.Owner,
-                                            ModData.Illustrations.InspiringMarshalStance,
-                                            "Inspiring Marshal Stance",
-                                            "You and all allies in your marsha's aura gain a +1 status bonus to attack rolls and saves against mental effects.",
-                                            ModData.QEffectIds.InspiringMarshalStance)
-                                        .AddGrantingOfTechnical(
-                                            cr => cr.HasEffect(ModData.QEffectIds.MarshalsAuraEffect),
-                                            qfTech =>
-                                            {
-                                                qfTech.Name = "Inspiring Marshal Aura";
-                                                qfTech.Description = $"You have a +1 status bonus to attack rolls and saves against mental effects.";
-                                                qfTech.Illustration = ModData.Illustrations.InspiringMarshalStance;
-                                                qfTech.BonusToAttackRolls = (_,action,_) =>
-                                                    action.HasTrait(Trait.Attack) ? new Bonus(1, BonusType.Status, "inspiring marshal aura") : null;
-                                                qfTech.BonusToDefenses = (qfThis2, action, def) =>
-                                                    def.IsSavingThrow() && action != null && action.HasTrait(Trait.Mental)
-                                                        ? new Bonus(1, BonusType.Status, "inspiring marshal aura")
-                                                        : null;
-                                                qfTech.StateCheckLayer = 1;
-                                            });
-                                    dmStance.WhenExpires = async qfThis2 =>
-                                    {
-                                        if (caster.FindQEffect(ModData.QEffectIds.MarshalsAuraProvider) is not
-                                            { } aura) return;
-                                        aura.Tag = 2;
-                                        aura.AssociatedAura?.MoveTo(aura.Tag as int? ?? 0f);
-                                    };
-                                    dmStance.HideFromPortrait = true;
-                                    break;
-                                }
-                                // Can't use again if critical failure
-                                case CheckResult.CriticalFailure:
-                                    qfThis.Owner.RemoveAllQEffects(qf => qf == qfThis);
-                                    break;
-                            }
-                        });
-                    return new ActionPossibility(enterStance)
+                    qfFeat.ProvideMainAction = qfThis =>
                     {
-                        PossibilityGroup = "Enter a stance"
+                        if (qfThis.Owner.HasEffect(ModData.QEffectIds.InspiringMarshalStance))
+                            return null;
+
+                        CombatAction enterStance = new CombatAction(
+                                qfThis.Owner,
+                                ModData.Illustrations.InspiringMarshalStance,
+                                "Inspiring Marshal Stance",
+                                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
+                                "{i}You become a brilliant example of dedication and poise in battle, encouraging your allies to follow suit.{/i}\n\n"
+                                + $"Attempt a {ModData.Tooltips.LeveledDC("DC " + Checks.LevelBasedDC(qfThis.Owner.Level))} Diplomacy check." +
+                                S.FourDegreesOfSuccess(
+                                    "Your marshal's aura increases to a 20-foot emanation and grants you and allies a +1 status bonus to attack rolls and saves against mental effects.",
+                                    "As critical success, but your aura's size doesn't increase.",
+                                    "You fail to enter the stance.",
+                                    "You fail to enter the stance and can't take this action again for the rest of the encounter."),
+                                Target.Self())
+                            .WithActionCost(1)
+                            .WithActiveRollSpecification(
+                                new ActiveRollSpecification(
+                                    TaggedChecks.SkillCheck(Skill.Diplomacy),
+                                    new TaggedCalculatedNumberProducer((_, _, _) =>
+                                        new CalculatedNumber(Checks.LevelBasedDC(qfThis.Owner.Level), "Level-based DC",
+                                            []))))
+                            .WithEffectOnEachTarget(async (_, caster, _, result) =>
+                            {
+                                switch (result)
+                                {
+                                    case >= CheckResult.Success:
+                                    {
+                                        // Increase the aura on a crit
+                                        if (result == CheckResult.CriticalSuccess && caster.FindQEffect(ModData.QEffectIds.MarshalsAuraProvider) is { } aura)
+                                        {
+                                            aura.Tag = 4;
+                                            aura.AssociatedAura?.MoveTo(aura.Tag as int? ?? 0f);
+                                        }
+                                    
+                                        // Normal effects
+                                        QEffect dmStance = KineticistCommonEffects.EnterStance(
+                                                qfThis.Owner,
+                                                ModData.Illustrations.InspiringMarshalStance,
+                                                "Inspiring Marshal Stance",
+                                                "You and all allies in your marsha's aura gain a +1 status bonus to attack rolls and saves against mental effects.",
+                                                ModData.QEffectIds.InspiringMarshalStance)
+                                            .AddGrantingOfTechnical(
+                                                cr => cr.HasEffect(ModData.QEffectIds.MarshalsAuraEffect),
+                                                qfTech =>
+                                                {
+                                                    qfTech.Name = "Inspiring Marshal Aura";
+                                                    qfTech.Description = $"You have a +1 status bonus to attack rolls and saves against mental effects.";
+                                                    qfTech.Illustration = ModData.Illustrations.InspiringMarshalStance;
+                                                    qfTech.BonusToAttackRolls = (_,action,_) =>
+                                                        action.HasTrait(Trait.Attack) ? new Bonus(1, BonusType.Status, "inspiring marshal aura") : null;
+                                                    qfTech.BonusToDefenses = (qfThis2, action, def) =>
+                                                        def.IsSavingThrow() && action != null && action.HasTrait(Trait.Mental)
+                                                            ? new Bonus(1, BonusType.Status, "inspiring marshal aura")
+                                                            : null;
+                                                    qfTech.StateCheckLayer = 1;
+                                                });
+                                        dmStance.WhenExpires = async qfThis2 =>
+                                        {
+                                            if (caster.FindQEffect(ModData.QEffectIds.MarshalsAuraProvider) is not
+                                                { } aura2) return;
+                                            aura2.Tag = 2;
+                                            aura2.AssociatedAura?.MoveTo(aura2.Tag as int? ?? 0f);
+                                        };
+                                        dmStance.HideFromPortrait = true;
+                                        break;
+                                    }
+                                    // Can't use again if critical failure
+                                    case CheckResult.CriticalFailure:
+                                        qfThis.Owner.RemoveAllQEffects(qf => qf == qfThis);
+                                        break;
+                                }
+                            });
+                        return new ActionPossibility(enterStance)
+                            .WithPossibilityGroup("Enter a stance");
                     };
-                };
-            })
-            .WithPrerequisite(values => values.HasFeat(FeatName.Diplomacy), "Must be trained in Diplomacy");
-        ModManager.AddFeat(inspiringStance);
+                })
+            .WithPrerequisite(
+                values => values.HasFeat(FeatName.Diplomacy),
+                "Must be trained in Diplomacy");
         
         // Snap Out of It! (Marshal) @lv4
         // Can this even be implemented?
         
         // Steel Yourself!
-        Feat steelYourself = new TrueFeat(
+        yield return new TrueFeat(
                 ModData.FeatNames.SteelYourself,
                 4,
                 "You encourage an ally to toughen up, giving them a fighting chance.",
@@ -308,23 +318,24 @@ public static class ArchetypeMarshal
                 [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Emotion, Trait.Mental])
             .WithActionCost(1)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
-            .WithPermanentQEffect("You give temporary HP and bonuses to Fortitude saves to an ally in your marshal's aura.",
+            .WithPermanentQEffect(
+                "You give temporary HP and bonuses to Fortitude saves to an ally in your marshal's aura.",
                 qfFeat =>
                 {
                     qfFeat.ProvideMainAction = qfThis =>
                     {
                         CombatAction steelAction = new CombatAction(
-                            qfThis.Owner,
-                            ModData.Illustrations.SteelYourself,
-                            "Steel Yourself",
-                            [Trait.Auditory, Trait.Emotion, Trait.Mental, Trait.Basic],
-                            "{i}You encourage an ally to toughen up, giving them a fighting chance.{/i}\n\n" +
-                            $"Choose one ally within your marshal's aura. The ally gains {{b}}+{qfThis.Owner.Abilities.Charisma}{{/b}} temporary Hit Points, as well as a +2 circumstance bonus to Fortitude saves which lasts until the start of your next turn.",
-                            Target.RangedFriend(GetMarshalAuraRange(qfThis.Owner))
-                                .WithAdditionalConditionOnTargetCreature(IsInMarshalAura))
+                                qfThis.Owner,
+                                ModData.Illustrations.SteelYourself,
+                                "Steel Yourself",
+                                [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Emotion, Trait.Mental, Trait.Basic],
+                                "{i}You encourage an ally to toughen up, giving them a fighting chance.{/i}\n\n" +
+                                $"Choose one ally within your marshal's aura. The ally gains {{b}}+{qfThis.Owner.Abilities.Charisma}{{/b}} temporary Hit Points, as well as a +2 circumstance bonus to Fortitude saves which lasts until the start of your next turn.",
+                                Target.RangedFriend(GetMarshalAuraRange(qfThis.Owner))
+                                    .WithAdditionalConditionOnTargetCreature(IsInMarshalAura))
                             .WithActionCost(1)
                             .WithSoundEffect(qfThis.Owner.HasTrait(Trait.Female) ? SfxName.TripFemale : SfxName.TripMale)
-                            .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
+                            .WithEffectOnEachTarget(async (_, caster, target, _) =>
                             {
                                 target.GainTemporaryHP(caster.Abilities.Charisma);
                                 target.AddQEffect(
@@ -342,16 +353,15 @@ public static class ArchetypeMarshal
                                         DoNotShowUpOverhead = true,
                                     });
                             });
-                        return new ActionPossibility(steelAction, PossibilitySize.Full);
+                        return new ActionPossibility(steelAction);
                     };
                 });
-        ModManager.AddFeat(steelYourself);
         
         // Cadence Call @lv6
         // Can this even be implemented?
         
         // Rallying Charge @lv6
-        Feat rallyingCharge = new TrueFeat(
+        yield return new TrueFeat(
                 ModData.FeatNames.RallyingCharge,
                 6,
                 "Your fearless charge into battle reinvigorates your allies to carry on the fight.",
@@ -359,67 +369,66 @@ public static class ArchetypeMarshal
                 [ModData.Traits.MoreDedications, Trait.Open, Trait.Visual])
             .WithActionCost(2)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
-            .WithPermanentQEffect("Stride and then make a melee Strike, granting temp HP to allies within 60 feet.", qfFeat =>
-            {
-                qfFeat.ProvideMainAction = qfThis =>
+            .WithPermanentQEffect(
+                "Stride and then make a melee Strike, granting temp HP to allies within 60 feet.",
+                qfFeat =>
                 {
-                    CombatAction charge = new CombatAction(
-                            qfThis.Owner,
-                            ModData.Illustrations.RallyingCharge,
-                            "Rallying Charge",
-                            [Trait.Open, Trait.Visual, Trait.Basic],
-                            "{/i}Your fearless charge into battle reinvigorates your allies to carry on the fight.{/i}\n\nYou Stride up to your Speed and make a melee Strike. If your Strike hits and damages an enemy, each ally within 60 feet"/*+" who saw you hit"*/+$" gains {{b}}+{qfThis.Owner.Abilities.Charisma}{{/b}} temporary Hit Points."/*+" These temporary Hit Points last until the start of your next turn."*/,
-                            Target.Self())
-                        .WithActionCost(2)
-                        .WithSoundEffect(SfxName.Footsteps)
-                        .WithEffectOnSelf(async (thisAction, self) =>
-                        {
-                            if (!await self.StrideAsync("Choose where to Stride with Rallying Charge. You should end your movement within melee reach of an enemy. (1/2)", allowCancel: true))
+                    qfFeat.ProvideMainAction = qfThis =>
+                    {
+                        CombatAction charge = new CombatAction(
+                                qfThis.Owner,
+                                ModData.Illustrations.RallyingCharge,
+                                "Rallying Charge",
+                                [ModData.Traits.MoreDedications, Trait.Open, Trait.Visual, Trait.Basic],
+                                "{/i}Your fearless charge into battle reinvigorates your allies to carry on the fight.{/i}\n\nYou Stride up to your Speed and make a melee Strike. If your Strike hits and damages an enemy, each ally within 60 feet"/*+" who saw you hit"*/+$" gains {{b}}+{qfThis.Owner.Abilities.Charisma}{{/b}} temporary Hit Points."/*+" These temporary Hit Points last until the start of your next turn."*/,
+                                Target.Self())
+                            .WithActionCost(2)
+                            .WithSoundEffect(SfxName.Footsteps)
+                            .WithEffectOnSelf(async (action, self) =>
                             {
-                                thisAction.RevertRequested = true;
-                            }
-                            else
-                            {
-                                QEffect preStrikeBuff = new QEffect()
+                                if (!await self.StrideAsync("Choose where to Stride with Rallying Charge. You should end your movement within melee reach of an enemy. (1/2)", allowCancel: true))
                                 {
-                                    AfterYouDealDamage = async (cr, action, target) =>
+                                    action.RevertRequested = true;
+                                }
+                                else
+                                {
+                                    QEffect preStrikeBuff = new QEffect()
                                     {
-                                        if (!action.HasTrait(Trait.Strike) || !action.HasTrait(Trait.Melee))
-                                            return;
-                                        
-                                        cr.Battle.AllCreatures.ForEach(cr2 =>
+                                        AfterYouDealDamage = async (cr, action2, target) =>
                                         {
-                                            if (!cr2.FriendOf(cr) || cr2.DistanceTo(cr) > 12)
+                                            if (!action2.HasTrait(Trait.Strike) || !action2.HasTrait(Trait.Melee))
                                                 return;
                                             
-                                            cr2.GainTemporaryHP(cr.Abilities.Charisma);
-                                            cr2.Overhead(cr.Abilities.Charisma.WithPlus(), Color.Aquamarine);
-                                        });
+                                            cr.Battle.AllCreatures.ForEach(cr2 =>
+                                            {
+                                                if (!cr2.FriendOf(cr) || cr2.DistanceTo(cr) > 12)
+                                                    return;
+                                                
+                                                cr2.GainTemporaryHP(cr.Abilities.Charisma);
+                                                cr2.Overhead(cr.Abilities.Charisma.WithPlus(), Color.Aquamarine);
+                                            });
+                                        }
+                                    };
+                                    self.AddQEffect(preStrikeBuff);
+                                    
+                                    if (!await CommonCombatActions.StrikeAdjacentCreature(self, null, true))
+                                    {
+                                        self.Battle.Log("Rallying Charge was converted to a simple Stride.");
+                                        action.SpentActions = 1;
+                                        action.RevertRequested = true;
                                     }
-                                };
-                                self.AddQEffect(preStrikeBuff);
-                                
-                                if (!await CommonCombatActions.StrikeAdjacentCreature(self, null, true))
-                                {
-                                    self.Battle.Log("Rallying Charge was converted to a simple Stride.");
-                                    thisAction.SpentActions = 1;
-                                    thisAction.RevertRequested = true;
-                                }
 
-                                preStrikeBuff.ExpiresAt = ExpirationCondition.Immediately;
-                            };
-                        });
-                    return new ActionPossibility(charge, PossibilitySize.Full);
-                };
-            });
-        ModManager.AddFeat(rallyingCharge);
+                                    preStrikeBuff.ExpiresAt = ExpirationCondition.Immediately;
+                                }
+                            });
+                        return new ActionPossibility(charge);
+                    };
+                });
         
         // Attack of Opportunity
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            FeatName.AttackOfOpportunity,
-            ModData.Traits.MarshalArchetype,
-            8)
-            .WithEquivalent(values => values.HasFeat(FeatName.Fighter)));
+        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+                FeatName.AttackOfOpportunity, ModData.Traits.MarshalArchetype, 8)
+            .WithEquivalent(values => values.HasFeat(FeatName.Fighter));
 
         // Back to Back @lv8
         // Can this even be implemented?
@@ -428,80 +437,82 @@ public static class ArchetypeMarshal
         // "As long as you aren't flanked at the same time as any of your adjacent allies, you and all allies adjacent to you gain the benefits of All-Around Vision."
 
         // To Battle!
-        Feat toBattle = new TrueFeat(
-            ModData.FeatNames.ToBattle,
-            8,
-            "With a resounding cry, you rally your ally to the offensive.",
-            "Choose one ally within your marshal's aura who has a reaction available. If you spend 1 action, that ally can use their reaction to immediately Stride. If you spend 2 actions, that ally can use their reaction to immediately Strike.",
-            [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Flourish])
+        yield return new TrueFeat(
+                ModData.FeatNames.ToBattle,
+                8,
+                "With a resounding cry, you rally your ally to the offensive.",
+                "Choose one ally within your marshal's aura who has a reaction available. If you spend 1 action, that ally can use their reaction to immediately Stride. If you spend 2 actions, that ally can use their reaction to immediately Strike.",
+                [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Flourish])
             .WithActionCost(-3)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
-            .WithPermanentQEffect("Choose an ally, who will use their reaction to Stride or Strike.", qfFeat =>
-            {
-                qfFeat.ProvideMainAction = qfThis =>
+            .WithPermanentQEffect(
+                "Choose an ally, who will use their reaction to Stride or Strike.", 
+                qfFeat =>
                 {
-                    CombatAction toBattleAction = new CombatAction(
-                        qfThis.Owner,
-                        ModData.Illustrations.ToBattle,
-                        "To Battle!",
-                        [Trait.Auditory, Trait.Flourish, Trait.Basic],
-                        "{i}With a resounding cry, you rally your ally to the offensive.{/i}\n\nChoose one ally within your marshal's aura who has a reaction available. If you spend 1 action, that ally can use their reaction to immediately Stride. If you spend 2 actions, that ally can use their reaction to immediately Strike.",
-                        Target.DependsOnActionsSpent(
-                            Target.RangedFriend(GetMarshalAuraRange(qfThis.Owner))
-                                .WithAdditionalConditionOnTargetCreature(IsInMarshalAura),
-                            Target.RangedFriend(GetMarshalAuraRange(qfThis.Owner))
-                                .WithAdditionalConditionOnTargetCreature(IsInMarshalAura),
-                            null))
-                        .WithActionCost(-3)
-                        .WithSoundEffect(qfThis.Owner.HasTrait(Trait.Female) ? SfxName.Intimidate : SfxName.MaleIntimidate)
-                        .WithCreateVariantDescription((actionCost, _) =>
-                        {
-                            if (actionCost == 1)
-                                return "Choose one ally within your marshal's aura who has a reaction available. That ally can use their reaction to immediately {Blue}Stride{/Blue}.";
-                            if (actionCost == 2)
-                                return "Choose one ally within your marshal's aura who has a reaction available. That ally can use their reaction to immediately {Blue}Strike{/Blue}.";
-                            else
-                                throw new ArgumentException("Unknown action cost.");
-                        })
-                        .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
-                        {
-                            if (thisAction.SpentActions == 1)
+                    qfFeat.ProvideMainAction = qfThis =>
+                    {
+                        CombatAction toBattleAction = new CombatAction(
+                                qfThis.Owner,
+                                ModData.Illustrations.ToBattle,
+                                "To Battle!",
+                                [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Flourish, Trait.Basic],
+                                "{i}With a resounding cry, you rally your ally to the offensive.{/i}\n\nChoose one ally within your marshal's aura who has a reaction available. If you spend 1 action, that ally can use their reaction to immediately Stride. If you spend 2 actions, that ally can use their reaction to immediately Strike.",
+                                Target.DependsOnActionsSpent(
+                                    Target.RangedFriend(GetMarshalAuraRange(qfThis.Owner))
+                                        .WithAdditionalConditionOnTargetCreature(IsInMarshalAura),
+                                    Target.RangedFriend(GetMarshalAuraRange(qfThis.Owner))
+                                        .WithAdditionalConditionOnTargetCreature(IsInMarshalAura),
+                                    null!))
+                            .WithActionCost(-3)
+                            .WithSoundEffect(qfThis.Owner.HasTrait(Trait.Female)
+                                ? SfxName.Intimidate : SfxName.MaleIntimidate)
+                            .WithCreateVariantDescription((actionCost, _) =>
                             {
-                                if (!await target.AskToUseReaction("{b}To Battle!{b}\nUse your reaction to Stride?"))
-                                {
-                                    thisAction.RevertRequested = true;
-                                    return;
-                                }
-                                
-                                if (!await target.StrideAsync("Choose where to Stride.", allowCancel: true))
-                                {
-                                    target.Actions.RefundReaction();
-                                    thisAction.RevertRequested = true;
-                                    return;
-                                }
-                            }
-                            else if (thisAction.SpentActions == 2)
+                                if (actionCost == 1)
+                                    return "Choose one ally within your marshal's aura who has a reaction available. That ally can use their reaction to immediately {Blue}Stride{/Blue}.";
+                                if (actionCost == 2)
+                                    return "Choose one ally within your marshal's aura who has a reaction available. That ally can use their reaction to immediately {Blue}Strike{/Blue}.";
+                                else
+                                    throw new ArgumentException("Unknown action cost.");
+                            })
+                            .WithEffectOnEachTarget(async (action, _, target, _) =>
                             {
-                                if (!await target.AskToUseReaction("{b}To Battle!{b}\nUse your reaction to Strike?"))
+                                if (action.SpentActions == 1)
                                 {
-                                    thisAction.RevertRequested = true;
-                                    return;
+                                    if (!await target.AskToUseReaction("{b}To Battle!{b}\nUse your reaction to Stride?"))
+                                    {
+                                        action.RevertRequested = true;
+                                        return;
+                                    }
+                                    
+                                    if (!await target.StrideAsync("Choose where to Stride.", allowCancel: true))
+                                    {
+                                        target.Actions.RefundReaction();
+                                        action.RevertRequested = true;
+                                        return;
+                                    }
                                 }
-                                
-                                if (!await CommonCombatActions.StrikeAnyCreature(target, null, allowCancel: true))
+                                else if (action.SpentActions == 2)
                                 {
-                                    target.Actions.RefundReaction();
-                                    thisAction.RevertRequested = true;
-                                    return;
+                                    if (!await target.AskToUseReaction("{b}To Battle!{b}\nUse your reaction to Strike?"))
+                                    {
+                                        action.RevertRequested = true;
+                                        return;
+                                    }
+                                    
+                                    if (!await CommonCombatActions.StrikeAnyCreature(target, null, allowCancel: true))
+                                    {
+                                        target.Actions.RefundReaction();
+                                        action.RevertRequested = true;
+                                        return;
+                                    }
                                 }
-                            }
-                        });
-                    Possibility battlePossibility = Possibilities.CreateSpellPossibility(toBattleAction);
-                    battlePossibility.PossibilitySize = PossibilitySize.Full;
-                    return battlePossibility;
-                };
-            });
-        ModManager.AddFeat(toBattle);
+                            });
+                        Possibility battlePossibility = Possibilities.CreateSpellPossibility(toBattleAction);
+                        battlePossibility.PossibilitySize = PossibilitySize.Full;
+                        return battlePossibility;
+                    };
+                });
     }
 
     public static int GetMarshalAuraRange(Creature marshal)

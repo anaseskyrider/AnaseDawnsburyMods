@@ -30,12 +30,18 @@ namespace Dawnsbury.Mods.MoreDedications;
 
 public static class ArchetypeBlessedOne
 {
-    public static void LoadMod()
+    public static void LoadArchetype()
+    {
+        foreach (Feat ft in CreateFeats())
+            ModManager.AddFeat(ft);
+    }
+
+    public static IEnumerable<Feat> CreateFeats()
     {
         Feat blessedOneDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
-            ModData.Traits.BlessedOneArchetype,
-            "Through luck or deed, heritage or heroics, you carry the blessing of a deity. This blessing manifests as the ability to heal wounds and remove harmful conditions, and exists independent of worship.",
-            "You learn the " + AllSpells.CreateSpellLink(ChampionFocusSpells.LayOnHands, ModData.Traits.BlessedOneArchetype) + " champion focus spell. This feat grants a focus pool of 1 Focus Point, or an additional Focus Point if you already had one."/*+" Your focus spells from the blessed one archetype are divine spells."*/)
+                ModData.Traits.BlessedOneArchetype,
+                "Through luck or deed, heritage or heroics, you carry the blessing of a deity. This blessing manifests as the ability to heal wounds and remove harmful conditions, and exists independent of worship.",
+                "You learn the " + AllSpells.CreateSpellLink(ChampionFocusSpells.LayOnHands, ModData.Traits.BlessedOneArchetype) + " champion focus spell. This feat grants a focus pool of 1 Focus Point, or an additional Focus Point if you already had one."/*+" Your focus spells from the blessed one archetype are divine spells."*/)
             .WithOnSheet(values =>
             {
                 values.SetProficiency(Trait.Spell, Proficiency.Trained);
@@ -50,7 +56,7 @@ public static class ArchetypeBlessedOne
                         ChampionFocusSpells.LayOnHands);
             });
         blessedOneDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
-        ModManager.AddFeat(blessedOneDedication);
+        yield return blessedOneDedication;
         
         // Blessed Sacrifice
         ModData.SpellIds.ProtectorsSacrifice = ModManager.RegisterNewSpell(
@@ -105,12 +111,12 @@ public static class ArchetypeBlessedOne
                         })
                         .WithHeighteningNumerical(spellLevel, 1, inCombat, 1, "The damage you redirect increases by 3.");
             });
-        Feat blessedSacrifice = new TrueFeat(
-            ModData.FeatNames.BlessedSacrifice,
-            4,
-            null,
-            $"You gain the {AllSpells.CreateSpellLink(ModData.SpellIds.ProtectorsSacrifice, Trait.Champion)} domain spell as a devotion spell. Increase the number of Focus Points in your focus pool by 1.",
-            [ModData.Traits.MoreDedications])
+        yield return new TrueFeat(
+                ModData.FeatNames.BlessedSacrifice,
+                4,
+                null,
+                $"You gain the {AllSpells.CreateSpellLink(ModData.SpellIds.ProtectorsSacrifice, Trait.Champion)} domain spell as a devotion spell. Increase the number of Focus Points in your focus pool by 1.",
+                [ModData.Traits.MoreDedications])
             .WithAvailableAsArchetypeFeat(ModData.Traits.BlessedOneArchetype)
             .WithOnSheet(values =>
             {
@@ -123,13 +129,10 @@ public static class ArchetypeBlessedOne
                         Ability.Charisma,
                         ModData.SpellIds.ProtectorsSacrifice);
             });
-        ModManager.AddFeat(blessedSacrifice);
         
         // Accelerating Touch
-        ModManager.AddFeat(ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            Champion.AcceleratingTouchFeatName,
-            ModData.Traits.BlessedOneArchetype,
-            6));
+        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            Champion.AcceleratingTouchFeatName, ModData.Traits.BlessedOneArchetype, 6);
         
         // NO MERCY??? :sob:
         

@@ -24,7 +24,13 @@ namespace Dawnsbury.Mods.MoreDedications;
 
 public static class ArchetypeAssassin
 {
-    public static void LoadMod()
+    public static void LoadArchetype()
+    {
+        foreach (Feat ft in CreateFeats())
+            ModManager.AddFeat(ft);
+    }
+
+    public static IEnumerable<Feat> CreateFeats()
     {
         // Dedication
         Feat assassinDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
@@ -41,7 +47,8 @@ public static class ArchetypeAssassin
             .WithPrerequisite(values =>
                 values.HasFeat(FeatName.Stealth),
                 "You must be trained in Stealth.")
-            .WithPermanentQEffect("You mark a creature, gaining a +2 circumstance bonus to Seeking and Feinting it. Your agile and finesse weapons and unarmed attacks gain the backstabber and deadly d6 traits against your mark.",
+            .WithPermanentQEffect(
+                "You mark a creature, gaining a +2 circumstance bonus to Seeking and Feinting it. Your agile and finesse weapons and unarmed attacks gain the backstabber and deadly d6 traits against your mark.",
                 qfFeat =>
                 {
                     qfFeat.StartOfCombat = async qfThis =>
@@ -53,10 +60,10 @@ public static class ArchetypeAssassin
                         new ActionPossibility(CreateMarkForDeathAction(qfThis.Owner));
                 });
         assassinDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
-        ModManager.AddFeat(assassinDedication);
+        yield return assassinDedication;
 
         // Expert Backstabber
-        Feat expertBackstabber = new TrueFeat(
+        yield return new TrueFeat(
                 ModData.FeatNames.ExpertBackstabber,
                 4,
                 null,
@@ -67,15 +74,14 @@ public static class ArchetypeAssassin
             {
                 qfFeat.Id = ModData.QEffectIds.ExpertBackstabber;
             });
-        ModManager.AddFeat(expertBackstabber);
         
         // Poison Resistance
-        Feat poisonResistance = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.PoisonResistanceDruid, ModData.Traits.AssassinArchetype,
-            4);
+        Feat poisonResistance = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.PoisonResistanceDruid, ModData.Traits.AssassinArchetype, 4);
         poisonResistance.Traits.Insert(0, ModData.Traits.MoreDedications);
         poisonResistance.FlavorText = "Your body has become fortified against toxins.";
         ModData.FeatNames.PoisonResistance = poisonResistance.FeatName;
-        ModManager.AddFeat(poisonResistance);
+        yield return poisonResistance;
 
         // Surprise Attack
         Feat surpriseAttack = new TrueFeat(
@@ -90,7 +96,7 @@ public static class ArchetypeAssassin
                 || values.AdditionalClassTraits.Contains(Trait.Rogue))
             .WithOnCreature(creature =>
                 creature.AddQEffect(Rogue.SurpriseAttackQEffect()));
-        ModManager.AddFeat(surpriseAttack);
+        yield return surpriseAttack;
 
         // Poison Weapon
         Feat poisonWeapon = new TrueFeat(
@@ -188,18 +194,19 @@ public static class ArchetypeAssassin
                         return (ActionPossibility)poisonIt;
                     };
                 });
-        ModManager.AddFeat(poisonWeapon);
-        Feat poisonWeaponAssassin = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(poisonWeapon.FeatName, ModData.Traits.AssassinArchetype, 6);
+        yield return poisonWeapon;
+        Feat poisonWeaponAssassin = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            poisonWeapon.FeatName, ModData.Traits.AssassinArchetype, 6);
         ModData.FeatNames.PoisonWeaponAssassin = poisonWeaponAssassin.FeatName;
-        ModManager.AddFeat(poisonWeaponAssassin);
+        yield return poisonWeaponAssassin;
 
         // Sneak Attacker
-        Feat sneakAttacker = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(FeatName.SneakAttacker, ModData.Traits.AssassinArchetype,
-            4);
+        Feat sneakAttacker = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.SneakAttacker, ModData.Traits.AssassinArchetype, 4);
         sneakAttacker.Traits.Insert(0, ModData.Traits.MoreDedications);
         sneakAttacker.FlavorText = "Your body has become fortified against toxins.";
         ModData.FeatNames.SneakAttacker = sneakAttacker.FeatName;
-        ModManager.AddFeat(sneakAttacker);
+        yield return sneakAttacker;
         
         // Improved Poison Weapon
         Feat improvedPoisonWeapon = new TrueFeat(
@@ -207,12 +214,13 @@ public static class ArchetypeAssassin
                 8,
                 "You deliver poisons in ways that maximize their harmful effects.",
                 "The damage of your prepared poisons increases to 2d4, and are no longer wasted on a critically failed attack roll.",
-                [Trait.Rogue])
+                [ModData.Traits.MoreDedications, Trait.Rogue])
             .WithPrerequisite(poisonWeapon.FeatName, "Poison Weapon");
-        ModManager.AddFeat(improvedPoisonWeapon);
-        Feat improvedPoisonWeaponAssassin = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(improvedPoisonWeapon.FeatName, ModData.Traits.AssassinArchetype, 10);
+        yield return improvedPoisonWeapon;
+        Feat improvedPoisonWeaponAssassin = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            improvedPoisonWeapon.FeatName, ModData.Traits.AssassinArchetype, 10);
         ModData.FeatNames.ImprovedPoisonWeaponAssassin = improvedPoisonWeaponAssassin.FeatName;
-        ModManager.AddFeat(improvedPoisonWeaponAssassin);
+        yield return improvedPoisonWeaponAssassin;
     }
 
     public static CombatAction CreateMarkForDeathAction(Creature self)
