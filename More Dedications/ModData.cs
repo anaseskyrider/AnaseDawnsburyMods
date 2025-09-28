@@ -89,10 +89,7 @@ public static class ModData
         public static FeatName PoisonResistance; // Set later
         public static readonly FeatName SurpriseAttack = ModManager.RegisterFeatName("MoreDedications.Archetype.Assassin.SurpriseAttack", "Surprise Attack");
         public static readonly FeatName PoisonWeapon = ModManager.RegisterFeatName("PoisonWeapon", "Poison Weapon");
-        public static FeatName PoisonWeaponAssassin; // Set later
-        public static FeatName SneakAttacker; // Set later
         public static readonly FeatName ImprovedPoisonWeapon = ModManager.RegisterFeatName("ImprovedPoisonWeapon", "Improved Poison Weapon");
-        public static FeatName ImprovedPoisonWeaponAssassin; // Set later
         #endregion
         
         #region Bonus Stances

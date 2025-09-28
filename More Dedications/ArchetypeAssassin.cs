@@ -99,7 +99,7 @@ public static class ArchetypeAssassin
         yield return surpriseAttack;
 
         // Poison Weapon
-        Feat poisonWeapon = new TrueFeat(
+        yield return new TrueFeat(
                 ModData.FeatNames.PoisonWeapon,
                 4,
                 null,
@@ -194,33 +194,27 @@ public static class ArchetypeAssassin
                         return (ActionPossibility)poisonIt;
                     };
                 });
-        yield return poisonWeapon;
-        Feat poisonWeaponAssassin = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            poisonWeapon.FeatName, ModData.Traits.AssassinArchetype, 6);
-        ModData.FeatNames.PoisonWeaponAssassin = poisonWeaponAssassin.FeatName;
-        yield return poisonWeaponAssassin;
+        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            ModData.FeatNames.PoisonWeapon, ModData.Traits.AssassinArchetype, 6);
 
         // Sneak Attacker
         Feat sneakAttacker = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.SneakAttacker, ModData.Traits.AssassinArchetype, 4);
         sneakAttacker.Traits.Insert(0, ModData.Traits.MoreDedications);
         sneakAttacker.FlavorText = "Your body has become fortified against toxins.";
-        ModData.FeatNames.SneakAttacker = sneakAttacker.FeatName;
         yield return sneakAttacker;
         
         // Improved Poison Weapon
-        Feat improvedPoisonWeapon = new TrueFeat(
+        yield return new TrueFeat(
                 ModData.FeatNames.ImprovedPoisonWeapon,
                 8,
                 "You deliver poisons in ways that maximize their harmful effects.",
                 "The damage of your prepared poisons increases to 2d4, and are no longer wasted on a critically failed attack roll.",
                 [ModData.Traits.MoreDedications, Trait.Rogue])
-            .WithPrerequisite(poisonWeapon.FeatName, "Poison Weapon");
-        yield return improvedPoisonWeapon;
-        Feat improvedPoisonWeaponAssassin = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            improvedPoisonWeapon.FeatName, ModData.Traits.AssassinArchetype, 10);
-        ModData.FeatNames.ImprovedPoisonWeaponAssassin = improvedPoisonWeaponAssassin.FeatName;
-        yield return improvedPoisonWeaponAssassin;
+            .WithPrerequisite(
+                ModData.FeatNames.PoisonWeapon, "Poison Weapon");
+        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            ModData.FeatNames.ImprovedPoisonWeapon, ModData.Traits.AssassinArchetype, 10);
     }
 
     public static CombatAction CreateMarkForDeathAction(Creature self)
