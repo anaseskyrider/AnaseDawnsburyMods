@@ -1,25 +1,7 @@
-using Dawnsbury.Audio;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations;
-using Dawnsbury.Core.CharacterBuilder.Feats;
-using Dawnsbury.Core.CharacterBuilder.FeatsDb;
-using Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion;
-using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
-using Dawnsbury.Core.CombatActions;
-using Dawnsbury.Core.Coroutines.Options;
-using Dawnsbury.Core.Creatures;
-using Dawnsbury.Core.Mechanics;
-using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
-using Dawnsbury.Core.Mechanics.Rules;
-using Dawnsbury.Core.Mechanics.Targeting;
-using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
-using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
-using Dawnsbury.Core.Possibilities;
-using Dawnsbury.Core.Tiles;
-using Dawnsbury.Display;
-using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.MoreShields;
@@ -37,32 +19,15 @@ public static class NewShields
     /// <summary>Load new shields into Dawnsbury Days. Called by <see cref="ModLoader"/>.</summary>
     public static void LoadShields()
     {
-        // Automates the creation of attack options for the thrown 30 ft trait.
-        ModManager.RegisterActionOnEachCreature(cr =>
-        {
-            cr.AddQEffect(new QEffect()
-            {
-                Name = "Thrown30ftAutomator",
-                ProvideStrikeModifier = item =>
-                {
-                    if (!item.HasTrait(ModData.Traits.Thrown30Feet))
-                        return null;
-
-                    return StrikeRules.CreateStrike(cr, item, RangeKind.Ranged, -1, true);
-                },
-            });
-        });
-        
         // Create new shields
         ModData.ItemNames.Buckler = ModManager.RegisterNewItemIntoTheShop(
             "Buckler",
             iName => new Item(
                     iName,
                     ModData.Illustrations.Buckler,
-                    "Buckler",
-                    0,
-                    1,
-                    [ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield])
+                    "buckler",
+                    0, 1,
+                    ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield)
                 .WithMainTrait(ModData.Traits.Buckler)
                 .WithDescription("This very small shield is a favorite of duelists and quick, lightly armored warriors. It's typically made of steel and strapped to your forearm.")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning))
@@ -71,10 +36,10 @@ public static class NewShields
             "FortressShield",
             iName => new Item(
                     iName,
-                    IllustrationName.TowerShield,
-                    "Fortress Shield",
+                    ModData.Illustrations.FortressShield,
+                    "fortress shield",
                     1, 20,
-                    [ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, ModData.Traits.HeavyShield, ModData.Traits.CoverShield, ModData.Traits.Hefty14])
+                    ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, ModData.Traits.HeavyShield, ModData.Traits.CoverShield, ModData.Traits.Hefty14)
                 .WithMainTrait(ModData.Traits.FortressShield)
                 .WithDescription("Also known as portable walls, these thick and heavy shields are slightly larger than tower shields. Like tower shields, they're typically made from wood reinforced with metal, but many are made from larger amounts of metal or even stone.")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning))
@@ -84,32 +49,24 @@ public static class NewShields
             iName => new Item(
                     iName,
                     ModData.Illustrations.MeteorShield,
-                    "Meteor Shield",
-                    0,
-                    4,
-                    [ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, ModData.Traits.Thrown30Feet, ModData.Traits.MediumShield])
+                    "meteor shield",
+                    0, 4,
+                    ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, Trait.Thrown30Feet, ModData.Traits.MediumShield)
                 .WithMainTrait(ModData.Traits.MeteorShield)
                 .WithDescription("Meteor shields are specifically designed with throwing in mind. A meteor shield is made from thin steel and has quick-release straps, allowing for easy, long-distance throws.")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning)
                 {
                     VfxStyle = new VfxStyle(1, ProjectileKind.Arrow, IllustrationName.WoodenShieldBoss)
                 })
-                .WithAdditionalWeaponProperties(prop =>
-                {
-                    prop.ForcedMelee = true;
-                    prop.Throwable = true;
-                    prop.WithRangeIncrement(30 / 5);
-                })
                 .WithShieldProperties(4));
         ModData.ItemNames.HeavyRondache = ModManager.RegisterNewItemIntoTheShop(
             "HeavyRondache",
             iName => new Item(
                     iName,
-                    ModData.Illustrations.Buckler,
-                    "Heavy Rondache",
-                    1,
-                    5,
-                    [ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield])
+                    ModData.Illustrations.HeavyRondache,
+                    "heavy rondache",
+                    1, 5,
+                    ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield)
                 .WithMainTrait(ModData.Traits.HeavyRondache)
                 .WithDescription("Similar in size to a buckler, this shield is intended to absorb blows instead of deflecting attacks. It features multiple layers of metal and is reinforced with additional wood.")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning))
@@ -121,9 +78,8 @@ public static class NewShields
                     iName,
                     ModData.Illustrations.CastersTarge,
                     "Caster's Targe",
-                    0,
-                    2,
-                    [ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, Trait.NonMetallic, ModData.Traits.LightShield])
+                    0, 2,
+                    ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, Trait.NonMetallic, ModData.Traits.LightShield)
                 .WithMainTrait(ModData.Traits.CastersTarge)
                 .WithDescription("This small shield is made from wood. It features a special panel of parchment along the inside surface that allows it to store a single spell scroll. This scroll can be activated from the shield while it is being held.")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning))

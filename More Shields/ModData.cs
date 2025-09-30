@@ -1,13 +1,7 @@
-using System.ComponentModel;
 using Dawnsbury.Audio;
-using Dawnsbury.Core;
-using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CombatActions;
-using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
-using Dawnsbury.Core.Mechanics.Enumerations.TraitAttributes;
 using Dawnsbury.Core.Mechanics.Treasure;
-using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 
@@ -15,13 +9,10 @@ namespace Dawnsbury.Mods.MoreShields;
 
 public static class ModData
 {
+    public const string IdPrepend = "MoreShields.";
+    
     public static void LoadData()
     {
-        // Trait Registration //
-        QEffectIds.BonusReaction = ModManager.TryParse("BonusReaction", out QEffectId bonusReaction)
-            ? bonusReaction
-            : ModManager.RegisterEnumMember<QEffectId>("BonusReaction");
-        
         // Trait Modification //
         TraitProperties tShieldProperties = Trait.TowerShield.GetTraitProperties();
         TraitExtensions.TraitProperties[Trait.TowerShield] = new TraitProperties(
@@ -34,25 +25,92 @@ public static class ModData
         TraitExtensions.TraitProperties[Trait.Shield] = new TraitProperties(
             shieldProperties.HumanizedName,
             shieldProperties.Relevant,
-            $"You can use this item to {TooltipInsert.ActionRaiseAShield("Raise a Shield {icon:Action}")}. If you score a crit and have unlocked {{tooltip:criteffect}}critical specialization effects{{/}} for this weapon: Push the target 5 feet.",
+            $"You can use this item to {Tooltips.ActionRaiseAShield("Raise a Shield {icon:Action}")}. If you score a crit and have unlocked {{tooltip:criteffect}}critical specialization effects{{/}} for this weapon: Push the target 5 feet.",
             shieldProperties.RelevantForShortBlock);
         
         // RuneKind registration //
         RuneKinds.ShieldPlating = ModManager.TryParse("ShieldPlating", out RuneKind shieldPlating)
             ? shieldPlating
             : ModManager.RegisterEnumMember<RuneKind>("ShieldPlating");
-
-        ///////////////////////
-        // Register Tooltips //
-        ///////////////////////
-        ModManager.RegisterInlineTooltip(
-            "MoreShields.Actions.RaiseAShield",
-            "{b}Raise a Shield {icon:Action}{/b}\n(Requires you wield a shield)\nYou position your shield to protect yourself. When you have Raised a Shield, you gain its listed circumstance bonus to AC. Your shield remains raised until the start of your next turn.");
     }
 
-    public static class TooltipInsert
+    public static class Illustrations
     {
-        public static readonly Func<string, string> ActionRaiseAShield = input => "{tooltip:MoreShields.Actions.RaiseAShield}"+input+"{/}";
+        public static readonly Illustration Buckler = new ModdedIllustration("MoreShieldsAssets/buckler.png");
+        public static readonly Illustration MeteorShield = new ModdedIllustration("MoreShieldsAssets/frisbee2.png");
+        public static readonly Illustration FortressShield = new ModdedIllustration("MoreShieldsAssets/shield.png");
+        public static readonly Illustration HeavyRondache = new ModdedIllustration("MoreShieldsAssets/buckler 2.png");
+        // https://game-icons.net/icons/ffffff/000000/1x1/lorc/bordered-shield.svg
+        //public static readonly Illustration CastersTarge = IllustrationName.WoodenShieldBoss;  // TODO: Caster's Targe icon
+        // https://game-icons.net/icons/ffffff/000000/1x1/lorc/magic-shield.svg
+        public static readonly Illustration ShieldPlating = new ModdedIllustration("MoreShieldsAssets/steel.png");
+        public static readonly Illustration ShieldAugmentation = new ModdedIllustration("MoreShieldsAssets/repair.png");
+        public static readonly string DawnsburySunPath = "GuardianClassAssets/PatreonSunTransparent.png";
+    }
+
+    public static class ItemGreaterGroups
+    {
+        public static readonly ItemGreaterGroup ShieldModifications = ModManager.RegisterEnumMember<ItemGreaterGroup>("Shield modifications");
+        public static readonly ItemGreaterGroup PlatedShields = ModManager.RegisterEnumMember<ItemGreaterGroup>("Plated shields");
+    }
+
+    public static class ItemNames
+    {
+        #region Shields
+        
+        public static ItemName Buckler;
+        public static ItemName CastersTarge; // TV
+        public static ItemName HeavyRondache; // TV
+        public static ItemName MeteorShield; // TV
+        public static ItemName FortressShield; // TV
+        
+        #endregion
+        
+        #region Item Modifications
+        
+        public static ItemName SturdyShieldPlatingMinor;
+        public static ItemName SturdyShieldPlatingLesser;
+        public static ItemName SturdyShieldPlatingModerate;
+        public static ItemName SturdyShieldPlatingGreater;
+        public static ItemName SturdyShieldPlatingMajor;
+        public static ItemName SturdyShieldPlatingSupreme;
+
+        public static ItemName ShieldAugmentationBackswing; // GB
+        public static ItemName ShieldAugmentationForceful; // GB
+        public static ItemName ShieldAugmentationManeuverable; // GB
+        public static ItemName ShieldAugmentationVersatile; // GB
+
+        #endregion
+    }
+
+    public static class RuneKinds
+    {
+        public static RuneKind ShieldPlating;
+        public static readonly RuneKind ShieldAugmentation = ModManager.RegisterEnumMember<RuneKind>("ShieldAugmentation");
+    }
+    
+    public static class SfxNames
+    {
+        public static readonly SfxName ShieldBlockWooodenImpact = ModManager.RegisterNewSoundEffect("MoreShieldsAssets/impactwood14 (quieter).mp3.flac");
+    }
+
+    public static class Tooltips
+    {
+        public static readonly Func<string, string> ActionRaiseAShield = RegisterTooltipInserter(
+            IdPrepend+"Actions.RaiseAShield",
+            "{b}Raise a Shield {icon:Action}{/b}\n(Requires you wield a shield)\nYou position your shield to protect yourself. When you have Raised a Shield, you gain its listed circumstance bonus to AC. Your shield remains raised until the start of your next turn.");
+        
+        /// <summary>
+        /// Registers a tooltip, then returns a function that can be used to insert the tooltip with any arbitrary text.
+        /// </summary>
+        /// <param name="tooltipName">The registered name of the tooltip.</param>
+        /// <param name="tooltipDescription">The body text of the tooltip.</param>
+        /// <returns>(Func[string, string]) A function which takes in the text to insert, and returns a tooltip with the passed text.</returns>
+        public static Func<string, string> RegisterTooltipInserter(string tooltipName, string tooltipDescription)
+        {
+            ModManager.RegisterInlineTooltip(tooltipName, tooltipDescription);
+            return input => "{tooltip:" + tooltipName + "}" + input + "{/}";
+        }
     }
     
     public static class Traits
@@ -94,9 +152,6 @@ public static class ModData
         public static readonly Trait Hefty14 = ModManager.RegisterTrait("Hefty14", 
             new TraitProperties("Hefty 14", true, "Raising a Shield with the Hefty trait takes more effort, costing an extra action if your Strength score is below the number with the trait."));
         
-        public static readonly Trait Thrown30Feet = ModManager.RegisterTrait("Thrown30Feet",
-                new TraitProperties("Thrown 30 ft.", true, "You can throw this as a ranged attack with a range increment of 30 feet."));
-        
         #region Items
         public static readonly Trait FortressShield = ModManager.RegisterTrait("FortressShield",
             new TraitProperties("Fortress Shield", false/*true, "You have an additional -10 speed penalty when wielding this shield."*/));
@@ -109,75 +164,5 @@ public static class ModData
         public static readonly Trait CastersTarge = ModManager.RegisterTrait("CastersTarge",
             new TraitProperties("Caster's Targe", false/*true, "This shield compromises some of its sturdiness to gain the Thrown 30 ft. trait."*/));
         #endregion
-    }
-    
-    public static class QEffectIds
-    {
-        //public static readonly QEffectId ExampleQFID = ModManager.RegisterEnumMember<QEffectId>("ExampleQEffectId");
-        
-        /// This Id corresponds to custom effects which grant bonus reactions, such as Quick Shield Block (except that one has its own unique Id.)
-        public static QEffectId BonusReaction;
-    }
-
-    public static class ActionIds
-    {
-        public static readonly ActionId ShieldBlock = ModManager.RegisterEnumMember<ActionId>("ShieldBlock");
-        public static readonly ActionId ReactiveShield = ModManager.RegisterEnumMember<ActionId>("ReactiveShield");
-    }
-
-    public static class Illustrations
-    {
-        public static readonly Illustration Buckler = new ModdedIllustration("MoreShieldsAssets/buckler.png");
-        public static readonly Illustration MeteorShield = new ModdedIllustration("MoreShieldsAssets/frisbee2.png");
-        //public static readonly Illustration FortressShield = new ModdedIllustration("MoreShieldsAssets/_.png"); // TODO: Fortress Shield icon
-        // https://game-icons.net/icons/ffffff/000000/1x1/lorc/bordered-shield.svg
-        //public static readonly Illustration CastersTarge = IllustrationName.WoodenShieldBoss;  // TODO: Caster's Targe icon
-        // https://game-icons.net/icons/ffffff/000000/1x1/lorc/magic-shield.svg
-        public static readonly Illustration ShieldPlating = new ModdedIllustration("MoreShieldsAssets/steel.png");
-        public static readonly Illustration ShieldAugmentation = new ModdedIllustration("MoreShieldsAssets/repair.png");
-        public static readonly string DawnsburySunPath = "GuardianClassAssets/PatreonSunTransparent.png";
-    }
-    
-    public static class SfxNames
-    {
-        public static readonly SfxName ShieldBlockWooodenImpact = ModManager.RegisterNewSoundEffect("MoreShieldsAssets/impactwood14 (quieter).mp3.flac");
-    }
-
-    public static class ItemNames
-    {
-        #region Shields
-        public static ItemName Buckler;
-        public static ItemName CastersTarge; // TV
-        public static ItemName HeavyRondache; // TV
-        public static ItemName MeteorShield; // TV
-        public static ItemName FortressShield; // TV
-        #endregion
-        
-        #region Item Modifications
-        public static ItemName SturdyShieldPlatingMinor;
-        public static ItemName SturdyShieldPlatingLesser;
-        public static ItemName SturdyShieldPlatingModerate;
-        public static ItemName SturdyShieldPlatingGreater;
-        public static ItemName SturdyShieldPlatingMajor;
-        public static ItemName SturdyShieldPlatingSupreme;
-
-        public static ItemName ShieldAugmentationBackswing; // GB
-        public static ItemName ShieldAugmentationForceful; // GB
-        public static ItemName ShieldAugmentationManeuverable; // GB
-        public static ItemName ShieldAugmentationVersatile; // GB
-
-        #endregion
-    }
-
-    public static class RuneKinds
-    {
-        public static RuneKind ShieldPlating;
-        public static readonly RuneKind ShieldAugmentation = ModManager.RegisterEnumMember<RuneKind>("ShieldAugmentation");
-    }
-
-    public static class ItemGreaterGroups
-    {
-        public static readonly ItemGreaterGroup ShieldModifications = ModManager.RegisterEnumMember<ItemGreaterGroup>("Shield modifications");
-        public static readonly ItemGreaterGroup PlatedShields = ModManager.RegisterEnumMember<ItemGreaterGroup>("Plated shields");
     }
 }
