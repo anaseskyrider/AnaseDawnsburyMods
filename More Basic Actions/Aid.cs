@@ -357,6 +357,7 @@ public static class Aid
                         [ModData.Traits.MoreBasicActions],
                         CreateAidReactionDescription(rank).Replace("{b}Aid{b} {icon:Reaction}\n", ""),
                         Target.AdjacentCreature())
+                    .WithTag(aidableAction) // Aid reaction stores which action it's aiding
                     .WithActionCost(0)
                     .WithActionId(ModData.ActionIds.AidReaction)
                     .WithActiveRollSpecification(new ActiveRollSpecification(TaggedChecks.SkillCheck(skill), Checks.FlatDC(AidDC())));
@@ -366,6 +367,7 @@ public static class Aid
                     throw new NullReferenceException("aidableAction cannot have a null Item field");
                 rank = aider.Proficiencies.Get(attack.Item.Traits);
                 aidReaction = aider.CreateStrike(attack.Item)
+                    .WithTag(aidableAction) // Aid reaction stores which action it's aiding
                     .WithActionCost(0)
                     .WithExtraTrait(Trait.ReactiveAttack)
                     .WithActionId(ModData.ActionIds.AidReaction)
