@@ -18,6 +18,7 @@ using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
+using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
@@ -452,20 +453,29 @@ public static class RunesmithClass
                                 await runicTattooFeat.StartOfCombat!.Invoke(runicTattooFeat);
                         }
                         
+                        // Get etch data
                         List<Rune> runesKnown = repertoire.GetRunesKnown(qfFeat.Owner);
                         int etchLimit = repertoire.GetEtchLimit(qfThis.Owner.Level);
                         
-                        qfThis.Owner.Overhead(
+                        qfThis.Owner.Battle.Log(
+                            $"{qfThis.Owner.Name} begins {{b}}Etching Runes{{/b}}.",
+                            "Etch Rune",
+                            $"{{i}}An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.{{/i}}\n\nAt the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to {etchLimit} runes.",
+                            new Traits([Trait.Manipulate, Trait.DoesNotProvoke, ModData.Traits.Runesmith]));
+                        
+                        // Old implementation
+                        /*qfThis.Owner.Overhead(
                             "Etching Runes",
                             Color.Black,
                             $"{qfThis.Owner.Name} begins {{b}}Etching Runes{{/b}}.",
                             "Etch Rune",
                             $"{{i}}An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.{{/i}}\n\nAt the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to {etchLimit} runes.",
-                            new Traits([Trait.Manipulate, Trait.DoesNotProvoke, ModData.Traits.Runesmith]));
+                            new Traits([Trait.Manipulate, Trait.DoesNotProvoke, ModData.Traits.Runesmith]));*/
 
                         for (int i = 0; i < etchLimit; i++)
                         {
-                            await qfThis.Owner.Battle.GameLoop.StateCheck();
+                            // Old implementation
+                            /*await qfThis.Owner.Battle.GameLoop.StateCheck();
                             
                             List<Option> options = [];
                             foreach (Rune rune in runesKnown)
@@ -496,7 +506,37 @@ public static class RunesmithClass
                                     return;
                             }
 
-                            await chosenOption.Action();
+                            await chosenOption.Action();*/
+                            
+                            qfThis.Owner.Overhead("Etching runes ("+(i+1)+"/"+etchLimit+")", Color.Black);
+
+                            PossibilitySection etchRunes = new PossibilitySection("Etch Rune");
+                            foreach (Rune rune in runesKnown)
+                            {
+                                CombatAction etchThisRune = CommonRuneRules.CreateEtchAction(qfThis.Owner, rune)
+                                    .WithExtraTrait(Trait.DoNotShowOverheadOfActionName);
+                                ActionPossibility etchPoss = new ActionPossibility(etchThisRune)
+                                {
+                                    Caption = (etchThisRune.Tag as Rune)!.Name
+                                };
+                                etchRunes.AddPossibility(etchPoss);
+                            }
+                            Possibilities etchableRunes = qfThis.Owner.Possibilities.FilterAnyPossibility(_ => false);
+                            etchableRunes.Sections.Add(etchRunes);
+                            etchableRunes.CannotPass = false;
+                            
+                            var active = qfThis.Owner.Battle.ActiveCreature;
+                            qfThis.Owner.Battle.ActiveCreature = qfThis.Owner;
+                            qfThis.Owner.Possibilities = etchableRunes;
+        
+                            List<Option> actions = await qfThis.Owner.Battle.GameLoop.CreateActions(
+                                qfThis.Owner,
+                                etchableRunes,
+                                null);
+                            qfThis.Owner.Battle.GameLoopCallback.AfterActiveCreaturePossibilitiesRegenerated();
+                            await qfThis.Owner.Battle.GameLoop.OfferOptions(qfThis.Owner, actions, true);
+        
+                            qfThis.Owner.Battle.ActiveCreature = active;
                         }
 
                         qfThis.Tag = true; // True means the runes have been etched.
