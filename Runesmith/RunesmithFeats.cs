@@ -1081,7 +1081,6 @@ public static class RunesmithFeats
         #region 6th-Level Feats
         
         // Runic Reprisal
-        // TODO: AfterYouUseShieldBlock
         yield return new TrueFeat(
                 ModData.FeatNames.RunicReprisal,
                 6,
@@ -1093,115 +1092,90 @@ public static class RunesmithFeats
                 "You can use Fortifying Knock with damaging runes. You invoke the rune on your attacker when you Shield Block.",
                 qfFeat =>
                 {
-                    // This captures the RaisedShield qf to allow it to call its internal behavior, with
-                    // the stipulation of adding the reprisal functionality after shield blocking.
-                    qfFeat.AfterYouAcquireEffect = async (qfThis, qfAcquired) =>
+                    qfFeat.WhenYouUseShieldBlock = async (qfThis, attacker, defender, damage) =>
                     {
-                        if (qfAcquired.Id == QEffectId.RaisingAShield && qfThis.Owner.HasFeat(FeatName.ShieldBlock))
-                        {
-                            var oldDamageDealt = qfAcquired.YouAreDealtDamage;
-                            qfAcquired.YouAreDealtDamage = async (qfRaisedShield, attacker, dealt, defender) =>
-                            {
-                                if (oldDamageDealt == null)
-                                    return null;
-                                
-                                // Get normal shield block stuff
-                                DamageModification? result = await oldDamageDealt.Invoke(qfRaisedShield, attacker, dealt, defender);
+                        if (!qfThis.Owner.IsAdjacentTo(attacker))
+                            return;
 
-                                if (result == null) // Didn't shield block
-                                    return result;
-                                
-                                // Has to be an adjacent attacker
-                                if (!defender.IsAdjacentTo(attacker))
-                                    return result;
-                                
-                                // Do runic reprisal stuff
-                                List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(defender, defender);
-                                DrawnRune? reprisalDr = drawnRunes.FirstOrDefault(dr => 
-                                    dr.SourceAction != null
-                                    && dr.SourceAction.Name.Contains("Knock")
-                                    && dr.SourceAction.Tag is Rune reprisalRune
-                                    && reprisalRune.InvokeTechnicalTraits.Contains(Trait.IsHostile));
-                                if (reprisalDr != null)
-                                {
-                                    if (await defender.Battle.AskForConfirmation(defender,
-                                            reprisalDr.Illustration ?? ModData.Illustrations.InvokeRune,
-                                            $"{{b}}Runic Reprisal{{/b}}\nYou just Shield Blocked. Invoke {{Blue}}{reprisalDr.Rune.Name}{{/Blue}} from your shield against {{Blue}}{attacker.Name}{{/Blue}}?",
-                                            "Invoke", "Pass"))
-                                    {
-                                        await attacker.FictitiousSingleTileMove(attacker.Occupies); // Move them back, so the invoke animation looks good
-                                        
-                                        CombatAction? invokeThisRune = CommonRuneRules.CreateInvokeAction(null, defender, reprisalDr, reprisalDr.Rune, 6, true, false)?
-                                            .WithExtraTrait(ModData.Traits.InvokeAgainstGivenTarget);
-                                        
-                                        if (invokeThisRune == null)
-                                            return result;
-                                        
-                                        invokeThisRune.Name = $"Runic Reprisal ({reprisalDr.Name})";
-                                        await defender.Battle.GameLoop.FullCast(invokeThisRune, ChosenTargets.CreateSingleTarget(attacker));
-                                    }
-                                }
-                                
-                                // Return normal shield block stuff
-                                return result;
-                            };
-                        }
-                    };
-                    
-                    // Compatibility for if my other mod, More Shields, is installed.
-                    qfFeat.AfterYouTakeAction = async (qfThis, action) =>
-                    {
-                        if (!ModManager.TryParse("ShieldBlock", out ActionId shieldBlock) || action.ActionId != shieldBlock)
-                            return;
-                        Creature self = qfThis.Owner;
-                        Creature? attacker = action.ChosenTargets.ChosenCreature;
-                        List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(self, self);
-                        DrawnRune? reprisalDr = drawnRunes.FirstOrDefault(dr => 
-                            dr.SourceAction != null
-                            && dr.SourceAction.Name.Contains("Knock")
-                            && dr.SourceAction.Tag is Rune reprisalRune
-                            && reprisalRune.InvokeTechnicalTraits.Contains(Trait.IsHostile));
-                        
-                        if (attacker == null
-                            || reprisalDr == null
-                            || !self.IsAdjacentTo(attacker) // Has to be an adjacent attacker
-                            || !await self.Battle.AskForConfirmation(self,
-                                reprisalDr?.Illustration ?? ModData.Illustrations.InvokeRune,
-                                $"{{b}}Runic Reprisal{{/b}}\nYou just used Shield Block. Invoke {{Blue}}{reprisalDr?.Rune.Name}{{/Blue}} from your shield against {{Blue}}{attacker.Name}{{/Blue}}?",
-                                "Invoke", "Pass"))
-                            return;
-                        
-                        CombatAction reprisalAction = new CombatAction(
-                                self,
-                                new SideBySideIllustration(action.Illustration, IllustrationName.Shove),
-                                "Runic Reprisal",
-                                [ModData.Traits.Invocation, ModData.Traits.Runesmith, Trait.UnaffectedByConcealment],
-                                "{i}When you raise your shield, you bury a runic trap into it, to be set off by the clash of an enemy weapon.{/i}\n\nWhen you use "+ModData.Tooltips.FeatsFortifyingKnock("Fortifying Knock "+RulesBlock.GetIconTextFromNumberOfActions(1))+", you can trace a damaging rune on your shield, even if it could not normally be applied to a shield. The traced rune doesn't have its normal effect, instead fading into your shield. If you Shield Block "+RulesBlock.GetIconTextFromNumberOfActions(-2)+" with the shield against an adjacent target, you can "+ModData.Tooltips.ActionInvokeRune("Invoke the Rune")+" as part of the reaction, causing the rune to detonate outwards and apply its invocation effect to the attacking creature.",
-                                Target.AdjacentCreature()
-                                    .WithAdditionalConditionOnTargetCreature(new EnemyCreatureTargetingRequirement()))
-                            .WithActionCost(0)
-                            .WithEffectOnEachTarget(async (action2, caster, target, result) =>
+                        // Do runic reprisal stuff
+                        attacker.AddQEffect(new QEffect()
+                        {
+                            Name = "[AFTER SHIELD BLOCK, RUNIC REPRISAL",
+                            AfterYouTakeAction = async (qfThis2, action) =>
                             {
-                                CombatAction? invokeThisRune = CommonRuneRules.CreateInvokeAction(
-                                        null,
-                                        caster,
-                                        reprisalDr!,
-                                        reprisalDr!.Rune,
-                                        6,
-                                        true,
-                                        false)
-                                    ?.WithExtraTrait(ModData.Traits.InvokeAgainstGivenTarget);
+                                // Get drawn runes
+                                DrawnRune? reprisalDr = DrawnRune
+                                    .GetDrawnRunes(qfThis.Owner, qfThis.Owner)
+                                    .FirstOrDefault(dr => 
+                                        dr.SourceAction != null
+                                        && dr.SourceAction.Name.Contains("Knock")
+                                        && dr.SourceAction.Tag is Rune reprisalRune
+                                        && reprisalRune.InvokeTechnicalTraits.Contains(Trait.IsHostile));
                                 
-                                if (invokeThisRune == null)
+                                if (reprisalDr == null)
+                                    return;
+
+                                if (!await defender.Battle.AskForConfirmation(
+                                        qfThis.Owner,
+                                        reprisalDr.Illustration ?? ModData.Illustrations.InvokeRune,
+                                        $"{{b}}Runic Reprisal{{/b}}\nYou just used Shield Block. Invoke {{Blue}}{reprisalDr.Rune.Name}{{/Blue}} from your shield against {{Blue}}{attacker.Name}{{/Blue}}?",
+                                        "Invoke", "Pass"))
                                     return;
                                 
-                                await attacker.FictitiousSingleTileMove(attacker.Occupies); // Move them back, so the invoke animation looks good
+                                // Move them back, so the invoke animation looks good
+                                await attacker.FictitiousSingleTileMove(attacker.Occupies); 
+
+                                CombatAction? invokeThisRune = CommonRuneRules.CreateInvokeAction(
+                                        null,
+                                        qfThis.Owner, reprisalDr,
+                                        reprisalDr.Rune,
+                                        6,
+                                        true,
+                                        false)?
+                                    .WithName($"Runic Reprisal ({reprisalDr.Name})")
+                                    .WithExtraTrait(ModData.Traits.InvokeAgainstGivenTarget);
+
+                                if (invokeThisRune == null)
+                                    return;
+
+                                await defender.Battle.GameLoop.FullCast(
+                                    invokeThisRune,
+                                    ChosenTargets.CreateSingleTarget(attacker));
+                                
+                                // CombatAction Wrapper
+                                /*CombatAction reprisalAction = new CombatAction(
+                                        self,
+                                        new SideBySideIllustration(action.Illustration, IllustrationName.Shove),
+                                        "Runic Reprisal",
+                                        [ModData.Traits.Invocation, ModData.Traits.Runesmith, Trait.UnaffectedByConcealment],
+                                        "{i}When you raise your shield, you bury a runic trap into it, to be set off by the clash of an enemy weapon.{/i}\n\nWhen you use "+ModData.Tooltips.FeatsFortifyingKnock("Fortifying Knock "+RulesBlock.GetIconTextFromNumberOfActions(1))+", you can trace a damaging rune on your shield, even if it could not normally be applied to a shield. The traced rune doesn't have its normal effect, instead fading into your shield. If you Shield Block "+RulesBlock.GetIconTextFromNumberOfActions(-2)+" with the shield against an adjacent target, you can "+ModData.Tooltips.ActionInvokeRune("Invoke the Rune")+" as part of the reaction, causing the rune to detonate outwards and apply its invocation effect to the attacking creature.",
+                                        Target.AdjacentCreature()
+                                            .WithAdditionalConditionOnTargetCreature(new EnemyCreatureTargetingRequirement()))
+                                    .WithActionCost(0)
+                                    .WithEffectOnEachTarget(async (action2, caster, target, result) =>
+                                    {
+                                        CombatAction? invokeThisRune = CommonRuneRules.CreateInvokeAction(
+                                                null,
+                                                caster,
+                                                reprisalDr!,
+                                                reprisalDr!.Rune,
+                                                6,
+                                                true,
+                                                false)
+                                            ?.WithExtraTrait(ModData.Traits.InvokeAgainstGivenTarget);
                                         
-                                //invokeThisRune.Name = $"Runic Reprisal ({reprisalDr.Name})";
-                                await caster.Battle.GameLoop.FullCast(invokeThisRune, ChosenTargets.CreateSingleTarget(target));
-                            });
-                        
-                        await self.Battle.GameLoop.FullCast(reprisalAction, ChosenTargets.CreateSingleTarget(attacker));
+                                        if (invokeThisRune == null)
+                                            return;
+                                        
+                                        await attacker.FictitiousSingleTileMove(attacker.Occupies); // Move them back, so the invoke animation looks good
+                                                
+                                        //invokeThisRune.Name = $"Runic Reprisal ({reprisalDr.Name})";
+                                        await caster.Battle.GameLoop.FullCast(invokeThisRune, ChosenTargets.CreateSingleTarget(target));
+                                    });
+                                
+                                await self.Battle.GameLoop.FullCast(reprisalAction, ChosenTargets.CreateSingleTarget(attacker));*/
+                            }
+                        });
                     };
                 });
         
