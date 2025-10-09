@@ -507,6 +507,9 @@ public static class RunesmithClass
                             }
 
                             await chosenOption.Action();*/
+
+                            if (qfThis.Owner.Actions.ActionHistoryThisEncounter.LastOrDefault() is { Tag: "PassEtching" })
+                                break;
                             
                             qfThis.Owner.Overhead("Etching runes ("+(i+1)+"/"+etchLimit+")", Color.Black);
 
@@ -525,6 +528,19 @@ public static class RunesmithClass
                             Possibilities etchableRunes = qfThis.Owner.Possibilities.FilterAnyPossibility(_ => false);
                             etchableRunes.Sections.Add(etchRunes);
                             etchableRunes.CannotPass = false;
+                            
+                            etchableRunes.Sections.Add(new PossibilitySection("Pass")
+                            {
+                                Possibilities = [new ActionPossibility(new CombatAction(
+                                        qfThis.Owner,
+                                        IllustrationName.EndTurn,
+                                        "Pass",
+                                        [Trait.Basic, Trait.UsableEvenWhenUnconsciousOrParalyzed, Trait.DoesNotPreventDelay],
+                                        "Do nothing.",
+                                        Target.Self())
+                                    .WithTag("PassEtching")
+                                    .WithActionCost(0))]
+                            });
                             
                             var active = qfThis.Owner.Battle.ActiveCreature;
                             qfThis.Owner.Battle.ActiveCreature = qfThis.Owner;
