@@ -22,6 +22,7 @@ using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
+using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
@@ -628,14 +629,11 @@ public static class RunesmithClass
                 {
                     int itemBonus = qfThis.Owner.Armor.Item?.ArmorProperties?.ItemBonus ?? 0;
                     if (defensePotency > itemBonus)
-                    {
                         return new Bonus(defensePotency - itemBonus, BonusType.Untyped, "Runic Crafter");
-                    }
-                } // Saving Throw Potency
-                else if (defense.IsSavingThrow() && savingThrowPotency > 0)
-                {
-                    return new Bonus(savingThrowPotency, BonusType.Item, "Runic Crafter");
                 }
+                // Saving Throw Potency
+                else if (defense.IsSavingThrow() && savingThrowPotency > 0)
+                    return new Bonus(savingThrowPotency, BonusType.Item, "Runic Crafter");
 
                 return null;
             },
@@ -654,23 +652,7 @@ public static class RunesmithClass
             descriptionStack = descriptionStack.Append($"a +{defensePotency} item bonus to AC").ToArray();
         if (savingThrowPotency > 0)
             descriptionStack = descriptionStack.Append($"a +{savingThrowPotency} item bonus to all saving throws").ToArray();
-        string description = "";
-        switch (descriptionStack.Length)
-        {
-            case 0:
-                break;
-            case 1:
-                description = descriptionStack.First();
-                break;
-            case 2:
-                description = string.Join(" and ", descriptionStack);
-                break;
-            default:
-                descriptionStack[^1] = descriptionStack[^1].Insert(0, "and ");
-                description = string.Join(", ", descriptionStack);
-                break;
-        }
-        description += ".";
+        string description = S.ConstructOrList(descriptionStack, "and") + ".";
         
         RCFX.Description = description;
 
