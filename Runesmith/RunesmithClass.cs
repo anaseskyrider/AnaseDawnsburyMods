@@ -31,363 +31,16 @@ public static class RunesmithClass
 {
     public static void LoadClass()
     {
-        ////////////////////
-        // Class Features //
-        ////////////////////
-        Feat runesmithRepertoire = new RunicRepertoireFeat(
-            ModData.FeatNames.RunesmithRepertoire,
-            // Ability.Intelligence,
-            ModData.Traits.Runesmith,
-            2);
-        ModManager.AddFeat(runesmithRepertoire);
+        // Class Features
+        foreach (Feat ft in CreateFeatures())
+            ModManager.AddFeat(ft);
         
-        Feat traceRune = new Feat(
-                ModData.FeatNames.TraceRune,
-                "Your fingers dance, glowing light leaving behind the image of a rune.",
-                "You apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.",
-                [Trait.Concentrate, Trait.Magical, Trait.Manipulate],
-                null)
-            .WithPermanentQEffect("You apply one rune to an adjacent target as an action, or to within 30 feet as two actions.", qfFeat =>
-            {
-                qfFeat.Name += " {icon:Action}–{icon:TwoActions}"; // No WithActionCost method, so update the sheet name to have actions.
-                qfFeat.Innate = false;
-                
-                qfFeat.ProvideMainAction = qfThis =>
-                {
-                    List<Possibility> traceRunePossibilities = [];
-                    RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(qfThis.Owner);
-                    if (repertoire == null)
-                        return null;
-                    foreach (Rune rune in repertoire.GetRunesKnown(qfThis.Owner)
-                                 .Where(rune => !rune.DrawTechnicalTraits.Contains(ModData.Traits.Etched)))
-                    {
-                        List<Possibility> specificRunePossibilities = [];
-                        
-                        // Don't make the 1-action version if you have RuneSinger.
-                        bool hasRuneSinger = qfThis.Owner.HasEffect(ModData.QEffectIds.RuneSinger);
-                        if (!hasRuneSinger)
-                        {
-                            CombatAction? oneActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 1)
-                                ?.WithExtraTrait(Trait.Basic);
-                            if (oneActionTraceRune == null)
-                                continue;
-                            oneActionTraceRune.ContextMenuName = "{icon:Action} " + oneActionTraceRune.Name;
-                            (oneActionTraceRune.Target as CreatureTarget)!
-                                .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
-                                    attacker.FindQEffect(ModData.QEffectIds.DrawnInRed)?.Tag == defender
-                                        ? Usability.NotUsableOnThisCreature("use Drawn in Red")
-                                        : Usability.Usable);
-                            ActionPossibility traceRunePossibility1 = new ActionPossibility(oneActionTraceRune)
-                                { Caption = "Touch", Illustration = IllustrationName.Action };
-                            specificRunePossibilities.Add(traceRunePossibility1);
-                        }
-                        
-                        CombatAction? twoActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 2)
-                            ?.WithExtraTrait(Trait.Basic);
-                        if (twoActionTraceRune == null)
-                            continue;
-                        if (!hasRuneSinger)
-                        {
-                            // Declutter your options by removing the ranged option while in melee.
-                            (twoActionTraceRune.Target as CreatureTarget)!
-                                .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
-                                    attacker.DistanceTo(defender) <= 1
-                                        ? Usability.NotUsableOnThisCreature("use the 1-action version")
-                                        : Usability.Usable);
-                        }
-                        twoActionTraceRune.ContextMenuName = RulesBlock.GetIconTextFromNumberOfActions(twoActionTraceRune.ActionCost) + " " + twoActionTraceRune.Name;
-                        (twoActionTraceRune.Target as CreatureTarget)!
-                            .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
-                                attacker.FindQEffect(ModData.QEffectIds.DrawnInRed)?.Tag == defender
-                                    ? Usability.NotUsableOnThisCreature("use Drawn in Red")
-                                    : Usability.Usable);
-                        ActionPossibility traceRunePossibility2 = new ActionPossibility(twoActionTraceRune)
-                        {
-                            Caption = "30 feet",
-                            Illustration = hasRuneSinger
-                                ? new SideBySideIllustration(IllustrationName.Action, ModData.Illustrations.RuneSinger)
-                                : IllustrationName.TwoActions
-                        };
-                        specificRunePossibilities.Add(traceRunePossibility2);
+        // Class
+        ModManager.AddFeat(CreateClass());
+    }
 
-                        SubmenuPossibility specificRuneMenu = new SubmenuPossibility(
-                            rune.Illustration,
-                            rune.Name,
-                            PossibilitySize.Half)
-                        {
-                            SpellIfAny = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, -3), // variable action trace rune
-                            Subsections =
-                            {
-                                new PossibilitySection(rune.Name) // rune.Name is how features like Drawn In Red find these sections.
-                                {
-                                    Possibilities = specificRunePossibilities,
-                                }
-                            }
-                        };
-                        
-                        traceRunePossibilities.Add(specificRuneMenu);
-                    }
-
-                    SubmenuPossibility traceRuneMenu = new SubmenuPossibility(
-                        ModData.Illustrations.TraceRune,
-                        "Trace Rune")
-                    {
-                        SubmenuId = ModData.SubmenuIds.TraceRune,
-                        SpellIfAny = new CombatAction(qfThis.Owner, ModData.Illustrations.TraceRune, "Trace Rune", [Trait.Concentrate, Trait.Magical, Trait.Manipulate, ModData.Traits.Runesmith], "{i}Your fingers dance, glowing light leaving behind the image of a rune.{/i}\n\n{b}Requirements{b} You have a hand free.\n\nYou apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend {icon:TwoActions} two actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.", Target.Self()).WithActionCost(-3), // This doesn't DO anything, it's just to provide description to the menu.
-                        Subsections = { new PossibilitySection("Trace Rune")
-                        {
-                            Possibilities = traceRunePossibilities,
-                        }},
-                        PossibilityGroup = ModData.PossibilityGroups.DrawingRunes,
-                    };
-                    return traceRuneMenu;
-                };
-            });
-        ModManager.AddFeat(traceRune);
-
-        Feat invokeRune = new Feat(
-                ModData.FeatNames.InvokeRune,
-                "",
-                "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed.\n\nYou can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are {Red}affected only once{/Red}, as normal for duplicate effects.",
-                [ModData.Traits.Invocation, Trait.Magical],
-                null)
-            .WithPermanentQEffect("You invoke any number of runes within 30 feet.", qfFeat =>
-            {
-                qfFeat.Name += " {icon:Action}";
-                qfFeat.Innate = false;
-                qfFeat.ProvideMainAction = qfThis =>
-                {
-                    CombatAction invokeRuneAction = new CombatAction(
-                            qfThis.Owner,
-                            ModData.Illustrations.InvokeRune,
-                            "Invoke Rune",
-                            [ModData.Traits.Invocation, Trait.Magical, ModData.Traits.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment],
-                            "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed.\n\nYou can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are {Red}affected only once{/Red}, as normal for duplicate effects.",
-                            Target.Self()
-                                .WithAdditionalRestriction(caster =>
-                                {
-                                    // PETR: Can't use if Silenced. Deafened does not DC5-check spellcasting in Dawnsbury, so it does not here.
-                                    //bool cannotSpeak = caster.HasEffect(QEffectId.) != null;
-                                    //if (cannotSpeak)
-                                    //  return "Cannot speak in a strong voice";
-
-                                    foreach (Creature cr in caster.Battle.AllCreatures)
-                                    {
-                                        if (caster.DistanceTo(cr) <= 6 && // Make sure creatures are in range.
-                                            cr.QEffects.FirstOrDefault( // Find a Qf-
-                                                qfToFind =>
-                                                    qfToFind is DrawnRune dr // -that is a DrawnRune,
-                                                    && dr.Source == caster // that is created by us,
-                                                    && dr.Traits.Contains(ModData.Traits.Rune) // with the rune trait,
-                                                    && !dr.Traits.Contains(ModData.Traits
-                                                        .Invocation) // but not the invocation trait.
-                                                    && !dr.Disabled
-                                            ) != null
-                                           )
-                                        {
-                                            return null;
-                                        }
-                                    }
-
-                                    return "No rune-bearers within range";
-                                }))
-                        .WithActionCost(1)
-                        .WithEffectOnEachTarget(async (thisAction, self, _,_) =>
-                        {
-                            // Number of runes on the field.
-                            int numberOfRunes = GetRunesInRange(self);
-
-                            // For each valid rune in play, attempt to take an invoke action, up to all our runes.
-                            int whileProtection = 0;
-                            while (numberOfRunes > 0 && whileProtection < 100)
-                            {
-                                await self.Battle.GameLoop.StateCheck(); // Idk why but they all do this so keep it.
-                                numberOfRunes = GetRunesInRange(self); // Regenerate the list of creatures with runes left.
-                                if (!await CommonRuneRules.PickARuneToInvokeOnTarget(
-                                        thisAction, self, null, null,
-                                        whileProtection == 0,
-                                        " Confirm no additional runes ",
-                                        $" You should avoid invoking the same rune on the same creature more than once. (Runes: {numberOfRunes})"))
-                                    return; // Task handles `RevertRequested = true;`.
-                                whileProtection++;
-                            }
-                            return;
-
-                            int GetRunesInRange(Creature caster)
-                            {
-                                return caster.Battle.AllCreatures
-                                    .Where(cr => caster.DistanceTo(cr) <= 6) // Must be within range.
-                                    .Sum(cr => DrawnRune.GetDrawnRunes(caster, cr).Count(dr => !dr.Disabled));
-                            }
-                        });
-                    CommonRuneRules.WithImmediatelyRemovesImmunity(invokeRuneAction); 
-                    return new ActionPossibility(invokeRuneAction)
-                        .WithPossibilityGroup(ModData.PossibilityGroups.InvokingRunes);
-                };
-            });
-        ModManager.AddFeat(invokeRune);
-        
-        // BUG: Action triggers before animal companions spawn.
-        Feat etchRune = new Feat(
-                ModData.FeatNames.EtchRune,
-                "An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.",
-                "At the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to 2 runes, and you can etch an additional rune at levels 5, 9, 13, and 17.",
-                [], // No traits, we don't want anything inside the encounter to try to interact with this action at the start of combat.
-                null)
-            /*.WithOnSheet(values =>
-            {
-                RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values);
-                if (repertoire == null)
-                    return;
-                for (int i = 0; i < repertoire.EtchLimit; i++)
-                {
-                    //values.AddSelectionOption(new SelectionOption );
-                    //SelectionOption.PRECOMBAT_PREPARATIONS_LEVEL
-                }
-            })*/
-            .WithPermanentQEffect("You apply runes to your allies at the start of combat which last until the end of combat or consumed.", qfFeat =>
-            {
-                qfFeat.Innate = false;
-                qfFeat.StartOfCombat = async qfThis =>
-                {
-                    RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(qfThis.Owner);
-                    if (repertoire == null)
-                        return;
-                    
-                    // Runic Tattoo first
-                    if (qfThis.Owner.HasFeat(ModData.FeatNames.RunicTattoo))
-                    {
-                        QEffect? runicTattooFeat = qfFeat.Owner.QEffects.FirstOrDefault(qf =>
-                            qf.Name is { } name && name.Contains("Runic Tattoo"));
-                        if (runicTattooFeat != null)
-                            await runicTattooFeat.StartOfCombat!.Invoke(runicTattooFeat);
-                    }
-                    
-                    List<Rune> runesKnown = repertoire.GetRunesKnown(qfFeat.Owner);
-                    int etchLimit = repertoire.GetEtchLimit(qfThis.Owner.Level);
-                    
-                    qfThis.Owner.Overhead(
-                        "Etching Runes",
-                        Color.Black,
-                        $"{qfThis.Owner.Name} begins {{b}}Etching Runes{{/b}}.",
-                        "Etch Rune",
-                        $"{{i}}An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.{{/i}}\n\nAt the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to {etchLimit} runes.",
-                        new Traits([Trait.Manipulate, Trait.DoesNotProvoke, ModData.Traits.Runesmith]));
-
-                    for (int i = 0; i < etchLimit; i++)
-                    {
-                        await qfThis.Owner.Battle.GameLoop.StateCheck();
-                        
-                        List<Option> options = [];
-                        foreach (Rune rune in runesKnown)
-                        {
-                            CombatAction etchThisRune = CommonRuneRules.CreateEtchAction(qfThis.Owner, rune);
-                            etchThisRune.Traits.Add(Trait.DoNotShowOverheadOfActionName);
-                            GameLoop.AddDirectUsageOnCreatureOptions(etchThisRune, options);
-                        }
-                        
-                        if (options.Count <= 0)
-                            continue;
-                            
-                        options.Add(new PassViaButtonOption(" Confirm no additional etchings "));
-                        
-                        // Await which option (even if just 1) to take.
-                        Option chosenOption = (await qfThis.Owner.Battle.SendRequest( // Send a request to pick an option
-                            new AdvancedRequest(qfThis.Owner, "Etch a rune on yourself or an ally.", options)
-                            {
-                                TopBarText = $"Etch a rune on yourself or an ally. ({i+1}/{etchLimit})",
-                                TopBarIcon = ModData.Illustrations.EtchRune,
-                            })).ChosenOption;
-                        
-                        switch (chosenOption)
-                        {
-                            case CreatureOption:
-                                break;
-                            case PassViaButtonOption:
-                                return;
-                        }
-
-                        await chosenOption.Action();
-                    }
-
-                    qfThis.Tag = true; // True means the runes have been etched.
-                };
-            });
-        ModManager.AddFeat(etchRune);
-
-        Feat runicCrafter = new Feat(
-                ModData.FeatNames.RunicCrafter,
-                "Your study of secret runes leaves you well practiced in crafting their more common cousins.",
-                "Your equipment gains the effects of the highest level fundamental armor and weapon runes for your level. This does not count as having runes for the purposes of other rules (you must still have potency runes to apply property runes).",
-                [],
-                null)
-            .WithOnCreature(RunicCrafterEffect);
-        ModManager.AddFeat(runicCrafter);
-
-        Feat assuredRunicCrafter = new Feat(
-                ModData.FeatNames.AssuredRunicCrafter,
-                "You’re so used to tracing and etching runes in the field that when given the peace and quiet of a proper workshop, it’s hard for things to go astray.",
-                "{b}Precombat Preparations{/b}You can select one ally to gain the benefits of your " +
-                ModData.Tooltips.FeatureRunicCrafter("Runic Crafter") + " feature.",
-                [],
-                null)
-            .WithOnSheet(values =>
-            {
-                values.AddSelectionOption(new SingleFeatSelectionOption(
-                        "RunesmithPlaytest.AssuredRunicCrafter",
-                        "Assured Runic Crafter",
-                        SelectionOption.PRECOMBAT_PREPARATIONS_LEVEL,
-                        ft => ft.Tag is "Assured Runic Crafter")
-                    .WithIsOptional());
-            });
-        ModManager.AddFeat(assuredRunicCrafter);
-        for (int i = 0; i < 4; i++)
-        {
-            int index = i;
-            Feat assuredChoice = new Feat(
-                    ModManager.RegisterFeatName(ModData.FeatNames.AssuredRunicCrafterChoice + (i + 1),
-                        "Player Character " + (i + 1)),
-                    null,
-                    "",
-                    [],
-                    null)
-                .WithNameCreator(_ =>
-                    $"Grant Runic Crafter to {GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"}")
-                .WithRulesTextCreator(_ =>
-                    $"{GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"} will gain the benefits of your {ModData.Tooltips.FeatureRunicCrafter("Runic Crafter")} feature at the start of combat.")
-                .WithIllustrationCreator(_ =>
-                    GetCharacterSheetFromPartyMember(index)?.Illustration ?? ModData.Illustrations.TraceRune)
-                .WithTag("Assured Runic Crafter")
-                .WithPermanentQEffect(
-                    "An ally chosen before the start of combat gains the effects of your Runic Crafter feature.",
-                    qfFeat =>
-                    {
-                        qfFeat.StartOfCombat = async qfThis =>
-                        {
-                            if (GetCharacterSheetFromPartyMember(index) is {} hero
-                                && qfThis.Owner.Battle.AllCreatures.FirstOrDefault(cr2 =>
-                                    cr2 != qfThis.Owner &&
-                                    cr2.PersistentCharacterSheet == hero) is { } chosenCreature)
-                            {
-                                QEffect crafter = RunicCrafterEffect(chosenCreature);
-                                crafter.Name = "Assured Runic Crafter";
-                                crafter.DoNotShowUpOverhead = false;
-                                chosenCreature.AddQEffect(crafter);
-                            }
-                        };
-                    })
-                .WithPrerequisite(_ => // Can't select another Runesmith
-                    GetCharacterSheetFromPartyMember(index)?.Class?.ClassTrait != ModData.Traits.Runesmith,
-                    "Can't select another Runesmith")
-                .WithPrerequisite(values => // Can't select yourself
-                    GetCharacterSheetFromPartyMember(index) != values.Sheet,
-                    "Can't select yourself");
-            ModManager.AddFeat(assuredChoice);
-        }
-        
-        /////////////////////
-        // Runesmith Class //
-        /////////////////////
+    public static Feat CreateClass()
+    {
         Feat runesmithClassFeat = new ClassSelectionFeat(
                 ModData.FeatNames.RunesmithClass,
                 "At the heart of all communication is the word, and at the heart of all magic is the rune. Equal parts scholar and artist, you devote yourself to the study of these mystic symbols, learning to carve, etch, brand, and paint the building blocks of magic to channel powers greater than yourself.",
@@ -461,9 +114,9 @@ public static class RunesmithClass
                     values.AddSelectionOption(new SingleFeatSelectionOption("rune"+i, "Level 17 rune", i, ft => ft is RuneFeat)
                         .WithIsOptional());
                 // Class features
-                values.GrantFeat(traceRune.FeatName);
-                values.GrantFeat(invokeRune.FeatName);
-                values.GrantFeat(etchRune.FeatName);
+                values.GrantFeat(ModData.FeatNames.TraceRune);
+                values.GrantFeat(ModData.FeatNames.InvokeRune);
+                values.GrantFeat(ModData.FeatNames.EtchRune);
                 // Bonus feats
                 values.GrantFeat(FeatName.ShieldBlock);
                 // Class feat
@@ -473,7 +126,7 @@ public static class RunesmithClass
                 #region Higher Levels
                 values.AddAtLevel(2, values2 =>
                 {
-                    values2.GrantFeat(runicCrafter.FeatName);
+                    values2.GrantFeat(ModData.FeatNames.RunicCrafter);
                 });
                 values.AddAtLevel(5, values2 =>
                 {
@@ -496,7 +149,7 @@ public static class RunesmithClass
                 {
                     RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values2)!;
                     repertoire.IncreaseEtchLimit(9, 1);
-                    values2.GrantFeat(assuredRunicCrafter.FeatName);
+                    values2.GrantFeat(ModData.FeatNames.AssuredRunicCrafter);
                 });
                 #endregion
 
@@ -568,7 +221,356 @@ public static class RunesmithClass
         runesmithClassFeat.RulesText = runesmithClassFeat.RulesText
             .Replace("Key ability", "Key attribute")
             .Replace("trained in Crafting", "trained in Crafting; as well as your choice of Arcana, Nature, Occultism, or Religion;");
-        ModManager.AddFeat(runesmithClassFeat);
+        
+        return runesmithClassFeat;
+    }
+    
+    public static IEnumerable<Feat> CreateFeatures()
+    {
+        // Runic Repertoire (class, not multiclass)
+        yield return new RunicRepertoireFeat(
+            ModData.FeatNames.RunesmithRepertoire,
+            // Ability.Intelligence,
+            ModData.Traits.Runesmith,
+            2);
+        
+        // Trace Rune
+        yield return new Feat(
+                ModData.FeatNames.TraceRune,
+                "Your fingers dance, glowing light leaving behind the image of a rune.",
+                "You apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.",
+                [Trait.Concentrate, Trait.Magical, Trait.Manipulate],
+                null)
+            .WithPermanentQEffect(
+                "You apply one rune to an adjacent target as an action, or to within 30 feet as two actions.",
+                qfFeat =>
+                {
+                    qfFeat.Name += " {icon:Action}–{icon:TwoActions}"; // No WithActionCost method, so update the sheet name to have actions.
+                    qfFeat.Innate = false;
+                    
+                    qfFeat.ProvideMainAction = qfThis =>
+                    {
+                        List<Possibility> traceRunePossibilities = [];
+                        RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(qfThis.Owner);
+                        if (repertoire == null)
+                            return null;
+                        foreach (Rune rune in repertoire.GetRunesKnown(qfThis.Owner)
+                                     .Where(rune => !rune.DrawTechnicalTraits.Contains(ModData.Traits.Etched)))
+                        {
+                            List<Possibility> specificRunePossibilities = [];
+                            
+                            // Don't make the 1-action version if you have RuneSinger.
+                            bool hasRuneSinger = qfThis.Owner.HasEffect(ModData.QEffectIds.RuneSinger);
+                            if (!hasRuneSinger)
+                            {
+                                CombatAction? oneActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 1)
+                                    ?.WithExtraTrait(Trait.Basic);
+                                if (oneActionTraceRune == null)
+                                    continue;
+                                oneActionTraceRune.ContextMenuName = "{icon:Action} " + oneActionTraceRune.Name;
+                                (oneActionTraceRune.Target as CreatureTarget)!
+                                    .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
+                                        attacker.FindQEffect(ModData.QEffectIds.DrawnInRed)?.Tag == defender
+                                            ? Usability.NotUsableOnThisCreature("use Drawn in Red")
+                                            : Usability.Usable);
+                                ActionPossibility traceRunePossibility1 = new ActionPossibility(oneActionTraceRune)
+                                    { Caption = "Touch", Illustration = IllustrationName.Action };
+                                specificRunePossibilities.Add(traceRunePossibility1);
+                            }
+                            
+                            CombatAction? twoActionTraceRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 2)
+                                ?.WithExtraTrait(Trait.Basic);
+                            if (twoActionTraceRune == null)
+                                continue;
+                            if (!hasRuneSinger)
+                            {
+                                // Declutter your options by removing the ranged option while in melee.
+                                (twoActionTraceRune.Target as CreatureTarget)!
+                                    .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
+                                        attacker.DistanceTo(defender) <= 1
+                                            ? Usability.NotUsableOnThisCreature("use the 1-action version")
+                                            : Usability.Usable);
+                            }
+                            twoActionTraceRune.ContextMenuName = RulesBlock.GetIconTextFromNumberOfActions(twoActionTraceRune.ActionCost) + " " + twoActionTraceRune.Name;
+                            (twoActionTraceRune.Target as CreatureTarget)!
+                                .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
+                                    attacker.FindQEffect(ModData.QEffectIds.DrawnInRed)?.Tag == defender
+                                        ? Usability.NotUsableOnThisCreature("use Drawn in Red")
+                                        : Usability.Usable);
+                            ActionPossibility traceRunePossibility2 = new ActionPossibility(twoActionTraceRune)
+                            {
+                                Caption = "30 feet",
+                                Illustration = hasRuneSinger
+                                    ? new SideBySideIllustration(IllustrationName.Action, ModData.Illustrations.RuneSinger)
+                                    : IllustrationName.TwoActions
+                            };
+                            specificRunePossibilities.Add(traceRunePossibility2);
+
+                            SubmenuPossibility specificRuneMenu = new SubmenuPossibility(
+                                rune.Illustration,
+                                rune.Name,
+                                PossibilitySize.Half)
+                            {
+                                SpellIfAny = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, -3), // variable action trace rune
+                                Subsections =
+                                {
+                                    new PossibilitySection(rune.Name) // rune.Name is how features like Drawn In Red find these sections.
+                                    {
+                                        Possibilities = specificRunePossibilities,
+                                    }
+                                }
+                            };
+                            
+                            traceRunePossibilities.Add(specificRuneMenu);
+                        }
+
+                        SubmenuPossibility traceRuneMenu = new SubmenuPossibility(
+                            ModData.Illustrations.TraceRune,
+                            "Trace Rune")
+                        {
+                            SubmenuId = ModData.SubmenuIds.TraceRune,
+                            SpellIfAny = new CombatAction(qfThis.Owner, ModData.Illustrations.TraceRune, "Trace Rune", [Trait.Concentrate, Trait.Magical, Trait.Manipulate, ModData.Traits.Runesmith], "{i}Your fingers dance, glowing light leaving behind the image of a rune.{/i}\n\n{b}Requirements{b} You have a hand free.\n\nYou apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend {icon:TwoActions} two actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.", Target.Self()).WithActionCost(-3), // This doesn't DO anything, it's just to provide description to the menu.
+                            Subsections = { new PossibilitySection("Trace Rune")
+                            {
+                                Possibilities = traceRunePossibilities,
+                            }},
+                            PossibilityGroup = ModData.PossibilityGroups.DrawingRunes,
+                        };
+                        return traceRuneMenu;
+                    };
+                });
+        
+        // Invoke Rune
+        yield return new Feat(
+                ModData.FeatNames.InvokeRune,
+                "",
+                "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed.\n\nYou can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are {Red}affected only once{/Red}, as normal for duplicate effects.",
+                [ModData.Traits.Invocation, Trait.Magical],
+                null)
+            .WithPermanentQEffect(
+                "You invoke any number of runes within 30 feet.",
+                qfFeat =>
+                {
+                    qfFeat.Name += " {icon:Action}";
+                    qfFeat.Innate = false;
+                    qfFeat.ProvideMainAction = qfThis =>
+                    {
+                        CombatAction invokeRuneAction = new CombatAction(
+                                qfThis.Owner,
+                                ModData.Illustrations.InvokeRune,
+                                "Invoke Rune",
+                                [ModData.Traits.Invocation, Trait.Magical, ModData.Traits.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment],
+                                "You utter the name of one or more of your runes within 30 feet. The rune blazes with power, applying the effect in its Invocation entry. The rune then fades away, its task completed.\n\nYou can invoke any number of runes with a single Invoke Rune action, but creatures that would be affected by multiple copies of the same specific rune are {Red}affected only once{/Red}, as normal for duplicate effects.",
+                                Target.Self()
+                                    .WithAdditionalRestriction(caster =>
+                                    {
+                                        // PETR: Can't use if Silenced. Deafened does not DC5-check spellcasting in Dawnsbury, so it does not here.
+                                        //bool cannotSpeak = caster.HasEffect(QEffectId.) != null;
+                                        //if (cannotSpeak)
+                                        //  return "Cannot speak in a strong voice";
+
+                                        foreach (Creature cr in caster.Battle.AllCreatures)
+                                        {
+                                            if (caster.DistanceTo(cr) <= 6 && // Make sure creatures are in range.
+                                                cr.QEffects.FirstOrDefault( // Find a Qf-
+                                                    qfToFind =>
+                                                        qfToFind is DrawnRune dr // -that is a DrawnRune,
+                                                        && dr.Source == caster // that is created by us,
+                                                        && dr.Traits.Contains(ModData.Traits.Rune) // with the rune trait,
+                                                        && !dr.Traits.Contains(ModData.Traits
+                                                            .Invocation) // but not the invocation trait.
+                                                        && !dr.Disabled
+                                                ) != null
+                                               )
+                                            {
+                                                return null;
+                                            }
+                                        }
+
+                                        return "No rune-bearers within range";
+                                    }))
+                            .WithActionCost(1)
+                            .WithEffectOnEachTarget(async (thisAction, self, _,_) =>
+                            {
+                                // Number of runes on the field.
+                                int numberOfRunes = GetRunesInRange(self);
+
+                                // For each valid rune in play, attempt to take an invoke action, up to all our runes.
+                                int whileProtection = 0;
+                                while (numberOfRunes > 0 && whileProtection < 100)
+                                {
+                                    await self.Battle.GameLoop.StateCheck(); // Idk why but they all do this so keep it.
+                                    numberOfRunes = GetRunesInRange(self); // Regenerate the list of creatures with runes left.
+                                    if (!await CommonRuneRules.PickARuneToInvokeOnTarget(
+                                            thisAction, self, null, null,
+                                            whileProtection == 0,
+                                            " Confirm no additional runes ",
+                                            $" You should avoid invoking the same rune on the same creature more than once. (Runes: {numberOfRunes})"))
+                                        return; // Task handles `RevertRequested = true;`.
+                                    whileProtection++;
+                                }
+                                return;
+
+                                int GetRunesInRange(Creature caster)
+                                {
+                                    return caster.Battle.AllCreatures
+                                        .Where(cr => caster.DistanceTo(cr) <= 6) // Must be within range.
+                                        .Sum(cr => DrawnRune.GetDrawnRunes(caster, cr).Count(dr => !dr.Disabled));
+                                }
+                            });
+                        CommonRuneRules.WithImmediatelyRemovesImmunity(invokeRuneAction); 
+                        return new ActionPossibility(invokeRuneAction)
+                            .WithPossibilityGroup(ModData.PossibilityGroups.InvokingRunes);
+                    };
+                });
+        
+        // Etch Rune
+        // BUG: Action triggers before animal companions spawn.
+        yield return new Feat(
+                ModData.FeatNames.EtchRune,
+                "An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.",
+                "At the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to 2 runes, and you can etch an additional rune at levels 5, 9, 13, and 17.",
+                [], null)
+            .WithPermanentQEffect(
+                "You apply runes to your allies at the start of combat which last until the end of combat or consumed.",
+                qfFeat =>
+                {
+                    qfFeat.Innate = false;
+                    qfFeat.StartOfCombat = async qfThis =>
+                    {
+                        RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(qfThis.Owner);
+                        if (repertoire == null)
+                            return;
+                        
+                        // Runic Tattoo first
+                        if (qfThis.Owner.HasFeat(ModData.FeatNames.RunicTattoo))
+                        {
+                            QEffect? runicTattooFeat = qfFeat.Owner.QEffects.FirstOrDefault(qf =>
+                                qf.Name is { } name && name.Contains("Runic Tattoo"));
+                            if (runicTattooFeat != null)
+                                await runicTattooFeat.StartOfCombat!.Invoke(runicTattooFeat);
+                        }
+                        
+                        List<Rune> runesKnown = repertoire.GetRunesKnown(qfFeat.Owner);
+                        int etchLimit = repertoire.GetEtchLimit(qfThis.Owner.Level);
+                        
+                        qfThis.Owner.Overhead(
+                            "Etching Runes",
+                            Color.Black,
+                            $"{qfThis.Owner.Name} begins {{b}}Etching Runes{{/b}}.",
+                            "Etch Rune",
+                            $"{{i}}An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.{{/i}}\n\nAt the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to {etchLimit} runes.",
+                            new Traits([Trait.Manipulate, Trait.DoesNotProvoke, ModData.Traits.Runesmith]));
+
+                        for (int i = 0; i < etchLimit; i++)
+                        {
+                            await qfThis.Owner.Battle.GameLoop.StateCheck();
+                            
+                            List<Option> options = [];
+                            foreach (Rune rune in runesKnown)
+                            {
+                                CombatAction etchThisRune = CommonRuneRules.CreateEtchAction(qfThis.Owner, rune);
+                                etchThisRune.Traits.Add(Trait.DoNotShowOverheadOfActionName);
+                                GameLoop.AddDirectUsageOnCreatureOptions(etchThisRune, options);
+                            }
+                            
+                            if (options.Count <= 0)
+                                continue;
+                                
+                            options.Add(new PassViaButtonOption(" Confirm no additional etchings "));
+                            
+                            // Await which option (even if just 1) to take.
+                            Option chosenOption = (await qfThis.Owner.Battle.SendRequest( // Send a request to pick an option
+                                new AdvancedRequest(qfThis.Owner, "Etch a rune on yourself or an ally.", options)
+                                {
+                                    TopBarText = $"Etch a rune on yourself or an ally. ({i+1}/{etchLimit})",
+                                    TopBarIcon = ModData.Illustrations.EtchRune,
+                                })).ChosenOption;
+                            
+                            switch (chosenOption)
+                            {
+                                case CreatureOption:
+                                    break;
+                                case PassViaButtonOption:
+                                    return;
+                            }
+
+                            await chosenOption.Action();
+                        }
+
+                        qfThis.Tag = true; // True means the runes have been etched.
+                    };
+                });
+        
+        // Runic Crafter
+        yield return new Feat(
+                ModData.FeatNames.RunicCrafter,
+                "Your study of secret runes leaves you well practiced in crafting their more common cousins.",
+                "Your equipment gains the effects of the highest level fundamental armor and weapon runes for your level. This does not count as having runes for the purposes of other rules (you must still have potency runes to apply property runes).",
+                [],
+                null)
+            .WithOnCreature(RunicCrafterEffect);
+        
+        // Assured Runic Crafter
+        yield return new Feat(
+                ModData.FeatNames.AssuredRunicCrafter,
+                "You’re so used to tracing and etching runes in the field that when given the peace and quiet of a proper workshop, it’s hard for things to go astray.",
+                "{b}Precombat Preparations{/b}You can select one ally to gain the benefits of your " +
+                ModData.Tooltips.FeatureRunicCrafter("Runic Crafter") + " feature.",
+                [],
+                null)
+            .WithOnSheet(values =>
+            {
+                values.AddSelectionOption(new SingleFeatSelectionOption(
+                        ModData.IdPrepend+"AssuredRunicCrafter",
+                        "Assured Runic Crafter",
+                        SelectionOption.PRECOMBAT_PREPARATIONS_LEVEL,
+                        ft => ft.Tag is "Assured Runic Crafter")
+                    .WithIsOptional());
+            });
+        for (int i = 0; i < 4; i++)
+        {
+            int index = i;
+            Feat assuredChoice = new Feat(
+                    ModManager.RegisterFeatName(ModData.FeatNames.AssuredRunicCrafterChoice + (i + 1),
+                        "Player Character " + (i + 1)),
+                    null,
+                    "",
+                    [],
+                    null)
+                .WithNameCreator(_ =>
+                    $"Grant Runic Crafter to {GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"}")
+                .WithRulesTextCreator(_ =>
+                    $"{GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"} will gain the benefits of your {ModData.Tooltips.FeatureRunicCrafter("Runic Crafter")} feature at the start of combat.")
+                .WithIllustrationCreator(_ =>
+                    GetCharacterSheetFromPartyMember(index)?.Illustration ?? ModData.Illustrations.TraceRune)
+                .WithTag("Assured Runic Crafter")
+                .WithPermanentQEffect(
+                    "An ally chosen before the start of combat gains the effects of your Runic Crafter feature.",
+                    qfFeat =>
+                    {
+                        qfFeat.StartOfCombat = async qfThis =>
+                        {
+                            if (GetCharacterSheetFromPartyMember(index) is {} hero
+                                && qfThis.Owner.Battle.AllCreatures.FirstOrDefault(cr2 =>
+                                    cr2 != qfThis.Owner &&
+                                    cr2.PersistentCharacterSheet == hero) is { } chosenCreature)
+                            {
+                                QEffect crafter = RunicCrafterEffect(chosenCreature);
+                                crafter.Name = "Assured Runic Crafter";
+                                crafter.DoNotShowUpOverhead = false;
+                                chosenCreature.AddQEffect(crafter);
+                            }
+                        };
+                    })
+                .WithPrerequisite(_ => // Can't select another Runesmith
+                    GetCharacterSheetFromPartyMember(index)?.Class?.ClassTrait != ModData.Traits.Runesmith,
+                    "Can't select another Runesmith")
+                .WithPrerequisite(values => // Can't select yourself
+                    GetCharacterSheetFromPartyMember(index) != values.Sheet,
+                    "Can't select yourself");
+            ModManager.AddFeat(assuredChoice);
+        }
     }
     
     public static QEffect RunicOptimization(bool greater)
