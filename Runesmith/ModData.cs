@@ -347,6 +347,9 @@ public static class ModData
         public static readonly Trait Ichelsu = ModManager.RegisterTrait("Ichelsu",
             new TraitProperties("Ichelsu", false));
         
+        public static readonly Trait InthDiacritic = ModManager.RegisterTrait("Inth-",
+            new TraitProperties("Inth-", false));
+        
         public static readonly Trait Jurroz = ModManager.RegisterTrait("Jurroz",
             new TraitProperties("Jurroz", false));
         
@@ -357,6 +360,11 @@ public static class ModData
             new TraitProperties("Trolistri", false));
         
         // Level 17 rune traits, for a future update.
+        public static readonly Trait Aiuen = ModManager.RegisterTrait("Aiuen",
+            new TraitProperties("Aiuen", false));
+        
+        public static readonly Trait Rovan = ModManager.RegisterTrait("Rovan",
+            new TraitProperties("Rovan", false));
         #endregion
     }
 }
