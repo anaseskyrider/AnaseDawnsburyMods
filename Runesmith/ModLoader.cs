@@ -20,7 +20,7 @@ public static class ModLoader
         RunesmithArchetype.LoadArchetype();
         
         RunesmithRunes.LoadRunes();
-        RunesmithFeats.CreateFeats();
+        RunesmithFeats.LoadFeats();
         
         ////////////////////////
         // Modify Stat Blocks //
