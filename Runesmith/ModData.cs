@@ -353,6 +353,9 @@ public static class ModData
         public static readonly Trait Kojastri = ModManager.RegisterTrait("Kojastri",
             new TraitProperties("Kojastri", false));
         
+        public static readonly Trait Trolistri = ModManager.RegisterTrait("Trolistri",
+            new TraitProperties("Trolistri", false));
+        
         // Level 17 rune traits, for a future update.
         #endregion
     }

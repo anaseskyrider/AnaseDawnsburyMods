@@ -33,6 +33,10 @@ public static class RunesmithRunes
 
     public static void LoadRunes()
     {
+        // TODO: Alter Rune class to store FullName, BaseName, Title. Delete Name, so as to generate errors to then fix.
+        // Use this to enhance some text-based processes.
+        // Use this to enhance the create-then-load workflow I now use.
+        
         /* TODO: Consider altering the way runes apply Item effects based on these Item fields to look into:
          * WithPermanentQEffectWhenWorn
          * WithOnCreatureWhenWorn
@@ -130,7 +134,7 @@ public static class RunesmithRunes
             .WithDetrimentalPassiveTechnical()
             .WithDamagingInvocationTechnical()
             .WithFortitudeSaveInvocationTechnical();
-        AddRuneAsRuneFeat("RunesmithPlaytest.RuneAtryl", runeAtryl);
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneAtryl", runeAtryl);
 
         // BUG: Add ignores concealment to the invocation... or should I?
         // BUG: Invoking the rune doesn't remove the rune if it misses due to concealment.
@@ -335,7 +339,7 @@ public static class RunesmithRunes
             .WithDamagingInvocationTechnical()
             .WithFortitudeSaveInvocationTechnical()
             .WithTargetDoesNotSaveTechnical();
-        AddRuneAsRuneFeat("RunesmithPlaytest.RuneEsvadir", runeEsvadir);
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneEsvadir", runeEsvadir);
 
         Rune runeHoltrik = new Rune(
                 "Holtrik, Rune of Dwarven Ramparts",
@@ -476,7 +480,7 @@ public static class RunesmithRunes
                 CommonRuneRules.ApplyImmunity(target, thisRune);
             })
             .WithDrawnOnShieldTechnical();
-        AddRuneAsRuneFeat("RunesmithPlaytest.RuneHoltrik", runeHoltrik);
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneHoltrik", runeHoltrik);
 
         // BUG: Gunslinger's Fakeout triggers splash damage.
         Rune runeMarssyl = new Rune(
@@ -673,7 +677,7 @@ public static class RunesmithRunes
                 CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
                 CommonRuneRules.ApplyImmunity(target, thisRune);
             });
-        AddRuneAsRuneFeat("RunesmithPlaytest.RuneMarssyl", runeMarssyl);
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneMarssyl", runeMarssyl);
 
         Rune runeOljinex = new Rune(
                 "Oljinex, Rune of Cowards' Bane",
@@ -995,7 +999,7 @@ public static class RunesmithRunes
                 CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
             })
             .WithDrawnOnShieldTechnical();
-        AddRuneAsRuneFeat("RunesmithPlaytest.RuneOljinex", runeOljinex);
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneOljinex", runeOljinex);
 
         Rune runePluuna = new Rune(
                 "Pluuna, Rune of Illumination",
@@ -1102,7 +1106,7 @@ public static class RunesmithRunes
             })
             //.WithTargetDoesNotSaveTechnical() // Debatable. The target does save, but so does everyone else.
             .WithFortitudeSaveInvocationTechnical();
-        AddRuneAsRuneFeat("RunesmithPlaytest.RunePluuna", runePluuna);
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RunePluuna", runePluuna);
 
         // BUG: Much like how Jurroz retroactively tracks damage taken, this should retroactively track moves made.
         Rune runeRanshu = new Rune(
@@ -1180,7 +1184,7 @@ public static class RunesmithRunes
             .WithDetrimentalPassiveTechnical()
             .WithDamagingInvocationTechnical()
             .WithFortitudeSaveInvocationTechnical();
-        AddRuneAsRuneFeat("RunesmithPlaytest.RuneRanshu", runeRanshu);
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneRanshu", runeRanshu);
 
         Rune runeSunDiacritic = new Rune(
                 "Sun-, Diacritic Rune of Preservation",
@@ -1285,7 +1289,7 @@ public static class RunesmithRunes
                 return CreateSunPassive(targetRune);
             })
             .WithDrawnOnRuneTechnical();
-        AddRuneAsRuneFeat("RunesmithPlaytest.RuneSunDiacritic", runeSunDiacritic);
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneSunDiacritic", runeSunDiacritic);
 
         // TODO: Make final decision on whether this buffs Marssyl's invocation.
         Rune runeUrDiacritic = new Rune(
@@ -1384,7 +1388,7 @@ public static class RunesmithRunes
                 return CreateUrPassive(targetRune);
             })
             .WithDrawnOnRuneTechnical();
-        AddRuneAsRuneFeat("RunesmithPlaytest.RuneUrDiacritic", runeUrDiacritic);
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneUrDiacritic", runeUrDiacritic);
 
         Rune runeZohk = new Rune(
                 "Zohk, Rune of Homecoming",
@@ -1525,7 +1529,7 @@ public static class RunesmithRunes
                 CommonRuneRules.ApplyImmunity(target, thisRune);
             })
             .WithWillSaveInvocationTechnical();
-        AddRuneAsRuneFeat("RunesmithPlaytest.RuneZohk", runeZohk);
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneZohk", runeZohk);
 
         #endregion
 
@@ -1634,7 +1638,7 @@ public static class RunesmithRunes
                 }
             })
             .WithDrawnOnRuneTechnical();
-        AddRuneAsRuneFeat("RunesmithPlaytest.RuneEnDiacritic", runeEnDiacritic);
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneEnDiacritic", runeEnDiacritic);
         
         Rune runeFeikris = new Rune(
                 "Feikris, Rune of Gravity",
@@ -1706,7 +1710,7 @@ public static class RunesmithRunes
                     sourceAction.RevertRequested = true;
             })
             .WithFortitudeSaveInvocationTechnical();
-        AddRuneAsRuneFeat("RunesmithPlaytest.RuneFeikris", runeFeikris);
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneFeikris", runeFeikris);
 
         /*Rune runeIchelsu = new Rune(
             "Ichelsu, Rune of Observation",
@@ -1789,10 +1793,10 @@ public static class RunesmithRunes
                         sourceAction.RevertRequested = true;
                 },
             };
-        AddRuneAsRuneFeat("RunesmithPlaytest.RuneIchelsu", runeIchelsu);*/
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneIchelsu", runeIchelsu);*/
         
         // Rune runeInthDiacritic = new Rune();
-        // AddRuneAsRuneFeat("RunesmithPlaytest.RuneInthDiacritic", runeInthDiacritic);
+        // AddRuneAsRuneFeat(ModData.IdPrepend+"RuneInthDiacritic", runeInthDiacritic);
 
         Rune runeJurroz = new Rune(
                 "Jurroz, Rune of Dragon Fury",
@@ -1819,7 +1823,7 @@ public static class RunesmithRunes
                             
                         QEffect jurrozFooted = QEffect.FlatFooted("Jurroz, Rune of Dragon Fury")
                             .WithExpirationAtStartOfSourcesTurn(action.Owner, 1);
-                        jurrozFooted.Key = "RunesmithPlaytest.JurrozPassive";
+                        jurrozFooted.Key = ModData.IdPrepend+"JurrozPassive";
                         action.Owner.AddQEffect(jurrozFooted);
                     },
                 };
@@ -1905,7 +1909,7 @@ public static class RunesmithRunes
                             {
                                 QEffect jurrozFooted = QEffect.FlatFooted("Jurroz, Rune of Dragon Fury")
                                     .WithExpirationAtEndOfSourcesNextTurn(target, true);
-                                jurrozFooted.Key = "RunesmithPlaytest.JurrozInvocation";
+                                jurrozFooted.Key = ModData.IdPrepend+"JurrozInvocation";
                                 chosenCreature.AddQEffect(jurrozFooted);
                             }
                             CommonRuneRules.ApplyImmunity(target, thisRune);
@@ -1919,31 +1923,33 @@ public static class RunesmithRunes
                 }
             })
             .WithOnlyEtchedTechnical();
-        RuneFeat jurrozFeat = AddRuneAsRuneFeat("RunesmithPlaytest.RuneJurroz", runeJurroz);
-        jurrozFeat.WithPermanentQEffect(null, qfFeat =>
-        {
-            qfFeat.Id = ModData.QEffectIds.JurrozDamageTracker;
-            Dictionary<Creature, List<Creature>> damageHistory = []; // Key: Creature who's taken damage, Value: Creatures who damaged them
-            qfFeat.Tag = damageHistory;
-            qfFeat.AddGrantingOfTechnical(
-                cr => true,
-                qfTech =>
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneJurroz", runeJurroz)
+            .WithPermanentQEffect(
+                null,
+                qfFeat =>
                 {
-                    qfTech.AfterYouTakeDamage = async (qfThis, amount, kind, action, critical) =>
-                    {
-                        if (amount <= 0 || action == null)
-                            return;
-                        
-                        if (damageHistory.TryGetValue(qfTech.Owner, out List<Creature>? damagedBy))
+                    qfFeat.Id = ModData.QEffectIds.JurrozDamageTracker;
+                    Dictionary<Creature, List<Creature>> damageHistory = []; // Key: Creature who's taken damage, Value: Creatures who damaged them
+                    qfFeat.Tag = damageHistory;
+                    qfFeat.AddGrantingOfTechnical(
+                        cr => true,
+                        qfTech =>
                         {
-                            if (!damagedBy.Contains(action.Owner))
-                                damagedBy.Add(action.Owner);
-                        }
-                        else
-                            damageHistory[qfTech.Owner] = [action.Owner];
-                    };
+                            qfTech.AfterYouTakeDamage = async (qfThis, amount, kind, action, critical) =>
+                            {
+                                if (amount <= 0 || action == null)
+                                    return;
+                                
+                                if (damageHistory.TryGetValue(qfTech.Owner, out List<Creature>? damagedBy))
+                                {
+                                    if (!damagedBy.Contains(action.Owner))
+                                        damagedBy.Add(action.Owner);
+                                }
+                                else
+                                    damageHistory[qfTech.Owner] = [action.Owner];
+                            };
+                        });
                 });
-        });
         
         Rune runeKojastri = new Rune(
                 "Kojastri, Rune of Insulation",
@@ -2088,20 +2094,36 @@ public static class RunesmithRunes
             .WithDamagingAreaInvocationTechnical()
             .WithReflexSaveInvocationTechnical()
             .WithTargetDoesNotSaveTechnical();
-        AddRuneAsRuneFeat("RunesmithPlaytest.RuneKojastri", runeKojastri);
-        
-        // Rune runeTrolistri = new Rune();
-        // AddRuneAsRuneFeat("RunesmithPlaytest.RuneTrolistri", runeTrolistri);
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneKojastri", runeKojastri);
+
+        /*Rune runeTrolistri = new Rune(
+                "Trolistri, Rune of Forlorn Sorrow",
+                ModData.Traits.Trolistri,
+                IllustrationName.NightmareRunestone,
+                9,
+                "etched on a creature", // etched onto a creature or armor
+                "This rune calls to mind the forlorn nature of elves, and the beauty within it. While this rune is beautiful, sorrow is best admired from a distance, discouraging approach.",
+                "Enemies within 20 feet of the rune-bearer treat all squares between them and the rune-bearer as difficult terrain.",
+                "Sorrow blots out the capacity for any other action. Each enemy within 20 feet of the rune-bearer must succeed at a Will saving throw or be slowed 1 as it spends the first action of its next turn sobbing (or slowed 2 on a critical failure). Regardless of the outcome, the creature is then temporarily immune to this invocation for the rest of the encounter.",
+                null,
+                [Trait.Arcane, Trait.Elf, Trait.Emotion, Trait.Mental])
+            // Usage is hard to work out. Depends on if it's enemies to the runesmith or enemies to the rune-bearer.
+            //.WithUsageCondition(Rune.UsabilityConditions.UsableOnAllies());
+            .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
+            {
+                
+            });
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneTrolistri", runeTrolistri);*/
 
         #endregion
         
         #region Level 17 Runes
         
         // Rune runeAiuen = new Rune();
-        // AddRuneAsRuneFeat("RunesmithPlaytest.RuneAiuen", runeAiuen);
+        // AddRuneAsRuneFeat(ModData.IdPrepend+"RuneAiuen", runeAiuen);
         
         // Rune runeRovan = new Rune();
-        // AddRuneAsRuneFeat("RunesmithPlaytest.RuneRovan", runeRovan);
+        // AddRuneAsRuneFeat(ModData.IdPrepend+"RuneRovan", runeRovan);
         
         #endregion
     }
