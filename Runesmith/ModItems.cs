@@ -1,4 +1,3 @@
-using Dawnsbury.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Modding;
