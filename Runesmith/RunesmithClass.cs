@@ -510,7 +510,8 @@ public static class RunesmithClass
                             
                             qfThis.Owner.Overhead("Etching runes ("+(i+1)+"/"+etchLimit+")", Color.Black);
 
-                            PossibilitySection etchRunes = new PossibilitySection("Etch Rune");
+                            PossibilitySection etchRunes = new PossibilitySection(
+                                "Etch Rune " + string.Join("", Enumerable.Repeat("{icon:spontaneousspellslot}", etchLimit-i)));
                             foreach (Rune rune in runesKnown)
                             {
                                 CombatAction etchThisRune = CommonRuneRules.CreateEtchAction(qfThis.Owner, rune)
