@@ -33,15 +33,15 @@ public static class ModLoader
     }
 
     /// <summary>Create a new instance of <see cref="SleepRequest"/> using Reflection.</summary>
-    public static AdvancedRequest NewSleepRequest(int sleepTime)
+    public static AdvancedRequest NewSleepRequest(int sleepTime, bool clickedThrough = true)
     {
         Type? sleepRequest = typeof(AdvancedRequest).Assembly.GetType("Dawnsbury.Core.Coroutines.Requests.SleepRequest");
         var constructor = sleepRequest?.GetConstructor([typeof(int)]);
         var sleep = constructor?.Invoke([sleepTime]);
-        sleep?.GetType().GetProperty("CanBeClickedThrough")?.SetMethod?.Invoke(sleep, [false]);
+        sleep?.GetType().GetProperty("CanBeClickedThrough")?.SetMethod?.Invoke(sleep, [clickedThrough]);
         return (AdvancedRequest)sleep!;
     }
-
+    
     /// <summary>Causes a QEffect to put an action in the Offense section with the given short description, but without listing any attack statistics.</summary>
     public static void DisplaysAsOffenseAction(QEffect qfFeat, string actionName, string shortDescription, int cost = 1)
     {

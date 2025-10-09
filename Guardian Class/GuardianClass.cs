@@ -236,10 +236,12 @@ public static class GuardianClass
                                     self,
                                     "It's a good thing I can sleep in my armor. Now to just pick up my weapons.",
                                     null);*/
+                                string dialog = "{Green}{b}Guardian's Armor!{b}{/Green}\nIt's a good thing I can sleep in my armor. Now to pick up my weapons.";
                                 self.Battle.Cinematics.TutorialBubble = new TutorialBubble(
                                     self.Illustration,
-                                    SubtitleModification.Replace("{Green}{b}Guardian's Armor!{b}{/Green}\nIt's a good thing I can sleep in my armor. Now to pick up my weapons."),
+                                    SubtitleModification.Replace(dialog),
                                     null);
+                                self.Battle.Log("{b}"+self.Name+":{/b} "+dialog);
                                 await self.Battle.SendRequest(ModLoader.NewSleepRequest(5000));
                                 self.Battle.Cinematics.TutorialBubble = null;
                             };
