@@ -100,6 +100,13 @@ public static class ModData
         #endregion
     }
 
+    public static class FeatGroups
+    {
+        public static readonly FeatGroup Level1Rune = new FeatGroup("Level 1", 0);
+        public static readonly FeatGroup Level9Rune = new FeatGroup("Level 9", 1);
+        public static readonly FeatGroup Level17Rune = new FeatGroup("Level 17", 2);
+    }
+
     public static class Illustrations
     {
         #region Class Features

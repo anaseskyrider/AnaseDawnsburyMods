@@ -2117,6 +2117,13 @@ public static class RunesmithRunes
         Rune rune)
     {
         RuneFeat runeFeat = RuneFeat.CreateRuneFeatFromRune(technicalName, rune);
+        runeFeat.FeatGroup = rune.BaseLevel switch
+        {
+            17 => ModData.FeatGroups.Level17Rune,
+            9 => ModData.FeatGroups.Level9Rune,
+            1 => ModData.FeatGroups.Level1Rune,
+            _ => null
+        };
         if (!AllRunes.Contains(rune))
             AllRunes.Add(rune);
         AllRuneFeats.Add(runeFeat);
