@@ -991,8 +991,9 @@ public static class RunesmithFeats
                             {
                                 qfTech2.Owner.DeathScheduledForNextStateCheck = false;
                                 await qfFeat.Owner.Battle.GameLoop.FullCast(
-                                    CreateTransposeAction(qfFeat).WithActionCost(0),
-                                    ChosenTargets.CreateSingleTarget(qfTech2.Owner));
+                                    CreateTransposeAction(qfFeat)
+                                        .WithActionCost(0)
+                                        .WithTag(qfTech2.Owner)); // Filters targets,
                                 qfTech2.Owner.DeathScheduledForNextStateCheck = true;
                                 //await qfTech2.Owner.Battle.GameLoop.StateCheck();
                             };
@@ -1036,6 +1037,10 @@ public static class RunesmithFeats
                                         cr.DistanceTo(caster) <= 6
                                         && DrawnRune.GetDrawnRunes(caster, cr).Count != 0)
                                     .ToList();
+                                if (transposeAction.Tag is Creature target)
+                                    possiblePickups = possiblePickups
+                                        .Where(cr => cr == target)
+                                        .ToList();
                                 DrawnRune? chosenRune = await CommonRuneRules.AskToChooseADrawnRune(
                                     caster,
                                     possiblePickups,
