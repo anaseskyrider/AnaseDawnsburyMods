@@ -47,7 +47,7 @@ public static class RunesmithFeats
                 ModData.FeatNames.BackupRunicEnhancement,
                 1,
                 "While you are not a spellcaster, you have a working knowledge of the most fundamental of runic magic.",
-                "Once per day, you can cast your choice of either " + AllSpells.CreateModernSpellTemplate(SpellId.MagicFang, Trait.Wizard).ToSpellLink().Replace("magic fang", "runic body") + " or " + AllSpells.CreateModernSpellTemplate(SpellId.MagicWeapon, Trait.Wizard).ToSpellLink().Replace("magic weapon", "runic weapon") + " as an innate spell. The rank of these spells is equal to half your level, rounded up" + "." + /*TODO: ", (NYI) and the tradition can be any tradition for which you are at least trained in the related skill." +*/ "\n\n"+new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString+" {b}Reminder{/b} You choose which one to cast. You cannot cast both in a day.",
+                "Once per day, you can cast your choice of either " + AllSpells.CreateModernSpellTemplate(SpellId.MagicFang, Trait.Wizard).ToSpellLink().Replace("magic fang", "runic body") + " or " + AllSpells.CreateModernSpellTemplate(SpellId.MagicWeapon, Trait.Wizard).ToSpellLink().Replace("magic weapon", "runic weapon") + " as an innate spell. The rank of these spells is equal to half your level, rounded up" + "." + /*TODO: ", (NYI) and the tradition can be any tradition for which you are at least trained in the related skill." +*/ "\n\n{icon:YellowWarning} {b}Reminder{/b} You choose which one to cast. You cannot cast both in a day.",
                 [ModData.Traits.Runesmith])
             .WithOnSheet(sheet =>
             {
@@ -975,7 +975,7 @@ public static class RunesmithFeats
                 ModData.FeatNames.TransposeEtching,
                 4,
                 "With a pinching gesture, you pick up a word and move it elsewhere.",
-                "You move any one of your runes within 30 feet to a different target within 30 feet.\n\n"+new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString+" {b}Reminder{/b} Despite the name, this can be used on traced runes, not just etched ones.\n\n{b}Special{/b} (homebrew) When a creature bearing one of your runes dies, you can use this action to move one of its runes as a {icon:FreeAction} free action.",
+                "You move any one of your runes within 30 feet to a different target within 30 feet.\n\n{icon:YellowWarning} {b}Reminder{/b} Despite the name, this can be used on traced runes, not just etched ones.\n\n{b}Special{/b} (homebrew) When a creature bearing one of your runes dies, you can use this action to move one of its runes as a {icon:FreeAction} free action.",
                 [Trait.Manipulate, ModData.Traits.Runesmith])
             .WithActionCost(1)
             .WithPermanentQEffect(
