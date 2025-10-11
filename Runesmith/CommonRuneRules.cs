@@ -549,7 +549,9 @@ public static class CommonRuneRules
         }*/
         
         // Determine the way the rune is being applied.
-        if (sourceAction.HasTrait(ModData.Traits.Etched))
+        if (sourceAction.HasTrait(ModData.Traits.Tattooed))
+            qfToApply = qfToApply.WithIsTattooed();
+        else if (sourceAction.HasTrait(ModData.Traits.Etched))
             qfToApply = qfToApply.WithIsEtched();
         else if (sourceAction.HasTrait(ModData.Traits.Traced))
             qfToApply = qfToApply.WithIsTraced();
