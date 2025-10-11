@@ -363,7 +363,6 @@ public static class RunesmithFeats
                 "Raise a Shield and Trace a Rune on your shield.",
                 qfFeat =>
                 {
-                    // PETR: action into Raise Shield section
                     qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
                     {
                         if (!(isTraitParsed && section.Name == "Raise shield")
@@ -395,8 +394,9 @@ public static class RunesmithFeats
                             // Disable this rune if it isn't a proper shield rune.
                             bool isDisabledRune = !rune.DrawTechnicalTraits.Contains(Trait.Shield);
                             
-                            CombatAction? knockThisRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 0)?
-                                .WithActionCost(1)?
+                            CombatAction? knockThisRune = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, 0)
+                                ?.WithName($"Knock {rune.Name}")
+                                .WithActionCost(1)
                                 .WithExtraTrait(Trait.DoNotShowInCombatLog); // Too much text spam.
                             
                             if (knockThisRune == null)
@@ -404,14 +404,14 @@ public static class RunesmithFeats
                             
                             if (knockThisRune.HasTrait(Trait.Manipulate)) // Don't bother adding if it doesn't have manipulate
                                 knockThisRune.WithExtraTrait(Trait.DoesNotProvoke); // Provoke manually later
-                            knockThisRune.Name = $"Knock {rune.Name}";
                             knockThisRune.Illustration = new SideBySideIllustration(shieldIll, rune.Illustration);
-                            knockThisRune.Description = CommonRuneRules.CreateTraceActionDescription(
-                                knockThisRune,
-                                rune,
-                                withFlavorText: false,
-                                afterFlavorText:"{b}Frequency{/b} once per round");
-                            knockThisRune.Description = knockThisRune.Description.Replace(rune.UsageText, "{Blue}drawn on your raised shield.{/Blue}");
+                            knockThisRune.Description = CommonRuneRules
+                                .CreateTraceActionDescription(
+                                    knockThisRune,
+                                    rune,
+                                    withFlavorText: false,
+                                    afterFlavorText:"{b}Frequency{/b} once per round")
+                                .Replace(rune.UsageText, "{Blue}drawn on your raised shield.{/Blue}");
                             if (isDisabledRune)
                             {
                                 string oldPassiveText = rune.PassiveTextWithHeightening(rune, knockThisRune.Owner.Level);
@@ -425,7 +425,7 @@ public static class RunesmithFeats
                                 .WithAdditionalRestriction(self =>
                                 {
                                     if (shieldItem == null)
-                                        return "You must have a shield equipped";
+                                        return "No shield equipped";
                                     if (qfThis.UsedThisTurn)
                                         return "Already used this round";
                                     return oldRestriction?.Invoke(self);
@@ -626,7 +626,7 @@ public static class RunesmithFeats
                     {
                         SelectionOption? foundSelection = qfThis.Owner.PersistentCharacterSheet?.Calculated.SelectionOptions
                             .FirstOrDefault(opt =>
-                                opt.Key.Contains("RunesmithPlaytest.RunicTattooSelection"));
+                                opt.Key.Contains(ModData.IdPrepend+"RunicTattooSelection"));
                         bool foundTattoo = AllFeats.All
                             .Where(ft =>
                                 ft.ToTechnicalName().Contains("FeatTattooed"))
@@ -682,13 +682,12 @@ public static class RunesmithFeats
                                 return;
                             
                             // Etch that rune at the start of combat
-                            CombatAction etchTattoo = CommonRuneRules.CreateEtchAction(runesmith, runeFeat.Rune);
-                            etchTattoo.Name = "Runic Tattoo";
+                            CombatAction etchTattoo = CommonRuneRules
+                                .CreateEtchAction(runesmith, runeFeat.Rune)
+                                .WithName("Tattoo " + runeFeat.Rune.Name)
+                                .WithExtraTrait(ModData.Traits.Tattooed); // Fallsback to tattoo before etch trait, so this is fine
                             DrawnRune? appliedRune = await CommonRuneRules.DrawRuneOnTarget(
-                                CombatAction.CreateSimple(
-                                    runesmith,
-                                    $"Runic Tattoo ({runeFeat.Rune.Name})",
-                                    [ModData.Traits.Etched]),
+                                etchTattoo,
                                 runesmith,
                                 runesmith,
                                 runeFeat.Rune,
@@ -696,17 +695,12 @@ public static class RunesmithFeats
 
                             if (appliedRune != null)
                             {
-                                // No longer tracking the tattoo with the featQF's tag.
-                                //qfThis.Tag = appliedRune;
                                 appliedRune.Id = ModData.QEffectIds.TattooedRune;
                                 appliedRune.AfterInvokingRune += async (thisDrawnRune, sourceAction, invokedRune) =>
                                 {
                                     if (invokedRune == thisDrawnRune)
                                         invokedRune.Owner.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.RunicTattoo);
                                 };
-                                appliedRune.Description = appliedRune.Description!.Replace(
-                                    "Etched: lasts until the end of combat.",
-                                    "Tattooed: lasts until the end of combat. If invoked, this rune won't be available until your next daily preparations.");
                             }
 
                             qfThis.UsedThisTurn = true;
@@ -1023,8 +1017,9 @@ public static class RunesmithFeats
                                     if (!runeBearers.Any())
                                         return "no rune-bearers";
                                     var validBearers = runeBearers
-                                        .Where(cr => DrawnRune.GetDrawnRunes(self, cr)
-                                            .Any(dr => dr.Description != null && !dr.Description.Contains("Tattooed") && !dr.Description.Contains("Runic Reprisal")))
+                                        .Where(cr =>
+                                            DrawnRune.GetDrawnRunes(self, cr)
+                                                .Any(IsTransposableRune))
                                         .ToList();
                                     if (!validBearers.Any())
                                         return "no valid runes";
@@ -1037,7 +1032,9 @@ public static class RunesmithFeats
                             .WithEffectOnEachTarget(async (transposeAction, caster, _,_) =>
                             {
                                 List<Creature> possiblePickups = caster.Battle.AllCreatures
-                                    .Where(cr => cr.DistanceTo(caster) <= 6 && DrawnRune.GetDrawnRunes(caster, cr).Count != 0)
+                                    .Where(cr =>
+                                        cr.DistanceTo(caster) <= 6
+                                        && DrawnRune.GetDrawnRunes(caster, cr).Count != 0)
                                     .ToList();
                                 DrawnRune? chosenRune = await CommonRuneRules.AskToChooseADrawnRune(
                                     caster,
@@ -1046,8 +1043,7 @@ public static class RunesmithFeats
                                     "Choose one of your runes to move to another creature within 30 feet or right-click to cancel.",
                                     "Cancel choosing a rune",
                                     true,
-                                    dr => dr.Description != null && !(dr.Description.Contains("Tattooed") ||
-                                        dr.Description.Contains("Runic Reprisal")));
+                                    IsTransposableRune);
                                 if (chosenRune != null)
                                 {
                                     List<Creature> possibleDropoffs = caster.Battle.AllCreatures
@@ -1073,6 +1069,11 @@ public static class RunesmithFeats
                                 else
                                     transposeAction.RevertRequested = true;
                             });
+                    }
+
+                    bool IsTransposableRune(DrawnRune dr)
+                    {
+                        return dr.DrawTrait != ModData.Traits.Tattooed && !dr.Traits.Contains(ModData.Traits.Reprised);
                     }
                 });
         
