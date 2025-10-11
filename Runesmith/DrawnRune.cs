@@ -157,7 +157,7 @@ public class DrawnRune : QEffect
         this.Traits.Remove(ModData.Traits.Tattooed);
         this.Traits.Remove(ModData.Traits.Etched);
         this.Traits.Add(ModData.Traits.Traced);
-        this.Description = "{i}Traced{/i}\n" + this.Description!.Replace("{i}Tattooed{/i}\n", "").Replace("{i}Etched{/i}\n", "") + "\n\n{i}{Blue}Lasts until the end of " + this.Source?.Name + "'s next turn.{/Blue}{/i}";
+        this.Description = "{i}Traced{/i}\n" + this.Description!.Replace("{i}Tattooed{/i}\n", "").Replace("{i}Etched{/i}\n", "") + "\n\n{i}{Blue}Lasts until the end of " + this.Source?.Name + "'s next turn.{/Blue}{/i}"; // TODO: remove some of this text, with future duration automations
         // Refuses to work for incomprehensible reasons
         /*this.WithExpirationAtEndOfSourcesNextTurn(this.Source!, true);
         this.StartOfSourcesTurn = async qfThis =>
