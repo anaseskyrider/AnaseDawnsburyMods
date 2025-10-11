@@ -64,18 +64,11 @@ public class DrawnRune : QEffect
     {
         get
         {
-            bool isEtched = this.Traits.Contains(ModData.Traits.Etched);
-            bool isTraced = this.Traits.Contains(ModData.Traits.Traced);
-            if (isEtched && isTraced) // It's not supposed to be both, so return a null just in case.
-                return null;
-            else if (isEtched)
-                return ModData.Traits.Etched;
-            else if (isTraced)
-                return ModData.Traits.Traced;
-            else
-                return null;
+            return this.Traits.FirstOrDefault(trait =>
+                trait == ModData.Traits.Tattooed
+                || trait == ModData.Traits.Etched
+                || trait == ModData.Traits.Traced);
         }
-        set => DrawTrait = value;
     }
 
     /// <summary>
@@ -128,7 +121,14 @@ public class DrawnRune : QEffect
     /// <returns></returns>
     public DrawnRune WithDrawDuration(Trait drawTrait)
     {
-        return drawTrait == ModData.Traits.Etched ? this.WithIsEtched() : (drawTrait == ModData.Traits.Traced ? this.WithIsTraced() : this);
+        return drawTrait == ModData.Traits.Tattooed
+            ? this.WithIsTattooed()
+            : drawTrait == ModData.Traits.Etched
+                ? this.WithIsEtched()
+                : (drawTrait == ModData.Traits.Traced
+                    ? this.WithIsTraced()
+                    : this);
+    }
     }
 
     public DrawnRune WithIsEtched()
