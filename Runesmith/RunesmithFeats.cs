@@ -431,54 +431,55 @@ public static class RunesmithFeats
                                     return oldRestriction?.Invoke(self);
                                 });
                             knockThisRune.EffectOnOneTarget = null; // Reset behavior so we can hard code this
-                            knockThisRune.WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
-                                {
-                                    // Raise a shield
-                                    Possibilities shieldActions = Possibilities.Create(caster)
-                                        .Filter( ap =>
-                                        {
-                                            if (ap.CombatAction.ActionId != ActionId.RaiseShield)
-                                                return false;
-                                            ap.CombatAction.ActionCost = 0;
-                                            ap.CombatAction.WithExtraTrait(Trait.DoNotShowOverheadOfActionName); // Too much text spam.
-                                            ap.RecalculateUsability();
-                                            return true;
-                                        });
-                                    List<Option> actions = await caster.Battle.GameLoop.CreateActions(caster, shieldActions, null);
-                                    await caster.Battle.GameLoop.OfferOptions(caster, actions, true);
-                                    
-                                    // Provoke manipulate, if the action is supposed to (e.g. Rune-Singer)
-                                    CombatAction phantomManipulate = CombatAction.CreateSimple(
-                                            caster,
-                                            $"Trace {rune.Name}",
-                                            Trait.DoNotShowInCombatLog,
-                                            Trait.Manipulate)
-                                        .WithActionCost(0);
-                                    if (thisAction.HasTrait(Trait.Manipulate))
-                                        await phantomManipulate.AllExecute();
-
-                                    if (phantomManipulate.Disrupted)
-                                        return;
-                                    
-                                    // Trace the rune
-                                    Rune actionRune = (thisAction.Tag as Rune)!;
-                                    if (await CommonRuneRules.DrawRuneOnTarget(thisAction, caster, target, actionRune, true) is { } drawnRune)
+                            knockThisRune.WithEffectOnEachTarget(async (thisAction, caster, target, _) =>
+                            {
+                                // Raise a shield
+                                Possibilities shieldActions = Possibilities.Create(caster)
+                                    .Filter( ap =>
                                     {
-                                        if (isDisabledRune)
-                                        {
-                                            drawnRune.DisableRune(true);
-                                            drawnRune.Description = "{Blue}(Runic Reprisal) When you use Shield Block against an adjacent attacker, this rune's invocation effects are detonated outward onto the attacker.{/Blue}" + "\n\n{i}{Blue}Traced: lasts until the end of " + drawnRune.Source?.Name + "'s next turn.{/Blue}{/i}";
-                                        }
-                                        
-                                        // If it didn't have it already (because idk my own code anymore),
-                                        // it needs to know there's an action with "Knock" in the name that traced it.
-                                        drawnRune.SourceAction = thisAction;
-                                    }
-                                    else
-                                        thisAction.RevertRequested = true;
+                                        if (ap.CombatAction.ActionId != ActionId.RaiseShield)
+                                            return false;
+                                        ap.CombatAction.ActionCost = 0;
+                                        ap.CombatAction.WithExtraTrait(Trait.DoNotShowOverheadOfActionName); // Too much text spam.
+                                        ap.RecalculateUsability();
+                                        return true;
+                                    });
+                                List<Option> actions = await caster.Battle.GameLoop.CreateActions(caster, shieldActions, null);
+                                await caster.Battle.GameLoop.OfferOptions(caster, actions, true);
+                                
+                                // Provoke manipulate, if the action is supposed to (e.g. Rune-Singer)
+                                CombatAction phantomManipulate = CombatAction.CreateSimple(
+                                        caster,
+                                        $"Trace {rune.Name}",
+                                        Trait.DoNotShowInCombatLog,
+                                        Trait.Manipulate)
+                                    .WithActionCost(0);
+                                if (thisAction.HasTrait(Trait.Manipulate))
+                                    await phantomManipulate.AllExecute();
 
-                                    qfThis.UsedThisTurn = true;
-                                });
+                                if (phantomManipulate.Disrupted)
+                                    return;
+                                
+                                // Trace the rune
+                                Rune actionRune = (thisAction.Tag as Rune)!;
+                                if (await CommonRuneRules.DrawRuneOnTarget(thisAction, caster, target, actionRune, true) is { } drawnRune)
+                                {
+                                    if (isDisabledRune)
+                                    {
+                                        drawnRune.DisableRune(true);
+                                        drawnRune.Description = "{i}Traced{/i}\n{Blue}(Runic Reprisal) When you use Shield Block against an adjacent attacker, this rune's invocation effects are detonated outward onto the attacker.{/Blue}" + "\n\n{i}{Blue}Lasts until the end of " + drawnRune.Source?.Name + "'s next turn.{/Blue}{/i}"; // TODO: remove some of this with future duration text automation
+                                        drawnRune.Traits.Add(ModData.Traits.Reprised);
+                                    }
+                                    
+                                    // If it didn't have it already (because idk my own code anymore),
+                                    // it needs to know there's an action with "Knock" in the name that traced it.
+                                    drawnRune.SourceAction = thisAction;
+                                }
+                                else
+                                    thisAction.RevertRequested = true;
+
+                                qfThis.UsedThisTurn = true;
+                            });
 
                             if (isDisabledRune)
                                 repriseSection.AddPossibility(new ActionPossibility(knockThisRune, PossibilitySize.Full));
