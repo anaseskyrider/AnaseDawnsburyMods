@@ -272,6 +272,14 @@ public static class ModData
                 "An etched rune is carved, inked, or branded in. A runesmith's magic can sustain up to 2 etched runes at a time, or more at higher levels. Etched runes remain indefinitely until they're expended or removed.", //"Runes are etched before combat begins."
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
         
+        /// <summary>A <see cref="DrawnRune"/> with this hidden technical trait represents a QEffect which has been tattooed via the Runic Tattoo feat.</summary>
+        public static readonly Trait Tattooed = ModManager.RegisterTrait("Tattooed",
+            new TraitProperties("Tattooed", false));
+        
+        /// <summary>A <see cref="DrawnRune"/> with this hidden technical trait represents a QEffect which has been traced via the Runic Reprisal feat.</summary>
+        public static readonly Trait Reprised = ModManager.RegisterTrait("Reprised",
+            new TraitProperties("Reprised", false));
+        
         /// <summary>An action with this trait represents an invocation action. A QEffect with this trait represents the effects of an invocation, as opposed to an effect that is the result of a rune being applied.</summary>
         public static readonly Trait Invocation = ModManager.RegisterTrait("Invocation",
             new TraitProperties("Invocation", true,
