@@ -648,12 +648,13 @@ public static class GuardianClass
                 {
                     if (attacker == attacker.Battle.Pseudocreature)
                         return Usability.NotUsable("Pseudocreature");
-                    /*if (d != ally)
-                        return Usability.NotUsableOnThisCreature("Not the target of Intercept Attack");*/
+                    if (d != dEvent.TargetCreature)
+                        return Usability.NotUsableOnThisCreature("Not the target of Intercept Attack");
                     if (!dEvent.KindedDamages.Any(kd =>
                             ModData.CommonRequirements.IsInterceptableDamageType(a, kd)))
                         return Usability.NotUsable("Damage does not trigger Intercept Attack");
-                    if (GetLegalTiles(a, d, canStride).Count == 0)
+                    if (!a.IsAdjacentTo(d)
+                        && GetLegalTiles(a, d, canStride).Count == 0)
                         return Usability.NotUsableOnThisCreature("Nowhere to move");
                     return Usability.Usable;
                 }))
