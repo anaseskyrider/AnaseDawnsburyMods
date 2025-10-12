@@ -157,17 +157,17 @@ public class DrawnRune : QEffect
         this.Traits.Remove(ModData.Traits.Tattooed);
         this.Traits.Remove(ModData.Traits.Etched);
         this.Traits.Add(ModData.Traits.Traced);
+        //this.ExpiresAt = ExpirationCondition.ExpiresAtEndOfSourcesTurn;
+        //this.CannotExpireThisTurn = true;
+        //this.Description += "\n\n{i}{Blue}Traced: lasts until the end of " + this.Source?.Name + "'s next turn.{/Blue}{/i}";
         this.Description = "{i}Traced{/i}\n" + this.Description!.Replace("{i}Tattooed{/i}\n", "").Replace("{i}Etched{/i}\n", "") + "\n\n{i}{Blue}Lasts until the end of " + this.Source?.Name + "'s next turn.{/Blue}{/i}"; // TODO: remove some of this text, with future duration automations
+        this.WithExpirationAtEndOfSourcesNextTurn(this.Source!, true);
         // Refuses to work for incomprehensible reasons
-        /*this.WithExpirationAtEndOfSourcesNextTurn(this.Source!, true);
-        this.StartOfSourcesTurn = async qfThis =>
+        /*this.StartOfSourcesTurn = async qfThis =>
         {
             //if (qfThis is { RoundsLeft: <= 1, CannotExpireThisTurn: false })
             qfThis.Description = qfThis.Description!.Replace("next turn", "current turn");
         };*/
-        //this.ExpiresAt = ExpirationCondition.ExpiresAtEndOfSourcesTurn;
-        //this.CannotExpireThisTurn = true;
-        //this.Description += "\n\n{i}{Blue}Traced: lasts until the end of " + this.Source?.Name + "'s next turn.{/Blue}{/i}";
         return this;
     }
 
