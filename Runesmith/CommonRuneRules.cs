@@ -13,6 +13,7 @@ using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
@@ -270,14 +271,17 @@ public static class CommonRuneRules
                     _ => Target.Self().WithAdditionalRestriction(self =>
                         RunesmithClass.IsRunesmithHandFree(self) ? null : "You must have a free hand to trace a rune")
                 })
-            .WithTag(rune)
+            .WithTag(rune) // Type is Rune before execution, then DrawnRune after execution.
             .WithActionCost(actions)
             .WithSoundEffect(ModData.SfxNames.TraceRune)
             .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
             {
                 Rune actionRune = (thisAction.Tag as Rune)!;
-                if (await CommonRuneRules.DrawRuneOnTarget(thisAction, caster, target, actionRune) == null)
+                if (await CommonRuneRules.DrawRuneOnTarget(thisAction, caster, target, actionRune) is not
+                    { } newDrawnRune)
                     thisAction.RevertRequested = true;
+                else
+                    thisAction.Tag = newDrawnRune;
             });
         
         return drawRuneAction;
@@ -446,7 +450,7 @@ public static class CommonRuneRules
                 traits,
                 initialDescription + (rune.InvocationTextWithHeightening(rune, caster.Level) ?? "[No invocation entry]"),
                 invokeTarget)
-            .WithTag(rune)
+            .WithTag(runeTarget)
             .WithActionId(ModData.ActionIds.InvokeRune)
             .WithActionCost(0)
             .WithProjectileCone(VfxStyle.BasicProjectileCone(rune.Illustration))

@@ -22,6 +22,7 @@ using Dawnsbury.Core.Mechanics.Zoning;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
+using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
@@ -228,8 +229,9 @@ public static class RunesmithRunes
 
                                 if (action.CheckResult >= CheckResult.Success)
                                 {
-                                    action.ChosenTargets.ChosenCreature.AddQEffect(
-                                        QEffect.PersistentDamage(bleedAmount, DamageKind.Bleed));
+                                    QEffect pBleed = QEffect.PersistentDamage(bleedAmount, DamageKind.Bleed);
+                                    pBleed.SourceAction = sourceAction; // Store the action that drew this rune so that data about this drawn rune is available to the persistent damage
+                                    action.ChosenTargets.ChosenCreature.AddQEffect(pBleed);
                                 }
                             },
                         }
@@ -1158,7 +1160,12 @@ public static class RunesmithRunes
                             return;
                         if (qfThis.UsedThisTurn) // If you have moved this turn,
                             return; // don't take any damage.
-                        await CommonSpellEffects.DealDirectDamage(null, immobilityDamage, self, CheckResult.Failure,
+                        await CommonSpellEffects.DealDirectDamage(
+                            CombatAction.CreateSimple(caster, "Ranshu, Rune of Thunder", [..thisRune.Traits])
+                                .WithTag(qfThis),
+                            immobilityDamage,
+                            self,
+                            CheckResult.Failure,
                             DamageKind.Electricity);
                         Sfxs.Play(ModData.SfxNames.PassiveRanshu);
                     },
@@ -2020,7 +2027,7 @@ public static class RunesmithRunes
                         if (action.Target is CreatureTarget { RangeKind: RangeKind.Melee } && !(action.HasTrait(Trait.Weapon) && action.HasTrait(Trait.Reach)))
                         {
                             await CommonSpellEffects.DealDirectDamage(
-                                CombatAction.CreateSimple(qfThis.Owner, thisRune.Name, [..qfThis.Traits]),
+                                CombatAction.CreateSimple(qfThis.Owner, thisRune.Name, [..qfThis.Traits]).WithTag(qfThis),
                                 DiceFormula.FromText(GetPassiveDamageAmount(caster.Level)),
                                 action.Owner,
                                 CheckResult.Success,
@@ -2053,6 +2060,7 @@ public static class RunesmithRunes
 
                     Creature grappler = qf.Source!;
                     CombatAction invocationDetails = CombatAction.CreateSimple(caster, sourceAction.Name, [..invokedRune.Traits])
+                        .WithTag(invokedRune)
                         .WithSavingThrow(new SavingThrow(Defense.Reflex, caster.ClassDC(ModData.Traits.Runesmith)));
                     CheckResult result = CommonSpellEffects.RollSavingThrow(
                         grappler,
