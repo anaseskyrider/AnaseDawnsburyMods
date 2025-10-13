@@ -22,6 +22,7 @@ namespace Dawnsbury.Mods.RunesmithPlaytest;
 public static class CommonRuneRules
 {
     #region Formatted Descriptions
+
     /// <summary>
     /// Generates a description block for this rune's Trace actions.
     /// </summary>
@@ -30,6 +31,7 @@ public static class CommonRuneRules
     /// <param name="withFlavorText">Whether to include flavor text in the description (typically false for dropdown options).</param>
     /// <param name="prologueText">The paragraph to add at the top of the description (includes one line-break after).</param>
     /// <param name="afterFlavorText">The text to add at the end of the flavor text paragraph.</param>
+    /// <param name="withUsageText">Whether to include the usage text in the description (typically false for dropdown options).</param>
     /// <param name="afterUsageText">The text to add at the end of the usage text paragraph.</param>
     /// <param name="afterPassiveText">The text to add at the end of the passive text paragraph.</param>
     /// <param name="afterInvocationText">The text to add at the end of the invocation text paragraph.</param>
@@ -41,20 +43,22 @@ public static class CommonRuneRules
         bool withFlavorText = true,
         string? prologueText = null,
         string? afterFlavorText = null,
+        bool withUsageText = true,
         string? afterUsageText = null,
         string? afterPassiveText = null,
         string? afterInvocationText = null,
         string? epilogueText = null)
     {
         int lvl = traceAction.Owner.Level;
-        string usageText = rune.GetFormattedUsageText() + afterUsageText;
+        string? usageText = (withUsageText ? rune.GetFormattedUsageText() : null) + afterUsageText;
         string? flavorText = (withFlavorText ? rune.GetFormattedFlavorText() : null) + afterFlavorText;
         string passiveText = rune.PassiveTextWithHeightening(rune, lvl) + afterPassiveText;
         string? invocationText = rune.GetFormattedInvocationText(rune.InvocationTextWithHeightening(rune, lvl)) + afterInvocationText;
         //string? levelText = this.WithLevelTextFormatting(); // Should have heightening, so this shouldn't be necessary.
         return (!string.IsNullOrEmpty(prologueText) ? $"{prologueText}\n" : null)
                + (!string.IsNullOrEmpty(flavorText) ? $"{flavorText}\n\n": null)
-               + $"{usageText}\n\n{passiveText}"
+               + (!string.IsNullOrEmpty(usageText) ? $"{usageText}\n\n" : null)
+               + passiveText
                + (!string.IsNullOrEmpty(invocationText) ? $"\n\n{invocationText}" : null)
                + (!string.IsNullOrEmpty(epilogueText) ? $"\n{epilogueText}" : null);
                //+ (levelText != null ? $"\n\n{levelText}" : null);
