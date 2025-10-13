@@ -4,6 +4,8 @@ using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations.AuraAnimations;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Spellbook;
+using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Requests;
@@ -16,6 +18,7 @@ using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
+using Dawnsbury.Core.Mechanics.Zoning;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
@@ -1048,13 +1051,13 @@ public static class RunesmithRunes
             .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
             {
                 const float emanationSize = 4f; // 20 feet
-
+                
                 // Create action wrapper for targeting and roll-inspection of invoking from target to emanation creatures.
                 CombatAction invokePluunaOnEveryone = new CombatAction(
                         target, // Get creatures near the rune, who is the creature with the drawn rune being invoked
                         thisRune.Illustration,
                         $"Invoke {thisRune.Name}",
-                        new List<Trait>(thisRune.Traits).Append(Trait.DoNotShowInCombatLog).ToArray(),
+                        [..thisRune.Traits, Trait.DoNotShowInCombatLog],
                         thisRune.InvocationTextWithHeightening(thisRune, caster.Level) ?? thisRune.InvocationText!,
                         Target.Emanation((int)emanationSize))
                     .WithActionCost(0)
@@ -1679,7 +1682,7 @@ public static class RunesmithRunes
                         target, // Get creatures near the rune, who is the creature with the drawn rune being invoked
                         thisRune.Illustration,
                         $"Invoke {thisRune.Name}",
-                        new List<Trait>(thisRune.Traits).Append(Trait.DoNotShowInCombatLog).ToArray(),
+                        [..thisRune.Traits, Trait.DoNotShowInCombatLog],
                         thisRune.InvocationTextWithHeightening(thisRune, caster.Level) ?? thisRune.InvocationText!,
                         Target.Emanation(3)
                             .WithIncludeOnlyIf((tar, cr) => cr != target))
