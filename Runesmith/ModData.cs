@@ -125,7 +125,7 @@ public static class ModData
         #region Misc
         public static readonly Illustration NoSymbol = new ModdedIllustration("RunesmithAssets/no symbol.png");
         public static readonly Illustration CheckSymbol = new ModdedIllustration("RunesmithAssets/check symbol.png");
-        //public static readonly Illustration DawnsburySun = new ModdedIllustration("RunesmithAssets/PatreonSunTransparent.png");
+        public static readonly Illustration DawnsburySun = new ModdedIllustration("RunesmithAssets/PatreonSunTransparent.png");
         public static readonly string DawnsburySunPath = "RunesmithAssets/PatreonSunTransparent.png";
         #endregion
     }
@@ -177,6 +177,7 @@ public static class ModData
         public const SfxName InvokedIchelsu = SfxName.MinorAbjuration;
         public const SfxName InvokedJurroz = SfxName.AirSpell;
         public const SfxName InvokedKojastri = SfxName.BoneSpray;
+        public const SfxName InvokedTrolistri = SfxName.Fear;
         public const SfxName ToggleRuneSinger = SfxName.OminousActivation; //SfxName.AuraExpansion;
         public const SfxName SingRune = SfxName.Choir;
         public const SfxName TransposeEtchingStart = SfxName.OminousActivation;
