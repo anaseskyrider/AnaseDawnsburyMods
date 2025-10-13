@@ -48,6 +48,9 @@ public static class RunesmithRunes
          */
         
         // TODO: Consolidate item-targeting routines with task functions in CommonRuneRules
+        
+        // BUG: Some runes incorrectly scale with non-striking die increases.
+        // "Counting Damage Dice: Effects base on a weapon's number of damage dice include only the weapon's damage die plus any extra dice from a striking rune. They don't count extra dice from abilities, critical specialization effects, property runes, weapon traits, or the like."
 
         #region Level 1 Runes
 
@@ -170,16 +173,16 @@ public static class RunesmithRunes
                 {
                     DrawnRune esvadirPassive = new DrawnRune(
                             thisRune,
-                            $"The target item or piercing and slashing unarmed strikes deal 2 persistent bleed damage per weapon damage die.",
+                            "The target item or piercing and slashing unarmed strikes deal 2 persistent bleed damage per weapon damage die.",
                             caster)
                         {
                             Name = $"{thisRune.Name} ({targetItem.Name})", // Custom name
-                            AfterYouTakeAction = async (QEffect qfSelf, CombatAction action) => // Add bleed
+                            AfterYouTakeAction = async (qfThis, action) => // Add bleed
                             {
-                                if ((qfSelf as DrawnRune)!.Disabled)
+                                if ((qfThis as DrawnRune)!.Disabled)
                                     return;
 
-                                Item? qfItem = (qfSelf as DrawnRune)?.DrawnOn as Item;
+                                Item? qfItem = (qfThis as DrawnRune)?.DrawnOn as Item;
                                 Item? actionItem = action.Item;
 
                                 // This many complex conditionals is really hard to work out so I did it the long way.
@@ -188,7 +191,7 @@ public static class RunesmithRunes
                                     !action.HasTrait(Trait.Strike) || // or the action isn't a strike
                                     action.ChosenTargets.ChosenCreature == null || // or null targets
                                     action.ChosenTargets.ChosenCreature ==
-                                    qfSelf.Owner || // or I'm my target for any reason
+                                    qfThis.Owner || // or I'm my target for any reason
                                     !(actionItem.DetermineDamageKinds().Contains(DamageKind.Piercing) ||
                                       actionItem.DetermineDamageKinds()
                                           .Contains(DamageKind
@@ -1235,6 +1238,8 @@ public static class RunesmithRunes
                             BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
                             {
                                 if (thisDr.Disabled)
+                                    // TODO: check if this needs an extra check
+                                    // || drInvoked != thisDr.DrawnOn
                                     return;
                                 /*CombatAction sunRedraw = CombatAction.CreateSimple(
                                 drInvoked.Source!,
@@ -1325,6 +1330,8 @@ public static class RunesmithRunes
                         BeforeInvokingRune = async (thisDr, sourceAction2, drInvoked) =>
                         {
                             if (thisDr.Disabled)
+                                // TODO: check if this needs an extra check
+                                // || drInvoked != thisDr.DrawnOn
                                 return;
                             QEffect invokeBonus = new QEffect()
                             {

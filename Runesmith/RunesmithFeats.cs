@@ -1042,13 +1042,13 @@ public static class RunesmithFeats
                                     possiblePickups = possiblePickups
                                         .Where(cr => cr == target)
                                         .ToList();
-                                DrawnRune? chosenRune = await CommonRuneRules.AskToChooseADrawnRune(
+                                DrawnRune? chosenRune = await CommonRuneRules.ChooseADrawnRune(
                                     caster,
                                     possiblePickups,
                                     transposeAction.Illustration,
                                     "Choose one of your runes to move to another creature within 30 feet or right-click to cancel.",
-                                    "Cancel choosing a rune",
-                                    true,
+                                    dr => $"Pick up {{Blue}}{dr.Rune.Name}{{/Blue}}",
+                                    null, "Don\'t choose a rune", true,
                                     IsTransposableRune);
                                 if (chosenRune != null)
                                 {
@@ -1062,7 +1062,7 @@ public static class RunesmithFeats
                                         transposeAction.Illustration,
                                         $"Choose a creature to bear {{Blue}}{chosenRune.Rune.Name}{{/Blue}}",
                                         $"Move {{Blue}}{chosenRune.Rune.Name}{{/Blue}} to this creature.",
-                                        "Cancel moving rune");
+                                        "Don\'t move rune");
                                     if (chosenCreature != null)
                                     {
                                         DrawnRune pretendNewRune = (await chosenRune.Rune.NewDrawnRune!.Invoke(transposeAction, caster, chosenCreature, chosenRune.Rune))!;
@@ -1107,17 +1107,13 @@ public static class RunesmithFeats
                         // Do runic reprisal stuff
                         attacker.AddQEffect(new QEffect()
                         {
-                            Name = "[AFTER SHIELD BLOCK, RUNIC REPRISAL",
+                            Name = "[AFTER SHIELD BLOCK, RUNIC REPRISAL]",
                             AfterYouTakeAction = async (qfThis2, action) =>
                             {
                                 // Get drawn runes
                                 DrawnRune? reprisalDr = DrawnRune
                                     .GetDrawnRunes(qfThis.Owner, qfThis.Owner)
-                                    .FirstOrDefault(dr => 
-                                        dr.SourceAction != null
-                                        && dr.SourceAction.Name.Contains("Knock")
-                                        && dr.SourceAction.Tag is Rune reprisalRune
-                                        && reprisalRune.InvokeTechnicalTraits.Contains(Trait.IsHostile));
+                                    .FirstOrDefault(dr => dr.Traits.Contains(ModData.Traits.Reprised));
                                 
                                 if (reprisalDr == null)
                                     return;

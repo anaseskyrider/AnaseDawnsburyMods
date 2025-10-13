@@ -269,6 +269,11 @@ public static class RunesmithClass
                                     ?.WithExtraTrait(Trait.Basic);
                                 if (oneActionTraceRune == null)
                                     continue;
+                                oneActionTraceRune.Description = CommonRuneRules.CreateTraceActionDescription(
+                                    oneActionTraceRune,
+                                    rune,
+                                    withFlavorText: false,
+                                    withUsageText: false);
                                 oneActionTraceRune.ContextMenuName = "{icon:Action} " + oneActionTraceRune.Name;
                                 (oneActionTraceRune.Target as CreatureTarget)!
                                     .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
@@ -294,6 +299,11 @@ public static class RunesmithClass
                                             : Usability.Usable);
                             }
                             twoActionTraceRune.ContextMenuName = RulesBlock.GetIconTextFromNumberOfActions(twoActionTraceRune.ActionCost) + " " + twoActionTraceRune.Name;
+                            twoActionTraceRune.Description = CommonRuneRules.CreateTraceActionDescription(
+                                twoActionTraceRune,
+                                rune,
+                                withFlavorText: false,
+                                withUsageText: false);
                             (twoActionTraceRune.Target as CreatureTarget)!
                                 .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
                                     attacker.FindQEffect(ModData.QEffectIds.DrawnInRed)?.Tag == defender

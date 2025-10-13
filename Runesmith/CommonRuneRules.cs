@@ -936,7 +936,7 @@ public static class CommonRuneRules
             newOwner.AddQEffect(rune);
         }
     }
-    
+
     /// <summary>
     /// Decider attempts to select drawn runes on any creatures in battle. Does not require that the decider owns the runes.
     /// </summary>
@@ -944,15 +944,20 @@ public static class CommonRuneRules
     /// <param name="possibleTargets">The list of creatures that can be chosen from.</param>
     /// <param name="illustration">The top-bar icon.</param>
     /// <param name="question">The top-bar string.</param>
+    /// <param name="tooltipName">The name of the button in the context menu. Usually a verb such as "choose" followed by the rune's name.</param>
+    /// <param name="tooltipText">The description widget displayed on hover next to the button option. Usually the rune's usage, passive, and invocation text.</param>
     /// <param name="passButtonCaption"></param>
     /// <param name="canBeCanceled">Whether you can right-click to cancel the request.</param>
     /// <param name="runeFilter">A function which filters out valid choices (such as drawn runes the decider owns, or preventing Transpose Etching from selecting a tattoo or runic reprisal trap).</param>
     /// <returns></returns>
-    public static async Task<DrawnRune?> AskToChooseADrawnRune(
+    // TODO: Make a version of this, AskToChooseADrawnRune, which includes a Pass option 
+    public static async Task<DrawnRune?> ChooseADrawnRune(
         Creature decider,
         IEnumerable<Creature> possibleTargets,
         Illustration illustration,
         string question,
+        Func<DrawnRune, string>? tooltipName,
+        Func<DrawnRune, string>? tooltipText,
         string passButtonCaption = "Pass",
         bool canBeCanceled = false,
         Func<DrawnRune, bool>? runeFilter = null)
@@ -970,13 +975,16 @@ public static class CommonRuneRules
             {
                 options.Add(new CreatureOption(
                     cr,
-                    $"Pick up {{Blue}}{dr.Rune.Name}{{/Blue}}",
+                    tooltipText?.Invoke(dr) ?? dr.Description ?? "{i}" + dr.DrawTrait?.HumanizeTitleCase2() + "{/i}\n\n" + CommonRuneRules.CreateTraceActionDescription(
+                        CombatAction.CreateSimple(decider, "[NO NAME GIVEN]"), // Action is used to get owner's level, so this is fine
+                        dr.Rune,
+                        withFlavorText: false),
                     async () => chosenRune = dr,
                     int.MinValue,
                     false)
                 {
                     Illustration = dr.Illustration,
-                    ContextMenuText = dr.Rune.Name,
+                    ContextMenuText = tooltipName?.Invoke(dr) ?? $"Choose {{Blue}}{dr.Rune.Name}{{/Blue}}",
                 });
             });
         });
