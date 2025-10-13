@@ -150,13 +150,15 @@ public static class CommonRuneRules
     #endregion
 
     #region Immunities
+
     /// <summary>
     /// Creates and applies an immunity against this rune's invocation effects to a given creature. This QEffect needs to be removed manually with <see cref="RemoveAllImmunities"/> at the end of any activity with subsidiary invocation actions.
     /// </summary>
     /// <param name="invokeTarget">The <see cref="Creature"/> to become immune to this rune's invocation.</param>
     /// <param name="rune">The rune whose invocation to become immune to.</param>
+    /// <param name="immuneForEncounter">If true, then this immunity lasts for the duration of the encounter, and won't be removed when invocation immunities would normally be removed.</param>
     /// <returns>(<see cref="QEffect"/>) The immunity which was applied to the target.</returns>
-    public static QEffect ApplyImmunity(Creature invokeTarget, Rune rune)
+    public static QEffect ApplyImmunity(Creature invokeTarget, Rune rune, bool immuneForEncounter = false)
     {
         QEffect runeInvocationImmunity = new QEffect()
         {
@@ -165,7 +167,9 @@ public static class CommonRuneRules
             Illustration = new SuperimposedIllustration(rune.Illustration, ModData.Illustrations.NoSymbol),
             Tag = rune,
             Traits = [ModData.Traits.InvocationImmunity, rune.RuneId], // ImmunityQFs are identified by these traits.
-            ExpiresAt = ExpirationCondition.ExpiresAtEndOfAnyTurn, // This QF is supposed to be removed when the activity making invokeActions completes. This is a back-up safety for developer-error.
+            ExpiresAt = immuneForEncounter
+                ? ExpirationCondition.Never // This QF won't be removed later on.
+                : ExpirationCondition.ExpiresAtEndOfAnyTurn, // This QF is supposed to be removed when the activity making invokeActions completes. This is a back-up safety for developer-error.
             DoNotShowUpOverhead = true,
         };
         invokeTarget.AddQEffect(runeInvocationImmunity);
@@ -187,15 +191,15 @@ public static class CommonRuneRules
     }
     
     /// <summary>
-    /// Removes all invocation immunities from a creature.
+    /// Removes all invocation immunities from a creature that aren't set to persist for the entire encounter.
     /// </summary>
     /// <param name="cr">The <see cref="Creature"/> whose QEffects will be searched.</param>
     /// <returns>(bool) True if at least one QEffect with the <see cref="ModData.Traits.InvocationImmunity"/> trait was removed, false otherwise.</returns>
     public static bool RemoveAllImmunities(Creature cr)
     {
-        int removals = cr.RemoveAllQEffects(
-            qf =>
-                qf.Traits.Contains(ModData.Traits.InvocationImmunity)
+        int removals = cr.RemoveAllQEffects(qf =>
+            qf.Traits.Contains(ModData.Traits.InvocationImmunity)
+            && qf.ExpiresAt != ExpirationCondition.Never // Exception for longer duration immunities
         );
         return (removals > 0);
     }
