@@ -1800,8 +1800,148 @@ public static class RunesmithRunes
             });
         AddRuneAsRuneFeat(ModData.IdPrepend+"RuneIchelsu", runeIchelsu);
         
-        // Rune runeInthDiacritic = new Rune();
-        // AddRuneAsRuneFeat(ModData.IdPrepend+"RuneInthDiacritic", runeInthDiacritic);
+        // "the target takes 1d4 persistent fire damage" has some ambiguity between Esvadir's invocation and Pluuna's invocation.
+        // Wording changed to specify that the rune-bearer takes the persistent damage.
+        // TODO: Unholy damage benefits to persistent damage
+        Rune runeInthDiacritic = new Rune(
+                "Inth-, Diacritic Rune of Corruption",
+                ModData.Traits.InthDiacritic,
+                IllustrationName.KeenRunestone,
+                9,
+                "drawn on a rune",
+                "This set of angular accents around the base rune channels the essence of fiendish corruption.",
+                "The base rune gains the unholy trait, as does any damage it deals. If applied to a holy creature, that creature is enfeebled 1 for as long as the rune is applied to it.",
+                "(unholy) When the base rune is invoked, it burns away in unholy black fire that lingers on its bearer. In addition to the base rune's normal effect, the rune-bearer takes 1d4 persistent fire damage.",
+                "The damage increases by 1d4.",
+                [ModData.Traits.Diacritic, Trait.Divine, Trait.Fiend, Trait.Fire, Trait.Evil])
+            .WithHeightenedText(
+                null,
+                (thisRune, charLevel) =>
+                {
+                    int currentLevel = Math.Max(charLevel, 9);
+                    int bonusLevel = (currentLevel - 9) / 2;
+                    int numDice = 1 + bonusLevel;
+                    string heightenedVar = S.HeightenedVariable(numDice, 1);
+                    return $"(unholy) When the base rune is invoked, it burns away in unholy black fire that lingers on its target. In addition to the base rune's normal effect, the target takes {heightenedVar}d4 persistent fire damage.";
+                },
+                "+2")
+            .WithUsageCondition(Rune.UsabilityConditions.UsableOnDiacritics())
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
+            {
+                switch (sourceAction.Target)
+                {
+                    case AreaTarget:
+                        foreach (DrawnRune? inthPassive in DrawnRune
+                                     .GetDrawnRunes(null, target)
+                                     .Where(IsValidRune)
+                                     .Select(CreateInthPassive))
+                        {
+                            if (inthPassive == null)
+                                continue;
+                        
+                            // Determine the way the rune is being applied.
+                            if (sourceAction.HasTrait(ModData.Traits.Etched))
+                                inthPassive.WithIsEtched();
+                            else if (sourceAction.HasTrait(ModData.Traits.Traced))
+                                inthPassive.WithIsTraced();
+
+                            target.AddQEffect(inthPassive);
+                        }
+                        // Return an ephemeral DrawnRune since we just applied this to a whole batch of runes.
+                        return new DrawnRune(thisRune);
+                    default:
+                        await caster.FictitiousSingleTileMove(caster.Occupies); // Move back into place
+                        DrawnRune? chosenRune = await CommonRuneRules.ChooseADrawnRune(
+                            caster,
+                            [target],
+                            thisRune.Illustration,
+                            $"Pick a rune to draw {{Blue}}{thisRune.Name}{{/Blue}} onto.",
+                            dr => "Draw onto {Blue}" + dr.Rune.Name + "{/Blue}",
+                            null, "Pass", true,
+                            IsValidRune);
+
+                        if (chosenRune is null)
+                        {
+                            sourceAction.RevertRequested = true;
+                            return null;
+                        }
+
+                        return CreateInthPassive(chosenRune);
+                }
+
+                bool IsValidRune(DrawnRune dr)
+                {
+                    return dr.AttachedDiacritic == null;
+                }
+
+                DrawnRune? CreateInthPassive(DrawnRune targetRune)
+                {
+                    int currentLevel = Math.Max(caster.Level, 9);
+                    int bonusLevel = (currentLevel - 9) / 2;
+                    int numDice = 1 + bonusLevel;
+                    DrawnRune drawnInth = new DrawnRune(
+                        thisRune,
+                        "The base rune gains the unholy trait, as does any damage it deals.",
+                        caster)
+                    {
+                        Name = $"{thisRune.Name} ({targetRune.Name})", // Custom name
+                        StateCheck = qfThis =>
+                        {
+                            qfThis.Description = "The base rune gains the unholy trait, as does any damage it deals.";
+                            if (IsHoly(qfThis.Owner))
+                            {
+                                qfThis.Description += "\n\n{Blue}Holy:{/Blue} You are enfeebled 1.";
+                                qfThis.Owner.AddQEffect(QEffect.Enfeebled(1).WithExpirationEphemeral());
+                            }
+                            DrawnRune dr = (qfThis as DrawnRune)!;
+                            if (dr.DrawnOn is DrawnRune onto && !onto.Traits.Contains(Trait.Evil))
+                                onto.Traits.Add(Trait.Evil);
+                        },
+                        AfterInvokingRune = async (drThis, action, drInvoked) =>
+                        {
+                            if (drThis.Disabled || drInvoked != drThis.DrawnOn)
+                                return;
+                            if (drInvoked.Owner.IsImmuneTo(Trait.Evil))
+                                return;
+                            QEffect pFire = QEffect.PersistentDamage(
+                                numDice + "d4",
+                                drInvoked.Owner.WeaknessAndResistance.WhatDamageKindIsBestAgainstMe([DamageKind.Fire, DamageKind.Evil]));
+                            pFire.Traits.Add(Trait.Evil);
+                            pFire.SourceAction = action;
+                            drInvoked.Owner.AddQEffect(pFire);
+                        }
+                    }
+                    .WithDiacriticRegulator(targetRune);
+                    drawnInth.AddGrantingOfTechnical(
+                        _ => true,
+                        qfTech =>
+                        {
+                            qfTech.StateCheck += qfThis =>
+                            {
+                                if (IsHoly(qfThis.Owner))
+                                    qfThis.Owner.WeaknessAndResistance.Weaknesses.Add(
+                                        new SpecialResistance(
+                                            "unholy (inth-)",
+                                            (action, _) =>
+                                                action?.Tag == drawnInth.DrawnOn,
+                                            qfThis.Owner.WeaknessAndResistance.Weaknesses.Max(weak =>
+                                                weak.DamageKind == DamageKind.Evil ? weak.Value : 0),
+                                            null));
+                            };
+                        });
+                    return drawnInth;
+                }
+
+                bool IsHoly(Creature cr)
+                {
+                    return cr.HasTrait(Trait.Good)
+                           && cr.WeaknessAndResistance.Weaknesses.Any(weak =>
+                               weak.DamageKind is DamageKind.Evil);
+                }
+            })
+            .WithDrawnOnRuneTechnical();
+        RuneFeat inthFeat = AddRuneAsRuneFeat(ModData.IdPrepend+"RuneInthDiacritic", runeInthDiacritic);
+        inthFeat.RulesText += "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " {b}Compatibility{/b} For the purposes of being holy, creatures with weakness to evil damage are considered holy, and this diacritic's persistent damage uses the better of fire or evil damage. {i}(NYI: Esvadir's bleed damage is not yet unholy.){/i}";
 
         Rune runeJurroz = new Rune(
                 "Jurroz, Rune of Dragon Fury",
