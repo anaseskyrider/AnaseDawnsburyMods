@@ -1715,88 +1715,76 @@ public static class RunesmithRunes
             .WithFortitudeSaveInvocationTechnical();
         AddRuneAsRuneFeat(ModData.IdPrepend+"RuneFeikris", runeFeikris);
 
-        /*Rune runeIchelsu = new Rune(
-            "Ichelsu, Rune of Observation",
-            ModData.Traits.Ichelsu,
-            IllustrationName.GhostTouchRunestone,
-            9,
-            "drawn on a creature",
-            "A ring of dotted circles, this rune allows a creature marked with it to see all.",
-            $"The target is affected by {AllSpells.CreateSpellLink(SpellId.SeeInvisibility, ModData.Traits.Runesmith).Replace("see invisibility", "see the unseen")} and gains {{tooltip:Runesmith.Misc.AllAroundVision}}all-around vision{{/}}.",
-            invocationText: "The eyes of the rune fly outwards, attaching to all creatures in a 20-foot emanation. Each of these creatures that was invisible becomes concealed instead, and each one that was concealed for any other reason is no longer concealed. This effect lasts for 2 rounds.",
-            additionalTraits:[Trait.Occult])
+        Rune runeIchelsu = new Rune(
+                "Ichelsu, Rune of Observation",
+                ModData.Traits.Ichelsu,
+                IllustrationName.GhostTouchRunestone,
+                9,
+                "drawn on a creature",
+                "A ring of dotted circles, this rune allows a creature marked with it to see all.",
+                $"The target is affected by {AllSpells.CreateSpellLink(SpellId.SeeInvisibility, ModData.Traits.Runesmith).Replace("see invisibility", "see the unseen")} and gains {ModData.Tooltips.MiscAllAroundVision("all-around vision")}.",
+                invocationText: "The eyes of the rune fly outwards, attaching to all creatures in a 20-foot emanation. Each of these creatures that was invisible becomes concealed instead, and each one that was concealed for any other reason is no longer concealed. This effect lasts for 2 rounds.",
+                additionalTraits:[Trait.Occult])
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
-                NewDrawnRune = async (sourceAction, caster, target, thisRune) =>
+                DrawnRune ichelsuPassive = new DrawnRune(
+                    thisRune,
+                    "You gain the effects of see the unseen and all-around vision.\n\n{b}See the Unseen{/b} You see invisible creatures as though they were just concealed, not invisible.\n\n{b}All-Around Vision{/b} You can't be flanked.",
+                    caster)
                 {
-                    QEffect see = QEffect.SeeInvisibility();
-                    QEffect vision = QEffect.AllAroundVision();
-                    DrawnRune ichelsuPassive = new DrawnRune(
-                        thisRune,
-                        "You gain the effects of see the unseen and all-around vision.",
-                        caster)
+                    StateCheck = async qfThis =>
                     {
-                        StateCheck = async qfThis =>
+                        QEffect see = QEffect.SeeInvisibility()
+                            .WithExpirationEphemeral();
+                        see.HideFromPortrait = true;
+                        QEffect vision = QEffect.AllAroundVision()
+                            .WithExpirationEphemeral();
+                        vision.HideFromPortrait = true;
+                        vision.Innate = false;
+                        qfThis.Owner
+                            .AddQEffect(see)
+                            .AddQEffect(vision);
+                    }
+                };
+                return ichelsuPassive;
+            })
+            .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
+            {
+                // Create action wrapper for targeting and roll-inspection of invoking from target to emanation creatures.
+                CombatAction invokeIchelsuOnEveryone = new CombatAction(
+                        target, // Get creatures near the rune, who is the creature with the drawn rune being invoked
+                        thisRune.Illustration,
+                        $"Invoke {thisRune.Name}",
+                        [..thisRune.Traits, Trait.DoNotShowInCombatLog],
+                        thisRune.InvocationTextWithHeightening(thisRune, caster.Level) ?? thisRune.InvocationText!,
+                        Target.Emanation(4))
+                    .WithActionCost(0)
+                    .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
+                    .WithSoundEffect(ModData.SfxNames.InvokedIchelsu)
+                    .WithNoSaveFor((thisAction, cr) =>
+                        cr == target || CommonRuneRules.IsImmuneToThisInvocation(cr, thisRune))
+                    .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
+                    {
+                        if (!CommonRuneRules.IsImmuneToThisInvocation(invokedOnto, thisRune))
                         {
-                            if (!qfThis.Owner.HasEffect(see))
-                                qfThis.Owner.AddQEffect(see);
-                            if (!qfThis.Owner.HasEffect(vision))
-                                qfThis.Owner.AddQEffect(vision);
-                        },
-                        WhenExpires = async qfThis =>
-                        {
-                            see.ExpiresAt = ExpirationCondition.Immediately;
-                            vision.ExpiresAt = ExpirationCondition.Immediately;
-                        }
-                    };
-                    return ichelsuPassive;
-                },
-                InvocationBehavior = async (sourceAction, thisRune, caster, target, invokedRune) =>
-                {
-                    // Create action wrapper for targeting and roll-inspection of invoking from target to emanation creatures.
-                    CombatAction invokeIchelsuOnEveryone = new CombatAction(
-                            target, // Get creatures near the rune, who is the creature with the drawn rune being invoked
-                            thisRune.Illustration,
-                            $"Invoke {thisRune.Name}",
-                            new List<Trait>(thisRune.Traits).Append(Trait.DoNotShowInCombatLog).ToArray(),
-                            thisRune.InvocationTextWithHeightening(thisRune, caster.Level) ?? thisRune.InvocationText!,
-                            Target.Emanation(4))
-                        .WithActionCost(0)
-                        .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
-                        .WithSoundEffect(ModData.SfxNames.InvokedIchelsu)
-                        .WithNoSaveFor((thisAction, cr) => cr == target || CommonRuneRules.IsImmuneToThisInvocation(cr, thisRune))
-                        .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
-                        {
-                            if (!CommonRuneRules.IsImmuneToThisInvocation(invokedOnto, thisRune))
-                            {
-                                invokedOnto.DetectionStatus.HiddenTo.Clear();
-                                invokedOnto.DetectionStatus.Undetected = false;
-                                QEffect invokedIchelsu = invokedRune.NewInvocationEffect(
+                            invokedOnto.DetectionStatus.HiddenTo.Clear();
+                            invokedOnto.DetectionStatus.Undetected = false;
+                            QEffect invokedIchelsu = invokedRune.NewInvocationEffect(
                                     "If you are invisible, you are concealed instead. If you were concealed for any other reason, you are no longer concealed.",
                                     ExpirationCondition.Never)
-                                    .WithExpirationAtStartOfSourcesTurn(caster, 2);
-                                QEffect faerie = QEffect.FaerieFire(invokedIchelsu.Name!, IllustrationName.None)
-                                    .WithExpirationEphemeral();
-                                invokedIchelsu.StateCheck = async qfThis =>
-                                {
-                                    if (!qfThis.Owner.HasEffect(faerie))
-                                        qfThis.Owner.AddQEffect(faerie);
-                                };
-                                invokedIchelsu.WhenExpires = async qfThis =>
-                                {
-                                    faerie.ExpiresAt = ExpirationCondition.Immediately;
-                                };
-                                invokedOnto.AddQEffect(invokedIchelsu);
-                                CommonRuneRules.ApplyImmunity(invokedOnto, thisRune);
-                            }
-                        });
+                                .WithExpirationAtStartOfSourcesTurn(caster, 2);
+                            invokedIchelsu.Id = QEffectId.FaerieFire;
+                            invokedOnto.AddQEffect(invokedIchelsu);
+                            CommonRuneRules.ApplyImmunity(invokedOnto, thisRune);
+                        }
+                    });
 
-                    if (await caster.Battle.GameLoop.FullCast(invokeIchelsuOnEveryone))
-                        CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
-                    else
-                        sourceAction.RevertRequested = true;
-                },
-            };
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneIchelsu", runeIchelsu);*/
+                if (await caster.Battle.GameLoop.FullCast(invokeIchelsuOnEveryone))
+                    CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
+                else
+                    sourceAction.RevertRequested = true;
+            });
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneIchelsu", runeIchelsu);
         
         // Rune runeInthDiacritic = new Rune();
         // AddRuneAsRuneFeat(ModData.IdPrepend+"RuneInthDiacritic", runeInthDiacritic);
