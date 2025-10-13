@@ -2087,24 +2087,84 @@ public static class RunesmithRunes
             .WithTargetDoesNotSaveTechnical();
         AddRuneAsRuneFeat(ModData.IdPrepend+"RuneKojastri", runeKojastri);
 
-        /*Rune runeTrolistri = new Rune(
+        // Faction alignment is treated as "enemies to the runesmith", regardless of the rune-bearer's faction.
+        // Changed to a 10-foot size, but always works.
+        // BUG: The difficult terrain effect doesn't interact with immunity to emotion or mental effects. No known way to fix this at this time.
+        Rune runeTrolistri = new Rune(
                 "Trolistri, Rune of Forlorn Sorrow",
                 ModData.Traits.Trolistri,
                 IllustrationName.NightmareRunestone,
                 9,
                 "etched on a creature", // etched onto a creature or armor
                 "This rune calls to mind the forlorn nature of elves, and the beauty within it. While this rune is beautiful, sorrow is best admired from a distance, discouraging approach.",
-                "Enemies within 20 feet of the rune-bearer treat all squares between them and the rune-bearer as difficult terrain.",
+                "Enemies treat all squares within 10 feet of the rune-bearer as difficult terrain.",
                 "Sorrow blots out the capacity for any other action. Each enemy within 20 feet of the rune-bearer must succeed at a Will saving throw or be slowed 1 as it spends the first action of its next turn sobbing (or slowed 2 on a critical failure). Regardless of the outcome, the creature is then temporarily immune to this invocation for the rest of the encounter.",
                 null,
                 [Trait.Arcane, Trait.Elf, Trait.Emotion, Trait.Mental])
-            // Usage is hard to work out. Depends on if it's enemies to the runesmith or enemies to the rune-bearer.
-            //.WithUsageCondition(Rune.UsabilityConditions.UsableOnAllies());
+            .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
+            {
+                const int radius = 2; // Changed to 10 feet instead of 20 feet.
+                DrawnRune trolistriPassive = new DrawnRune(
+                    thisRune,
+                    "Squares within 10 feet of you are difficult terrain to {Blue}"+caster+"'s{/Blue} enemies.",
+                    caster);
+                Zone trolistriZone = Zone.Spawn(trolistriPassive, ZoneAttachment.Aura(radius))
+                    .With(zone =>
+                    {
+                        zone.TileEffectCreator = tile =>
+                            new TileQEffect(tile)
+                            {
+                                Illustration = IllustrationName.IllusoryRubble,
+                                // Terrain is always difficult, instead of directional and individual
+                                StateCheck = tqfThis =>
+                                    tqfThis.Owner.DifficultTerrainToComputerControlledCreatures = true
+                            };
+                    });
+
+                return trolistriPassive;
+            })
             .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
             {
-                
-            });
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneTrolistri", runeTrolistri);*/
+                // Create action wrapper for targeting and roll-inspection of invoking from target to emanation creatures.
+                CombatAction invokeTrolistriOnEveryone = new CombatAction(
+                        target, // Get creatures near the rune, who is the creature with the drawn rune being invoked
+                        thisRune.Illustration,
+                        $"Invoke {thisRune.Name}",
+                        [..thisRune.Traits, Trait.DoNotShowInCombatLog],
+                        thisRune.InvocationTextWithHeightening(thisRune, caster.Level) ?? thisRune.InvocationText!,
+                        Target.Emanation(4)
+                            .WithIncludeOnlyIf((tar, cr) => cr.EnemyOf(caster))
+                            // Not sure if the rune-bearer counts as an enemy within 20 feet of the bearer.
+                            // Because sometimes, obvious English linguistics isn't actually that obvious.
+                            /*.WithIncludeOnlyIf((tar, cr) => cr != target)*/)
+                    .WithActionCost(0)
+                    .WithProjectileCone(VfxStyle.BasicProjectileCone(thisRune.Illustration))
+                    .WithSoundEffect(ModData.SfxNames.InvokedTrolistri)
+                    .WithSavingThrow(new SavingThrow(Defense.Will, caster.ClassDC(ModData.Traits.Runesmith)))
+                    .WithNoSaveFor((thisAction, cr) => /*cr == target ||*/ CommonRuneRules.IsImmuneToThisInvocation(cr, thisRune) || cr.FriendOf(caster))
+                    .WithEffectOnEachTarget(async (selfAction, invokeEE, invokedOnto, result) =>
+                    {
+                        if (!CommonRuneRules.IsImmuneToThisInvocation(invokedOnto, thisRune))
+                        {
+                            int value = result switch
+                            {
+                                CheckResult.CriticalFailure => 2,
+                                CheckResult.Failure => 1,
+                                _ => 0
+                            };
+                            if (value > 0)
+                                invokedOnto.AddQEffect(QEffect.Slowed(value).WithExpirationAtEndOfOwnerTurn());
+                            CommonRuneRules.ApplyImmunity(invokedOnto, thisRune, true);
+                        }
+                    });
+
+                if (await caster.Battle.GameLoop.FullCast(invokeTrolistriOnEveryone))
+                    CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
+                else
+                    sourceAction.RevertRequested = true;
+            })
+            .WithWillSaveInvocationTechnical();
+        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneTrolistri", runeTrolistri);
 
         #endregion
         
