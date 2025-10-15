@@ -74,6 +74,8 @@ public static class ArchetypeBlessedOne
                                 qfTech =>
                                 {
                                     Creature ally = qfTech.Owner;
+                                    if (qfThis.Owner.Spellcasting?.FocusPoints <= 0 || !castable.Invoke())
+                                        return;
                                     qfTech.YouAreDealtDamage = async (qfTech2, attacker, dStuff, defender) =>
                                     {
                                         if (!await cleric.AskToUseReaction(
