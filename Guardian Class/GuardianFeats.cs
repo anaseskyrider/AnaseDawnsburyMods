@@ -376,7 +376,7 @@ public static class GuardianFeats
                                 qfFeat.Owner,
                                 new SideBySideIllustration(shield.Illustration, ModData.Illustrations.Taunt),
                                 "Shielding Taunt",
-                                [Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.Flourish, ModData.Traits.Guardian],
+                                [Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment, Trait.Flourish, ModData.Traits.Guardian],
                                 "{i}By banging loudly on your shield, you get the attention of even the most stubborn of foes.{/i}\n\nRaise a Shield, and then Taunt a creature. Your Taunt gains the auditory trait.",
                                 aTaunt.Target)
                             .WithActionCost(1)
