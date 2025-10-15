@@ -646,7 +646,7 @@ public static class GuardianClass
             Target.RangedFriend(interceptRange - (canStride ? 0 : 1))
                 .WithAdditionalConditionOnTargetCreature((a,d) =>
                 {
-                    if (attacker == attacker.Battle.Pseudocreature)
+                    if (attacker == owner.Battle.Pseudocreature)
                         return Usability.NotUsable("Pseudocreature");
                     if (d != dEvent.TargetCreature)
                         return Usability.NotUsableOnThisCreature("Not the target of Intercept Attack");
