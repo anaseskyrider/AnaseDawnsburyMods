@@ -5,6 +5,8 @@ using Dawnsbury.Campaign.Path;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Specific;
+using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
@@ -18,6 +20,7 @@ using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
+using Dawnsbury.Display.Controls.Portraits;
 using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.KholoAncestry;
@@ -92,14 +95,93 @@ public static class AncestryFeats
             "Your jaws unarmed attack deals 1d8 piercing damage instead of 1d6 and gains the versatile B trait.",
             [ModData.Traits.Kholo]);
         
+        // Scent (familiar ability)
+        yield return Familiars.CreateFamiliarAbility(
+                ModData.FeatNames.FamiliarScent,
+                "Your familiar has enhanced olfactory perception.",
+                "You gain imprecise scent with a range of 15 feet, which means that creatures can't be undetected within the area while you are conscious.")
+            .WithEquivalent(values => values.Tags.ContainsKey(Familiars.FAMILIAR_KEY))
+            .WithOnCreature(self =>
+            {
+                self.AddQEffect(ImpreciseScent(
+                    "Scent",
+                    "You detect creatures within 15 feet using your familiar's imprecise scent.",
+                    3,
+                    true
+                ));
+            });
+        
         // Hyena Familiar
-        // TODO: Combat Familiars integration.
-        /*yield return new TrueFeat(
+        yield return new TrueFeat(
                 ModData.FeatNames.HyenaFamiliar,
                 1,
-                "",
-                "",
-                [ModData.Traits.Kholo]);*/
+                "Hyenas serve kholo as pets and trackers. Some kholos, such as yourself, draw the attention of smaller hyenas that are vessels for magical spirits.",
+                "You gain a hyena as a {link:ClassFamiliar}combat familiar{/}. It always has the {link:"+ModData.FeatNames.FamiliarScent+"}scent{/} ability prepared, which counts against the number of familiar abilities it has.",
+                [ModData.Traits.Kholo])
+            .WithIllustration(ModData.Illustrations.HyenaFamiliar)
+            .WithEquivalent(values => values.Tags.ContainsKey(Familiars.FAMILIAR_KEY))
+            .WithOnSheet(values =>
+            {
+                FamiliarTag hyena = new FamiliarTag()
+                {
+                    FamiliarAbilities = 1, // Fewer choices than normal due to pre-selected ability.
+                    Illustration = ModData.Illustrations.HyenaFamiliar,
+                };
+                values.Tags[Familiars.FAMILIAR_KEY] = hyena;
+                values.AddSelectionOptionRightNow(
+                    new SingleFeatSelectionOption(
+                            "FamiliarIllustrationDisplay",
+                            "Show familiar",
+                            -1,
+                            ft => ft.HasTrait(Trait.FamiliarIllustrationDisplay))
+                        .WithIsOptional());
+                values.AddSelectionOptionRightNow(
+                    new CompanionIdentitySelectionOption(
+                            "FamiliarName",
+                            "Familiar identity",
+                            -1,
+                            "You can name your familiar.\n\nIf you don't choose a name, it will be called {b}Hyena{/b}.",
+                            "Hyena",
+                            ModData.Illustrations.HyenaFamiliar,
+                            [PortraitCategory.Familiars, PortraitCategory.AnimalCompanions, PortraitCategory.Custom],
+                            (val, txt) =>
+                            {
+                                if (!val.Tags.TryGetValue(Familiars.FAMILIAR_KEY, out object? obj)
+                                    || obj is not FamiliarTag famTag)
+                                    return;
+                                CompanionIdentitySelectionOption.SetFamiliarDataFromSection(famTag, txt);
+                            })
+                        .WithIsOptional());
+                values.AtEndOfRecalculationBeforeMorningPreparations += values2 =>
+                {
+                    if (!values2.Tags.TryGetValue(Familiars.FAMILIAR_KEY, out object? obj)
+                        || obj is not FamiliarTag famTag2)
+                        return;
+                    values2.HasMorningPreparations = true;
+                    values2.AddSelectionOption(
+                        new MultipleFeatSelectionOption(
+                            "FamiliarAbilities",
+                            "Familiar abilities",
+                            SelectionOption.MORNING_PREPARATIONS_LEVEL,
+                            (ft, values3) =>
+                            {
+                                if (!ft.HasTrait(Trait.CombatFamiliarAbility))
+                                    return false;
+                                if (ft.Tag is not Trait tag2
+                                    || values3.AdditionalClassTraits.Contains(tag2))
+                                    return true;
+                                ClassSelectionFeat? classSelectionFeat = values3.Class;
+                                return classSelectionFeat != null
+                                       && classSelectionFeat.ClassTrait == tag2;
+                            },
+                            famTag2.FamiliarAbilities)
+                        {
+                            DoNotApplyEffectsInsteadOfRemovingThem = true
+                        });
+                };
+                // Granted abilities
+                values.GrantFeat(ModData.FeatNames.FamiliarScent);
+            });
 
         // Kholo Lore
         yield return new TrueFeat(
@@ -190,52 +272,14 @@ public static class AncestryFeats
                 "Your large black nose isn't just for show. You can pick up on the faintest scents near you and track them down.",
                 "You gain imprecise scent with a range of 30 feet, which means that creatures can't be undetected within the area while you are conscious.",
                 [ModData.Traits.Kholo])
-            .WithPermanentQEffect(
-                "You detect creatures within 30 feet using your imprecise scent.",
-                qfFeat =>
-                {
-                    int range = 6;
-                    qfFeat.StateCheck = qfThis =>
-                    {
-                        if (qfThis.Owner.HasEffect(QEffectId.Unconscious))
-                            return;
-                        qfThis.Owner.Battle.AllCreatures
-                            .Where(cr =>
-                                cr.EnemyOf(qfThis.Owner) && cr.DistanceTo(qfThis.Owner) <= range)
-                            .ForEach(cr => cr.DetectionStatus.Undetected = false);
-                    };
-                    qfFeat.StartOfCombat = async qfThis =>
-                    {
-                        if (!qfThis.Owner.Battle.Encounter.Name?.ToLower().Contains("sewers") ?? true)
-                        {
-                            qfThis.StartOfCombat = null;
-                            return;
-                        }
-                        
-                        range = 3;
-                        
-                        qfThis.Owner.AddQEffect(new QEffect()
-                        {
-                            StartOfYourPrimaryTurn = async (qfThis2, self) =>
-                            {
-                                qfThis2.ExpiresAt = ExpirationCondition.Immediately;
-                                Sfxs.Play(SfxName.Unallowed);
-                                /*await self.Battle.Cinematics.ShowQuickBubble(
-                                    self,
-                                    "{b}Sensitive Nose{/b}\nThis foul smell is messing with my nose. I can only detect creatures using my imprecise scent from 15 feet away.",
-                                    null);*/
-                                string dialog = "{b}Sensitive Nose{/b}\nThis foul smell is messing with my nose. I can only detect creatures using my imprecise scent from {Red}15 feet away{/Red}.";
-                                self.Battle.Cinematics.TutorialBubble = new TutorialBubble(
-                                    self.Illustration,
-                                    SubtitleModification.Replace(dialog),
-                                    null);
-                                self.Battle.Log("{b}"+self.Name+":{/b} "+dialog);
-                                await self.Battle.SendRequest(ModLoader.NewSleepRequest(5000));
-                                self.Battle.Cinematics.TutorialBubble = null;
-                            },
-                        });
-                    };
-                });
+            .WithOnCreature(self =>
+            {
+                self.AddQEffect(ImpreciseScent(
+                    "Sensitive Nose",
+                    "You detect creatures within 30 feet using your imprecise scent.",
+                    6
+                ));
+            });
 
         #endregion
 
@@ -707,5 +751,71 @@ public static class AncestryFeats
 
         await chosenOption.Action();
         return true;
+    }
+    
+    /// <summary>
+    /// Creates an innate QEffect for imprecise scent, including a Sewers encounter easter egg.
+    /// </summary>
+    /// <param name="featName">The name of the ability on your stat block. (Has fallback null name)</param>
+    /// <param name="featDescription">The short description of the ability on your stat block. (Has fallback null description)</param>
+    /// <param name="range">The range of the imprecise scent in squares.</param>
+    /// <param name="isFamiliar">Whether the ability comes from you or from your familiar (only affects the Sewers encounter easter egg dialog, has no mechanical impact).</param>
+    /// <returns></returns>
+    public static QEffect ImpreciseScent(string? featName, string? featDescription, int range, bool isFamiliar = false)
+    {
+        featName ??= "Imprecise Scent";
+        featDescription ??= $"You detect creatures within {range * 5} feet using your imprecise scent.";
+        return new QEffect(featName, featDescription)
+        {
+            Tag = range,
+            StateCheck = qfThis =>
+            {
+                if (qfThis.Owner.HasEffect(QEffectId.Unconscious))
+                    return;
+                int innerRange = (int)qfThis.Tag!;
+                qfThis.Owner.Battle.AllCreatures
+                    .Where(cr =>
+                        cr.EnemyOf(qfThis.Owner) && cr.DistanceTo(qfThis.Owner) <= innerRange)
+                    .ForEach(cr => cr.DetectionStatus.Undetected = false);
+            },
+            StartOfCombat = async qfThis =>
+            {
+                if (!qfThis.Owner.Battle.Encounter.Name?.ToLower().Contains("sewers") ?? true)
+                {
+                    qfThis.StartOfCombat = null;
+                    return;
+                }
+
+                int innerRange = (int)qfThis.Tag!;
+                int reducedRange = innerRange / 2;
+                qfThis.Description = qfThis.Description!.Replace(
+                    (innerRange*5).ToString(),
+                    "{Red}" + (reducedRange * 5) + "{/Red}"
+                );
+                qfThis.Tag = reducedRange;
+
+                qfThis.Owner.AddQEffect(new QEffect()
+                {
+                    StartOfYourPrimaryTurn = async (qfThis2, self) =>
+                    {
+                        qfThis2.ExpiresAt = ExpirationCondition.Immediately;
+                        Sfxs.Play(SfxName.Unallowed);
+                        /*await self.Battle.Cinematics.ShowQuickBubble(
+                            self,
+                            "{b}Sensitive Nose{/b}\nThis foul smell is messing with my nose. I can only detect creatures using my imprecise scent from 15 feet away.",
+                            null);*/
+                        string dialog =
+                            "{b}" + qfThis.Name + "{/b}\nThis foul smell is messing with my" + (isFamiliar ? " familiar's" : null) + " nose. I can only detect creatures using " + (isFamiliar ? "their" : "my") + " imprecise scent from {Red}" + (reducedRange * 5) + " feet away{/Red}.";
+                        self.Battle.Cinematics.TutorialBubble = new TutorialBubble(
+                            self.Illustration,
+                            SubtitleModification.Replace(dialog),
+                            null);
+                        self.Battle.Log("{b}" + self.Name + ":{/b} " + dialog);
+                        await self.Battle.SendRequest(ModLoader.NewSleepRequest(5000));
+                        self.Battle.Cinematics.TutorialBubble = null;
+                    },
+                });
+            },
+        };
     }
 }

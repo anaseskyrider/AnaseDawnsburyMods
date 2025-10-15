@@ -11,6 +11,8 @@
     <DevelopersDawnsburyInstall>Z:\Steam Library\steamapps\common\Dawnsbury Days</DevelopersDawnsburyInstall>
     <WorkshopExport>..\[Exports]\KholoAncestry</WorkshopExport>
     <AssetsFolder>KholoAncestryAssets</AssetsFolder>
+    <!--<Tokens1Folder>CustomPortraits</Tokens1Folder>-->
+    <Tokens2Folder>CustomPortraitsWithCustomRing</Tokens2Folder>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,17 +29,25 @@
   <Target Name="CopyToGameModsFolder" AfterTargets="Build">
     <ItemGroup>
       <Assets Include="$(AssetsFolder)\**\*.*"/>
+      <!--<Tokens1 Include="$(Tokens1Folder)\**\*.*"/>-->
+      <Tokens2 Include="$(Tokens2Folder)\**\*.*"/>
     </ItemGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods"/>
     <Copy SourceFiles="@(Assets)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods\$(AssetsFolder)\%(RecursiveDir)"/>
+    <!--<Copy SourceFiles="@(Tokens1)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomPortraitsWithCustomRing\%(RecursiveDir)"/>-->
+    <Copy SourceFiles="@(Tokens2)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomPortraitsWithCustomRing\%(RecursiveDir)"/>
   </Target>
   <Target Name="CopyToWorkshopUploadable" AfterTargets="Build">
     <ItemGroup>
       <Assets Include="$(AssetsFolder)\**\*.*"/>
+      <!--<Tokens2 Include="$(Tokens1Folder)\**\*.*"/>-->
+      <Tokens2 Include="$(Tokens2Folder)\**\*.*"/>
     </ItemGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopExport)\CustomModsV3"/>
     <Copy SourceFiles="ORC copyright notice.html" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
     <Copy SourceFiles="optional-dependencies.txt" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
     <Copy SourceFiles="@(Assets)" DestinationFolder="$(WorkshopExport)\CustomModsV3\$(AssetsFolder)\%(RecursiveDir)"/>
+    <!--<Copy SourceFiles="@(Tokens1)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomPortraitsWithCustomRing\$(Tokens1Folder)\%(RecursiveDir)"/>-->
+    <Copy SourceFiles="@(Tokens2)" DestinationFolder="$(WorkshopExport)\CustomPortraitsWithCustomRing\%(RecursiveDir)"/>
   </Target>
 </Project>

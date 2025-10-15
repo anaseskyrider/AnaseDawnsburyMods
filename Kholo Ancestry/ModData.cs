@@ -70,6 +70,7 @@ public static class ModData
         #region Ancestry Feats
         public static readonly FeatName AskTheBones = ModManager.RegisterFeatName(IdPrepend+"AskTheBones", "Ask the Bones");
         public static readonly FeatName Crunch = ModManager.RegisterFeatName(IdPrepend+"Crunch", "Crunch");
+        public static readonly FeatName FamiliarScent = ModManager.RegisterFeatName(IdPrepend+"FamiliarScent", "Scent");
         public static readonly FeatName HyenaFamiliar = ModManager.RegisterFeatName(IdPrepend+"HyenaFamiliar", "Hyena Familiar");
         public static readonly FeatName KholoLore = ModManager.RegisterFeatName(IdPrepend+"KholoLore", "Kholo Lore");
         public static readonly FeatName KholoWeaponFamiliarity = ModManager.RegisterFeatName(IdPrepend+"KholoWeaponFamiliarity", "Kholo Weapon Familiarity");
@@ -91,10 +92,13 @@ public static class ModData
 
     public static class Illustrations
     {
-        public static readonly Illustration DawnsburySun = new ModdedIllustration("KholoAncestryAssets/PatreonSunTransparent.png");
-        public static readonly Illustration SpiritThresher = new ModdedIllustration("KholoAncestryAssets/spirit_thresher.png");
-        public static readonly Illustration AbsorbStrengthMeat = new ModdedIllustration("KholoAncestryAssets/beef.png");
-        public static readonly Illustration AbsorbStrengthMeatBigger = new ModdedIllustration("KholoAncestryAssets/beef (2).png");
+        public const string ModFolder = "KholoAncestryAssets/";
+        
+        public static readonly Illustration DawnsburySun = new ModdedIllustration(ModFolder+"PatreonSunTransparent.png");
+        public static readonly Illustration SpiritThresher = new ModdedIllustration(ModFolder+"spirit_thresher.png");
+        public static readonly Illustration AbsorbStrengthMeat = new ModdedIllustration(ModFolder+"beef.png");
+        public static readonly Illustration AbsorbStrengthMeatBigger = new ModdedIllustration(ModFolder+"beef (2).png");
+        public static readonly Illustration HyenaFamiliar = new ModdedIllustration(ModFolder+"HyenaFamiliar.png");
     }
 
     public static class ItemNames
