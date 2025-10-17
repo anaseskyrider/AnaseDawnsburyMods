@@ -106,6 +106,7 @@ public static class GuardianClass
                 values.AddAtLevel(7, values2 =>
                 {
                     values2.SetProficiency(Trait.Reflex, Proficiency.Expert);
+                    values2.SetProficiency(Trait.Perception, Proficiency.Expert);
                     values2.GrantFeat(ModData.FeatNames.ReactionTime);
                 });
                 values.AddAtLevel(9, values2 =>
