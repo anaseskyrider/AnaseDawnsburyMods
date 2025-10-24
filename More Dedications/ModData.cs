@@ -154,6 +154,10 @@ public static class ModData
         public static readonly QEffectId MarkForDeathTarget = ModManager.RegisterEnumMember<QEffectId>("MarkForDeathTarget");
         public static readonly QEffectId ExpertBackstabber = ModManager.RegisterEnumMember<QEffectId>("ExpertBackstabber");
         
+        // Dual-Weapon Warrior
+        public static readonly QEffectId FlenseCounter = ModManager.RegisterEnumMember<QEffectId>("FlenseCounter");
+        public static readonly QEffectId FlenseWeapons = ModManager.RegisterEnumMember<QEffectId>("FlenseWeapons");
+        
         // Bonus stances
         public static readonly QEffectId StokedFlameStance = ModManager.RegisterEnumMember<QEffectId>("Stoked Flame Stance");
         public static readonly QEffectId WildWindsStance = ModManager.RegisterEnumMember<QEffectId>("Wild Winds Stance");
