@@ -1098,7 +1098,6 @@ public static class ArchetypeMartialArtist
                 "Stoked Flame Stance");
 
         // Wild Winds Initiate
-        // TODO: ignore cover
         ModData.SpellIds.WildWindsStance = ModManager.RegisterNewSpell(
             "WildWindsStance",
             4,
@@ -1116,16 +1115,11 @@ public static class ArchetypeMartialArtist
                 CombatAction wildWindsSpell = Spells.CreateModern(
                         icon,
                         name,
-                        [Trait.Air, Trait.Evocation, Trait.Focus, Trait.Manipulate, Trait.Monk, Trait.Stance, Trait.SomaticOnly],
+                        [ModData.Traits.MoreDedications, Trait.Air, Trait.Evocation, Trait.Focus, Trait.Manipulate, Trait.Monk, Trait.Stance, Trait.SomaticOnly],
                         "You take on the stance of the flowing winds, sending out waves of energy at a distance.",
-                        "{b}Duration{/b} until you leave the stance\n\nEnter a stance.\n\n" + passiveBonus + "\n\n" + describedAttack + "\n\nWind crash Strikes ignore concealment and all (NYI)cover.",
+                        "{b}Duration{/b} until you leave the stance\n\nEnter a stance.\n\n" + passiveBonus + "\n\n" + describedAttack + "\n\nWind crash Strikes ignore concealment and all cover.",
                         Target.Self()
-                            .WithAdditionalRestriction(self =>
-                            {
-                                if (self.HasEffect(ModData.QEffectIds.WildWindsStance))
-                                    return "You're already in this stance.";
-                                return null;
-                            }),
+                            .WithAdditionalRestriction(ModData.CommonRequirements.StanceRestriction(ModData.QEffectIds.WildWindsStance)),
                         4,
                         null)
                     .WithShortDescription("Enter a stance where " + shortDescription.Uncapitalize())
@@ -1144,6 +1138,58 @@ public static class ArchetypeMartialArtist
                             action != null && action.HasTrait(Trait.Ranged) && def is Defense.AC
                                 ? new Bonus(2, BonusType.Circumstance, "Wild winds stance")
                                 : null;
+                        stanceQF.BonusToAttackRolls = (qfThis, action, defender) =>
+                        {
+                            if (action.Item != qfThis.AdditionalUnarmedStrike
+                                || !action.HasTrait(Trait.Strike)
+                                || qfThis.Tag is true
+                                || defender == null)
+                                return null;
+
+                            // Prevent infinite recursion
+                            qfThis.Tag = true;
+
+                            // Get all circumstance bonuses to AC on this attack
+                            List<Bonus>? circumstances = action.ActiveRollSpecification
+                                ?.TaggedDetermineDC
+                                .CalculatedNumberProducer
+                                .Invoke(action, action.Owner, defender)
+                                .Bonuses
+                                .Where(bonus => bonus is { BonusType: BonusType.Circumstance, Amount: > 0 })
+                                .WhereNotNull()
+                                .OrderBy(bonus => bonus.Amount)
+                                .ToList();
+
+                            qfThis.Tag = false;
+
+                            // Return null if there's nothing to do
+                            if (circumstances == null)
+                                return null;
+
+                            // Separate bonuses from cover from bonuses other circumstance bonuses
+                            string[] coverStrings = ["lesser cover", "cover", "greater cover"];
+                            int highestCover = 0;
+                            int highestOther = 0;
+                            foreach (Bonus bonus in circumstances)
+                            {
+                                if (coverStrings.Contains(bonus.BonusSource.ToLower()))
+                                    highestCover = Math.Max(highestCover, bonus.Amount);
+                                else
+                                    highestOther = Math.Max(highestOther, bonus.Amount);
+                            }
+                            // If cover is higher, then only bypass it enough to equate to the other bonuses.
+                            // Thus, subtract the lower "other"s from the cover bonuses.
+                            int bypassCover = highestCover - highestOther;
+
+                            // If the other bonuses were higher, then ignoring cover doesn't do anything,
+                            // So return null here.
+                            if (highestCover == 0 || bypassCover <= 0)
+                                return null;
+
+                            // Return a bonus which will equate to bypassing as much cover as exists,
+                            // Up to the next highest non-cover bonuses.
+                            return new Bonus(bypassCover, BonusType.Untyped, "Wild winds stance");
+                        };
                     });
                 return wildWindsSpell;
                 
@@ -1154,14 +1200,16 @@ public static class ArchetypeMartialArtist
                             {
                                 VfxStyle = new VfxStyle(1, ProjectileKind.Arrow, icon),
                                 Sfx = SfxName.AirSpell,
+                                AdditionalSuccessDescription = " {Blue}This ignores cover and concealment.{/Blue}",
                             }
-                            .WithMaximumRange(30/5));
+                            .WithRangeIncrement(6)
+                            .WithMaximumRange(6));
             });
         Feat wildWindsInitiate = CreateKiSpellFeat2(
             ModData.FeatNames.WildWindsInitiate,
             8,
             "You learn a mystical stance that lets you attack from a distance.",
-            "While entering the stance is a ki spell, the wind crash Strikes the stance grants are not, so you can use them as often as you like while in the stance.",
+            "While entering the stance is a ki spell, the wind crash Strikes the stance grants are not, so you can use them as often as you like while in the stance.\n\n{icon:YellowWarning} {b}Implementation{/b} These Strikes ignore cover by providing an untyped attack bonus. Some roll displays might seem odd due to other circumstance bonuses applying that aren't shown.",
             "Wild Winds Stance",
             ModData.SpellIds.WildWindsStance,
             ModData.Illustrations.WildWindsStance,
