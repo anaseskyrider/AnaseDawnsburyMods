@@ -21,6 +21,7 @@ using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Controls.Portraits;
+using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.KholoAncestry;
@@ -290,7 +291,7 @@ public static class AncestryFeats
                 ModData.FeatNames.AbsorbStrength,
                 5,
                 "You consume a piece of your enemy, absorbing their strength.",
-                "{b}Frequency{/b} once per encounter\n{b}Requirements{/b} You are adjacent to an enemy's corpse.\n\nYou gain temporary Hit Points equal to the enemy's level (minimum of 1).\n\n" + ModData.Illustrations.AbsorbStrengthMeatBigger.IllustrationAsIconString + " {b}Corpses{/b} Undead and constructs do not leave behind a consumable corpse. Corpses created as part of this feat do not occupy their space, do not block line of sight, and cannot be targeted in any way.",
+                "{b}Frequency{/b} once per encounter\n{b}Requirements{/b} You are adjacent to an enemy's "+ ModData.Illustrations.AbsorbStrengthMeatBigger.IllustrationAsIconString + " corpse.\n\nYou gain temporary Hit Points equal to the enemy's level (minimum of 1).\n\n" + ModData.Illustrations.AbsorbStrengthMeatBigger.IllustrationAsIconString + " {b}Corpses{/b} This feat leaves behind a piece of an enemy on death. These corpses don't occupy their space nor block line of sight, and can't be targeted in any way. Undead and constructs {Red}do not{/Red} leave behind a consumable corpse.",
                 [ModData.Traits.Kholo])
             .WithActionCost(1)
             .WithPermanentQEffect(
