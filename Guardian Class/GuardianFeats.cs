@@ -285,6 +285,13 @@ public static class GuardianFeats
         
         #region Level 2
         // Covering Stance
+        // Might not be possible without asterisks.
+        /*yield return new TrueFeat(
+                ModData.FeatNames.CoveringStance,
+                2,
+                "Your very presence on the field of battle protects nearby allies from harm.",
+                "At the end of each of your turns while you're in this stance, choose one ally adjacent to you to gain lesser cover until the start of your next turn.\n\nThat ally loses this benefit if they move to a space that is no longer adjacent to you at any point during their move.\n\nIf you Intercept an Attack that would harm the ally you're covering, that ally can Step as a free action after your reaction is complete.",
+                [ModData.Traits.Guardian]);*/
         // Hampering Stance
         yield return new TrueFeat(
                 ModData.FeatNames.HamperingStance,
@@ -393,6 +400,12 @@ public static class GuardianFeats
             });
         // Raise Haft
         // Shield Your Eyes (useless?)
+        /*yield return new TrueFeat(
+                ModData.FeatNames.ShieldYourEyes,
+                2,
+                "You reflexively place your shield between your eyes and visual dangers.",
+                "While your shield is raised, you gain a +2 circumstance bonus to all defenses against effects with the light or visual trait. If you critically fail your save against such an effect while your shield is raised, you fail instead. Likewise, if such an effect critically succeeds against your DC, it's a success instead.",
+                [ModData.Traits.Guardian]);*/
         // Shielding Taunt
         yield return new TrueFeat(
                 ModData.FeatNames.ShieldingTaunt,
