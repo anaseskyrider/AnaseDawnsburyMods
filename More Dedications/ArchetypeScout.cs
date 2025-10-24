@@ -60,7 +60,7 @@ public static class ArchetypeScout
         Feat scoutDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.ScoutArchetype,
                 "You're an expert in espionage and reconnaissance, able to skulk silently through the wilderness to gather intelligence, sneak through enemy lines to report to your comrades, or suddenly and decisively strike your foes. Your skills ease the difficulty of travel for you and your companions and keep you all on guard when you're approaching danger.",
-                "You gain the Scout's Warning ranger feat.\n\n" + new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString + " {b}Modding{/b} If the {i}"+explorationModName+"{/i} mod is installed, you gain the following benefit: When you're using the Scout exploration activity, you grant your allies a +2 circumstance bonus to their initiative rolls instead of a +1 circumstance bonus.")
+                "You gain the Scout's Warning ranger feat.\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " {b}Modding{/b} If the {i}"+explorationModName+"{/i} mod is installed, you gain the following benefit: When you're using the Scout exploration activity, you grant your allies a +2 circumstance bonus to their initiative rolls instead of a +1 circumstance bonus.")
             .WithPrerequisite(values =>
                 values.HasFeat(FeatName.Stealth) && values.HasFeat(FeatName.Survival),
                 "Must be trained in Stealth and Survival")

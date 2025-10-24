@@ -57,7 +57,7 @@ public static class ArchetypeBastion
                 ModData.FeatNames.DisarmingBlock,
                 4,
                 null,
-                "{b}Trigger{/b} You Shield Block a melee Strike made with a held weapon.\n\nYou attempt to Disarm the creature whose attack you blocked of the weapon they attacked you with. You can do so even if you don't have a hand free.\n\n" + new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString + " {b}NYI{/b} This does not target a specific item to Disarm.",
+                "{b}Trigger{/b} You Shield Block a melee Strike made with a held weapon.\n\nYou attempt to Disarm the creature whose attack you blocked of the weapon they attacked you with. You can do so even if you don't have a hand free.\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " {b}NYI{/b} This does not target a specific item to Disarm.",
                 [ModData.Traits.MoreDedications])
             .WithActionCost(0)
             .WithAvailableAsArchetypeFeat(ModData.Traits.BastionArchetype)
