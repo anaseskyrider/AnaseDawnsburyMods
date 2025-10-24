@@ -402,3 +402,4 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 Guardian Class/Dawnsbury.Mods.GuardianClass.csproj
+*.csproj
