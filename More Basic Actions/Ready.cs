@@ -130,6 +130,7 @@ public static class Ready
         return footworkAction;
     }
 
+    // BUG: Look at bizarre flanking triggers, reported by Erful
     public static CombatAction CreateReadySeize(Creature owner)
     {
         CombatAction seizeAction = new CombatAction(
