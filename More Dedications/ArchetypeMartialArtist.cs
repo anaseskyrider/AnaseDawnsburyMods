@@ -1195,12 +1195,12 @@ public static class ArchetypeMartialArtist
                 
                 Item WeaponProducer() =>
                     new Item(icon, "wind crash", [Trait.Agile, Trait.Brawling, Trait.Nonlethal, Trait.Propulsive, Trait.Unarmed, Trait.UnaffectedByConcealment])
+                        .WithDescription("{Blue}This ignores cover and concealment.{/Blue}")
                         //.WithSoundEffect(SfxName.AirSpell)
                         .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning)
                             {
                                 VfxStyle = new VfxStyle(1, ProjectileKind.Arrow, icon),
                                 Sfx = SfxName.AirSpell,
-                                AdditionalSuccessDescription = " {Blue}This ignores cover and concealment.{/Blue}",
                             }
                             .WithRangeIncrement(6)
                             .WithMaximumRange(6));
