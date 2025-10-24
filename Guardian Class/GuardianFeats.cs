@@ -340,7 +340,58 @@ public static class GuardianFeats
                                 }));
                 });
         // Phalanx Formation
-        // Raise Haft ???
+        yield return new TrueFeat(
+                ModData.FeatNames.PhalanxFormation,
+                2,
+                "You know how to clear a line of fire for your allies.",
+                "Allies within 10 feet of you ignore lesser cover.",
+                [ModData.Traits.Guardian])
+            .WithPermanentQEffectAndSameRulesText(qfFeat =>
+            {
+                qfFeat.AddGrantingOfTechnical(
+                    cr =>
+                        cr.FriendOfAndNotSelf(qfFeat.Owner)
+                        && cr.DistanceTo(qfFeat.Owner) <= 2,
+                    qfTech =>
+                    {
+                        qfTech.Tag = false; // Loop only once
+                        qfTech.BonusToAttackRolls = (qfThis, action, target) =>
+                        {
+                            if (!action.HasTrait(Trait.Attack)
+                                || action.HasTrait(Trait.AttackDoesNotTargetAC)
+                                || action.ActiveRollSpecification is null
+                                || qfThis.Tag is true
+                                || target is null)
+                                return null;
+
+                            qfThis.Tag = true;
+
+                            // Get all circumstance bonuses to AC on this attack
+                            List<Bonus> circumstances = action.ActiveRollSpecification
+                                .TaggedDetermineDC
+                                .CalculatedNumberProducer
+                                .Invoke(action, action.Owner, target)
+                                .Bonuses
+                                .Where(bonus => bonus is { BonusType: BonusType.Circumstance, Amount: > 0 })
+                                .WhereNotNull()
+                                .ToList();
+
+                            qfThis.Tag = false;
+
+                            if (circumstances.Count == 0)
+                                return null;
+                            
+                            // The only +1 bonus must be from lesser cover
+                            if (!circumstances.All(bonus =>
+                                    bonus.Amount == 1
+                                    && bonus.BonusSource.ToLower() == "lesser cover"))
+                                return null;
+
+                            return new Bonus(1, BonusType.Untyped, "Phalanx formation");
+                        };
+                    });
+            });
+        // Raise Haft
         // Shield Your Eyes (useless?)
         // Shielding Taunt
         yield return new TrueFeat(
