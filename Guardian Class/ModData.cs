@@ -18,11 +18,20 @@ public static class ModData
 {
     public static void LoadData()
     {
-        // Register Mod Options
-        /*ModManager.RegisterBooleanSettingsOption(ModData.BooleanOptions.UnrestrictedTrace,
-            "Runesmith: Less Restrictive Rune Tracing",
-            "Enabling this option removes protections against \"bad decisions\" with tracing certain runes on certain targets.\n\nThe Runesmith is a class on the more advanced end of tactics and creativity. For example, you might want to trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy. Or you might trace Atryl on yourself as a 3rd action so that you can move it with Transpose Etching (just 1 action) on your next turn, because you're a ranged build.\n\nThis option is for those players.",
-            true);*/
+        
+    }
+
+    /// <summary>
+    /// Registers the source enum to the game, or returns the original if it's already registered.
+    /// </summary>
+    /// <param name="technicalName">The technicalName string of the enum being registered.</param>
+    /// <typeparam name="T">The enum being registered to.</typeparam>
+    /// <returns>The newly registered enum.</returns>
+    public static T SafelyRegister<T>(string technicalName) where T : struct, Enum
+    {
+        return ModManager.TryParse<T>(technicalName, out T alreadyRegistered)
+            ? alreadyRegistered
+            : ModManager.RegisterEnumMember<T>(technicalName);
     }
 
     public static class ActionIds
@@ -31,13 +40,30 @@ public static class ModData
         public static readonly ActionId InterceptAttack = ModManager.RegisterEnumMember<ActionId>("InterceptAttack");
     }
     
+    /// <summary>
+    /// Keeps the options registered with <see cref="ModManager.RegisterBooleanSettingsOption"/>. To read the registered options, use <see cref="PlayerProfile.Instance.IsBooleanOptionEnabled(string)"/>.
+    /// </summary>
     public static class BooleanOptions
     {
-        /* Added the ability for mods to add settings options with  ModManager.RegisterBooleanSettingsOption(string technicalName, string caption, string longDescription, bool default) for registration API and PlayerProfile.Instance.IsBooleanOptionEnabled(string technicalName) for reading API.
-
-        You can now use the many new methods in the CommonQuestions class to add dialogue and other player interactivity choices. */
+        /*public static readonly string UnrestrictedTrace = RegisterBooleanOption(
+            "RunesmithPlaytest.UnrestrictedTrace",
+            "Runesmith: Less Restrictive Rune Tracing",
+            "Enabling this option removes protections against \"bad decisions\" with tracing certain runes on certain targets.\n\nThe Runesmith is a class on the more advanced end of tactics and creativity. For example, you might want to trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy. Or you might trace Atryl on yourself as a 3rd action so that you can move it with Transpose Etching (just 1 action) on your next turn, because you're a ranged build.\n\nThis option is for those players.",
+            true);*/
         
-        //public const string UnrestrictedTrace = "RunesmithPlaytest.UnrestrictedTrace";
+        /// <summary>
+        /// Functions as <see cref="ModManager.RegisterBooleanSettingsOption"/>, but also returns the technicalName.
+        /// </summary>
+        /// <returns>(string) The technical name for the option.</returns>
+        public static string RegisterBooleanOption(
+            string technicalName,
+            string caption,
+            string longDescription,
+            bool defaultValue)
+        {
+            ModManager.RegisterBooleanSettingsOption(technicalName, caption, longDescription, defaultValue);
+            return technicalName;
+        }
     }
 
     public static class CommonQfKeys
@@ -164,7 +190,7 @@ public static class ModData
         public static readonly Illustration StompGround = new ModdedIllustration(ModFolder+"quake-stomp.png");
         public static readonly Illustration HamperingStance = new ModdedIllustration(ModFolder+"banana-peel + hot-surface.png");
         public static readonly Illustration LockDown = new ModdedIllustration(ModFolder+"foot-trip.png");
-        public static readonly string DawnsburySunPath = "GuardianClassAssets/PatreonSunTransparent.png";
+        public static readonly Illustration DawnsburySun = new ModdedIllustration(ModFolder+"PatreonSunTransparent.png");
     }
 
     public static class PersistentActions
