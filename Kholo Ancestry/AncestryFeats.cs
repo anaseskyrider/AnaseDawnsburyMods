@@ -634,13 +634,21 @@ public static class AncestryFeats
                 [ModData.Traits.Kholo])
             .WithOnCreature(self =>
             {
+                QEffect statBlockEntry = new QEffect("Ambush Hunter", "You can Avoid Notice and Scout at the same time.");
                 if (!ModManager.TryParse("AvoidNotice", out FeatName avoidNotice)
-                    || !ModManager.TryParse("ScoutActivity", out FeatName scout))
-                    return;
-                if (self.HasFeat(avoidNotice) && !self.HasFeat(scout))
-                    self.WithFeat(scout);
-                else if (self.HasFeat(scout) && !self.HasFeat(avoidNotice))
-                    self.WithFeat(avoidNotice);
+                    || !ModManager.TryParse("ScoutActivity", out FeatName scout)
+                    || (!self.HasFeat(avoidNotice) && !self.HasFeat(scout)))
+                {
+                    statBlockEntry.Description = new SimpleIllustration(IllustrationName.RedWarning).IllustrationAsIconString + " You can {Red}Avoid Notice{/Red} and {Red}Scout{/Red} at the same time.";
+                }
+                else
+                {
+                    if (self.HasFeat(avoidNotice) && !self.HasFeat(scout))
+                        self.WithFeat(scout);
+                    else if (self.HasFeat(scout) && !self.HasFeat(avoidNotice))
+                        self.WithFeat(avoidNotice);
+                }
+                self.AddQEffect(statBlockEntry);
             });
 
         // Breath Like Honey
