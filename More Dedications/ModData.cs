@@ -28,6 +28,19 @@ public static class ModData
         public static readonly ActionId DragonRoar = ModManager.RegisterEnumMember<ActionId>("DragonRoar");
         public static readonly ActionId TigerSlash = ModManager.RegisterEnumMember<ActionId>("TigerSlash");
     }
+
+    public static class CommonRequirements
+    {
+        public static Func<Creature, string?> StanceRestriction(QEffectId stanceId)
+        {
+            return self =>
+            {
+                if (self.HasEffect(stanceId))
+                    return "You're already in this stance.";
+                return null;
+            };
+        }
+    }
     
     public static class FeatNames
     {
@@ -106,6 +119,7 @@ public static class ModData
         public static readonly FeatName StokedFlameStance = ModManager.RegisterFeatName("StokedFlameStance", "Stoked Flame Stance");
         public static readonly FeatName InnerFire = ModManager.RegisterFeatName("InnerFireSOM", "Inner Fire (SoM)");
         public static readonly FeatName WildWindsInitiate = ModManager.RegisterFeatName("WildWindsInitiate", "Wild Winds Initiate");
+        public static readonly FeatName ClingingShadowsInitiate = ModManager.RegisterFeatName("ClingingShadowsInitiate", "Clinging Shadows Initiate");
         public static readonly FeatName TangledForestStance = ModManager.RegisterFeatName("TangledForestStance", "Tangled Forest Stance");
         public static readonly FeatName JellyfishStance = ModManager.RegisterFeatName("JellyfishStance", "Jellyfish Stance");
         #endregion
@@ -125,6 +139,7 @@ public static class ModData
         public static readonly Illustration ToBattle = new ModdedIllustration(ModFolder+"flying-flag.png");
         public static readonly Illustration ProtectorsSacrifice = new ModdedIllustration(ModFolder+"protector's-sacrifice.png");
         public static readonly Illustration WildWindsStance = IllustrationName.FourWinds;
+        public static readonly Illustration ClingingShadowsStance = IllustrationName.BlackTentacles;
         public static readonly Illustration FlensingSlice = new ModdedIllustration(ModFolder+"FlensingSlice.png");
     }
     
@@ -161,6 +176,7 @@ public static class ModData
         // Bonus stances
         public static readonly QEffectId StokedFlameStance = ModManager.RegisterEnumMember<QEffectId>("Stoked Flame Stance");
         public static readonly QEffectId WildWindsStance = ModManager.RegisterEnumMember<QEffectId>("Wild Winds Stance");
+        public static readonly QEffectId ClingingShadowsStance = ModManager.RegisterEnumMember<QEffectId>("Clinging Shadows Stance");
         public static readonly QEffectId TangledForestStance = ModManager.RegisterEnumMember<QEffectId>("Tangled Forest Stance");
         public static readonly QEffectId JellyfishStance = ModManager.RegisterEnumMember<QEffectId>("Jellyfish Stance");
         
@@ -171,6 +187,7 @@ public static class ModData
     public static class SpellIds
     {
         public static SpellId WildWindsStance { get; set; }
+        public static SpellId ClingingShadowsStance { get; set; }
         public static SpellId ProtectorsSacrifice { get; set; }
     }
 
@@ -206,5 +223,8 @@ public static class ModData
         public static readonly Trait ScoutArchetype = ModManager.RegisterTrait(IdPrepend+"Scout", new TraitProperties("Scout", true));
         public static readonly Trait AssassinArchetype = ModManager.RegisterTrait(IdPrepend+"Assassin", new TraitProperties("Assassin", true));
         public static readonly Trait DualWeaponWarriorArchetype = ModManager.RegisterTrait(IdPrepend+"DualWeaponWarrior", new TraitProperties("Dual-Weapon Warrior", true));
+        
+        // Other traits
+        public static readonly Trait Shadow = ModManager.RegisterTrait("Shadow");
     }
 }

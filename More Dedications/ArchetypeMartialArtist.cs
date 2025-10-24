@@ -1294,7 +1294,77 @@ public static class ArchetypeMartialArtist
         tangledStance.Traits.Insert(0, ModData.Traits.MoreDedications);
         yield return tangledStance;
         
-        // TODO: Clinging Shadows Stance
+        // Clinging Shadows Stance
+        ModData.SpellIds.ClingingShadowsStance = ModManager.RegisterNewSpell(
+            "ClingingShadowsStance",
+            4,
+            (spellId, spellcaster, spellLevel, inCombat, spellInformation) =>
+            {
+                Illustration icon = ModData.Illustrations.ClingingShadowsStance;
+                const string name = "Clinging Shadows Stance";
+                const string shortDescription = "You gain a +2 circumstance bonus to Grapple and for creatures to Escape you.";
+                string passiveBonus = "While in clinging shadows stance, you have a +2 circumstance bonus to Athletics checks to Grapple, and to the DC for creatures to Escape from you.";
+                string describedAttack = "Also, you gain an additional attack option:\n"
+                    + Monk.DescribeAttack(WeaponProducer())
+                        .Replace("  ", " ");
+                CombatAction clingingShadowsSpell = Spells.CreateModern(
+                        icon,
+                        name,
+                        [ModData.Traits.MoreDedications, Trait.Evocation, Trait.Focus, Trait.Manipulate, Trait.Monk, ModData.Traits.Shadow, Trait.Stance, Trait.SomaticOnly],
+                        "You adopt the stance of clinging shadows, shrouding your limbs in sticky smoke made of ki.",
+                        "{b}Duration{/b} until you leave the stance\n\nEnter a stance.\n\n" + passiveBonus + "\n\n" + describedAttack + ".",
+                        Target.Self()
+                            .WithAdditionalRestriction(ModData.CommonRequirements.StanceRestriction(ModData.QEffectIds.ClingingShadowsStance)),
+                        4,
+                        null)
+                    .WithShortDescription("Enter a stance where " + shortDescription.Uncapitalize())
+                    .WithActionCost(1)
+                    // SFX I like:
+                    // - DeepNecromancy
+                    // - Necromancy
+                    // - Deafness
+                    // - Mistform
+                    // - DeathsCall
+                    .WithSoundEffect(SfxName.DeathsCall)
+                    .WithEffectOnSelf(async self =>
+                    {
+                        QEffect stanceQF = KineticistCommonEffects.EnterStance(
+                            self,
+                            icon,
+                            name,
+                            shortDescription,
+                            ModData.QEffectIds.ClingingShadowsStance);
+                        stanceQF.AdditionalUnarmedStrike = WeaponProducer();
+                        stanceQF.BonusToSkillChecks = (skill, action, _) =>
+                            skill is Skill.Athletics && action.ActionId is ActionId.Grapple
+                                ? new Bonus(2, BonusType.Circumstance, "Clinging shadows stance")
+                                : null;
+                        stanceQF.BonusToDefenses = (_, action, _) =>
+                            action?.ActionId is ActionId.Escape
+                                ? new Bonus(2, BonusType.Circumstance, "Clinging shadows stance")
+                                : null;
+                    });
+                return clingingShadowsSpell;
+                
+                Item WeaponProducer() =>
+                    new Item(icon, "shadow grasp", [Trait.Agile, Trait.Brawling, Trait.Grapple, Trait.Reach, Trait.Unarmed])
+                        // SFX I like:
+                        // - Necromancy
+                        // - MajorNegative
+                        //.WithSoundEffect(SfxName.MajorNegative) // Abandoned since these can play too rapidly, don't have an appropriately subtle shadowy sound.
+                        .WithWeaponProperties(new WeaponProperties("1d4", DamageKind.Negative));
+            });
+        Feat clingingShadowsInitiate = CreateKiSpellFeat2(
+            ModData.FeatNames.ClingingShadowsInitiate,
+            8,
+            "You learn a mystical stance that transforms your ki into sticky smoke that shrouds your limbs, clinging to everything you touch.",
+            "While entering the stance is a ki spell, the shadow grasp Strikes the stance grants are not, so you can use them as often as you like while in the stance.",
+            "Clinging Shadows Stance",
+            ModData.SpellIds.ClingingShadowsStance,
+            ModData.Illustrations.ClingingShadowsStance,
+            true);
+        clingingShadowsInitiate.Traits.Insert(0, ModData.Traits.MoreDedications);
+        yield return clingingShadowsInitiate;
     }
     
     /// Exists to resolve issues with the way QEffectIds are referenced for generating strings, which don't work with modded QFids (unlike base game IDs).
