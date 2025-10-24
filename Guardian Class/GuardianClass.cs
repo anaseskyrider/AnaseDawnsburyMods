@@ -258,7 +258,7 @@ public static class GuardianClass
                 "Choose an enemy within 30 feet to be your taunted enemy. If your taunted enemy takes a hostile action that includes at least one of your allies but doesn't include you, they take a –1 circumstance penalty to their attack rolls and DCs for that action, and they also become off-guard until the start of their next turn.\n\nYour enemy remains taunted until the start of your next turn, and you can have only one Taunt in effect at a time. Taunting a new enemy ends this effect on any current target.\n\nTaunt gains the auditory trait, visual trait, or both, depending on how you draw the target's attention.",
                 [Trait.Concentrate])
             .WithActionCost(1)
-            .WithPermanentQEffect("Designate a taunted enemy within 30 feet. They take penalties if they take hostile actions which don't include you.",
+            .WithPermanentQEffect("Designate an enemy within 30 feet. Hostile actions which don't include you take penalties and make them off-guard.",
                 qfFeat =>
                 {
                     if (qfFeat.Owner.HasFeat(ModData.FeatNames.GroupTaunt))
@@ -585,6 +585,7 @@ public static class GuardianClass
                 if (!ActionTriggersTaunt(action, taunter))
                     return;
                 QEffect offguard = QEffect.FlatFooted("Taunt");
+                offguard.Name = "Off-guard due to Taunt";
                 offguard.ExpiresAt = ExpirationCondition.ExpiresAtStartOfYourTurn;
                 offguard.Source = taunter;
                 offguard.Key = ModData.CommonQfKeys.OffGuardDueToTaunt+taunter;
