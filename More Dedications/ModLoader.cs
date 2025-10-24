@@ -25,5 +25,6 @@ public static class ModLoader
         ArchetypeBlessedOne.LoadArchetype();
         ArchetypeScout.LoadArchetype();
         ArchetypeAssassin.LoadArchetype();
+        ArchetypeDualWeaponWarrior.LoadArchetype();
     }
 }

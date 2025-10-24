@@ -94,6 +94,13 @@ public static class ModData
         public static readonly FeatName PoisonWeapon = ModManager.RegisterFeatName("PoisonWeapon", "Poison Weapon");
         public static readonly FeatName ImprovedPoisonWeapon = ModManager.RegisterFeatName("ImprovedPoisonWeapon", "Improved Poison Weapon");
         #endregion
+
+        #region Dual Weapon Warrior
+        
+        public static readonly FeatName DualThrower = ModManager.RegisterFeatName(IdPrepend+"Archetype.DualWeaponWarrior.DualThrower", "Dual Thrower");
+        public static readonly FeatName FlensingSlice = ModManager.RegisterFeatName(IdPrepend+"Archetype.DualWeaponWarrior.FlensingSlice", "Flensing Slice");
+
+        #endregion
         
         #region Bonus Stances
         public static readonly FeatName StokedFlameStance = ModManager.RegisterFeatName("StokedFlameStance", "Stoked Flame Stance");
@@ -118,6 +125,7 @@ public static class ModData
         public static readonly Illustration ToBattle = new ModdedIllustration(ModFolder+"flying-flag.png");
         public static readonly Illustration ProtectorsSacrifice = new ModdedIllustration(ModFolder+"protector's-sacrifice.png");
         public static readonly Illustration WildWindsStance = IllustrationName.FourWinds;
+        public static readonly Illustration FlensingSlice = new ModdedIllustration(ModFolder+"FlensingSlice.png");
     }
     
     public static class PersistentActions
