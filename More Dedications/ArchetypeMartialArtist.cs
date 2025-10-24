@@ -242,6 +242,14 @@ public static class ArchetypeMartialArtist
             qfStance =>
             {
                 qfStance.Tag = false;
+                qfStance.StateCheck += qfThis =>
+                {
+                    qfThis.Owner.AddQEffect(new QEffect(ExpirationCondition.Ephemeral)
+                    {
+                        Name = "[TIGER STANCE 10-FOOT STEP]",
+                        Id = QEffectId.ElfStep
+                    });
+                };
                 qfStance.AfterYouDealDamage = async (attacker, action, defender) =>
                 {
                     if (action.CheckResult == CheckResult.CriticalSuccess)
@@ -253,30 +261,6 @@ public static class ArchetypeMartialArtist
                             DamageKind.Bleed);
                         critBleed.SourceAction = action;
                         defender.AddQEffect(critBleed);
-                    }
-                };
-                /*qfStance.YouBeginAction = async (qfThis, action) =>
-                {
-                    if (action.ActionId != ActionId.Stride || action.Target is not TileTarget tileTarget)
-                        return;
-
-                    if (qfThis.Owner.DistanceTo(action.ChosenTargets.ChosenTile!) <= 2)
-                        action.Target = tileTarget.WithPathfindingGuidelines(cr => new PathfindingDescription { Squares = 2, Style = new MovementStyle() {Shifting = true}});
-                }; */
-                qfStance.AfterYouTakeAction = async (qfThis, action) =>
-                {
-                    if (action.ActionId != ActionId.Step || qfThis.Tag is true)
-                    {
-                        qfThis.Tag = false;
-                        return;
-                    }
-
-                    // This will be ABSOLUTELY CRACKED if lv9 Elf Step enters the game.
-                    if (qfThis.Owner.Speed >= 4) // 20 ft.
-                    {
-                        // Immediately make another 5-ft Step.
-                        qfThis.Tag = true;
-                        await qfThis.Owner.StepAsync("Make another Step due to Tiger Stance.", allowPass:true);
                     }
                 };
             },
