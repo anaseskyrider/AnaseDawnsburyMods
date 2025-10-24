@@ -1489,7 +1489,34 @@ public static class GuardianFeats
                         }
                     };
                 });
-        // Mighty Bulwark???
+        // Mighty Bulwark
+        yield return new TrueFeat(
+                ModData.FeatNames.MightyBulwark,
+                8,
+                "Thanks to the incredible connection you have forged with your armor, you can use it to shrug off an extensive array of dangers.",
+                "Your bonus from the bulwark armor trait increases by 1.",
+                [ModData.Traits.Guardian])
+            .WithPermanentQEffect(
+                "Increase your armor's bulwark bonus by 1.",
+                qfFeat =>
+                {
+                    // Add an initial check to reduce performance impacts
+                    if (!(qfFeat.Owner.Armor.Item?.HasTrait(Trait.Bulwark) ?? false))
+                        // Add a warning that the user isn't benefitting from the feat
+                        qfFeat.Description = qfFeat.Description!.Replace("bulwark", "{Red}bulwark{/Red}");
+                    else
+                        qfFeat.BonusToDefenses = (qfThis, action, def) =>
+                        {
+                            if (def is not Defense.Reflex)
+                                return null;
+                            if (!(qfThis.Owner.Armor.Item?.HasTrait(Trait.Bulwark) ?? false))
+                                return null;
+                            // Must actually get any value out of a +4 bulwark.
+                            if (qfThis.Owner.Abilities.Dexterity > 3)
+                                return null;
+                            return new Bonus(1, BonusType.Untyped, "Mighty bulwark");
+                        };
+                });
         // Repositioning Block ????? More Basic Actions??? Hard-coded?
         // Shield From Arrows
         // Shield Wallop
