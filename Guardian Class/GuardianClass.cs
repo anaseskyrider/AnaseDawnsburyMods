@@ -58,6 +58,7 @@ public static class GuardianClass
                 cf.AddFeature(3, ModData.Tooltips.FeatureToughToKill("tough to kill"));
                 cf.AddFeature(5, "Expert in defenses", "medium, heavy");
                 cf.AddFeature(5, "Expert in weapons", "unarmed, simple, martial");
+                cf.AddFeature(7, WellKnownClassFeature.ExpertInPerception);
                 cf.AddFeature(7, ModData.Tooltips.FeatureReactionTime("reaction time"));
                 cf.AddFeature(7, WellKnownClassFeature.ExpertInReflex);
                 cf.AddFeature(9, ModData.Tooltips.FeatureBattleHardened("battle hardened"));
