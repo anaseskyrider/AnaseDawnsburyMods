@@ -91,7 +91,7 @@ _Disclaimer: the Runesmith's runes are unrelated to the runes from the shop. You
 **Level 5:** Attribute boosts, ancestry feat, skill increase, Smith's Weapon Expertise (expert in unarmed/simple/martial weapons), additional rune known (level 1), Etch Rune (3 runes)  
 **Level 6:** Runesmith feat  
 **Level 7:** General feat, Runic Optimization, additional rune known (level 1)  
-**Level 8:** Runesmith feat
+**Level 8:** Runesmith feat  
 **Level 9:** Assured Runic Crafter, additional rune known (level 9), Etch Rune (4 runes)
 
 ### Class Feats
