@@ -25,7 +25,7 @@ This mod adds more **Archetypes** and expands existing Archetypes.
 - **(Assassin):** Expert Backstabber, Surprise Attack, Poison Resistance, Poison Weapon, Sneak Attack, Improved Poison Weapon.
 - **(Bastion):** Agile Shield Grip, Disarming Block, Shielded Stride, Reflexive Shield
 - **(Blessed One):** Blessed Sacrifice, Accelerating Touch
-- **(Dual-Weapon Warrior):** Dual Thrower, (⚙️Swashbuckler mod) Twin Parry, Flensing Slice
+- **(Dual-Weapon Warrior):** Dual Thrower, (⚙️[Swashbuckler](https://steamcommunity.com/sharedfiles/filedetails/?id=3205787569) mod) Twin Parry, Flensing Slice
 - **(Marshal):** Dread Marshal Stance, Inspiring Marshal Stance, Steel Yourself!, Rallying Charge, Attack of Opportunity, To Battle!
 - **(Martial Artist):** Powder Punch Stance, Brawling Focus, Crane Stance, Dragon Stance, Gorilla Stance, Mountain Stance, Wolf Stance, Stumbling Stance, Tiger Stance, Follow-Up Strike, Thunder Clap, Crane Flutter, Dragon Roar, Gorilla Pound, Grievous Blow, Mountain Stronghold, Stumbling Feint, Tiger Slash, Wolf Drag
 - **(Mauler):** Knockdown, Power Attack, Clear the Way, Shoving Sweep
@@ -91,7 +91,8 @@ _Disclaimer: the Runesmith's runes are unrelated to the runes from the shop. You
 **Level 5:** Attribute boosts, ancestry feat, skill increase, Smith's Weapon Expertise (expert in unarmed/simple/martial weapons), additional rune known (level 1), Etch Rune (3 runes)  
 **Level 6:** Runesmith feat  
 **Level 7:** General feat, Runic Optimization, additional rune known (level 1)  
-**Level 8:** Runesmith feat  
+**Level 8:** Runesmith feat
+**Level 9:** Assured Runic Crafter, additional rune known (level 9), Etch Rune (4 runes)
 
 ### Class Feats
 - **(1st)** Backup Runic Enhancement, Engraving Strike, Remote Detonation, Rune-Singer
@@ -102,7 +103,7 @@ _Disclaimer: the Runesmith's runes are unrelated to the runes from the shop. You
 
 ### Runesmith's Runes
 - **(1st)** Atryl, Rune of Fire; Esvadir, Rune of Whetstones; Holtrik, Rune of Dwarven Ramparts; Marssyl, Rune of Impact; Oljinex, Rune of Cowards' Bane; Pluuna, Rune of Illumination; Ranshu, Rune of Thunder; Sun-, Diacritic Rune of Preservation; Ur-, Diacritic Rune of Intensity; Zohk, Rune of Homecoming
-- **(9th)** (accessible with a homebrew feat) En-, Diacritic Rune of Expansion; Feikris, Rune of Gravity; Jurroz, Rune of Dragon Fury; Kojastri, Rune of Insulation
+- **(9th)** En-, Diacritic Rune of Expansion; Feikris, Rune of Gravity; Ichelsu, Rune of Observation; Inth-, Diacritic Rune of Corruption; Jurroz, Rune of Dragon Fury; Trolistri, Rune of Forlorn Sorrow; Kojastri, Rune of Insulation
 
 ### Differences from Tabletop
 In general, if a small element of a feature doesn't exist in DD, then that text is removed for simplicity and clarity.
@@ -125,23 +126,25 @@ In general, if a small element of a feature doesn't exist in DD, then that text 
 
 #### Specific Runes
 - Runes which are drawn on armor are instead drawn on a creature.
-- **Atryl, Rune of Fire:** Due to lack of mechanical utility, this rune cannot be drawn on items.
-- **Ranshu, Rune of Thunder:** Due to lack of mechanical utility, this rune cannot be drawn on items.
-- **Kojastri, Rune of Insulation:** In spite of the playtest wording, I've made it so you can't damage yourself by using touch abilities with yourself on this rune. Your allies still can take damage, though.
-- **Oljinex, Rune of Coward's Bane:** Due to technical limitations, the invocation imposes a DC 5 flat check on move actions -- DC 11 if it's to move away from the bearer. Its +1 AC status bonus currently applies to any ranged attack, not just physical (pending update).
-- **Pluuna, Rune of Illumination:** The game doesn't do lightning mechanics. The existence of the light (both the passive and invocation effect) makes the bearer unable to be Undetected (they can still be Hidden).
-- **Zohk, Rune of Homecoming:** The passive effect is a bespoke Stride used during your turn, rather than a benefit to any Stride.
+- **(Atryl, Rune of Fire):** Due to lack of mechanical utility, this rune cannot be drawn on items.
+- **(Ranshu, Rune of Thunder):** Due to lack of mechanical utility, this rune cannot be drawn on items.
+- **(Kojastri, Rune of Insulation):** In spite of the playtest wording, I've made it so you can't damage yourself by using touch abilities with yourself on this rune. Your allies still can take damage, though.
+- **(Oljinex, Rune of Coward's Bane):** Due to technical limitations, the invocation imposes a DC 5 flat check on move actions -- DC 11 if it's to move away from the bearer. Its +1 AC status bonus currently applies to any ranged attack, not just physical (pending update).
+- **(Pluuna, Rune of Illumination):** The game doesn't do lightning mechanics. The existence of the light (both the passive and invocation effect) makes the bearer unable to be Undetected (they can still be Hidden).
+- **(Zohk, Rune of Homecoming):** The passive effect is a bespoke Stride used during your turn, rather than a benefit to any Stride.
+- **(Inth-, Diacritic Rune of Corruption):** The invocation is interpreted as only applying to the rune-bearer, so its persistent fire cannot be spread as an AoE, and the text is modified accordingly. Currently, Esvadir's persistent bleed damage does not become unholy. For compatibility reasons, creatures with weakness to evil are considered holy, and this invocation's persistent fire damage can be persistent evil damage instead.
+- **(Trolistri, Rune of Forlorn Sorrow):** Always generates difficult terrain for enemies regardless of distance or move direction. Effect radius reduced to 10 feet (invocation range unchanged). This difficult terrain cannot be ignored by creatures immune to emotion or mental effects (technical limitation).
 
 ### Attributions:
-- <a href="https://www.flaticon.com/free-icons/feather" title="feather icons">Feather icons created by Freepik - Flaticon</a>
-- <a href="https://www.flaticon.com/free-icons/rune" title="rune icons">Rune icons created by bearicons - Flaticon</a>
-- <a href="https://www.flaticon.com/free-icons/rune" title="rune icons">Rune icons created by Freepik - Flaticon</a>
-- <a href="https://www.flaticon.com/free-icons/comment" title="comment icons">Comment icons created by Freepik - Flaticon</a>
-- <a href="https://www.flaticon.com/free-icons/wow" title="wow icons">Wow icons created by Vitaly Gorbachev - Flaticon</a>
-- <a href="https://www.flaticon.com/free-icons/handmade" title="handmade icons">Handmade icons created by GOWI - Flaticon</a>
-- <a href="https://www.flaticon.com/free-icons/knife" title="knife icons">Knife icons created by kerismaker - Flaticon</a>
-- <a href="https://www.flaticon.com/free-icons/musical-note" title="musical note icons">Musical note icons created by Freepik - Flaticon</a>
-- <a href="https://www.flaticon.com/free-icons/hammer" title="hammer icons">Hammer icons created by Smashicons - Flaticon</a>
+- [Feather icons created by Freepik - Flaticon](https://www.flaticon.com/free-icons/feather)
+- [Rune icons created by bearicons - Flaticon](https://www.flaticon.com/free-icons/rune)
+- [Rune icons created by Freepik - Flaticon](https://www.flaticon.com/free-icons/rune)
+- [Comment icons created by Freepik - Flaticon](https://www.flaticon.com/free-icons/comment)
+- [Wow icons created by Vitaly Gorbachev - Flaticon](https://www.flaticon.com/free-icons/wow)
+- [Handmade icons created by GOWI - Flaticon](https://www.flaticon.com/free-icons/handmade)
+- [Knife icons created by kerismaker - Flaticon](https://www.flaticon.com/free-icons/knife)
+- [Musical note icons created by Freepik - Flaticon](https://www.flaticon.com/free-icons/musical-note)
+- [Hammer icons created by Smashicons - Flaticon](https://www.flaticon.com/free-icons/hammer)
 
 ## More Basic Actions
 Adds more basic actions for characters to use.
