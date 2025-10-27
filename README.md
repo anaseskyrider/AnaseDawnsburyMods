@@ -16,7 +16,7 @@ STATEMENT OF INTENT: This repository, other than the licensed content it contain
 - - [Guardian Class](#guardian-class)
 - - [Kholo Ancestry](#kholo-ancestry)
 - Libraries
-- - [ParryLogic](#parry-logic)
+- - [ParryLogic](#parrylogic)
 - [Ko-Fi](https://ko-fi.com/anaseskyrider) (tips always appreciated)
 - I go by @AnaseSkyrider on Discord and most other places.
 
