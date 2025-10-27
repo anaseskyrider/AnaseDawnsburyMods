@@ -286,6 +286,7 @@ public static class GuardianFeats
         #region Level 2
         // Covering Stance
         // Might not be possible without asterisks.
+        //// Might not be possible without asterisks.
         /*yield return new TrueFeat(
                 ModData.FeatNames.CoveringStance,
                 2,
@@ -600,6 +601,7 @@ public static class GuardianFeats
                 ModData.CommonRequirements.HasInterceptAttack,
                 "You must have the guardian's Intercept Attack feature.");
         // Flying Tackle
+        //// Not sure if will include due to reliance on More Basic Actions, and weak implementation
         // Not So Fast!
         yield return new TrueFeat(
                 ModData.FeatNames.NotSoFast,
@@ -799,6 +801,7 @@ public static class GuardianFeats
                     };
                 });
         // Shielded Attrition <---- High priority. QEffectId.IgnoreAoOWhenMoving.
+        //// Not sure how to make due to nuance complexities
         #endregion
         
         #region Level 6
