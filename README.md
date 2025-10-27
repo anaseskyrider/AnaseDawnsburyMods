@@ -15,6 +15,8 @@ STATEMENT OF INTENT: This repository, other than the licensed content it contain
 - - [More Shields](#more-shields)
 - - [Guardian Class](#guardian-class)
 - - [Kholo Ancestry](#kholo-ancestry)
+- Libraries
+- - [ParryLogic](#parry-logic)
 - [Ko-Fi](https://ko-fi.com/anaseskyrider) (tips always appreciated)
 - I go by @AnaseSkyrider on Discord and most other places.
 
@@ -277,3 +279,13 @@ Inoculation Subroutine may be included, if staged non-poison disease afflictions
 
 ## [Kholo Ancestry](https://steamcommunity.com/sharedfiles/filedetails/?id=3584747644)
 ⚠️ Description unfinished ⚠️
+
+## Libraries
+The following are local libraries written by me. They are intended to be used by other modders as local libraries rather than as hard dependencies.
+
+### ParryLogic
+Provides logic for generating and using Parry actions associated with the parry trait, without creating duplicate actions. 
+
+**GreaterParry**: The `GreaterParry()` function creates a `QEffect` that performs the effects of feats that grant the parry trait to certain weapons and increases the bonus for those weapons that already had it; such as with the Guardian feat Raise Haft, and the Warrior of Legend class archetype.
+
+**Art:** This library comes with two icons (and two rotated variants). This art is provided by Lobot922 for use as public domain, no credits required. I recommend using `ParryT7.png` as part of a SideBySideIllustration and `ParryT6.png` as the sole Illustration for the basic Parry action when passing illustrations to `ParryLogic.Load()`.
