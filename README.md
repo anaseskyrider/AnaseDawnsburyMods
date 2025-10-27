@@ -281,11 +281,11 @@ Inoculation Subroutine may be included, if staged non-poison disease afflictions
 ⚠️ Description unfinished ⚠️
 
 ## Libraries
-The following are local libraries written by me. They are intended to be used by other modders as local libraries rather than as hard dependencies.
+The following are local libraries written by me. They are intended to be used by other modders without inter-mod hard dependencies.
 
 ### ParryLogic
-Provides logic for generating and using Parry actions associated with the parry trait, without creating duplicate actions. 
+Provides logic for generating and using Parry actions associated with the parry trait, without creating duplicate actions when used by multiple mods, and without directly modifying items to grant actions.
 
 **GreaterParry**: The `GreaterParry()` function creates a `QEffect` that performs the effects of feats that grant the parry trait to certain weapons and increases the bonus for those weapons that already had it; such as with the Guardian feat Raise Haft, and the Warrior of Legend class archetype.
 
-**Art:** This library comes with two icons (and two rotated variants). This art is provided by Lobot922 for use as public domain, no credits required. I recommend using `ParryT7.png` as part of a SideBySideIllustration and `ParryT6.png` as the sole Illustration for the basic Parry action when passing illustrations to `ParryLogic.Load()`.
+**Art:** This library comes with two icons (and two rotated variants). This art is provided by Lobot922 for use as public domain, no credits required. I recommend using `ParryT7.png` as part of a `SideBySideIllustration` and `ParryT6.png` as the sole `Illustration` for the basic Parry `QEffect` when passing illustrations to `ParryLogic.Load()`.
