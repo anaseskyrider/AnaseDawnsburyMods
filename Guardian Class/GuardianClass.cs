@@ -585,7 +585,8 @@ public static class GuardianClass
                 if (!ActionTriggersTaunt(action, taunter))
                     return;
                 QEffect offguard = QEffect.FlatFooted("Taunt");
-                offguard.Name = "Off-guard due to Taunt";
+                offguard.Name = "Off-Guard (Taunt)";
+                offguard.Description = "{i}You ignored {Blue}"+taunter.Name+"{/Blue}'s taunt.{/i}" + offguard.Description;
                 offguard.ExpiresAt = ExpirationCondition.ExpiresAtStartOfYourTurn;
                 offguard.Source = taunter;
                 offguard.Key = ModData.CommonQfKeys.OffGuardDueToTaunt+taunter;
