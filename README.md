@@ -6,18 +6,19 @@ A compilation of all of my mods for Dawnsbury Days.
 STATEMENT OF INTENT: This repository, other than the licensed content it contains, is public domain (see Unlicense). Follow the terms and conditions of those other licenses located in the associated mod folders before attempting to use the content of this project, which I do not possess the rights to commit to public domain.
 
 ### Links
-- [Steam Workshop: More Dedications](https://steamcommunity.com/sharedfiles/filedetails/?id=3447019566)
-- [Steam Workshop: Runesmith](https://steamcommunity.com/sharedfiles/filedetails/?id=3460180524)
-- [Steam Workshop: More Basic Actions](https://steamcommunity.com/sharedfiles/filedetails/?id=3485625903)
-- [Steam Workshop: Strategist Subclasses](https://steamcommunity.com/sharedfiles/filedetails/?id=3493565179)
-- [Steam Workshop: Android Ancestry](https://steamcommunity.com/sharedfiles/filedetails/?id=3498094211)
-- [Steam Workshop: More Shields](https://steamcommunity.com/sharedfiles/filedetails/?id=3538575665)
-- [Steam Workshop: Guardian Class](https://steamcommunity.com/sharedfiles/filedetails/?id=3544453050)
-- [Steam Workshop: Kholo Ancestry](https://steamcommunity.com/sharedfiles/filedetails/?id=3584747644)
+- Mods
+- - [More Dedications](#more-dedications)
+- - [Runesmith](#runesmith)
+- - [More Basic Actions](#more-basic-actions)
+- - [Strategist Subclasses](#strategist-subclasses)
+- - [Android Ancestry](#android-ancestry)
+- - [More Shields](#more-shields)
+- - [Guardian Class](#guardian-class)
+- - [Kholo Ancestry](#kholo-ancestry)
 - [Ko-Fi](https://ko-fi.com/anaseskyrider) (tips always appreciated)
 - I go by @AnaseSkyrider on Discord and most other places.
 
-## More Dedications
+## [More Dedications](https://steamcommunity.com/sharedfiles/filedetails/?id=3447019566)
 
 This mod adds more **Archetypes** and expands existing Archetypes.
 
@@ -67,7 +68,7 @@ This mod also adds the following feats which are not part of any archetype (migh
 - [Shield icons created by Freepik - Flaticon](https://www.flaticon.com/free-icons/shield])
 - [Flensing Slice](https://assetstore.unity.com/packages/2d/gui/icons/2d-skills-icon-set-handpainted-210622)
 
-## Runesmith
+## [Runesmith](https://steamcommunity.com/sharedfiles/filedetails/?id=3460180524)
 Adds the *Runesmith* class from the Impossible Playtest, a warrior scholar who wields a repertoire of runic magic.
 
 ### How Runesmith Works
@@ -146,7 +147,7 @@ In general, if a small element of a feature doesn't exist in DD, then that text 
 - [Musical note icons created by Freepik - Flaticon](https://www.flaticon.com/free-icons/musical-note)
 - [Hammer icons created by Smashicons - Flaticon](https://www.flaticon.com/free-icons/hammer)
 
-## More Basic Actions
+## [More Basic Actions](https://steamcommunity.com/sharedfiles/filedetails/?id=3485625903)
 Adds more basic actions for characters to use.
 
 ### Prepare to Aid →
@@ -199,7 +200,7 @@ _(Mod options allow you to toggle adding the basic Drop prone action, just as be
 - [Refusing icons created by Leremy - Flaticon](https://www.flaticon.com/free-icons/refusing)
 - [Jump icons created by AbtoCreative - Flaticon](https://www.flaticon.com/free-icons/jump)
 
-## Strategist Subclasses
+## [Strategist Subclasses](https://steamcommunity.com/sharedfiles/filedetails/?id=3493565179)
 Adds the Alchemical Sciences, Empiricism, Forensic Medicine, and Interrogation subclasses to Strategist.
 
 _⚠️ Optional Mods: There are additional benefits if the ⚙️[Bundle of Backgrounds](https://steamcommunity.com/sharedfiles/filedetails/?id=3348552008) or ⚙️[DawnniExpanded](https://steamcommunity.com/sharedfiles/filedetails/?id=3163146733) mods are installed. (Load order is managed automatically)_
@@ -220,7 +221,7 @@ You are trained in Diplomacy, gain the ⚙️Bundle of Backgrounds' _No Cause fo
 - (preview art) [Detective icons created by Eucalyp - Flaticon](https://www.flaticon.com/free-icons/detective)
 - [Magnifying glass icons created by Freepik - Flaticon](https://www.flaticon.com/free-icons/magnifying-glass)
 
-## Android Ancestry
+## [Android Ancestry](https://steamcommunity.com/sharedfiles/filedetails/?id=3498094211)
 With synthetic bodies but real souls, androids are logical introverts driven by curiosity.
 
 _⚠️ Optional Mods: There are additional benefits if the ⚙️[Bundle of Backgrounds](https://steamcommunity.com/sharedfiles/filedetails/?id=3348552008) or ⚙️[DawnniExpanded](https://steamcommunity.com/sharedfiles/filedetails/?id=3163146733) mods are installed. (Load order is managed automatically)_
@@ -267,3 +268,12 @@ Inoculation Subroutine may be included, if staged non-poison disease afflictions
 ##### Attributions
 -  (preview) [Robot icons created by kerismaker - Flaticon](https://www.flaticon.com/free-icons/robot)
 -  [Idea icons created by xnimrodx - Flaticon](https://www.flaticon.com/free-icons/idea)
+
+## [More Shields](https://steamcommunity.com/sharedfiles/filedetails/?id=3538575665)
+⚠️ Description unfinished ⚠️
+
+## [Guardian Class](https://steamcommunity.com/sharedfiles/filedetails/?id=3544453050)
+⚠️ Description unfinished ⚠️
+
+## [Kholo Ancestry](https://steamcommunity.com/sharedfiles/filedetails/?id=3584747644)
+⚠️ Description unfinished ⚠️
