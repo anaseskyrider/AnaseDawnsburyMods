@@ -285,7 +285,6 @@ public static class GuardianFeats
         
         #region Level 2
         // Covering Stance
-        // Might not be possible without asterisks.
         //// Might not be possible without asterisks.
         /*yield return new TrueFeat(
                 ModData.FeatNames.CoveringStance,
@@ -400,6 +399,21 @@ public static class GuardianFeats
                     });
             });
         // Raise Haft
+        yield return new TrueFeat(
+                ModData.FeatNames.RaiseHaft,
+                2,
+                "You know how to use the haft of larger weapons to block your enemies' attacks.",
+                "Two-handed weapons you wield gain the parry trait. If the weapon already has the parry trait, you increase the circumstance bonus to AC it provides to +2."
+                    + "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " {b}Modding{/b} This benefits more with mods which add parry weapons.",
+                [ModData.Traits.Guardian])
+            .WithOnCreature(self =>
+            {
+                self.AddQEffect(ParryLogic.GreaterParry(
+                    "Raise Haft",
+                    "Two-handed weapons gain the parry trait for you, or increase the bonus to +2 if they already have it.",
+                    (_, weapon) =>
+                        weapon.HasTrait(Trait.TwoHanded)));
+            });
         // Shield Your Eyes (useless?)
         /*yield return new TrueFeat(
                 ModData.FeatNames.ShieldYourEyes,
