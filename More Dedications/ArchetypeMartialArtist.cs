@@ -16,6 +16,7 @@ using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
+using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
@@ -601,20 +602,40 @@ public static class ArchetypeMartialArtist
                                             .Where(kind => kind.IsPhysical());
 
                                         // Get the applied resistances associated with this action.
-                                        var relevantResistances = qfThis.Owner.WeaknessAndResistance.AppliedResistances
-                                            .Where(res =>
-                                                relevantDamages.Contains(res.DamageKind) || res is SpecialResistance { Name: "physical" })
-                                            .ToArray();
+                                        var relevantResistances = qfThis.Owner.WeaknessAndResistance
+                                            .DamageKindsWithAppliedResistance
+                                            .Where(kvp => relevantDamages.Contains(kvp.Key))
+                                            .ToList()
+                                            .OrderByDescending(kvp => kvp.Value);
 
-                                        // Increase the damage dealt for each relevant resistance that was applied, up to caster level.
-                                        relevantResistances.ForEach(res =>
+                                        // Gets whether it has physical resistance
+                                        bool resistsPhysical = qfThis.Owner.WeaknessAndResistance.Resistances.Any(res =>
+                                            res is SpecialResistance phys && phys.Name.Contains("physical",
+                                                StringComparison.CurrentCultureIgnoreCase));
+
+                                        // Increase the damage dealt, up to the caster level.
+                                        foreach (var applied in relevantResistances)
                                         {
-                                            int bypassAmount = Math.Min(res.Value, caster.Level);
-                                            dEvent.ReduceBy(-bypassAmount, $"Bypass {bypassAmount} {res.DamageKind.HumanizeLowerCase2()} resistance (grievous blow)");
-                                            dEvent.DamageEventDescription.Replace("--", "+");
-                                        });
+                                            string kind = applied.Key.HumanizeLowerCase2();
+                                            BypassDamage(
+                                                dEvent,
+                                                resistsPhysical ? $"physical ({kind})" : kind,
+                                                Math.Min(applied.Value, caster.Level));
+
+                                            // Apply only once if there isn't a Physical resist
+                                            if (!resistsPhysical)
+                                                break;
+                                        }
                                     },
                                 });
+
+                                void BypassDamage(DamageEvent dEvent, string kind, int amount)
+                                {
+                                    dEvent.ReduceBy(
+                                        -amount,
+                                        $"Bypass {amount} {kind} resistance (grievous blow)");
+                                    dEvent.DamageEventDescription.Replace("--", "+");
+                                }
                             });
                         strike.Illustration =
                             new SideBySideIllustration(strike.Illustration, IllustrationName.StarHit);
