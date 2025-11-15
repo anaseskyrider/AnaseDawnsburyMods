@@ -136,7 +136,6 @@ public class DrawnRune : QEffect
         this.Traits.Remove(ModData.Traits.Etched);
         this.Traits.Add(ModData.Traits.Tattooed);
         this.Description = "{i}Tattooed{/i}\n" + this.Description!.Replace("{i}Etched{/i}\n", "").Replace("{i}Traced{/i}\n", "") + "\n\n{i}{Blue}If invoked, this rune won't be available until your next daily preparations.{/Blue}{/i}";
-        //this.Description += "\n\n{i}{Blue}Tattooed: lasts until the end of combat. If invoked, this rune won't be available until your next daily preparations.{/Blue}{/i}";
         this.ExpiresAt = ExpirationCondition.Never;
         return this;
     }
@@ -148,7 +147,6 @@ public class DrawnRune : QEffect
         this.Traits.Add(ModData.Traits.Etched);
         this.Description = "{i}Etched{/i}\n" + this.Description!.Replace("{i}Tattooed{/i}\n", "").Replace("{i}Traced{/i}\n", "");
         this.ExpiresAt = ExpirationCondition.Never;
-        //this.Description += "\n\n{i}{Blue}Etched: lasts until the end of combat.{/Blue}{/i}";
         return this;
     }
 
@@ -157,17 +155,8 @@ public class DrawnRune : QEffect
         this.Traits.Remove(ModData.Traits.Tattooed);
         this.Traits.Remove(ModData.Traits.Etched);
         this.Traits.Add(ModData.Traits.Traced);
-        //this.ExpiresAt = ExpirationCondition.ExpiresAtEndOfSourcesTurn;
-        //this.CannotExpireThisTurn = true;
-        //this.Description += "\n\n{i}{Blue}Traced: lasts until the end of " + this.Source?.Name + "'s next turn.{/Blue}{/i}";
-        this.Description = "{i}Traced{/i}\n" + this.Description!.Replace("{i}Tattooed{/i}\n", "").Replace("{i}Etched{/i}\n", "") + "\n\n{i}{Blue}Lasts until the end of " + this.Source?.Name + "'s next turn.{/Blue}{/i}"; // TODO: remove some of this text, with future duration automations
+        this.Description = "{i}Traced{/i}\n" + this.Description!.Replace("{i}Tattooed{/i}\n", "").Replace("{i}Etched{/i}\n", "");
         this.WithExpirationAtEndOfSourcesNextTurn(this.Source!, true);
-        // Refuses to work for incomprehensible reasons
-        /*this.StartOfSourcesTurn = async qfThis =>
-        {
-            //if (qfThis is { RoundsLeft: <= 1, CannotExpireThisTurn: false })
-            qfThis.Description = qfThis.Description!.Replace("next turn", "current turn");
-        };*/
         return this;
     }
 

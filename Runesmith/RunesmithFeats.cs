@@ -467,7 +467,7 @@ public static class RunesmithFeats
                                     if (isDisabledRune)
                                     {
                                         drawnRune.DisableRune(true);
-                                        drawnRune.Description = "{i}Traced{/i}\n{Blue}(Runic Reprisal) When you use Shield Block against an adjacent attacker, this rune's invocation effects are detonated outward onto the attacker.{/Blue}" + "\n\n{i}{Blue}Lasts until the end of " + drawnRune.Source?.Name + "'s next turn.{/Blue}{/i}"; // TODO: remove some of this with future duration text automation
+                                        drawnRune.Description = "{i}Traced{/i}\n{Blue}(Runic Reprisal) When you use Shield Block against an adjacent attacker, this rune's invocation effects are detonated outward onto the attacker.{/Blue}";
                                         drawnRune.Traits.Add(ModData.Traits.Reprised);
                                     }
                                     

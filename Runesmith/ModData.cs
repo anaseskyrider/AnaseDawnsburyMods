@@ -126,6 +126,7 @@ public static class ModData
         public static readonly Illustration NoSymbol = new ModdedIllustration("RunesmithAssets/no symbol.png");
         public static readonly Illustration CheckSymbol = new ModdedIllustration("RunesmithAssets/check symbol.png");
         public static readonly Illustration DawnsburySun = new ModdedIllustration("RunesmithAssets/PatreonSunTransparent.png");
+        // TODO: Switch to singular modded illus reference now that it works consistently
         public static readonly string DawnsburySunPath = "RunesmithAssets/PatreonSunTransparent.png";
         #endregion
     }
