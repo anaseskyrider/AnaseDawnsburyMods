@@ -170,6 +170,8 @@ public static class ArchetypeMartialArtist
             FeatName.MountainStance, ModData.Traits.MartialArtistArchetype, 4);
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.WolfStance, ModData.Traits.MartialArtistArchetype, 4);
+        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.GorillaPound, ModData.Traits.MartialArtistArchetype, 8);
         
         // Stumbling Stance
         Feat stumblingStance = CreateMonkStance2(
@@ -547,77 +549,6 @@ public static class ArchetypeMartialArtist
                 "Dragon Stance");
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.DragonRoar, ModData.Traits.MartialArtistArchetype, 8);
-        
-        // Gorilla Pound
-        yield return new TrueFeat(
-                ModData.FeatNames.GorillaPound,
-                6,
-                "You pound your chest before slamming into your foes.",
-                "{b}Requirements{/b} You are in Gorilla Stance.\n\nAttempt an Intimidation check to Demoralize, then make one gorilla slam Strike against the same target. If your Strike hits, you gain a circumstance bonus to the damage roll equal to triple the value of the target's frightened condition." /*+"\n\n{b}Special{/b} While you are in Gorilla Stance, you gain a climb Speed of 15 feet."*/,
-                [ModData.Traits.MoreDedications, Trait.Emotion, Trait.Flourish, Trait.Mental, Trait.Monk])
-            .WithActionCost(1)
-            .WithPermanentQEffect(
-                "Demoralize a creature and gorilla slam them with bonus damage.",
-                qfFeat =>
-                {
-                    qfFeat.ProvideStrikeModifier = item =>
-                    {
-                        // Won't exist without the stance anyway
-                        /*if (qfFeat.Owner.FindQEffect(QEffectId.GorillaStance) == null)
-                            return null;*/
-                        if (item.Name != "gorilla slam")
-                            return null;
-
-                        StrikeModifiers strikeMods = new StrikeModifiers()
-                        {
-                            QEffectForStrike = new QEffect()
-                            {
-                                // Bonus damage to frightened target
-                                BonusToDamage = (qfThis, action, defender) =>
-                                {
-                                    if (action.Item is not { Name: "gorilla slam" })
-                                        return null;
-                                    
-                                    // Bonus might apply to interjected strikes?
-                                    int frightenedValue = defender.FindQEffect(QEffectId.Frightened)?.Value ?? 0;
-                                    return new Bonus(frightenedValue * 3, BonusType.Circumstance,
-                                        "gorilla pound" /*$"Frightened {frightenedValue} (gorilla pound)"*/);
-                                },
-                            }
-                        };
-                        
-                        CombatAction slamStrike = qfFeat.Owner.CreateStrike(item, strikeModifiers: strikeMods)
-                            .WithExtraTrait(Trait.Emotion)
-                            .WithExtraTrait(Trait.Flourish)
-                            .WithExtraTrait(Trait.Mental)
-                            .WithExtraTrait(Trait.Monk)
-                            .WithActionCost(1)
-                            // Demoralize before the strike
-                            .WithPrologueEffectOnChosenTargetsBeforeRolls(async (thisAction, caster, targets) =>
-                            {
-                                CombatAction demoralize = CommonCombatActions.Demoralize(caster).WithActionCost(0);
-                                if (targets.ChosenCreature != null)
-                                    await caster.Battle.GameLoop.FullCast(demoralize, ChosenTargets.CreateSingleTarget(targets.ChosenCreature));
-                            });
-                        slamStrike.Name = "Gorilla Pound";
-                        slamStrike.Description = StrikeRules.CreateBasicStrikeDescription4(
-                            strikeMods,
-                            prologueText: "Attempt an Intimidation check to Demoralize.",
-                            additionalSuccessText: "Add a circumstance bonus to damage equal to triple the target's frightened value.");
-                        slamStrike.Illustration =
-                            new SideBySideIllustration(IllustrationName.Demoralize, item.Illustration);
-
-                        return slamStrike;
-                    };
-                })
-            .WithPrerequisite(
-                FeatName.GorillaStance,
-                "Gorilla Stance")
-            .WithPrerequisite(
-                FeatName.ExpertIntimidation,
-                "Expert in Intimidation");
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.GorillaPound, ModData.Traits.MartialArtistArchetype, 8);
         
         // Grievous Blow
         yield return new TrueFeat(
