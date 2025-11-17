@@ -173,6 +173,8 @@ public static class ArchetypeMartialArtist
             FeatName.WolfStance, ModData.Traits.MartialArtistArchetype, 4);
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.GorillaPound, ModData.Traits.MartialArtistArchetype, 8);
+        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.WolfDrag, ModData.Traits.MartialArtistArchetype, 8);
         
         // Stumbling Stance
         Feat stumblingStance = CreateMonkStance2(
@@ -889,64 +891,6 @@ public static class ArchetypeMartialArtist
                 "Tiger Stance");
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.TigerSlash, ModData.Traits.MartialArtistArchetype, 8);
-        
-        // Wolf Drag
-        yield return new TrueFeat(
-                ModData.FeatNames.WolfDrag,
-                6,
-                "You rip your enemy off their feet.",
-                "Make a wolf jaw Strike. Your wolf jaw gains the fatal d12 trait for this Strike, and if the attack succeeds, you knock the target prone.",
-                [ModData.Traits.MoreDedications, Trait.Monk])
-            .WithActionCost(2)
-            .WithPermanentQEffect(
-                "Make a wolf jaw strike with the fatal d12 trait that knocks the target prone on a success.",
-                qfFeat =>
-                {
-                    qfFeat.ProvideStrikeModifier = (item) =>
-                    {
-                        if (item.Name != "wolf jaw")
-                            return null;
-
-                        StrikeModifiers newMods = new StrikeModifiers()
-                        {
-                            OnEachTarget = async (attacker, defender, result) =>
-                            {
-                                if (result > CheckResult.Failure)
-                                    defender.AddQEffect(QEffect.Prone());
-                            }
-                        };
-
-                        // Duplicating it is a null error for some god-forsaken reason.
-                        //Item wolfJaw = item.Duplicate();
-                        
-                        CombatAction strike = qfFeat.Owner.CreateStrike(item, strikeModifiers: newMods)
-                            .WithName("Wolf Drag")
-                            .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
-                                newMods,
-                                additionalSuccessText: "The target is knocked prone.",
-                                additionalCriticalSuccessText: "As success, and the attack gains the fatal d12 trait."))
-                            .WithActionCost(2)
-                            .WithExtraTrait(Trait.Basic)
-                            .WithExtraTrait(Trait.FatalD12)
-                            .WithPrologueEffectOnChosenTargetsBeforeRolls(async (action, self, targets) =>
-                            {
-                                action.Item!.Traits.Add(Trait.FatalD12);
-                            });
-                        strike.WithEffectOnChosenTargets(async (self, targets) =>
-                            {
-                                strike.Item!.Traits.Remove(Trait.FatalD12);
-                            });
-                        strike.Illustration = new SideBySideIllustration(
-                            item.Illustration, IllustrationName.DropProne);
-
-                        return strike;
-                    };
-                })
-            .WithPrerequisite(
-                FeatName.WolfStance,
-                "Wolf Stance");
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.WolfDrag, ModData.Traits.MartialArtistArchetype, 8);
     }
 
     public static IEnumerable<Feat> CreateBonusFeats()
