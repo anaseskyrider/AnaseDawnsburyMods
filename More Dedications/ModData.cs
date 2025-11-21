@@ -24,7 +24,6 @@ public static class ModData
 
     public static class ActionIds
     {
-        public static readonly ActionId CraneFlutter = ModManager.RegisterEnumMember<ActionId>("CraneFlutter");
         public static readonly ActionId DragonRoar = ModManager.RegisterEnumMember<ActionId>("DragonRoar");
         public static readonly ActionId TigerSlash = ModManager.RegisterEnumMember<ActionId>("TigerSlash");
     }
@@ -69,7 +68,6 @@ public static class ModData
         public static readonly FeatName TigerStance = ModManager.RegisterFeatName("TigerStance", "Tiger Stance");
         public static readonly FeatName FollowUpStrike = ModManager.RegisterFeatName(IdPrepend+"Archetype.MartialArtist.FollowUpStrike", "Follow-Up Strike");
         public static readonly FeatName ThunderClap = ModManager.RegisterFeatName(IdPrepend+"Archetype.MartialArtist.ThunderClap", "Thunder Clap");
-        public static readonly FeatName CraneFlutter = ModManager.RegisterFeatName("CraneFlutter", "Crane Flutter");
         public static readonly FeatName DragonRoar = ModManager.RegisterFeatName("DragonRoar", "Dragon Roar");
         public static readonly FeatName GrievousBlow = ModManager.RegisterFeatName("GrievousBlow", "Grievous Blow");
         public static readonly FeatName StumblingFeint = ModManager.RegisterFeatName("StumblingFeint", "Stumbling Feint");
@@ -151,7 +149,6 @@ public static class ModData
         public static readonly QEffectId PowderPunchStance = ModManager.RegisterEnumMember<QEffectId>("Powder Punch Stance");
         public static readonly QEffectId StumblingStance = ModManager.RegisterEnumMember<QEffectId>("Stumbling Stance");
         public static readonly QEffectId TigerStance = ModManager.RegisterEnumMember<QEffectId>("Tiger Stance");
-        public static readonly QEffectId DragonRoarImmunity = ModManager.RegisterEnumMember<QEffectId>("Dragon Roar Immunity");
         public static readonly QEffectId FlatFootedToStumblingFeint = ModManager.RegisterEnumMember<QEffectId>("FlatFootedToStumblingFeint");
         
         // Marshal

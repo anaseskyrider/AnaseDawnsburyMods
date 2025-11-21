@@ -172,9 +172,11 @@ public static class ArchetypeMartialArtist
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.WolfStance, ModData.Traits.MartialArtistArchetype, 4);
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            FeatName.GorillaPound, ModData.Traits.MartialArtistArchetype, 8);
+            FeatName.CraneFlutter, ModData.Traits.MartialArtistArchetype, 8);
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.WolfDrag, ModData.Traits.MartialArtistArchetype, 8);
+        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.GorillaPound, ModData.Traits.MartialArtistArchetype, 8);
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.MountainStronghold, ModData.Traits.MartialArtistArchetype, 8);
         
@@ -378,57 +380,6 @@ public static class ArchetypeMartialArtist
             .WithPrerequisite(
                 ModData.FeatNames.PowderPunchStance,
                 "Powder Punch Stance");
-
-        // Crane Flutter
-        yield return new TrueFeat(
-                ModData.FeatNames.CraneFlutter,
-                6,
-                "You interpose your arm between yourself and your opponent.",
-                "{b}Trigger{/b} You are targeted with a melee attack by an attacker you can see.\n{b}Requirements{/b} You are in Crane Stance\n\nYour circumstance bonus to AC from Crane Stance increases to +3 against the triggering attack. If the attack misses you, you can immediately make a crane wing Strike against the attacker at a –2 penalty and with the Reach trait for this attack.",
-                [ModData.Traits.MoreDedications, Trait.Monk])
-            .WithActionCost(-2)
-            .WithPermanentQEffect(
-                "Against a melee attack, you can increase your AC and make a crane wing attack if it misses.",
-                qfFeat =>
-                {
-                    qfFeat.YouAreTargeted = async (qfThis, provokingAction) =>
-                    {
-                        if (qfThis.Owner.FindQEffect(QEffectId.CraneStance) == null || !provokingAction.HasTrait(Trait.Melee) || !provokingAction.HasTrait(Trait.Attack) || provokingAction.Owner.DetectionStatus.UndetectedTo.Contains(qfThis.Owner) || provokingAction.Owner.DetectionStatus.HiddenTo.Contains(qfThis.Owner))
-                            return;
-
-                        Creature self = qfThis.Owner;
-                        
-                        if (await self.Battle.AskToUseReaction(self,
-                                "{b}Crane Flutter {icon:Reaction}{\b}\nYou are targeted with a melee attack.\nIncrease AC by 2, and if the attack misses, make a crane wing Strike at -2?"))
-                        {
-                            self.Battle.Log($"{self} uses {{b}}Crane Flutter{{/b}}.", "Crane Flutter {icon:Reaction}", "Your circumstance bonus to AC from Crane Stance increases to +3 against the triggering attack. If the attack misses you, you can immediately make a crane wing Strike against the attacker at a –2 penalty and with the Reach trait for this attack.");
-                            self.AddQEffect(new QEffect()
-                            {
-                                Tag = ModData.ActionIds.CraneFlutter,
-                                BonusToDefenses = (qfThis2, combatAction, def) => def == Defense.AC && combatAction == provokingAction ? new Bonus(
-                                3, BonusType.Circumstance, "Crane Flutter") : null,
-                                AfterYouAreTargeted = async (qfThis2, combatAction) =>
-                                {
-                                    if (combatAction.CheckResult < CheckResult.Success)
-                                    {
-                                        // Crane Stance compels your unarmeds, so this should be guaranteed to be Crane Wing Attack.
-                                        CombatAction wingAttack = self.CreateStrike(self.UnarmedStrike)
-                                            .WithExtraTrait(Trait.Reach)
-                                            .WithActionCost(0);
-                                        wingAttack.StrikeModifiers.AdditionalBonusesToAttackRoll ??= [];
-                                        wingAttack.StrikeModifiers.AdditionalBonusesToAttackRoll.Add(new Bonus(-2, BonusType.Untyped, "Crane Flutter"));
-                                        await self.Battle.GameLoop.FullCast(wingAttack, ChosenTargets.CreateSingleTarget(combatAction.Owner));
-                                    }
-                                },
-                            });
-                        }
-                    };
-                })
-            .WithPrerequisite(
-                FeatName.CraneStance,
-                "Crane Stance");
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.CraneFlutter, ModData.Traits.MartialArtistArchetype, 8);
         
         // Dragon Roar
         yield return new TrueFeat(
