@@ -261,7 +261,7 @@ public static class Ready
                         // For each enemy currently in my reach,
                         foreach (Creature cr in self.Battle.AllCreatures.Where(cr => !cr.FriendOf(self)))
                         {
-                            if (cr.DistanceToReach(self) > reach)
+                            if (cr.DistanceToWith10FeetException(self) > reach)
                             {
                                 provokeQueue.Remove(cr);
                                 continue;
@@ -277,7 +277,7 @@ public static class Ready
                             Tile previousTile = move.Path.Count > 1 && currentTileIndex > 0
                                 ? move.Path[currentTileIndex-1]
                                 : move.OriginalTile;
-                            if (previousTile.DistanceToReach(self.Occupies) <= reach)
+                            if (self.DistanceToWith10FeetException(previousTile) <= reach)
                                 continue;
                             
                             // and didn't just prompt on the same movement,
@@ -445,25 +445,5 @@ public static class Ready
                && !target.WeaknessAndResistance.Resistances.Any(wp => wp.DamageKind == weaponProperties.DamageKind)
                && !obj.HasTrait(Trait.Shield)
                && !attacker.HasTrait(Trait.Monk);
-    }
-
-    /// <summary>
-    /// Gets the distance to the target, treating the second diagonal as 10 feet instead of 15.
-    /// </summary>
-    public static int DistanceToReach(this Creature self, Creature target)
-    {
-        return self.Occupies.DistanceToReach(target.Occupies);
-    }
-
-    /// <summary>
-    /// Gets the distance to the target, treating the second diagonal as 10 feet instead of 15.
-    /// </summary>
-    public static int DistanceToReach(this Tile self, Tile target)
-    {
-        int distance = self.DistanceTo(target);
-        int reach = self.DistanceToReachSpecial(target);
-        return distance <= 3
-            ? reach
-            : distance;
     }
 }
