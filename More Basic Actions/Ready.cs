@@ -393,7 +393,7 @@ public static class Ready
             CheckResult checkResult = await attacker.MakeStrike(selectedStrike, target);
             if (!bestCheckResult.HasValue)
             {
-                bestCheckResult = new CheckResult?(checkResult);
+                bestCheckResult = checkResult;
             }
             else
             {
@@ -401,7 +401,7 @@ public static class Ready
                 CheckResult? nullable = bestCheckResult;
                 int valueOrDefault = (int) nullable.GetValueOrDefault();
                 if (num > valueOrDefault & nullable.HasValue)
-                    bestCheckResult = new CheckResult?(checkResult);
+                    bestCheckResult = checkResult;
             }
         }
       
@@ -413,7 +413,7 @@ public static class Ready
         CombatAction CreateReactiveAttackFromWeapon(Item weapon)
         {
             // Do not set any MAP value.
-            CombatAction attackFromWeapon = attacker.CreateStrike(weapon, attacksMade)
+            CombatAction attackFromWeapon = attacker.CreateStrike(weapon, attacksMade/*, 0*/)
                 .WithActionCost(0);
             //attackFromWeapon.Traits.Add(Trait.AttackOfOpportunity);
             //attackFromWeapon.Traits.Add(Trait.ReactiveAttack);
