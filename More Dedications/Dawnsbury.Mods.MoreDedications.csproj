@@ -10,6 +10,7 @@
     <WarningsAsErrors>0618</WarningsAsErrors>
     <DevelopersDawnsburyInstall>Z:\Steam Library\steamapps\common\Dawnsbury Days</DevelopersDawnsburyInstall>
     <WorkshopExport>[Workshop Files]\[Export]</WorkshopExport>
+    <AssetsFolder>MoreDedicationsAssets</AssetsFolder>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,18 +29,18 @@
   </ItemGroup>
   <Target Name="CopyToGameModsFolder" AfterTargets="Build">
     <ItemGroup>
-      <MoreDedicationsAssets Include="MoreDedicationsAssets\**\*.*"/>
+      <Assets Include="$(AssetsFolder)\**\*.*"/>
     </ItemGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods"/>
-    <Copy SourceFiles="@(MoreDedicationsAssets)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods\MoreDedicationsAssets\%(RecursiveDir)"/>
+    <Copy SourceFiles="@(Assets)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods\$(AssetsFolder)\%(RecursiveDir)"/>
   </Target>
   <Target Name="CopyToWorkshopUploadable" AfterTargets="Build">
     <ItemGroup>
-      <MoreDedicationsAssets Include="MoreDedicationsAssets\**\*.*"/>
+      <Assets Include="$(AssetsFolder)\**\*.*"/>
     </ItemGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopExport)\CustomModsV3"/>
     <Copy SourceFiles="OGL copyright notice.html" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
     <Copy SourceFiles="optional-dependencies.txt" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
-    <Copy SourceFiles="@(MoreDedicationsAssets)" DestinationFolder="$(WorkshopExport)\CustomModsV3\MoreDedicationsAssets\%(RecursiveDir)"/>
+    <Copy SourceFiles="@(MoreDedicationsAssets)" DestinationFolder="$(WorkshopExport)\CustomModsV3\$(AssetsFolder)\%(RecursiveDir)"/>
   </Target>
 </Project>
