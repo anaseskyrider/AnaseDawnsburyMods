@@ -43,6 +43,7 @@ public static class Reposition
 
     public static CombatAction CreateReposition(Creature owner)
     {
+        const string improvName = "[REPOSITION IMPROVEMENT]";
         return new CombatAction(
                 owner,
                 ModData.Illustrations.Reposition,
@@ -71,12 +72,42 @@ public static class Reposition
             .WithActionCost(1)
             .WithSoundEffect(SfxName.Shove)
             .WithActionId(ModData.ActionIds.Reposition)
-            .WithActiveRollSpecification(new ActiveRollSpecification(TaggedChecks.SkillCheck(Skill.Athletics),
+            .WithActiveRollSpecification(new ActiveRollSpecification(
+                TaggedChecks.SkillCheck(Skill.Athletics),
                 TaggedChecks.DefenseDC(Defense.Fortitude)))
-            .WithEffectOnEachTarget(async (_,caster, target, result) =>
+            .WithTargetingTooltip((action, target, index) =>
             {
-                if (target.FriendOf(caster))
-                    result.ImproveByOneStep();
+                QEffect? improve = null;
+                if (target.FriendOf(action.Owner))
+                {
+                    improve = new QEffect()
+                    {
+                        AdjustActiveRollCheckResult = (qfThis, action2, target2, result) =>
+                            action2 == action && target2 == target
+                                ? result.ImproveByOneStep()
+                                : result
+                    };
+                    action.Owner.AddQEffect(improve);
+                }
+                CheckBreakdown result = CombatActionExecution.BreakdownAttackForTooltip(action, target);
+                if (improve is not null)
+                    improve.ExpiresAt = ExpirationCondition.Immediately;
+                return result.TooltipDescription;
+            })
+            .WithPrologueEffectOnChosenTargetsBeforeRolls(async (action, self, targets) =>
+            {
+                if (targets.ChosenCreature?.FriendOf(action.Owner) ?? false)
+                    self.AddQEffect(new QEffect()
+                    {
+                        Name = improvName,
+                        AdjustActiveRollCheckResult = (qfThis, action2, target2, result) =>
+                            action2 == action && target2 == targets.ChosenCreature
+                                ? result.ImproveByOneStep()
+                                : result
+                    });
+            })
+            .WithEffectOnEachTarget(async (action, caster, target, result) =>
+            {
                 caster.FictitiousSingleTileMove(caster.Occupies); // Do not await, as it adds unnecessary delays.
                 switch (result)
                 {
@@ -87,9 +118,12 @@ public static class Reposition
                         await ExecuteRepositionLogic(caster, target, 1);
                         break;
                     case CheckResult.CriticalFailure:
-                        await ExecuteRepositionLogic(target, caster, 1, true);
+                        if (!target.FriendOf(caster))
+                            await ExecuteRepositionLogic(target, caster, 1, true);
                         break;
                 }
+
+                caster.RemoveAllQEffects(qf => qf.Name is improvName);
             });
     }
     
@@ -98,11 +132,17 @@ public static class Reposition
         int reach = GrappleTag.GetGrappleReach(attacker);
         List<Tile> tiles = attacker.Battle.Map.AllTiles
             .Where(tile =>
-                tile.IsTrulyGenuinelyFreeTo(defender)
+                !ReferenceEquals(defender.Space.TopLeftTile, tile)
+                && tile.IsTrulyGenuinelyFreeTo(defender)
                 && tile.DistanceTo(defender.Occupies) <= distance
-                && tile.DistanceToReachSpecial(attacker.Occupies) <= reach)
+                && attacker.DistanceToWith10FeetException(tile) <= reach)
             .ToList();
-        Tile? moveTo = null;
+        if (tiles.Count == 0)
+        {
+            attacker.Overhead("*no valid tiles*", Color.Red, "Reposition failed: No free spaces.");
+            return;
+        }
+        Tile? moveTo;
         if (randomTile)
             moveTo = tiles.GetRandomForAi();
         else
@@ -111,15 +151,17 @@ public static class Reposition
                 ModData.Illustrations.Reposition, //IllustrationName.GenericCombatManeuver,
                 "Choose where to relocate " + defender.Name + ".",
                 "",
-                false, false);
-        if (moveTo is not null)
-            await defender.MoveTo(moveTo, null,
-                new MovementStyle()
-                {
-                    ForcedMovement = true,
-                    Shifting = true,
-                    ShortestPath = true,
-                    MaximumSquares = 100,
-                });
+                false, true, defender,
+                "Don\'t reposition");
+        if (moveTo is null)
+            return;
+        await defender.MoveTo(moveTo, null,
+            new MovementStyle()
+            {
+                ForcedMovement = true,
+                Shifting = true,
+                ShortestPath = true,
+                MaximumSquares = 100,
+            });
     }
 }
