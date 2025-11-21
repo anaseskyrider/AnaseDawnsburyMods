@@ -24,7 +24,6 @@ public static class ModData
 
     public static class ActionIds
     {
-        public static readonly ActionId DragonRoar = ModManager.RegisterEnumMember<ActionId>("DragonRoar");
         public static readonly ActionId TigerSlash = ModManager.RegisterEnumMember<ActionId>("TigerSlash");
     }
 
@@ -68,7 +67,6 @@ public static class ModData
         public static readonly FeatName TigerStance = ModManager.RegisterFeatName("TigerStance", "Tiger Stance");
         public static readonly FeatName FollowUpStrike = ModManager.RegisterFeatName(IdPrepend+"Archetype.MartialArtist.FollowUpStrike", "Follow-Up Strike");
         public static readonly FeatName ThunderClap = ModManager.RegisterFeatName(IdPrepend+"Archetype.MartialArtist.ThunderClap", "Thunder Clap");
-        public static readonly FeatName DragonRoar = ModManager.RegisterFeatName("DragonRoar", "Dragon Roar");
         public static readonly FeatName GrievousBlow = ModManager.RegisterFeatName("GrievousBlow", "Grievous Blow");
         public static readonly FeatName StumblingFeint = ModManager.RegisterFeatName("StumblingFeint", "Stumbling Feint");
         public static readonly FeatName TigerSlash = ModManager.RegisterFeatName("TigerSlash", "Tiger Slash");

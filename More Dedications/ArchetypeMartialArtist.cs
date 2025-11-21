@@ -174,11 +174,13 @@ public static class ArchetypeMartialArtist
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.CraneFlutter, ModData.Traits.MartialArtistArchetype, 8);
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            FeatName.WolfDrag, ModData.Traits.MartialArtistArchetype, 8);
+            FeatName.DragonRoar, ModData.Traits.MartialArtistArchetype, 8);
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.GorillaPound, ModData.Traits.MartialArtistArchetype, 8);
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.MountainStronghold, ModData.Traits.MartialArtistArchetype, 8);
+        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.WolfDrag, ModData.Traits.MartialArtistArchetype, 8);
         
         // Stumbling Stance
         Feat stumblingStance = CreateMonkStance2(
@@ -380,131 +382,6 @@ public static class ArchetypeMartialArtist
             .WithPrerequisite(
                 ModData.FeatNames.PowderPunchStance,
                 "Powder Punch Stance");
-        
-        // Dragon Roar
-        yield return new TrueFeat(
-                ModData.FeatNames.DragonRoar,
-                6,
-                "You bellow, instilling fear in your enemies.",
-                "{b}Requirements{/b} You are in Dragon Stance.\n\nEnemies within a 15-foot emanation must succeed at a Will save against your Intimidation DC or be frightened 1 (frightened 2 on a critical failure). When a creature frightened by the roar begins its turn adjacent to you, it can’t reduce its frightened value below 1 on that turn.\n\nYour first attack that hits a frightened creature after you roar and before the end of your next turn gains a +4 circumstance bonus to damage.\n\nAfter you use Dragon Roar, you can't use it again for 1d4 rounds. Its effects end immediately if you leave Dragon Stance. Creatures in the area of your roar are then temporarily immune for 1 minute.",
-                [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Emotion, Trait.Fear, Trait.Mental, Trait.Monk])
-            .WithActionCost(1)
-            .WithPermanentQEffect(
-                "Frighten enemies in a 15-foot emanation (Will save), and do bonus damage to your next attack against a frightened enemy.",
-                qfFeat =>
-                {
-                    qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
-                    {
-                        if (section.PossibilitySectionId != PossibilitySectionId.MainActions)
-                            return null;
-
-                        if (qfThis.Owner.FindQEffect(QEffectId.DragonStance) == null)
-                            return null;
-
-                        const string roarActionName = "Dragon Roar";
-                        const IllustrationName roarIcon = IllustrationName.Fear;
-                        
-                        CombatAction roarAction = new CombatAction(
-                                qfThis.Owner,
-                                roarIcon,
-                                roarActionName,
-                                [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Emotion, Trait.Fear, Trait.Mental, Trait.Monk],
-                                "{/i}You bellow, instilling fear in your enemies.{/i}\n\n"+
-                                "{b}Requirements{/b} You are in Dragon Stance.\n\nEnemies within a 15-foot emanation must succeed at a Will save against your Intimidation DC or be frightened 1 (frightened 2 on a critical failure). When a creature frightened by the roar begins its turn adjacent to you, it can't reduce its frightened value below 1 on that turn.\n\nYour first attack that hits a frightened creature after you roar and before the end of your next turn gains a +4 circumstance bonus to damage.\n\nAfter you use Dragon Roar, you can't use it again for 1d4 rounds. Its effects end immediately if you leave Dragon Stance. Creatures in the area of your roar are then temporarily immune for 1 minute.",
-                                Target.SelfExcludingEmanation(3)
-                                    .WithIncludeOnlyIf((target, cr) =>
-                                    {
-                                        bool isEnemy = cr.EnemyOf(qfThis.Owner);
-                                        bool isImmune = cr.QEffects.Any(qf =>
-                                            qf is { Id: QEffectId.ImmunityToTargeting, Tag: ActionId id, Source: { } src } &&
-                                            id == ModData.ActionIds.DragonRoar && src == qfThis.Owner);
-                                        return isEnemy && !isImmune;
-                                    }))
-                            .WithActionId(ModData.ActionIds.DragonRoar)
-                            .WithActionCost(1)
-                            .WithSoundEffect(SfxName.Fear)
-                            .WithProjectileCone(VfxStyle.BasicProjectileCone(roarIcon))
-                            .WithSavingThrow(new SavingThrow(Defense.Will, qfThis.Owner.Skills.Get(Skill.Intimidation)+10))
-                            .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
-                            {
-                                int value = result < CheckResult.Success
-                                    ? result == CheckResult.CriticalFailure ? 2 : 1
-                                    : 0;
-                                if (value > 0)
-                                {
-                                    QEffect specialFrightened = QEffect.Frightened(value);
-                                    specialFrightened.Description += $"\n\n{{Blue}}Dragon Roar: Beginning your turn adjacent to {caster.Name} prevents this frightened from being removed that turn.{{/Blue}}";
-                                    specialFrightened.StartOfYourPrimaryTurn = async (qfThis2, creature) =>
-                                    {
-                                        if (qfThis2.Owner.IsAdjacentTo(caster))
-                                            qfThis2.Owner.AddQEffect(new QEffect(
-                                                    "Frightened Won't Expire",
-                                                    "Frightened from Dragon Roar won't expire this turn.",
-                                                    ExpirationCondition.ExpiresAtEndOfYourTurn, // Decrements occur first; this holds until after Frightened is checked.
-                                                    caster,
-                                                    IllustrationName.DirgeOfDoom)
-                                            {
-                                                Id = QEffectId.DirgeOfDoomFrightenedSustainer,
-                                            });
-                                    };
-                                    specialFrightened.Tag = roarActionName; // Used to remove fear early if stance ends.
-                                    specialFrightened.Source = caster;
-                                    target.AddQEffect(specialFrightened);
-                                }
-
-                                QEffect roarImmunity = QEffect.ImmunityToTargeting(ModData.ActionIds.DragonRoar, caster);
-                                roarImmunity.Illustration = thisAction.Illustration;
-                                roarImmunity.Key = caster.Name+ModData.QEffectIds.DragonRoarImmunity;
-                                roarImmunity.DoNotShowUpOverhead = true;
-                                target.AddQEffect(roarImmunity);
-                            })
-                            .WithEffectOnChosenTargets(async (attacker, defender) =>
-                            {
-                                attacker.AddQEffect(QEffect.Recharging(roarActionName));
-                                attacker.AddQEffect(
-                                    new QEffect(
-                                        "Dragon Roar Benefits",
-                                        "Your first attack that hits a frightened creature before the end of your next turn gains a +4 circumstance bonus to damage.", 
-                                        ExpirationCondition.ExpiresAtEndOfYourTurn,
-                                        attacker,
-                                        roarIcon)
-                                    {
-                                        Tag = roarActionName, // Used to remove benefits early if stance ends.
-                                        CannotExpireThisTurn = true,
-                                        DoNotShowUpOverhead = true,
-                                        BonusToDamage = (qfThis2, action, defender2) =>
-                                        {
-                                            if (defender2.HasEffect(QEffectId.Frightened) && action.HasTrait(Trait.Attack))
-                                            {
-                                                qfThis2.ExpiresAt = ExpirationCondition.EphemeralAtEndOfImmediateAction;
-                                                return new Bonus(4, BonusType.Circumstance, "Dragon roar benefits");
-                                            }
-                                            return null;
-                                        },
-                                    });
-                            });
-
-                        return new ActionPossibility(roarAction);
-                    };
-                    qfFeat.StateCheck = qfThis =>
-                    {
-                        if (qfThis.Owner.FindQEffect(QEffectId.DragonStance) != null)
-                            return;
-                        bool removedAny = false;
-                        foreach (Creature cr in qfThis.Owner.Battle.AllCreatures)
-                        {
-                            if (cr.RemoveAllQEffects(qf => qf.Tag is "Dragon Roar" && qf.Source == qfThis.Owner) > 0)
-                                removedAny = true;
-                        }
-                        if (removedAny)
-                            qfThis.Owner.Battle.Log($"{qfThis.Owner.Name}'s dragon roar effects removed due to stance ending.");
-                    };
-                })
-            .WithPrerequisite(
-                FeatName.DragonStance,
-                "Dragon Stance");
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.DragonRoar, ModData.Traits.MartialArtistArchetype, 8);
         
         // Grievous Blow
         yield return new TrueFeat(
