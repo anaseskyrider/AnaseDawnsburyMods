@@ -72,7 +72,6 @@ public static class ModData
         public static readonly FeatName CraneFlutter = ModManager.RegisterFeatName("CraneFlutter", "Crane Flutter");
         public static readonly FeatName DragonRoar = ModManager.RegisterFeatName("DragonRoar", "Dragon Roar");
         public static readonly FeatName GrievousBlow = ModManager.RegisterFeatName("GrievousBlow", "Grievous Blow");
-        public static readonly FeatName MountainStronghold = ModManager.RegisterFeatName("MountainStronghold", "Mountain Stronghold");
         public static readonly FeatName StumblingFeint = ModManager.RegisterFeatName("StumblingFeint", "Stumbling Feint");
         public static readonly FeatName TigerSlash = ModManager.RegisterFeatName("TigerSlash", "Tiger Slash");
         #endregion
@@ -153,7 +152,6 @@ public static class ModData
         public static readonly QEffectId StumblingStance = ModManager.RegisterEnumMember<QEffectId>("Stumbling Stance");
         public static readonly QEffectId TigerStance = ModManager.RegisterEnumMember<QEffectId>("Tiger Stance");
         public static readonly QEffectId DragonRoarImmunity = ModManager.RegisterEnumMember<QEffectId>("Dragon Roar Immunity");
-        public static readonly QEffectId MountainStronghold = ModManager.RegisterEnumMember<QEffectId>("Mountain Stronghold");
         public static readonly QEffectId FlatFootedToStumblingFeint = ModManager.RegisterEnumMember<QEffectId>("FlatFootedToStumblingFeint");
         
         // Marshal

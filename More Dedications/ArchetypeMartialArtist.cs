@@ -175,6 +175,8 @@ public static class ArchetypeMartialArtist
             FeatName.GorillaPound, ModData.Traits.MartialArtistArchetype, 8);
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.WolfDrag, ModData.Traits.MartialArtistArchetype, 8);
+        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.MountainStronghold, ModData.Traits.MartialArtistArchetype, 8);
         
         // Stumbling Stance
         Feat stumblingStance = CreateMonkStance2(
@@ -646,67 +648,6 @@ public static class ArchetypeMartialArtist
                     };
                 })
             .WithAvailableAsArchetypeFeat(ModData.Traits.MartialArtistArchetype);
-        
-        // Mountain Stronghold
-        yield return new TrueFeat(
-                ModData.FeatNames.MountainStronghold,
-                6,
-                "You focus on your connection to the earth and call upon the mountain to block attacks against you.",
-                "{b}Requirements{/b} You are in Mountain Stance.\n\nYou gain a +2 circumstance bonus to AC until the beginning of your next turn." +
-                "\n\n{b}Special{/b} If you have this feat, you can add up to +1 to your AC from your Dexterity modifier instead of none.",
-                [ModData.Traits.MoreDedications, Trait.Monk])
-            .WithActionCost(1)
-            .WithPermanentQEffect(
-                "While in Mountain Stance, gain a +2 circumstance bonus to AC until next turn.",
-                qfFeat =>
-                {
-                    qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
-                    {
-                        if (section.PossibilitySectionId != PossibilitySectionId.MainActions)
-                            return null;
-
-                        if (qfThis.Owner.FindQEffect(QEffectId.MountainStance) == null)
-                            return null;
-
-                        if (qfThis.Owner.FindQEffect(ModData.QEffectIds.MountainStronghold) != null)
-                            return null;
-
-                        CombatAction strongholdAction = new CombatAction(
-                                qfThis.Owner,
-                                new SideBySideIllustration(IllustrationName.FallingStoneRock, IllustrationName.AncestralDefense),
-                                "Mountain Stronghold",
-                                [ModData.Traits.MoreDedications, Trait.Monk],
-                                "{i}You focus on your connection to the earth and call upon the mountain to block attacks against you.{/i}\n\n" +
-                                "{b}Requirements{/b} You are in Mountain Stance.\n\nYou gain a +2 circumstance bonus to AC until the beginning of your next turn.",
-                                Target.Self())
-                            .WithActionCost(1)
-                            .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
-                            {
-                                QEffect strongholdBonus = new QEffect("Mountain Stronghold", "You have a +2 circumstance bonus to AC.", ExpirationCondition.ExpiresAtStartOfYourTurn, caster, thisAction.Illustration)
-                                {
-                                    Id = ModData.QEffectIds.MountainStronghold,
-                                    BonusToDefenses = (qfThis2, action, def) => def == Defense.AC ? new Bonus(2, BonusType.Circumstance, "Mountain stronghold") : null
-                                };
-                                caster.AddQEffect(strongholdBonus);
-                            });
-
-                        return new ActionPossibility(strongholdAction);
-                    };
-                    qfFeat.AfterYouAcquireEffect = async (qfThis, qfAcquired) =>
-                    {
-                        if (qfAcquired.Id != QEffectId.MountainStance)
-                            return;
-                        
-                        qfAcquired.LimitsDexterityBonusToAC = 1;
-                        qfAcquired.Description = qfAcquired.Description?.Replace("but don't add your Dexterity to AC", "{Blue}with a +1 Dexterity modifier cap{/Blue}");
-                        qfThis.Owner.RecalculateArmor();
-                    };
-                })
-            .WithPrerequisite(
-                FeatName.MountainStance,
-                "Mountain Stance");
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.MountainStronghold, ModData.Traits.MartialArtistArchetype, 8);
         
         // Stumbling Feint
         // PETR: If levels extend beyond 8, account for dedication FoB. For now, class-check is sufficient.
