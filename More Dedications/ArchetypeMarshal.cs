@@ -12,7 +12,9 @@ using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Text;
@@ -455,10 +457,20 @@ public static class ArchetypeMarshal
                                 [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Flourish, Trait.Basic],
                                 "{i}With a resounding cry, you rally your ally to the offensive.{/i}\n\nChoose one ally within your marshal's aura who has a reaction available. If you spend 1 action, that ally can use their reaction to immediately Stride. If you spend 2 actions, that ally can use their reaction to immediately Strike.",
                                 Target.DependsOnActionsSpent(
-                                    Target.RangedFriend(GetMarshalAuraRange(qfThis.Owner))
-                                        .WithAdditionalConditionOnTargetCreature(IsInMarshalAura),
-                                    Target.RangedFriend(GetMarshalAuraRange(qfThis.Owner))
-                                        .WithAdditionalConditionOnTargetCreature(IsInMarshalAura),
+                                    BasicTargeting()
+                                        .WithAdditionalConditionOnTargetCreature((_,d) =>
+                                            d.HasEffect(QEffectId.Immobilized)
+                                                ? Usability.NotUsableOnThisCreature("immobilized")
+                                                : Usability.Usable),
+                                    BasicTargeting()
+                                        .WithAdditionalConditionOnTargetCreature((a,d) =>
+                                        {
+                                            if (d.HasEffect(QEffectId.Restrained))
+                                                return Usability.NotUsableOnThisCreature("restrained");
+                                            if (d.HasEffect(QEffectId.CalmEmotions))
+                                                return Usability.NotUsableOnThisCreature("calm");
+                                            return Usability.Usable;
+                                        }),
                                     null!))
                             .WithActionCost(-3)
                             .WithSoundEffect(qfThis.Owner.HasTrait(Trait.Female)
@@ -508,6 +520,22 @@ public static class ArchetypeMarshal
                         Possibility battlePossibility = Possibilities.CreateSpellPossibility(toBattleAction);
                         battlePossibility.PossibilitySize = PossibilitySize.Full;
                         return battlePossibility;
+
+                        CreatureTarget BasicTargeting()
+                        {
+                            return Target.RangedFriend(GetMarshalAuraRange(qfThis.Owner))
+                                .WithAdditionalConditionOnTargetCreature(IsInMarshalAura)
+                                .WithAdditionalConditionOnTargetCreature((a, d) =>
+                                {
+                                    if (a == d)
+                                        return Usability.NotUsableOnThisCreature("not ally");
+                                    if (!d.Actions.CanTakeReaction())
+                                        return Usability.NotUsableOnThisCreature("no reaction");
+                                    if (!d.Actions.CanTakeActions())
+                                        return Usability.NotUsableOnThisCreature("can't take actions");
+                                    return Usability.Usable;
+                                });
+                        }
                     };
                 });
     }
