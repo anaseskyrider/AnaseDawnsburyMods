@@ -49,26 +49,29 @@ public static class Reposition
                 ModData.Illustrations.Reposition,
                 "Reposition",
                 [Trait.Basic, ModData.Traits.MoreBasicActions, Trait.Attack, Trait.AttackDoesNotTargetAC],
-                "{i}You forcefully relocate a creature.{/i}\n\n{b}Requirements{/b} You have a free hand, are holding the target, or have a grapple weapon.\n\nMake an Athletics check against the target's Fortitude DC."
+                "{i}You forcefully relocate a creature.{/i}\n\n{b}Requirements{/b} You have a free hand, are holding the target or have a grapple weapon, and the target isn't more than one size larger than you.\n\nMake an Athletics check against the target's Fortitude DC."
                 + S.FourDegreesOfSuccess("You move the creature up to 10 feet along any unobstructed path within your reach.",
                 "As critical success, but you move the creature 5 feet.",
                 null,
                 "The target Repositions you to a random square instead, as if a success.")
                 + "\n\n{b}Special{/b} You automatically get one degree of success better when targeting an ally with Reposition.",
                 new CreatureTarget( // Custom target that will let you target allies
-                        RangeKind.Melee, 
-                        [
-                            MeleeReachCreatureTargetingRequirement.WithWeaponOfTrait(Trait.Grapple)
-                        ],
-                        (_, _, _) => int.MinValue)
-                    .WithAdditionalConditionOnTargetCreature((a, _) =>
-                        !a.HasFreeHand && !a.WieldsItem(Trait.Grapple)
-                            ? Usability.CommonReasons.NoFreeHandForManeuver
-                            : Usability.Usable)
-                    .WithAdditionalConditionOnTargetCreature((_,d) =>
-                        d.WeaknessAndResistance.ImmunityToForcedMovement
-                            ? Usability.NotUsableOnThisCreature("immune to forced movement")
-                            : Usability.Usable))
+                    RangeKind.Melee, 
+                    [
+                        MeleeReachCreatureTargetingRequirement.WithWeaponOfTrait(Trait.Grapple),
+                        new TargetMustNotBeTwoSizesAboveYouCreatureTargetingRequirement(),
+                        new LegacyCreatureTargetingRequirement((a, d) =>
+                        {
+                            if (a == d) // Cannot be self
+                                return Usability.NotUsableOnThisCreature("self");
+                            if (!a.HasFreeHand && !a.WieldsItem(Trait.Grapple)) // Need a free hand or a grapple weapon
+                                return Usability.CommonReasons.NoFreeHandForManeuver;
+                            if (d.WeaknessAndResistance.ImmunityToForcedMovement) // Mustn't be immune
+                                return Usability.NotUsableOnThisCreature("immune to forced movement");
+                            return Usability.Usable;
+                        })
+                    ],
+                    (_, _, _) => int.MinValue))
             .WithActionCost(1)
             .WithSoundEffect(SfxName.Shove)
             .WithActionId(ModData.ActionIds.Reposition)
