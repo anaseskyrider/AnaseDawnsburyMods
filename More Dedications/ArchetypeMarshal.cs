@@ -430,10 +430,58 @@ public static class ArchetypeMarshal
             .WithEquivalent(values => values.HasFeat(FeatName.Fighter));
 
         // Back to Back @lv8
-        // Can this even be implemented?
-        
-        // "You excel at watching your allies' backs and helping them watch yours."
-        // "As long as you aren't flanked at the same time as any of your adjacent allies, you and all allies adjacent to you gain the benefits of All-Around Vision."
+        // Special thanks to SilchasRuin
+        yield return new TrueFeat(
+                ModData.FeatNames.BackToBack,
+                8,
+                "You excel at watching your allies' backs and helping them watch yours.",
+                "You gain the following benefit: You cannot be flat-footed due to flanking while none of your adjacent allies are flanked.\n\nYour adjacent allies gain the following benefit: You cannot be flat-footed due to flanking while the marshal with this feat isn't flanked.",
+                [ModData.Traits.MoreDedications])
+            .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
+            .WithPermanentQEffect(
+                "You and your adjacent allies can't be flanked unless both you and another adjacent ally are flanked.",
+                qfFeat =>
+                {
+                    Creature marshal = qfFeat.Owner;
+                    qfFeat.AddGrantingOfTechnical(
+                        cr =>
+                            (cr.IsAdjacentTo(marshal) && cr.FriendOf(marshal)) || cr == marshal,
+                        qfTech =>
+                        {
+                            qfTech.StateCheck = qfTech2 =>
+                            {
+                                List<Creature> adjacentFriends = marshal.Battle.AllCreatures
+                                    .Where(cr =>
+                                        cr.FriendOf(marshal) && cr.IsAdjacentTo(marshal))
+                                    .ToList();
+                                
+                                if (adjacentFriends.Count == 0)
+                                    return;
+                                
+                                // If marshal is flanked and any ally is flanked,
+                                if (IsFlankedByAnyEnemy(marshal)
+                                    && adjacentFriends.Any(IsFlankedByAnyEnemy))
+                                    return; // no benefits.
+                                
+                                qfTech2.Owner.AddQEffect(new QEffect(
+                                    "Back to Back",
+                                    "You cannot be flat-footed due to flanking.",
+                                    ExpirationCondition.Ephemeral,
+                                    marshal,
+                                    IllustrationName.MirrorImage)
+                                {
+                                    Id = QEffectId.AllAroundVision
+                                });
+                            };
+                        });
+                    
+                    return;
+
+                    bool IsFlankedByAnyEnemy(Creature cr)
+                    {
+                        return cr.HasEffect(QEffectId.FlankedBy); // Source is always an enemy
+                    }
+                });
 
         // To Battle!
         yield return new TrueFeat(
