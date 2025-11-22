@@ -77,6 +77,7 @@ public static class ModData
         public static readonly FeatName InspiringMarshalStance = ModManager.RegisterFeatName(IdPrepend+"Archetype.Marshal.InspiringMarshalStance", "Inspiring Marshal Stance");
         public static readonly FeatName SteelYourself = ModManager.RegisterFeatName(IdPrepend+"Archetype.Marshal.SteelYourself", "Steel Yourself!");
         public static readonly FeatName RallyingCharge = ModManager.RegisterFeatName(IdPrepend+"Archetype.Marshal.RallyingCharge", "Rallying Charge");
+        public static readonly FeatName BackToBack = ModManager.RegisterFeatName(IdPrepend+"Archetype.Marshal.BackToBack", "Back to Back");
         public static readonly FeatName ToBattle = ModManager.RegisterFeatName(IdPrepend+"Archetype.Marshal.ToBattle", "To Battle!");
         #endregion
         
