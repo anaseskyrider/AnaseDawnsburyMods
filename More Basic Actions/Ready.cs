@@ -166,9 +166,12 @@ public static class Ready
                         
                         List<Creature> provokeQueue = (qfThis.Tag as List<Creature>)!;
 
-                        foreach (Creature cr in self.Battle.AllCreatures.Where(cr => !cr.FriendOf(self)))
+                        foreach (Creature cr in self.Battle.AllCreatures
+                                     .Where(cr => !cr.FriendOf(self)))
                         {
-                            if (cr.IsFlatfootedToBecause(self, null) == null && !FlankingRules.IsFlanking(self, cr))
+                             if (cr.IsFlatfootedToBecause(self, null) == null
+                                && !cr.QEffects.Any(qf =>
+                                    qf.Id == QEffectId.FlankedBy && qf.Source == self))
                             {
                                 provokeQueue.Remove(cr);
                                 continue;
@@ -190,7 +193,11 @@ public static class Ready
                         }
                     },
                     Tag = caster.Battle.AllCreatures
-                        .Where(cr => cr.IsFlatfootedToBecause(caster, null) == null && !FlankingRules.IsFlanking(caster, cr))
+                        .Where(cr =>
+                            !cr.FriendOf(caster)
+                            && cr.IsFlatfootedToBecause(caster, null) == null
+                            && !cr.QEffects.Any(qf =>
+                                qf.Id == QEffectId.FlankedBy && qf.Source == caster))
                         .ToList(), // Creatures who've been made off-guard since last reaction-prompt
                 };
                 caster.AddQEffect(readiedSeize);
