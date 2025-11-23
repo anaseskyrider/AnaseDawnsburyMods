@@ -9,7 +9,8 @@
         <NoWarn>1998;NETSDK1206;NU1901;NU1902;NU1903;NU1904</NoWarn>
         <WarningsAsErrors>0618</WarningsAsErrors>
         <DevelopersDawnsburyInstall>Z:\Steam Library\steamapps\common\Dawnsbury Days</DevelopersDawnsburyInstall>
-        <WorkshopExport>..\[Exports]\More Basic Actions</WorkshopExport>
+        <WorkshopExport>[Workshop Files]\[Export]</WorkshopExport>
+        <AssetsFolder>MoreBasicActionsAssets</AssetsFolder>
         <RootNamespace>Dawnsbury.Mods.MoreBasicActions</RootNamespace>
     </PropertyGroup>
 
@@ -26,17 +27,17 @@
     </ItemGroup>
     <Target Name="CopyToGameModsFolder" AfterTargets="Build">
         <ItemGroup>
-            <MoreBasicActionsAssets Include="MoreBasicActionsAssets\**\*.*"/>
+            <Assets Include="$(AssetsFolder)\**\*.*"/>
         </ItemGroup>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods"/>
-        <Copy SourceFiles="@(MoreBasicActionsAssets)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods\MoreBasicActionsAssets\%(RecursiveDir)"/>
+        <Copy SourceFiles="@(Assets)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods\$(AssetsFolder)\%(RecursiveDir)"/>
     </Target>
     <Target Name="CopyToWorkshopUploadable" AfterTargets="Build">
         <ItemGroup>
-            <MoreBasicActionsAssets Include="MoreBasicActionsAssets\**\*.*"/>
+            <Assets Include="$(AssetsFolder)\**\*.*"/>
         </ItemGroup>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopExport)\CustomModsV3"/>
         <Copy SourceFiles="OGL copyright notice.html" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
-        <Copy SourceFiles="@(MoreBasicActionsAssets)" DestinationFolder="$(WorkshopExport)\CustomModsV3\MoreBasicActionsAssets\%(RecursiveDir)"/>
+        <Copy SourceFiles="@(Assets)" DestinationFolder="$(WorkshopExport)\CustomModsV3\$(AssetsFolder)\%(RecursiveDir)"/>
     </Target>
 </Project>

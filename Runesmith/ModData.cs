@@ -17,7 +17,8 @@ public static class ModData
     
     public static void LoadData()
     {
-        
+        // Runs the initializer, registering the option.
+        BooleanOptions.UnrestrictedTrace = BooleanOptions.UnrestrictedTrace;
     }
 
     public static class ActionIds
@@ -33,7 +34,7 @@ public static class ModData
     public static class BooleanOptions
     {
         //public const string HideRuneDialogs = "RunesmithPlaytest.HideRuneDialogs"; // Unused, but kept just in case.
-        public static readonly string UnrestrictedTrace = RegisterBooleanOption(
+        public static string UnrestrictedTrace = RegisterBooleanOption(
             IdPrepend+"UnrestrictedTrace",
             "Runesmith: Less Restrictive Rune Tracing",
             "Enabling this option removes protections against \"bad decisions\" with tracing certain runes on certain targets.\n\nThe Runesmith is a class on the more advanced end of tactics and creativity. For example, you might want to trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy. Or you might trace Atryl on yourself as a 3rd action so that you can move it with Transpose Etching (just 1 action) on your next turn, because you're a ranged build.\n\nThis option is for those players.",
