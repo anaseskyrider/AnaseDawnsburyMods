@@ -1,6 +1,7 @@
 using Dawnsbury.Audio;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Possibilities;
@@ -50,6 +51,18 @@ public static class ModData
         {
             ModManager.RegisterBooleanSettingsOption(technicalName, caption, longDescription, defaultValue);
             return technicalName;
+        }
+    }
+    
+    public static class CommonRequirements
+    {
+        public static Usability IsRunesmithHandFree(Creature runesmith)
+        {
+            return runesmith.HasFreeHand
+                   || runesmith.HeldItems.Any(item => item.HasTrait(ModData.Traits.CountsAsRunesmithFreeHand))
+                   || runesmith.HasEffect(ModData.QEffectIds.RuneSinger)
+                ? Usability.Usable
+                : Usability.NotUsable("You must have a free hand to trace a rune");
         }
     }
         

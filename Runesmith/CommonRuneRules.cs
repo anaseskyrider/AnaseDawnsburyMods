@@ -242,10 +242,8 @@ public static class CommonRuneRules
             if (tar is not CreatureTarget crTar)
                 continue;
             crTar.WithAdditionalConditionOnTargetCreature( // Free hand
-                (attacker, defender) =>
-                    RunesmithClass.IsRunesmithHandFree(attacker)
-                        ? Usability.Usable
-                        : Usability.NotUsable("You must have a free hand to trace a rune"));
+                (a, _) =>
+                    ModData.CommonRequirements.IsRunesmithHandFree(a));
             crTar.WithAdditionalConditionOnTargetCreature(rune.UsageCondition);
         }
         
@@ -269,7 +267,7 @@ public static class CommonRuneRules
                     1 => adjacentTarget,
                     -3 => varyTarget,
                     _ => Target.Self().WithAdditionalRestriction(self =>
-                        RunesmithClass.IsRunesmithHandFree(self) ? null : "You must have a free hand to trace a rune")
+                        ModData.CommonRequirements.IsRunesmithHandFree(self).UnusableReason)
                 })
             .WithTag(rune) // Type is Rune before execution, then DrawnRune after execution.
             .WithActionCost(actions)
