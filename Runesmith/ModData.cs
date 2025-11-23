@@ -56,6 +56,7 @@ public static class ModData
     
     public static class CommonRequirements
     {
+        /// <summary>Returns whether the Creature has a hand free for the purposes of tracing runes.</summary>
         public static Usability IsRunesmithHandFree(Creature runesmith)
         {
             return runesmith.HasFreeHand

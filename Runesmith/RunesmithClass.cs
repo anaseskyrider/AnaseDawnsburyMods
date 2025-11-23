@@ -788,14 +788,6 @@ public static class RunesmithClass
         }
     }
 
-    /// <summary>Returns whether the Creature has a hand free for the purposes of tracing runes.</summary>
-    public static bool IsRunesmithHandFree(Creature runesmith)
-    {
-        return runesmith.HasFreeHand
-               || runesmith.HeldItems.Any(item => item.HasTrait(ModData.Traits.CountsAsRunesmithFreeHand))
-               || runesmith.HasEffect(ModData.QEffectIds.RuneSinger);
-    }
-
     /// <summary>
     /// Asynchronously gets a user selected tile that is closer to an enemy
     /// </summary>
