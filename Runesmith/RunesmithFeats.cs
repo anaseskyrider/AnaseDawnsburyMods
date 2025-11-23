@@ -141,10 +141,10 @@ public static class RunesmithFeats
                             additionalSuccessText:"Trace a Rune onto the target.",
                             additionalCriticalSuccessText:"Trace a Rune onto the target.");
                         (engravingStrike.Target as CreatureTarget)!
-                            .WithAdditionalConditionOnTargetCreature( (attacker, defender) => 
+                            .WithAdditionalConditionOnTargetCreature( (a, _) => 
                                 qfFeat.UsedThisTurn ? Usability.NotUsable("Already used this round") : Usability.Usable)
-                            .WithAdditionalConditionOnTargetCreature( (attacker, defender) => 
-                                RunesmithClass.IsRunesmithHandFree(attacker) ? Usability.Usable : Usability.NotUsable("You must have a free hand to trace a rune"));
+                            .WithAdditionalConditionOnTargetCreature( (a, _) => 
+                                ModData.CommonRequirements.IsRunesmithHandFree(a));
                         
                         return engravingStrike;
                     };
