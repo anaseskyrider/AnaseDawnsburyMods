@@ -2003,6 +2003,14 @@ public static class RunesmithRunes
                                                     
                                                     return false;
                                                 }
+                                                
+                                                // The action was a Strike being buffed by Marssyl
+                                                if ((action?.HasTrait(Trait.Strike) ?? false)
+                                                    && action.Owner.QEffects.Any(qf =>
+                                                        qf is DrawnRune dr
+                                                        && dr.Rune.RuneId == ModData.Traits.Marssyl
+                                                        && dr.DrawnOn == action.Item))
+                                                    return true;
 
                                                 return false;
                                             },
