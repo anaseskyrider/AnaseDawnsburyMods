@@ -461,20 +461,7 @@ public static class GuardianFeats
                             .WithEffectOnEachTarget(async (action, caster, target, result) =>
                             {
                                 // Raise a shield
-                                Possibilities possibilities = caster.Possibilities.Filter(ap =>
-                                {
-                                    if (ap.CombatAction.ActionId != ActionId.RaiseShield)
-                                        return false;
-                                    ap.CombatAction.ActionCost = 0;
-                                    ap.RecalculateUsability();
-                                    return true;
-                                });
-                                List<Option> actions = await caster.Battle.GameLoop.CreateActions(
-                                    caster,
-                                    possibilities,
-                                    null);
-                                caster.Battle.GameLoopCallback.AfterActiveCreaturePossibilitiesRegenerated();
-                                await caster.Battle.GameLoop.OfferOptions(caster, actions, true);
+                                await MoreShields.CommonShieldRules.OfferToRaiseAShield(caster);
                                 
                                 // Used for actual execution
                                 // Not doing it twice results in usage errors
@@ -939,20 +926,7 @@ public static class GuardianFeats
                             .WithEffectOnEachTarget(async (action, caster, target, result) =>
                             {
                                 // Raise a shield
-                                Possibilities possibilities = caster.Possibilities.Filter(ap =>
-                                {
-                                    if (ap.CombatAction.ActionId != ActionId.RaiseShield)
-                                        return false;
-                                    ap.CombatAction.ActionCost = 0;
-                                    ap.RecalculateUsability();
-                                    return true;
-                                });
-                                List<Option> actions = await caster.Battle.GameLoop.CreateActions(
-                                    caster,
-                                    possibilities,
-                                    null);
-                                caster.Battle.GameLoopCallback.AfterActiveCreaturePossibilitiesRegenerated();
-                                await caster.Battle.GameLoop.OfferOptions(caster, actions, true);
+                                await MoreShields.CommonShieldRules.OfferToRaiseAShield(caster);
                                 
                                 await caster.StepAsync(
                                     "Choose where to Step with Guarded Advance, or right-click to cancel. (1/2)",
