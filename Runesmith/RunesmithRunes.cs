@@ -1862,7 +1862,6 @@ public static class RunesmithRunes
         AddRuneAsRuneFeat(ModData.IdPrepend+"RuneIchelsu", runeIchelsu);
         
         // "the target takes 1d4 persistent fire damage" has some ambiguity between Esvadir's invocation and Pluuna's invocation.
-        // TODO: Unholy damage benefits to persistent damage
         // DOC: Wording changed to specify that the rune-bearer takes the persistent damage.
         Rune runeInthDiacritic = new Rune(
                 "Inth-, Diacritic Rune of Corruption",
@@ -1983,8 +1982,31 @@ public static class RunesmithRunes
                                     qfThis.Owner.WeaknessAndResistance.Weaknesses.Add(
                                         new SpecialResistance(
                                             "unholy (inth-)",
-                                            (action, _) =>
-                                                action?.Tag == drawnInth.DrawnOn,
+                                            (action, dk) =>
+                                            {
+                                                // The action dealing damage was an invocation of a rune,
+                                                // and the rune invoked was the base rune of this diacritic;
+                                                if (action?.Tag == drawnInth.DrawnOn)
+                                                    return true;
+                                                
+                                                // The action has an origin QEffect,
+                                                if (action?.Origin?.QEffect is { } originQf)
+                                                {
+                                                    // and is persistent damage that was applied via this diacritic's base rune.
+                                                    if (originQf.Id == QEffectId.PersistentDamage
+                                                        && originQf.SourceAction?.Tag == drawnInth.DrawnOn)
+                                                        return true;
+                                                    
+                                                    // and the origin of this damage is the base rune itself.
+                                                    if (originQf == drawnInth.DrawnOn)
+                                                        return true;
+                                                    
+                                                    return false;
+                                                }
+
+                                                return false;
+                                            },
+                                            // The unholy weakness amount is equal to their existing evil weakness.
                                             qfThis.Owner.WeaknessAndResistance.Weaknesses.Max(weak =>
                                                 weak.DamageKind == DamageKind.Evil ? weak.Value : 0),
                                             null));
