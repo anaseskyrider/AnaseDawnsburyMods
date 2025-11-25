@@ -74,19 +74,19 @@ public static class GuardianFeats
                     [ModData.Traits.BodyguardCharge],
                     null)
                 .WithNameCreator(_ =>
-                    $"Choose {ModLoader.GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"} as your charge.")
+                    $"Choose {LibraryOfAnase.GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"} as your charge.")
                 .WithRulesTextCreator(_ =>
-                    $"Your Taunt's penalty will increase to -2 against {ModLoader.GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"}.")
+                    $"Your Taunt's penalty will increase to -2 against {LibraryOfAnase.GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"}.")
                 .WithIllustrationCreator(_ =>
-                    ModLoader.GetCharacterSheetFromPartyMember(index)?.Illustration ?? ModData.Illustrations.Taunt)
+                    LibraryOfAnase.GetCharacterSheetFromPartyMember(index)?.Illustration ?? ModData.Illustrations.Taunt)
                 .WithTag(i)
                 .WithPermanentQEffect(
-                    $"The penalty for Taunt increases to -2 against {{Blue}}{ModLoader.GetCharacterSheetFromPartyMember(index)?.Name ?? "a chosen ally"}{{/Blue}}.",
+                    $"The penalty for Taunt increases to -2 against {{Blue}}{LibraryOfAnase.GetCharacterSheetFromPartyMember(index)?.Name ?? "a chosen ally"}{{/Blue}}.",
                     qfFeat =>
                     {
                         qfFeat.StartOfCombat = async qfThis =>
                         {
-                            if (ModLoader.GetCharacterSheetFromPartyMember(index) is {} hero
+                            if (LibraryOfAnase.GetCharacterSheetFromPartyMember(index) is {} hero
                                 && qfThis.Owner.Battle.AllCreatures.FirstOrDefault(cr2 =>
                                     cr2 != qfThis.Owner &&
                                     cr2.PersistentCharacterSheet == hero) is { } chosenCreature)
@@ -105,7 +105,7 @@ public static class GuardianFeats
                         };
                     })
                 .WithPrerequisite(values => // Can't select yourself
-                    ModLoader.GetCharacterSheetFromPartyMember(index) != values.Sheet,
+                    LibraryOfAnase.GetCharacterSheetFromPartyMember(index) != values.Sheet,
                     "Can't select yourself");
             ModManager.AddFeat(chargeChoice);
         }
@@ -206,8 +206,7 @@ public static class GuardianFeats
                 null,
                 qfFeat =>
                 {
-                    ModLoader.DisplaysAsOffenseAction(
-                        qfFeat,
+                    qfFeat.WithDisplayActionInOffenseSection(
                         "Shoulder Check",
                         "Make a fist Strike that can make a foe off-guard.");
                     qfFeat.Id = QEffectId.AlwaysShowedUnarmedStrike;
@@ -499,8 +498,7 @@ public static class GuardianFeats
                 null,
                 qfFeat =>
                 {
-                    ModLoader.DisplaysAsOffenseAction(
-                        qfFeat,
+                    qfFeat.WithDisplayActionInOffenseSection(
                         "Taunting Strike",
                         "Make a Strike. Then make a visual Taunt.");
                     // The actual action
@@ -784,8 +782,7 @@ public static class GuardianFeats
                 null,
                 qfFeat =>
                 {
-                    ModLoader.DisplaysAsOffenseAction(
-                        qfFeat,
+                    qfFeat.WithDisplayActionInOffenseSection(
                         "Proud Nail",
                         "Strike a foe who ignored your Taunt, dealing extra damage.");
                     
@@ -983,8 +980,7 @@ public static class GuardianFeats
                 null,
                 qfFeat =>
                 {
-                    ModLoader.DisplaysAsOffenseAction(
-                        qfFeat, "Lock Down",
+                    qfFeat.WithDisplayActionInOffenseSection( "Lock Down",
                         "(Requires Hampering Stance) Strike a creature, inhibiting their movement for 1 round, unless you move or Strike with that weapon again.");
                     
                     qfFeat.ProvideStrikeModifier = item =>
@@ -1112,8 +1108,7 @@ public static class GuardianFeats
                 null,
                 qfFeat =>
                 {
-                    ModLoader.DisplaysAsOffenseAction(
-                        qfFeat,
+                    qfFeat.WithDisplayActionInOffenseSection(
                         "Retaliating Rescue",
                         "Stride to an ally in danger, push them, and Strike.",
                         2);
@@ -1228,8 +1223,7 @@ public static class GuardianFeats
                 null,
                 qfFeat =>
                 {
-                    ModLoader.DisplaysAsOffenseAction(
-                        qfFeat, "Ring Their Bell",
+                    qfFeat.WithDisplayActionInOffenseSection( "Ring their Bell",
                         "Strike a foe who ignored your Taunt, stunning them.");
                     qfFeat.Id = QEffectId.AlwaysShowedUnarmedStrike;
                     qfFeat.ProvideStrikeModifier = item =>
@@ -1375,8 +1369,7 @@ public static class GuardianFeats
                 null,
                 qfFeat =>
                 {
-                    ModLoader.DisplaysAsOffenseAction(
-                        qfFeat,
+                    qfFeat.WithDisplayActionInOffenseSection(
                         "Juggernaut Charge",
                         "Stride, make a melee Strike, and Stride again. On a hit, drag the target with you.",
                         2);
@@ -1548,8 +1541,7 @@ public static class GuardianFeats
                 null,
                 qfFeat =>
                 {
-                    ModLoader.DisplaysAsOffenseAction(
-                        qfFeat,
+                    qfFeat.WithDisplayActionInOffenseSection(
                         "Shield Wallop",
                         "Make a shield Strike that stupefies the target.");
                     qfFeat.ProvideStrikeModifier = item =>
@@ -1587,31 +1579,5 @@ public static class GuardianFeats
                     };
                 });
         #endregion
-    }
-
-    public static CombatAction WithHitAndDealDamage(this CombatAction action, Func<Creature, CombatAction, Creature, Task> doWhat)
-    {
-        return action.WithPrologueEffectOnChosenTargetsBeforeRolls(async (innerAction, self, targets) =>
-        {
-            // Initialize to capture reference in scope
-            QEffect doAfter = new QEffect()
-            {
-                Name = "[AFTER YOU DEAL DAMAGE WITH" + innerAction.Name + "]",
-                ExpiresAt = ExpirationCondition.ExpiresAtEndOfYourTurn, // Fallback
-            };
-            doAfter.AfterYouDealDamage = async (self2, innerAction2, target) =>
-            {
-                if (innerAction2 != innerAction
-                    || target != targets.ChosenCreature
-                    || innerAction2.CheckResult < CheckResult.Success
-                    || innerAction2.Item != action.Item)
-                    return;
-
-                await doWhat.Invoke(self2, innerAction2, target);
-
-                doAfter.ExpiresAt = ExpirationCondition.Immediately;
-            };
-            self.AddQEffect(doAfter);
-        });
     }
 }
