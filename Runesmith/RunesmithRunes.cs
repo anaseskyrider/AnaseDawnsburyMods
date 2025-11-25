@@ -1657,7 +1657,6 @@ public static class RunesmithRunes
             .WithDrawnOnRuneTechnical();
         AddRuneAsRuneFeat(ModData.IdPrepend+"RuneEnDiacritic", runeEnDiacritic);
         
-        // PETR: Large creatures update, Titan Wrestler feat
         Rune runeFeikris = new Rune(
                 "Feikris, Rune of Gravity",
                 ModData.Traits.Feikris,
@@ -1665,9 +1664,8 @@ public static class RunesmithRunes
                 9,
                 "drawn on a creature" /* or armor"*/,
                 "The lines of this rune overlap strangely, making it seem larger than it really is.",
-                "The rune-bearer gains a +2 item bonus to Athletics checks." /* and gains the benefits of the Titan Wrestler feat.*/,
-                invocationText:
-                "All creatures in a 15-foot emanation around the rune-bearer must succeed at a Fortitude save or be pulled 5 feet towards the rune-bearer (or 10 feet on a critical failure).",
+                "The rune-bearer gains a +2 item bonus to Athletics checks and gains the benefits of the Titan Wrestler feat.",
+                invocationText: "All creatures in a 15-foot emanation around the rune-bearer must succeed at a Fortitude save or be pulled 5 feet towards the rune-bearer (or 10 feet on a critical failure).",
                 levelText: "The item bonus increases to +3.",
                 additionalTraits: [Trait.Arcane])
             .WithHeightenedText(
@@ -1680,13 +1678,26 @@ public static class RunesmithRunes
                 "17th")
             .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
+                int athleticsBonus = caster.Level >= 17 ? 3 : 2;
+                QEffectId titanWrestler = caster.Proficiencies.Get(Trait.Athletics) >= Proficiency.Legendary
+                    ? QEffectId.TitanWrestlerLegendary
+                    : QEffectId.TitanWrestler;
                 DrawnRune feikrisPassive = new DrawnRune(
                     thisRune,
                     $"You have a +{(caster.Level >= 17 ? 3 : 2)} item bonus to Athletics checks.",
                     caster)
                 {
                     BonusToSkills = skill =>
-                        skill is Skill.Athletics ? new Bonus(caster.Level >= 17 ? 3 : 2, BonusType.Item, "Feikris") : null,
+                        skill is Skill.Athletics
+                            ? new Bonus(athleticsBonus, BonusType.Item, "Feikris")
+                            : null,
+                    StateCheck = qfThis =>
+                    {
+                        qfThis.Owner.AddQEffect(new QEffect(ExpirationCondition.Ephemeral)
+                        {
+                            Id = titanWrestler,
+                        });
+                    },
                 };
                 return feikrisPassive;
             })
