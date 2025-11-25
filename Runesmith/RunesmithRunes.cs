@@ -2032,7 +2032,7 @@ public static class RunesmithRunes
             })
             .WithDrawnOnRuneTechnical();
         RuneFeat inthFeat = AddRuneAsRuneFeat(ModData.IdPrepend+"RuneInthDiacritic", runeInthDiacritic);
-        inthFeat.RulesText += "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " {b}Compatibility{/b} For the purposes of being holy, creatures with weakness to evil damage are considered holy, and this diacritic's persistent damage uses the better of fire or evil damage. {i}(NYI: Esvadir's bleed damage is not yet unholy.){/i}";
+        inthFeat.RulesText += "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " {b}Compatibility{/b} For the purposes of being holy, creatures with weakness to evil damage are considered holy, and this diacritic's persistent damage uses the better of fire or evil damage.";
 
         Rune runeJurroz = new Rune(
                 "Jurroz, Rune of Dragon Fury",
