@@ -77,12 +77,6 @@ public static class ModData
             "More Basic Actions: Reduce Aid DC",
             "The DC to Aid is normally 20. If enabled, the DC is reduced to 15 instead.",
             false);
-        /// <summary>Move the Prepare to Aid into submenus.</summary>
-        public static readonly string AidInSubmenus = RegisterBooleanOption(
-            IdPrepend+"AidInSubmenus",
-            "More Basic Actions: Move Aid to Other Actions",
-            "Enabling this option will move the Aid menu to the Other Actions submenu.",
-            false);
         /// <summary>Add the Drop Prone action to the action bar.</summary>
         public static readonly string AllowDropProne = RegisterBooleanOption(
             IdPrepend+"AllowDropProne",
@@ -95,11 +89,11 @@ public static class ModData
             "More Basic Actions: Help Up Doesn't Move Ally",
             "Helping an ally up from prone counts as you taking a manipulate action and the ally taking a move action. Enabling this action means the ally doesn't actually take the Stand Up action.",
             false);
-        /// <summary>Move the Ready actions into submenus.</summary>
-        public static readonly string ReadyInSubmenus = RegisterBooleanOption(
-            IdPrepend+"ReadyInSubmenus",
-            "More Basic Actions: Move Ready to Other Actions",
-            "Enabling this option will move the Ready menu to the Other Actions submenu.",
+        /// <summary>Move the Aid and Ready actions into submenus.</summary>
+        public static readonly string AidAndReadyInSubmenus = RegisterBooleanOption(
+            IdPrepend+"AidAndReadyInSubmenus",
+            "More Basic Actions: Move Aid and Ready to Other Actions",
+            "Enabling this option will move the Aid and Ready menus to the Other Actions submenu.",
             false);
         
         /// <summary>

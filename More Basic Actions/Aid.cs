@@ -50,7 +50,7 @@ public static class Aid
                 ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
                     PossibilitySectionId sectionId =
-                        PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.AidInSubmenus)
+                        PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.AidAndReadyInSubmenus)
                             ? PossibilitySectionId.OtherManeuvers
                             : PossibilitySectionId.SkillActions;
                     if (section.PossibilitySectionId != sectionId)
@@ -91,21 +91,23 @@ public static class Aid
         });
         
         TrueFeat cooperativeNature = new TrueFeat(
-            ModData.FeatNames.CooperativeNature,
-            1,
-            "The short human life span lends perspective and has taught you from a young age to set aside differences and work with others to achieve greatness.",
-            "You gain a +4 circumstance bonus on checks to Aid {icon:Reaction}.",
-            [ModData.Traits.MoreBasicActions, Trait.Human])
-            .WithPermanentQEffect("You have a permanent +4 circumstance bonus on checks to Aid {icon:Reaction}.", qfFeat =>
-            {
-                qfFeat.BonusToAttackRolls = (qfThis, action, defender) =>
+                ModData.FeatNames.CooperativeNature,
+                1,
+                "The short human life span lends perspective and has taught you from a young age to set aside differences and work with others to achieve greatness.",
+                "You gain a +4 circumstance bonus on checks to Aid {icon:Reaction}.",
+                [ModData.Traits.MoreBasicActions, Trait.Human])
+            .WithPermanentQEffect(
+                "You have a permanent +4 circumstance bonus on checks to Aid {icon:Reaction}.",
+                qfFeat =>
                 {
-                    if (action.Name.Contains("Aid Strike") || action.ActionId == ModData.ActionIds.AidReaction)
-                        return new Bonus(4, BonusType.Circumstance, "Cooperative Nature");
+                    qfFeat.BonusToAttackRolls = (qfThis, action, defender) =>
+                    {
+                        if (action.Name.Contains("Aid Strike") || action.ActionId == ModData.ActionIds.AidReaction)
+                            return new Bonus(4, BonusType.Circumstance, "Cooperative Nature");
 
-                    return null;
-                };
-            });
+                        return null;
+                    };
+                });
         ModManager.AddFeat(cooperativeNature);
     }
 

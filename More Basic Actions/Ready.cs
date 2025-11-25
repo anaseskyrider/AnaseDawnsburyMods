@@ -43,7 +43,7 @@ public static class Ready
                 ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
                     PossibilitySectionId sectionId =
-                        PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.ReadyInSubmenus)
+                        PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.AidAndReadyInSubmenus)
                             ? PossibilitySectionId.OtherManeuvers
                             : PossibilitySectionId.SkillActions;
                     if (section.PossibilitySectionId != sectionId)
