@@ -166,6 +166,7 @@ public static class ModData
     
     public static class QEffectIds // Technical names are often used directly for the readable name, write accordingly.
     {
+        public static readonly QEffectId RunicCrafter = ModManager.RegisterEnumMember<QEffectId>("RunicCrafter");
         public static readonly QEffectId RuneSinger = ModManager.RegisterEnumMember<QEffectId>("Rune-Singer");
         public static readonly QEffectId RuneSingerCreator = ModManager.RegisterEnumMember<QEffectId>("RuneSingerCreator");
         /// The DrawnRune that is tattooed

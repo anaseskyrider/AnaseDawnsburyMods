@@ -48,9 +48,6 @@ public static class RunesmithRunes
          */
         
         // TODO: Consolidate item-targeting routines with task functions in CommonRuneRules
-        
-        // BUG: Some runes incorrectly scale with non-striking die increases.
-        // "Counting Damage Dice: Effects base on a weapon's number of damage dice include only the weapon's damage die plus any extra dice from a striking rune. They don't count extra dice from abilities, critical specialization effects, property runes, weapon traits, or the like."
 
         #region Level 1 Runes
 
@@ -211,24 +208,10 @@ public static class RunesmithRunes
 
 
                                 // Determine weapon damage dice count
-                                string weaponDamageDiceCount =
-                                    actionItem.WeaponProperties!.DamageDieCount.ToString();
-                                if (action.TrueDamageFormula is { } trueDamage)
-                                {
-                                    Capture diceCountCapture =
-                                        Regex.Match(trueDamage.ToString(), @"(\d+)d\d+").Groups[1];
-                                    if (diceCountCapture.Value != "")
-                                        weaponDamageDiceCount = diceCountCapture.Value;
-                                }
-
                                 DiceFormula bleedAmount = DiceFormula.FromText(
-                                    (2 * int.Parse(weaponDamageDiceCount) *
+                                    (2 * RunesmithClass.GetItemDamageDieCountIncludingRunicCrafter(action.Owner, actionItem) *
                                      (action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1)).ToString(),
                                     thisRune.Name);
-
-                                //DiceFormula bleedAmount = DiceFormula.FromText(
-                                //((action.CheckResult == CheckResult.CriticalSuccess ? 2 : 1) * 2 * actionItem.WeaponProperties!.DamageDieCount).ToString(),
-                                //thisRune.Name);
 
                                 if (action.CheckResult >= CheckResult.Success)
                                 {
@@ -552,15 +535,9 @@ public static class RunesmithRunes
                             #endregion
 
                             // Determine weapon damage dice count
-                            string weaponDamageDiceCount = actionItem.WeaponProperties!.DamageDieCount.ToString();
-                            if (action.TrueDamageFormula is { } trueDamage)
-                            {
-                                Capture diceCountCapture = Regex.Match(trueDamage.ToString(), @"(\d+)d\d+").Groups[1];
-                                if (diceCountCapture.Value != "")
-                                    weaponDamageDiceCount = diceCountCapture.Value;
-                            }
-
-                            DiceFormula splashAmount = DiceFormula.FromText(weaponDamageDiceCount, thisRune.Name);
+                            DiceFormula splashAmount = DiceFormula.FromText(
+                                RunesmithClass.GetItemDamageDieCountIncludingRunicCrafter(action.Owner, actionItem!).ToString(),
+                                "Splash damage (" + thisRune.Name + ")");
 
                             // Make the strike magical while dealing splash damage (backfire mantle integration)
                             action.WithExtraTrait(Trait.Magical);
@@ -1813,8 +1790,8 @@ public static class RunesmithRunes
         AddRuneAsRuneFeat(ModData.IdPrepend+"RuneIchelsu", runeIchelsu);
         
         // "the target takes 1d4 persistent fire damage" has some ambiguity between Esvadir's invocation and Pluuna's invocation.
-        // Wording changed to specify that the rune-bearer takes the persistent damage.
         // TODO: Unholy damage benefits to persistent damage
+        // DOC: Wording changed to specify that the rune-bearer takes the persistent damage.
         Rune runeInthDiacritic = new Rune(
                 "Inth-, Diacritic Rune of Corruption",
                 ModData.Traits.InthDiacritic,
@@ -2255,7 +2232,7 @@ public static class RunesmithRunes
         AddRuneAsRuneFeat(ModData.IdPrepend+"RuneKojastri", runeKojastri);
 
         // Faction alignment is treated as "enemies to the runesmith", regardless of the rune-bearer's faction.
-        // Changed to a 10-foot size, but always works.
+        // DOC: Changed to a 10-foot size, but always works.
         // BUG: The difficult terrain effect doesn't interact with immunity to emotion or mental effects. No known way to fix this at this time.
         Rune runeTrolistri = new Rune(
                 "Trolistri, Rune of Forlorn Sorrow",

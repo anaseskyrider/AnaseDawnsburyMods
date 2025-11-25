@@ -673,6 +673,7 @@ public static class RunesmithClass
         // Uses code from ABP //
         QEffect RCFX = new QEffect("Runic Crafter", "INCOMPLETE", ExpirationCondition.Never, owner, IllustrationName.None)
         {
+            Id = ModData.QEffectIds.RunicCrafter,
             Innate = true,
             BonusToAttackRolls = (qfThis, combatAction, defender) =>
             {
@@ -739,6 +740,7 @@ public static class RunesmithClass
             QEffect striking = new QEffect("Runic Crafter (Striking)", "INCOMPLETE", ExpirationCondition.Never,
                 owner2, IllustrationName.None)
             {
+                Id = ModData.QEffectIds.RunicCrafter,
                 IncreaseItemDamageDieCount = (qfSelf, item) =>
                     item.WeaponProperties?.DamageDieCount <= bonusDice,
             };
@@ -1026,5 +1028,24 @@ public static class RunesmithClass
         else if (CharacterLibrary.Instance is { } library)
             hero = library.SelectedRandomEncounterParty[index];
         return hero;
+    }
+
+    /// <summary>
+    /// Gets the number of weapon damage dice for the weapon from its weapon properties, but also including from Runic Crafter.
+    /// </summary>
+    /// <param name="runesmith">The creature who is a runesmith.</param>
+    /// <param name="weapon">The weapon whose dice are being counted.</param>
+    /// <returns>(int) The number of damage dice the weapon deals, including Striking and Runic Crafter.</returns>
+    public static int GetItemDamageDieCountIncludingRunicCrafter(Creature runesmith, Item weapon)
+    {
+        if (weapon.WeaponProperties is null)
+            return 0;
+        int baseDice = weapon.WeaponProperties.DamageDieCount;
+        foreach (QEffect runicCrafter in runesmith.QEffects
+                     .Where(qf =>
+                         qf.Id == ModData.QEffectIds.RunicCrafter
+                         && (qf.IncreaseItemDamageDieCount?.Invoke(qf, weapon) ?? false)))
+            baseDice++;
+        return baseDice;
     }
 }
