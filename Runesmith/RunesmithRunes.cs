@@ -14,6 +14,7 @@ using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Intelligence;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
+using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
@@ -502,31 +503,13 @@ public static class RunesmithRunes
                             #region vars and validation checks
                             if ((qfSelf as DrawnRune)!.Disabled)
                                 return;
+                            
                             Item? qfItem = (qfSelf as DrawnRune)?.DrawnOn as Item;
                             Item? actionItem = action.Item;
-                            
-                            // This many complex conditionals is really hard to work out so I did it the long way.
-                            // Fail to splash if,
-                            if (actionItem == null || qfItem == null || // either item is blank
-                                !action.HasTrait(Trait.Strike) || // or the action isn't a strike
-                                action.ChosenTargets == null ||
-                                action.ChosenTargets.ChosenCreature == null || // or null targets
-                                action.ChosenTargets.ChosenCreature ==
-                                qfSelf.Owner || // or I'm my target for any reason
-                                !actionItem.DetermineDamageKinds()
-                                    .Contains(DamageKind.Bludgeoning)) // or it's not bludgeoning damage
+
+                            // Fail to splash if the action or items are invalid.
+                            if (!IsValidStrike(action, qfItem))
                                 return;
-                            // Fail to splash if,
-                            if (actionItem.HasTrait(Trait.Unarmed)) // attacking with an unarmed,
-                            {
-                                if (!qfItem.HasTrait(Trait.Unarmed)) // that is unbuffed.
-                                    return;
-                            }
-                            else // attacking with a regular weapon,
-                            {
-                                if (actionItem != qfItem) // that is unbuffed.
-                                    return;
-                            }
 
                             // Fail to splash if not the first of multiple duplicate effects
                             if (qfSelf != qfSelf.Owner.QEffects.First(qf =>
@@ -540,37 +523,111 @@ public static class RunesmithRunes
                                 "Splash damage (" + thisRune.Name + ")");
 
                             // Make the strike magical while dealing splash damage (backfire mantle integration)
-                            action.WithExtraTrait(Trait.Magical);
-
-                            // If the strike at least failed,
+                            //action.WithExtraTrait(Trait.Magical);
+                            
+                            // If the strike didn't critically fail,
                             if (action.CheckResult > CheckResult.CriticalFailure)
                             {
-                                await CommonSpellEffects.DealDirectSplashDamage(
-                                    action /*CombatAction.CreateSimple(qfSelf.Owner, "Marssyl")*/, splashAmount,
-                                    action.ChosenTargets.ChosenCreature,
-                                    DamageKind.Bludgeoning); // deal damage to the target.
-
-                                if (action.CheckResult > CheckResult.Failure) // If the strike also at least succeeded,
+                                CombatAction marssylAction = /*action*/ MarssylSplashDamageAction(qfSelf, action);
+                                // But did fail (and thus didn't deal damage with AddExtraKindedDamageOnStrike),
+                                if (action.CheckResult == CheckResult.Failure)
+                                    await CommonSpellEffects.DealDirectSplashDamage(
+                                        marssylAction,
+                                        splashAmount,
+                                        action.ChosenTargets.ChosenCreature!,
+                                        DamageKind.Bludgeoning); // deal damage to the Strike target.
+                                // But hit and already dealt damage to the target,
+                                else
                                 {
                                     foreach (Creature target2 in qfSelf.Owner.Battle.AllCreatures.Where(cr =>
-                                                 action.ChosenTargets.ChosenCreature
+                                                 action.ChosenTargets.ChosenCreature!
                                                      .IsAdjacentTo(cr))) // Loop through all adjacent creatures,
                                     {
+                                        // And if it's a melee attack, skip me, otherwise include me when I,
                                         if (target2 != qfSelf.Owner ||
-                                            !actionItem.HasTrait(Trait
-                                                .Melee)) // And if it's a melee attack, skip me, otherwise include me when I,
-                                            await CommonSpellEffects.DealDirectSplashDamage(action, splashAmount,
+                                            !actionItem!.HasTrait(Trait.Melee))
+                                            await CommonSpellEffects.DealDirectSplashDamage(marssylAction, splashAmount,
                                                 target2, DamageKind.Bludgeoning); // splash them too.
                                     }
                                 }
                             }
 
                             // Make the strike no longer magical
-                            action.Traits.Remove(Trait.Magical);
+                            //action.Traits.Remove(Trait.Magical);
                         },
                     }.WithItemOrUnarmedRegulator(targetItem);
+                    // Apply outside of construction so as to capture reference
+                    // This will combine the splash damage with the initial damage
+                    marssylPassive.AddExtraKindedDamageOnStrike = (strike, strikeTarget) =>
+                    {
+                        if (marssylPassive.Disabled)
+                            return null;
+                            
+                        Item? qfItem = marssylPassive.DrawnOn as Item;
+                        Item? actionItem = strike.Item;
+
+                        // Fail to splash if the action or items are invalid.
+                        if (!IsValidStrike(strike, qfItem))
+                            return null;
+
+                        // Fail to splash if not the first of multiple duplicate effects
+                        if (marssylPassive != marssylPassive.Owner.QEffects.First(qf =>
+                                qf is DrawnRune dr && dr.Rune.RuneId == ModData.Traits.Marssyl))
+                            return null;
+
+                        // Determine weapon damage dice count
+                        DiceFormula splashAmount = DiceFormula.FromText(
+                            RunesmithClass.GetItemDamageDieCountIncludingRunicCrafter(strike.Owner, actionItem!).ToString(),
+                            "Splash damage (" + thisRune.Name + ")");
+
+                        return new KindedDamage(splashAmount, DamageKind.Bludgeoning)
+                        {
+                            ApplyCriticalAndHalvingEffects = false,
+                        };
+                    };
 
                     return marssylPassive;
+
+                    bool IsValidStrike(CombatAction action, Item? drawnOnItem)
+                    {
+                        Item? actionItem = action.Item;
+                        // This many complex conditionals is really hard to work out so I did it the long way.
+                        // Fail to splash if any items are null
+                        if (actionItem == null || drawnOnItem == null)
+                            return false;
+                        if (!action.HasTrait(Trait.Strike))
+                            return false;
+                        // Fail to splash if it doesn't deal bludgeoning damage
+                        if (!actionItem.DetermineDamageKinds()
+                                .Contains(DamageKind.Bludgeoning))
+                            return false;
+                        // Fail to splash if,
+                        if (actionItem.HasTrait(Trait.Unarmed)) // attacking with an unarmed,
+                        {
+                            if (!drawnOnItem.HasTrait(Trait.Unarmed)) // that is unbuffed.
+                                return false;
+                        }
+                        else // attacking with a regular weapon,
+                        {
+                            if (actionItem != drawnOnItem) // that is unbuffed.
+                                return false;
+                        }
+
+                        return true;
+                    }
+
+                    CombatAction MarssylSplashDamageAction(QEffect qfMarssyl, CombatAction strikeAction)
+                    {
+                        return CombatAction
+                            .CreateSimple(qfMarssyl.Owner, "Marssyl")
+                            .WithExtraTrait(Trait.Magical)
+                            .WithTag(qfMarssyl)
+                            .WithOrigin(new ActionOrigin()
+                            {
+                                QEffect = qfMarssyl,
+                                Source = strikeAction.Owner,
+                            });
+                    }
                 }
 
                 // Target a specific item
