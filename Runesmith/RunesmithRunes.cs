@@ -681,6 +681,7 @@ public static class RunesmithRunes
                         $"The next successful Strike made with {(invokedRune.DrawnOn as Item)?.Name} before the end of your next turn deals an additional die of damage, and the target must succeed at a Fortitude save against your class DC or be pushed 10 feet in a straight line backwards, or 20 feet on a critical failure.",
                         ExpirationCondition.ExpiresAtEndOfYourTurn);
                     invokedMarssyl.Tag = invokedRune.DrawnOn as Item;
+                    invokedMarssyl.SourceAction = sourceAction; // Store the invocation action to expose data to Ur-.
                     invokedMarssyl.IncreaseItemDamageDieCount = (qfSelf, item) =>
                     {
                         Item? tagItem = qfSelf.Tag as Item;
@@ -1340,7 +1341,6 @@ public static class RunesmithRunes
             .WithDrawnOnRuneTechnical();
         AddRuneAsRuneFeat(ModData.IdPrepend+"RuneSunDiacritic", runeSunDiacritic);
 
-        // TODO: Make final decision on whether this buffs Marssyl's invocation.
         Rune runeUrDiacritic = new Rune(
                 "Ur-, Diacritic Rune of Intensity",
                 ModData.Traits.UrDiacritic,
@@ -1350,7 +1350,9 @@ public static class RunesmithRunes
                 "This diacritic accentuates the base rune with bolder lines to give greater weight to its effects.",
                 "When the base rune is invoked, its invocation gains a status bonus to damage equal to your Intelligence modifier.",
                 additionalTraits: [ModData.Traits.Diacritic])
-            .WithUsageCondition(Rune.UsabilityConditions.UsableOnDiacritics(dr => dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile)))
+            .WithUsageCondition(Rune.UsabilityConditions.UsableOnDiacritics(dr =>
+                dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile)
+                || dr.Rune.RuneId == ModData.Traits.Marssyl))
             .WithDrawnRuneCreator(async (sourceAction, caster, target, thisRune) =>
             {
                 DrawnRune? CreateUrPassive(DrawnRune targetRune)
@@ -1377,13 +1379,25 @@ public static class RunesmithRunes
                                     if (thisDr.Disabled)
                                         return null;
 
-                                    if (!action.HasTrait(ModData.Traits.Invocation)
-                                        || action.Tag is not Rune
-                                        || drInvoked != thisDr.DrawnOn)
-                                        return null;
-
-                                    return new Bonus(caster.Abilities.Intelligence, BonusType.Status,
+                                    Bonus urBonus = new Bonus(caster.Abilities.Intelligence, BonusType.Status,
                                         "Ur, Diacritic Rune of Intensity");
+
+                                    // Apply to an invocation action's damage
+                                    if (action.HasTrait(ModData.Traits.Invocation)
+                                        && action.Tag is Rune
+                                        && drInvoked == thisDr.DrawnOn)
+                                        return urBonus;
+                                    
+                                    // Apply to a Strike being buffed by Marssyl
+                                    if (action.HasTrait(Trait.Strike)
+                                        && qfThis.Owner.QEffects.Any(qf =>
+                                            qf.Traits.Any(tt => tt == ModData.Traits.Invocation)
+                                            && (qf.Name?.ToLower().Contains("marssyl") ?? false)
+                                            && qf.Tag is Item marssylItem 
+                                            && marssylItem == action.Item))
+                                        return urBonus;
+
+                                    return null;
                                 },
                             };
                             ArgumentNullException.ThrowIfNull(thisDr.Source);
@@ -1399,8 +1413,9 @@ public static class RunesmithRunes
                 List<DrawnRune> validRunes = [];
                 foreach (DrawnRune dr in DrawnRune.GetDrawnRunes(null, target)
                              .Where(dr =>
-                                 dr.AttachedDiacritic == null &&
-                                 dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile)))
+                                 dr.AttachedDiacritic == null
+                                 && (dr.Rune.InvokeTechnicalTraits.Contains(Trait.IsHostile)
+                                     || dr.Rune.RuneId == ModData.Traits.Marssyl)))
                 {
                     validRunesString.Add(dr.Name ?? dr.ToString());
                     validRunes.Add(dr);
