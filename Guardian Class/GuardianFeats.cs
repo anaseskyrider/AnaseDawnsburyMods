@@ -798,8 +798,117 @@ public static class GuardianFeats
                         return proudNail;
                     };
                 });
-        // Shielded Attrition <---- High priority. QEffectId.IgnoreAoOWhenMoving.
-        //// Not sure how to make due to nuance complexities
+        // Shielded Attrition
+        yield return new TrueFeat(
+                ModData.FeatNames.ShieldedAttrition,
+                4,
+                "You provoke attacks from foes that might otherwise stop your allies from moving.",
+                "{b}Requirements{/b} You are wielding a shield.\n\nRaise your Shield, then Stride up to half your Speed. This movement triggers enemies' reactions as normal. Each enemy who reacted to your movement is unable to react to your allies' movement until the start of your next turn (even if they've since regained their reaction).",
+                [ModData.Traits.Guardian, MoreShields.ModData.Traits.ShieldActionFeat])
+            .WithActionCost(1)
+            .WithPermanentQEffect(
+                "Raise a Shield, Stride half your speed, and deny reactions to your allies' movement until the start of your next turn.",
+                qfFeat =>
+                {
+                    qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                    {
+                        if (section.Name != "Raise shield")
+                            return null;
+                        
+                        Item? shield = MoreShields.CommonShieldRules
+                            .GetWieldedShields(qfThis.Owner)
+                            .FirstOrDefault();
+                        
+                        CombatAction shieldedAttrition = new CombatAction(
+                                qfThis.Owner,
+                                new SideBySideIllustration(
+                                    shield?.Illustration ?? IllustrationName.SteelShield,
+                                    IllustrationName.FleetStep),
+                                "Shielded Attrition",
+                                [Trait.Basic, ModData.Traits.Guardian],
+                                null!,
+                                Target.Self()
+                                    // In strict hypothesis, this restriction should never get called
+                                    .WithAdditionalRestriction(_ =>
+                                        shield is null
+                                            ? "Must be wielding a shield"
+                                            : null))
+                            .WithDescription(
+                                "You provoke attacks from foes that might otherwise stop your allies from moving.",
+                                "Raise your Shield, then Stride up to half your Speed. This movement triggers enemies' reactions as normal. Each enemy who reacted to your movement is unable to react to your allies' movement until the start of your next turn (even if they've since regained their reaction).")
+                            .WithActionCost(1)
+                            .WithEffectOnSelf(async self =>
+                            {
+                                CombatAction pathStride = CommonCombatActions.StepByStepStride(self)
+                                    .WithActionCost(0);
+                                pathStride.EffectOnChosenTargets = null;
+                                pathStride.WithEffectOnChosenTargets(async (action, self2, targets) =>
+                                {
+                                    await MoreShields.CommonShieldRules.OfferToRaiseAShield(self);
+                                    await self2.MoveToUsingStepByStepPath(
+                                        targets.ChosenTiles,
+                                        action,
+                                        new MovementStyle()
+                                        {
+                                            MaximumSquares = 1000
+                                        });
+                                });
+                                self.AddQEffect(new QEffect(ExpirationCondition.ExpiresAtEndOfYourTurn)
+                                {
+                                    Name = "[SHIELDED ATTRITION META]",
+                                    // Half speed
+                                    BonusToAllSpeeds = _ =>
+                                        new Bonus(
+                                            -(int)Math.Ceiling(self.Speed / (double) 2),
+                                            BonusType.Untyped, 
+                                            "Shielded attrition"),
+                                    // Remove after completion
+                                    AfterYouTakeAction = async (qfThis2, action) =>
+                                    {
+                                        if (action == pathStride)
+                                            qfThis2.ExpiresAt = ExpirationCondition.Immediately;
+                                    },
+                                    AfterYouAreTargeted = async (qfThis2, action) =>
+                                    {
+                                        if (!action.HasTrait(Trait.ReactiveAttack))
+                                            return;
+
+                                        QEffect cantReact = new QEffect(
+                                                "Shielded Attrition",
+                                                "You can't react to the movement of {Blue}" + self.Name + "'s{/Blue} allies.",
+                                                ExpirationCondition.ExpiresAtStartOfSourcesTurn,
+                                                self,
+                                                IllustrationName.DawnsburyThree)
+                                        {
+                                            RoundsLeft = 1,
+                                            // Sometimes applies twice, idk why, this helps with that
+                                            Key = ModData.CommonQfKeys.ShieldedAttrition+self.Name,
+                                        }
+                                        .AddGrantingOfTechnical(
+                                            self.FriendOfAndNotSelf,
+                                            qfTech =>
+                                            {
+                                                qfTech.PreventTargetingBy = ca =>
+                                                {
+                                                    if (ca.Owner != action.Owner)
+                                                        return null;
+                                                    if (!ca.HasTrait(Trait.ReactiveAttack))
+                                                        return null;
+                                                    if (qfTech.Owner.AnimationData.LongMovement is null)
+                                                        return null;
+                                                    return "Shielded attrition";
+                                                };
+                                            });
+
+                                        action.Owner.AddQEffect(cantReact);
+                                    },
+                                });
+                                await self.Battle.GameLoop.FullCast(pathStride);
+                            });
+
+                        return (ActionPossibility) shieldedAttrition;
+                    };
+                });
         #endregion
         
         #region Level 6
