@@ -124,7 +124,68 @@ public static class GuardianFeats
                         ft => ft.HasTrait(ModData.Traits.BodyguardCharge))
                     .WithIsOptional());
             });
-        // Larger Than Life?????????
+        // Larger than Life
+        yield return new TrueFeat(
+                ModData.FeatNames.LargerThanLife,
+                1,
+                "When you're clad in the heaviest of armors, you have an outsized presence.",
+                "{b}Requirements{/b} You're wearing heavy armor\n\nYou're treated as one size larger for the purposes of targeting other creatures with the Disarm, Grapple, Reposition, Shove, and Trip actions {i}(This is cumulative with {link:TitanWrestler}Titan Wrestler{/}, but not with legendary Athletics){/i}.\n\nSimilarly, you're treated as one size larger for the purposes of creatures targeting you with those same actions."/*", as well as with Swallow Whole and similar actions."*/,
+                [ModData.Traits.Guardian])
+            .WithPermanentQEffect(
+                "{Green}While in heavy armor{/Green}, you're one size larger for the purposes of combat maneuvers.",
+                qfFeat =>
+                {
+                    qfFeat.StateCheck = qfThis =>
+                    {
+                        if (ModData.CommonRequirements.IsWearingHeavyArmor(qfThis.Owner))
+                        {
+                            qfThis.Owner.AddQEffect(new QEffect(ExpirationCondition.Ephemeral)
+                            {
+                                Id = qfThis.Owner.HasEffect(QEffectId.TitanWrestler)
+                                    ? QEffectId.TitanWrestlerLegendary
+                                    : QEffectId.TitanWrestler
+                            });
+                            qfThis.Description = qfThis.Description!.Replace(
+                                "{Red}While in heavy armor{/Red}",
+                                "{Green}While in heavy armor{/Green}");
+                        }
+                        else
+                        {
+                            qfThis.Description = qfThis.Description!.Replace(
+                                "{Green}While in heavy armor{/Green}",
+                                "{Red}While in heavy armor{/Red}");
+                        }
+                    };
+                    qfFeat.PreventTargetingBy = action =>
+                    {
+                        if (!ModData.CommonRequirements.IsWearingHeavyArmor(qfFeat.Owner)
+                            || !IsManeuver(action))
+                            return null;
+
+                        var maneuverSizeRequirement = new TargetMustNotBeTwoSizesAboveYouCreatureTargetingRequirement();
+                        if (!maneuverSizeRequirement.Satisfied(action.Owner, qfFeat.Owner))
+                            return null;
+
+                        qfFeat.Owner.Space.Size += 1;
+                        if (!maneuverSizeRequirement.Satisfied(action.Owner, qfFeat.Owner))
+                        {
+                            qfFeat.Owner.Space.Size -= 1;
+                            return "Larger than life";
+                        }
+                        qfFeat.Owner.Space.Size -= 1;
+                        
+                        return null;
+                    };
+
+                    bool IsManeuver(CombatAction action)
+                    {
+                        if (ModManager.TryParse("Reposition", out ActionId reposition)
+                            && action.ActionId == reposition)
+                            return true;
+                        return action.ActionId is ActionId.Disarm or ActionId.Grapple or ActionId.Shove
+                            or ActionId.Trip;
+                    }
+                });
         // Long-distance Taunt
         yield return new TrueFeat(
             ModData.FeatNames.LongDistanceTaunt,

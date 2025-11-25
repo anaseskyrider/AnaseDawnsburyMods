@@ -105,6 +105,14 @@ public static class ModData
                        && (armor2.HasTrait(Trait.MediumArmor) || armor2.HasTrait(Trait.HeavyArmor)));
         }
 
+        public static bool IsWearingHeavyArmor(Creature cr)
+        {
+            return (cr.Armor.Item is {} armor1
+                    && armor1.HasTrait(Trait.HeavyArmor))
+                   || (cr.BaseArmor is {} armor2
+                       && armor2.HasTrait(Trait.HeavyArmor));
+        }
+
         public static bool HasInterceptAttack(CalculatedCharacterSheetValues values)
         {
             return values.HasFeat(FeatNames.InterceptAttack) || values.HasFeat(FeatNames.GuardiansIntercept);
