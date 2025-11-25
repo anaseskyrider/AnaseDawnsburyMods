@@ -633,91 +633,95 @@ public static class GuardianClass
         int stepSpeed = owner.HasEffect(QEffectId.ElfStep) ? 2 : 1;
         
         CombatAction interceptAttack = new CombatAction(
-                owner,
-            ModData.Illustrations.InterceptAttack,
-            "Intercept Attack",
-            [Trait.Basic, ModData.Traits.Guardian, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName],
-            "{i}You fling yourself in the way of oncoming harm to protect an ally.{/i}\n\nYou can Step, but you must end your movement adjacent to the triggering ally. You take the damage instead of the triggering ally. Apply your own immunities, weaknesses, and resistances to the damage, not the ally's.\n\n{b}Special{/b} You can extend this ability to an ally within 15 feet of you if the damage comes from your taunted enemy. If this ally is farther than you can Step to reach, you can Stride instead of Stepping; you still must end the movement adjacent to your ally.",
-            Target.RangedFriend(interceptRange - (canStride ? 0 : 1))
-                .WithAdditionalConditionOnTargetCreature((a,d) =>
-                {
-                    if (attacker == owner.Battle.Pseudocreature)
-                        return Usability.NotUsable("Pseudocreature");
-                    if (d != dEvent.TargetCreature)
-                        return Usability.NotUsableOnThisCreature("Not the target of Intercept Attack");
-                    if (!dEvent.KindedDamages.Any(kd =>
-                            ModData.CommonRequirements.IsInterceptableDamageType(a, kd)))
-                        return Usability.NotUsable("Damage does not trigger Intercept Attack");
-                    if (!a.IsAdjacentTo(d)
-                        && GetLegalTiles(a, d, canStride).Count == 0)
-                        return Usability.NotUsableOnThisCreature("Nowhere to move");
-                    return Usability.Usable;
-                }))
-        .WithActionCost(0)
-        .WithActionId(ModData.ActionIds.InterceptAttack)
-        .WithTag(dEvent) // Store the damage event
-        .WithEffectOnEachTarget(async (action, self, ally, _) =>
-        {
-            // Pick a tile
-            string question = $"Choose where to Step{(canStride ? " or Stride" : null)} with Intercept Attack or right-click to continue. You must end your movement adjacent to the triggering ally.";
-            Tile? chosenTile = await self.Battle.AskToChooseATile(
-                self,
-                Pathfinding.Floodfill(
-                        self, self.Battle, new PathfindingDescription()
-                        {
-                            Squares = self.Speed,
-                            Style =
-                            {
-                                MaximumSquares = self.Speed,
-                                PermitsStep = true
-                            }
-                        })
-                    .Where(tile => IsLegalTile(tile, self, ally, canStride)),
-                ModData.Illustrations.InterceptAttack,
-                question, "Move here",
-                true, true,
-                "Don\'t step" + (canStride ? " or stride" : null));
-            // Step/Stride to that tile
-            if (chosenTile == null)
-            {
-                if (!self.IsAdjacentTo(ally))
-                {
-                    string log = "reaction";
-                    if (refundBonusReaction)
+                owner, 
+                ModData.Illustrations.InterceptAttack, 
+                "Intercept Attack", 
+                [Trait.Basic, ModData.Traits.Guardian, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName], 
+                "{i}You fling yourself in the way of oncoming harm to protect an ally.{/i}\n\nYou can Step, but you must end your movement adjacent to the triggering ally. You take the damage instead of the triggering ally. Apply your own immunities, weaknesses, and resistances to the damage, not the ally's.\n\n{b}Special{/b} You can extend this ability to an ally within 15 feet of you if the damage comes from your taunted enemy. If this ally is farther than you can Step to reach, you can Stride instead of Stepping; you still must end the movement adjacent to your ally.", 
+                Target.RangedFriend(interceptRange - (canStride ? 0 : 1))
+                    .WithAdditionalConditionOnTargetCreature((a,d) =>
                     {
-                        self.Actions.ReactionsUsedUpThisRound.Remove(ModData.CommonReactionKeys.ReactionTime);
-                        log = "bonus " + log;
-                    }
-                    else
-                        self.Actions.RefundReaction();
-                    self.Battle.Log(log.Capitalize() + " refunded: no square chosen, and not adjacent to ally.");
-                    return;
-                }
-            }
-            else
-                await self.StrideAsync(question, allowStep: true, strideTowards: chosenTile);
-                
-            DamageEvent interceptedDamage = new DamageEvent(
-                dEvent.CombatAction,
-                owner,
-                dEvent.CheckResult,
-                [..dEvent.KindedDamages])
+                        if (attacker == owner.Battle.Pseudocreature)
+                            return Usability.NotUsable("Pseudocreature");
+                        if (d != dEvent.TargetCreature)
+                            return Usability.NotUsableOnThisCreature("Not the target of Intercept Attack");
+                        if (!dEvent.KindedDamages.Any(kd =>
+                                ModData.CommonRequirements.IsInterceptableDamageType(a, kd)))
+                            return Usability.NotUsable("Damage does not trigger Intercept Attack");
+                        if (!a.IsAdjacentTo(d)
+                            && GetLegalTiles(a, d, canStride).Count == 0)
+                            return Usability.NotUsableOnThisCreature("Nowhere to move");
+                        return Usability.Usable;
+                    }))
+            .WithActionCost(0)
+            .WithActionId(ModData.ActionIds.InterceptAttack)
+            .WithTag(dEvent) // Store the damage event
+            .WithEffectOnEachTarget(async (action, self, ally, _) =>
             {
-                IsSplashDamage = dEvent.IsSplashDamage,
-                //DoubleDamage = dEvent.DoubleDamage, // Doubles twice
-                //HalveDamage = dEvent.HalveDamage, // Halves twice
-                //Bonuses = @event.Bonuses, // Recalculates
-            };
-            self.Overhead(
-                "intercept attack",
-                Color.White,
-                self + " {b}Intercepts{/b} the {b}Attack{/b} against " + ally + ".",
-                action.Name +" {icon:Reaction}",
-                action.Description,
-                action.Traits);
-            await CommonSpellEffects.DealDirectDamage(interceptedDamage);
-            dEvent.ReduceBy(dEvent.KindedDamages.Sum(kd => kd.ResolvedDamage), "Intercept attack");
-        });
+                // Pick a tile
+                string question = $"Choose where to Step{(canStride ? " or Stride" : null)} with Intercept Attack or right-click to continue. You must end your movement {"adjacent to the triggering ally".WithColor(self.IsAdjacentTo(ally) ? "Green" : "Red")}.";
+                string button = ("Don\'t step" + (canStride ? " or stride" : null))
+                    .WithColor(self.IsAdjacentTo(ally)
+                        ? "Green"
+                        : "Red");
+                Tile? chosenTile = await self.Battle.AskToChooseATile(
+                    self,
+                    Pathfinding.Floodfill(
+                            self, self.Battle, new PathfindingDescription()
+                            {
+                                Squares = self.Speed,
+                                Style =
+                                {
+                                    MaximumSquares = self.Speed,
+                                    PermitsStep = true
+                                }
+                            })
+                        .Where(tile => IsLegalTile(tile, self, ally, canStride)),
+                    ModData.Illustrations.InterceptAttack,
+                    question, "Move here",
+                    true, true, null,
+                    button);
+                // Step/Stride to that tile
+                if (chosenTile == null)
+                {
+                    if (!self.IsAdjacentTo(ally))
+                    {
+                        string log = "reaction";
+                        if (refundBonusReaction)
+                        {
+                            self.Actions.ReactionsUsedUpThisRound.Remove(ModData.CommonReactionKeys.ReactionTime);
+                            log = "bonus " + log;
+                        }
+                        else
+                            self.Actions.RefundReaction();
+                        self.Battle.Log(log.Capitalize() + " refunded: no square chosen, and not adjacent to ally.");
+                        return;
+                    }
+                }
+                else
+                    await self.StrideAsync(question, allowStep: true, strideTowards: chosenTile);
+                    
+                DamageEvent interceptedDamage = new DamageEvent(
+                    dEvent.CombatAction,
+                    owner,
+                    dEvent.CheckResult,
+                    [..dEvent.KindedDamages])
+                {
+                    IsSplashDamage = dEvent.IsSplashDamage,
+                    //DoubleDamage = dEvent.DoubleDamage, // Doubles twice
+                    //HalveDamage = dEvent.HalveDamage, // Halves twice
+                    //Bonuses = @event.Bonuses, // Recalculates
+                };
+                self.Overhead(
+                    "intercept attack",
+                    Color.White,
+                    self + " {b}Intercepts{/b} the {b}Attack{/b} against " + ally + ".",
+                    action.Name +" {icon:Reaction}",
+                    action.Description,
+                    action.Traits);
+                await CommonSpellEffects.DealDirectDamage(interceptedDamage);
+                dEvent.ReduceBy(dEvent.KindedDamages.Sum(kd => kd.ResolvedDamage), "Intercept attack");
+            });
         
         return interceptAttack;
 
