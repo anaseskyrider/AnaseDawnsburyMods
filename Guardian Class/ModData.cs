@@ -142,8 +142,8 @@ public static class ModData
         #region Class Feats
         public static readonly FeatName Bodyguard = ModManager.RegisterFeatName("GuardianClass.Bodyguard", "Bodyguard");
         public static readonly string BodyguardChargeChoice = "GuardianClass.BodyguardChargeChoice";
-        public static readonly FeatName LargerThanLife = ModManager.RegisterFeatName("GuardianClass.LargerThanLife", "Larger Than Life");
-        public static readonly FeatName LongDistanceTaunt = ModManager.RegisterFeatName("GuardianClass.LongDistanceTaunt", "Long-Distance Taunt");
+        public static readonly FeatName LargerThanLife = ModManager.RegisterFeatName("GuardianClass.LargerThanLife", "Larger than Life");
+        public static readonly FeatName LongDistanceTaunt = ModManager.RegisterFeatName("GuardianClass.LongDistanceTaunt", "Long-distance Taunt");
         public static readonly FeatName PunishingShove = ModManager.RegisterFeatName("GuardianClass.PunishingShove", "Punishing Shove");
         public static readonly FeatName ShieldWarfare = ModManager.RegisterFeatName("GuardianClass.ShieldWarfare", "Shield Warfare");
         public static readonly FeatName ShoulderCheck = ModManager.RegisterFeatName("GuardianClass.ShoulderCheck", "Shoulder Check");
@@ -152,14 +152,14 @@ public static class ModData
         public static readonly FeatName HamperingStance = ModManager.RegisterFeatName("GuardianClass.HamperingStance", "Hampering Stance");
         public static readonly FeatName PhalanxFormation = ModManager.RegisterFeatName("GuardianClass.PhalanxFormation", "Phalanx Formation");
         public static readonly FeatName RaiseHaft = ModManager.RegisterFeatName("GuardianClass.RaiseHaft", "Raise Haft");
-        public static readonly FeatName ShieldYourEyes = ModManager.RegisterFeatName("GuardianClass.ShieldYourEyes", "Shield Your Eyes");
+        public static readonly FeatName ShieldYourEyes = ModManager.RegisterFeatName("GuardianClass.ShieldYourEyes", "Shield your Eyes");
         public static readonly FeatName ShieldingTaunt = ModManager.RegisterFeatName("GuardianClass.ShieldingTaunt", "Shielding Taunt");
         public static readonly FeatName TauntingStrike = ModManager.RegisterFeatName("GuardianClass.TauntingStrike", "Taunting Strike");
         public static readonly FeatName AreaArmor = ModManager.RegisterFeatName("GuardianClass.AreaArmor", "Area Armor");
         public static readonly FeatName ArmoredCourage = ModManager.RegisterFeatName("GuardianClass.ArmoredCourage", "Armored Courage");
         public static readonly FeatName EnergyInterceptor = ModManager.RegisterFeatName("GuardianClass.EnergyInterceptor", "Energy Interceptor");
         public static readonly FeatName FlyingTackle = ModManager.RegisterFeatName("GuardianClass.FlyingTackle", "FlyingTackle");
-        public static readonly FeatName NotSoFast = ModManager.RegisterFeatName("GuardianClass.NotSoFast", "Not So Fast");
+        public static readonly FeatName NotSoFast = ModManager.RegisterFeatName("GuardianClass.NotSoFast", "Not so Fast");
         public static readonly FeatName ProudNail = ModManager.RegisterFeatName("GuardianClass.ProudNail", "Proud Nail");
         public static readonly FeatName ShieldedAttrition = ModManager.RegisterFeatName("GuardianClass.ShieldedAttrition", "Shielded Attrition");
         public static readonly FeatName DisarmingIntercept = ModManager.RegisterFeatName("GuardianClass.DisarmingIntercept", "Disarming Intercept");
@@ -169,13 +169,13 @@ public static class ModData
             ModManager.RegisterFeatName("GuardianClass.ReactiveStrike", "Reactive Strike");
         // FeatName Reflexive Shield
         public static readonly FeatName RetaliatingRescue = ModManager.RegisterFeatName("GuardianClass.RetaliatingRescue", "Retaliating Rescue");
-        public static readonly FeatName RingTheirBell = ModManager.RegisterFeatName("GuardianClass.RingTheirBell", "Ring Their Bell");
+        public static readonly FeatName RingTheirBell = ModManager.RegisterFeatName("GuardianClass.RingTheirBell", "Ring their Bell");
         public static readonly FeatName StompGround = ModManager.RegisterFeatName("GuardianClass.StompGround", "Stomp Ground");
         public static readonly FeatName GroupTaunt = ModManager.RegisterFeatName("GuardianClass.GroupTaunt", "Group Taunt");
         public static readonly FeatName JuggernautCharge = ModManager.RegisterFeatName("GuardianClass.JuggernautCharge", "Juggernaut Charge");
         public static readonly FeatName MightyBulwark = ModManager.RegisterFeatName("GuardianClass.MightyBulwark", "Mighty Bulwark");
         public static readonly FeatName RepositioningBlock = ModManager.RegisterFeatName("GuardianClass.RepositioningBlock", "Repositioning Block");
-        public static readonly FeatName ShieldFromArrows = ModManager.RegisterFeatName("GuardianClass.ShieldFromArrows", "Shield From Arrows");
+        public static readonly FeatName ShieldFromArrows = ModManager.RegisterFeatName("GuardianClass.ShieldFromArrows", "Shield from Arrows");
         public static readonly FeatName ShieldWallop = ModManager.RegisterFeatName("GuardianClass.ShieldWallop", "Shield Wallop");
         #endregion
     }

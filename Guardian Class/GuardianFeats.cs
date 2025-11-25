@@ -125,7 +125,7 @@ public static class GuardianFeats
                     .WithIsOptional());
             });
         // Larger Than Life?????????
-        // Long-Distance Taunt
+        // Long-distance Taunt
         yield return new TrueFeat(
             ModData.FeatNames.LongDistanceTaunt,
             1,
@@ -413,7 +413,7 @@ public static class GuardianFeats
                     (_, weapon) =>
                         weapon.HasTrait(Trait.TwoHanded)));
             });
-        // Shield Your Eyes (useless?)
+        // Shield your Eyes (useless?)
         /*yield return new TrueFeat(
                 ModData.FeatNames.ShieldYourEyes,
                 2,
@@ -614,7 +614,7 @@ public static class GuardianFeats
                 "You must have the guardian's Intercept Attack feature.");
         // Flying Tackle
         //// Not sure if will include due to reliance on More Basic Actions, and weak implementation
-        // Not So Fast!
+        // Not so Fast!
         yield return new TrueFeat(
                 ModData.FeatNames.NotSoFast,
                 4,
@@ -632,7 +632,7 @@ public static class GuardianFeats
             {
                 AttackOfOpportunityMechanics mechanics = new AttackOfOpportunityMechanics()
                 {
-                    Name = "Not So Fast!", // QuestionText doesn't ask about the name
+                    Name = "Not so Fast!", // QuestionText doesn't ask about the name
                     Description = "While in Hampering Stance, creatures who leave a square in your reach provoke a reaction to Strike and slow them down.",
                     RestrictToOnlyAgainstWhom = (qfReact, _) =>
                         qfReact.Owner.HasEffect(ModData.QEffectIds.HamperingStance),
@@ -1206,7 +1206,7 @@ public static class GuardianFeats
                         return (ActionPossibility)rescue;
                     };
                 });
-        // Ring Their Bell
+        // Ring their Bell
         yield return new TrueFeat(
                 ModData.FeatNames.RingTheirBell,
                 6,
@@ -1233,7 +1233,7 @@ public static class GuardianFeats
                         
                         StrikeModifiers newMods = new StrikeModifiers() { };
                         CombatAction ringTheirBell = qfFeat.Owner.CreateStrike(item, -1, newMods)
-                            .WithName("Ring Their Bell")
+                            .WithName("Ring their Bell")
                             .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
                                 newMods,
                                 prologueText: "{b}Requirements{/b} You are wearing medium or heavy armor, and your taunted enemy is off-guard because it didn't target you or include you in an area effect.\n",
@@ -1528,7 +1528,7 @@ public static class GuardianFeats
                         };
                 });
         // Repositioning Block ????? More Basic Actions??? Hard-coded?
-        // Shield From Arrows
+        // Shield from Arrows
         // Shield Wallop
         yield return new TrueFeat(
                 ModData.FeatNames.ShieldWallop,
