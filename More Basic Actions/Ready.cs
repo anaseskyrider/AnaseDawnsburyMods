@@ -157,6 +157,7 @@ public static class Ready
                     {
                         qfThis.Value = self.Actions.AttackedThisManyTimesThisTurn;
                     },
+                    StateCheckLayer = 1,
                     StateCheckWithVisibleChanges = async qfThis =>
                     {
                         Creature self = qfThis.Owner;
