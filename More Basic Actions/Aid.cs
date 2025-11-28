@@ -190,8 +190,8 @@ public static class Aid
                 .Max(ica => owner.Proficiencies.Get(ica.Action.Item?.Traits ?? []));
             List<CombatAction> mostProficientAttacks = strikeList
                 .FindAll(ica =>
-                    owner.Proficiencies.Get(ica.Action.Item?.Traits ?? []) == highestAnyProficiency &&
-                    ica.Action.ActiveRollSpecification != null)
+                    owner.Proficiencies.Get(ica.Action.Item?.Traits ?? []) == highestAnyProficiency
+                    && ica.Action.ActiveRollSpecification != null)
                 .Select(ica => ica.Action)
                 .ToList();
             mostProficientAttack = mostProficientAttacks.FirstOrDefault();
