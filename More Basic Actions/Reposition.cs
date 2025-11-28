@@ -28,7 +28,8 @@ public static class Reposition
         {
             QEffect repositionLoader = new QEffect()
             {
-                Name = "RepositionLoader",
+                Name = "RepositionGranter",
+                Key = "RepositionGranter", // Last mod to add this effect will win out.
                 ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
                     if (section.PossibilitySectionId != PossibilitySectionId.TrueAttackManeuvers)
