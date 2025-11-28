@@ -218,7 +218,66 @@ public static class Ready
                 "Ready (Brace)",
                 [ModData.Traits.MoreBasicActions, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
                 "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy moves into your reach\n\nYou make a melee Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
-                Target.Self())
+                Target.Self(/*(self, ai) => // Hopelessly nonfunctional experiment in getting AI to use Brace sometimes.
+                {
+                    // Mindless creatures do not use Ready actions.
+                    if (ai.Tactic is Tactic.Mindless or Tactic.DoNothing or Tactic.PanickingChild)
+                        return int.MinValue;
+                    
+                    // Do not take as first action, encourage normal option evaluations before falling back to Ready
+                    int actionsLeft = self.Actions.TotalActionsLeft;
+                    if (actionsLeft > 2)
+                        return int.MinValue;
+                    
+                    // Won't take this action if it can't react since it requires a reaction to utilize
+                    if (!self.Actions.CanTakeReaction())
+                        return int.MinValue;
+                    
+                    // Will not be taken if this creature has both AoOs and Reach,
+                    // because Brace becomes wasteful compared to other options.
+                    if (self.HasEffect(QEffectId.AttackOfOpportunity) is {} opp && self.Space.ActualReach > 1)
+                        return int.MinValue;
+                    
+                    // Will not be taken by creatures who have spells or ranged Strike options.
+                    bool hasRangedOptions = self.Spellcasting is not null
+                        || self.Weapons.Any(item => item.WeaponProperties is
+                            { RangeIncrement: > 0, MaximumRange: > 0 });
+                    if (hasRangedOptions)
+                        return int.MinValue;
+                    
+                    // Will only be taken if there are enemies within a distance that could feasibly trigger Ready.
+                    List<Creature> enemies = self.Battle.AllCreatures
+                        .Where(self.EnemyOf)
+                        .OrderBy(self.DistanceTo) // First creature is the closest
+                        .ToList();
+                    if (enemies.Count == 0)
+                        return int.MinValue;
+                    // // Don't Brace if I can Stride 1+ times and then Strike.
+                    int distanceICanStrideAndStrike = (self.Speed * (actionsLeft - 1)) + self.Space.ActualReach;
+                    if (enemies.Any(cr =>
+                            self.DistanceToWith10FeetException(cr) <= distanceICanStrideAndStrike))
+                        return int.MinValue;
+                    // // Don't Brace if nobody can Stride up and enter my reach.
+                    if (enemies.All(cr =>
+                            cr.DistanceTo(self) > (cr.Speed * 3) + self.Space.ActualReach))
+                        return int.MinValue;
+                    
+                    // The value of this action is based on the goodness of their default melee attack.
+                    if (self.PrimaryWeapon == null)
+                        return int.MinValue;
+
+                    float mainStrike = self.CreateStrike(
+                            self.PrimaryWeapon,
+                            self.Actions.AttackedThisManyTimesThisTurn)
+                        .TrueDamageFormula!
+                        .ExpectedValueMinimumOne;
+
+                    int distanceOverMinimum = enemies.First().DistanceToWith10FeetException(self) - distanceICanStrideAndStrike;
+                    float distance_Modifier = -0.1f * distanceOverMinimum; // Reduced value if the creature isn't advancing
+                    float AoO_Mult = opp ? 0.5f : 1f; // Reduced value if the creature has AoOs.
+
+                    return mainStrike * AoO_Mult + distance_Modifier;
+                }*/))
             .WithActionCost(2)
             .WithActionId(ModData.ActionIds.Ready)
             .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
