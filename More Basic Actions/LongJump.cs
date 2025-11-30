@@ -40,7 +40,9 @@ public static class LongJump
                     if (section.PossibilitySectionId != sectionId)
                         return null;
 
-                    return (ActionPossibility)CreateLongJump(qfThis.Owner);
+                    return (ActionPossibility) CreateLongJump(
+                        qfThis.Owner,
+                        qfThis.Owner.HasFeat(ModData.FeatNames.QuickJump));
                 },
             };
             
@@ -63,9 +65,11 @@ public static class LongJump
                 "You must be trained in Athletics."));
     }
 
-    public static CombatAction CreateLongJump(Creature owner)
+    public static CombatAction CreateLongJump(Creature owner, bool hasQuickJump = false)
     {
-        bool hasQuickJump = owner.HasFeat(ModData.FeatNames.QuickJump);
+        Skill bestSkill = owner.HasFeat(ModData.FeatNames.GracefulLeaper)
+            ? new Skill[] {Skill.Acrobatics, Skill.Athletics}.MaxBy(skill => owner.Skills.Get(skill))
+            : Skill.Athletics;
         return new CombatAction(
                 owner,
                 ModData.Illustrations.LongJump,
@@ -136,6 +140,7 @@ public static class LongJump
                             : Usability.NotUsableOnThisCreature("Not in the same direction");
                     });
                 }
+                
                 leap.EffectOnChosenTargets = null;
                 // Roll to Jump
                 leap.WithEffectOnChosenTargets(async (innerLeap, leaper, leapTargets) =>
