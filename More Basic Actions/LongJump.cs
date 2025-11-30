@@ -32,7 +32,8 @@ public static class LongJump
         {
             QEffect longJumpLoader = new QEffect()
             {
-                Name = "LongJumpLoader",
+                Name = "LongJumpGranter",
+                Key = "LongJumpGranter",
                 ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
                     PossibilitySectionId sectionId = PossibilitySectionId.Movement;
