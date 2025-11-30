@@ -28,10 +28,6 @@ public static class Ready
     
     public static void LoadReady()
     {
-        // SilchasRuin — 2:59 AM
-        // TODO: maybe make ranged attack when an enemy no longer has cover?
-        // not sure how easy thatd be to program
-        
         // Add Prepare to Aid to every creature.
         ModManager.RegisterActionOnEachCreature(cr =>
         {
@@ -62,6 +58,7 @@ public static class Ready
                                     new ActionPossibility(CreateReadySeize(cr)),
                                     new ActionPossibility(CreateReadyFootwork(cr)),
                                     new ActionPossibility(CreateReadyHold(cr)),
+                                    new ActionPossibility(CreateReadyWideOpen(cr)),
                                 ],
                             },
                         },
@@ -79,6 +76,91 @@ public static class Ready
             };
             cr.AddQEffect(readyLoader);
         });
+    }
+
+    public static CombatAction CreateReadyWideOpen(Creature owner)
+    {
+        CombatAction readyWideOpen = new CombatAction(
+                owner,
+                IllustrationName.TwoActions,
+                "Ready (Wide Open)",
+                [ModData.Traits.MoreBasicActions, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
+                "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy exits cover or lowers its shield\n\nYou make a Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
+                Target.Self())
+            .WithActionCost(2)
+            .WithActionId(ModData.ActionIds.Ready)
+            .WithEffectOnEachTarget(async (_, caster, _, _) =>
+            {
+                QEffect readiedWideOpen = new QEffect(
+                    "Seeking Opening",
+                    "When an enemy exits cover or lowers its shield, you can Strike the triggering creature as a reaction.",
+                    ExpirationCondition.ExpiresAtStartOfYourTurn,
+                    caster,
+                    ModData.Illustrations.Ready)
+                {
+                    DoNotShowUpOverhead = true,
+                    Value = caster.Actions.AttackedThisManyTimesThisTurn,
+                    EndOfYourTurnBeneficialEffect = async (qfThis, self) =>
+                    {
+                        qfThis.Value = self.Actions.AttackedThisManyTimesThisTurn;
+                    },
+                    StateCheckLayer = 1,
+                    StateCheckWithVisibleChanges = async qfThis =>
+                    {
+                        if (qfThis.Owner.PrimaryWeaponIncludingRanged == null)
+                            return;
+                        
+                        // List of creatures who don't have cover or a shield
+                        List<Creature> provokeQueue = (qfThis.Tag as List<Creature>)!;
+
+                        foreach (Creature cr in qfThis.Owner.Battle.AllCreatures
+                                     .Where(qfThis.Owner.EnemyOf))
+                        {
+                            if (HasCoverOrShield(qfThis.Owner, cr))
+                            {
+                                provokeQueue.Remove(cr);
+                                continue;
+                            }
+
+                            if (provokeQueue.Contains(cr))
+                                continue;
+                            
+                            await OfferAndMakeReactiveStrike2(
+                                qfThis.Owner,
+                                cr,
+                                $"{{b}}Ready (Wide Open) {{icon:Reaction}}{{/b}}\n{{Blue}}{cr.Name}{{/Blue}} has become exposed to you.\nMake a Strike?",
+                                "*ready (wide open)*",
+                                1,
+                                qfThis.Value,
+                                false);
+                            
+                            provokeQueue.Add(cr);
+                        }
+                    },
+                    // Creatures who don't have cover or a shield
+                    Tag = caster.Battle.AllCreatures
+                        .Where(caster.EnemyOf)
+                        .Where(cr => !HasCoverOrShield(caster, cr))
+                        .ToList(),
+                };
+                caster.AddQEffect(readiedWideOpen);
+                
+                return;
+
+                bool HasCoverOrShield(Creature me, Creature cr)
+                {
+                    return cr.Defenses.DetermineDefenseBonuses(
+                        me,
+                        me.PrimaryWeapon is not null ? me.CreateStrike(me.PrimaryWeapon) : null,
+                        Defense.AC,
+                        cr)
+                        .Any(bonus =>
+                            bonus?.BonusType is BonusType.Circumstance
+                            && bonus.BonusSource.ToLower() is {} lower
+                            && (lower.Contains("shield") || lower.Contains("cover")));
+                }
+            });
+        return readyWideOpen;
     }
 
     public static CombatAction CreateReadyHold(Creature owner)
