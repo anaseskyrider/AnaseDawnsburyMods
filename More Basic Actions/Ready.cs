@@ -31,8 +31,6 @@ public static class Ready
         // SilchasRuin — 2:59 AM
         // TODO: maybe make ranged attack when an enemy no longer has cover?
         // not sure how easy thatd be to program
-        // TODO: also make ranged attack when enemy enters first range increment
-        // maybe combine em
         
         // Add Prepare to Aid to every creature.
         ModManager.RegisterActionOnEachCreature(cr =>
@@ -63,6 +61,7 @@ public static class Ready
                                     new ActionPossibility(CreateReadyBrace(cr)),
                                     new ActionPossibility(CreateReadySeize(cr)),
                                     new ActionPossibility(CreateReadyFootwork(cr)),
+                                    new ActionPossibility(CreateReadyHold(cr)),
                                 ],
                             },
                         },
@@ -80,6 +79,113 @@ public static class Ready
             };
             cr.AddQEffect(readyLoader);
         });
+    }
+
+    public static CombatAction CreateReadyHold(Creature owner)
+    {
+        CombatAction holdAction = new CombatAction(
+                owner,
+                IllustrationName.TwoActions,
+                "Ready (Hold)",
+                [ModData.Traits.MoreBasicActions, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
+                "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy enters the maximum range or the first range increment of a ranged attack you have\n\nYou make a Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
+                Target.Self())
+            .WithActionCost(2)
+            .WithActionId(ModData.ActionIds.Ready)
+            .WithEffectOnEachTarget(async (_, caster, _, _) =>
+            {
+                List<Creature> enemies = caster.Battle.AllCreatures
+                    .Where(caster.EnemyOf)
+                    .ToList();
+                List<Item> rangedWeapons = GetRangedAttacks(caster);
+                
+                QEffect readiedHold = new QEffect(
+                    "Holding Fire",
+                    "When an enemy enters any of your maximum ranges or first range increments, you can Strike the triggering creature as a reaction.",
+                    ExpirationCondition.ExpiresAtStartOfYourTurn,
+                    caster,
+                    ModData.Illustrations.Ready)
+                {
+                    DoNotShowUpOverhead = true,
+                    Value = caster.Actions.AttackedThisManyTimesThisTurn,
+                    EndOfYourTurnBeneficialEffect = async (qfThis, self) =>
+                    {
+                        qfThis.Value = self.Actions.AttackedThisManyTimesThisTurn;
+                    },
+                    StateCheckWithVisibleChanges = async qfThis =>
+                    {
+                        List<Item> rangedAttacks = GetRangedAttacks(qfThis.Owner);
+                        if (rangedAttacks.Count == 0)
+                            return;
+                        
+                        List<(Creature, Item)> provokeQueue = (qfThis.Tag as List<(Creature, Item)>)!;
+
+                        foreach (Creature cr in qfThis.Owner.Battle.AllCreatures
+                                     .Where(cr => !cr.FriendOf(qfThis.Owner)))
+                        {
+                            List<Item> promptWeapons = [];
+                            
+                            foreach (Item weapon in rangedAttacks)
+                            {
+                                int range = weapon.WeaponProperties!.RangeIncrement > 0
+                                    ? weapon.WeaponProperties!.RangeIncrement
+                                    : weapon.WeaponProperties!.MaximumRange;
+                                if (cr.DistanceTo(qfThis.Owner) > range)
+                                {
+                                    provokeQueue.RemoveAll(tup =>
+                                        tup.Item1 == cr && tup.Item2 == weapon);
+                                    continue;
+                                }
+
+                                if (provokeQueue.Any(tup =>
+                                        tup.Item1 == cr && tup.Item2 == weapon))
+                                    continue;
+                                
+                                /*
+                                 * Don't immediately offer the reaction, do it for each weapon that
+                                 * triggered at the same time on this creature to reduce prompts
+                                 */
+                                
+                                provokeQueue.Add((cr, weapon));
+                                promptWeapons.Add(weapon);
+                            }
+                            
+                            if (promptWeapons.Count > 0)
+                                await OfferAndMakeReactiveStrike2(
+                                    qfThis.Owner, cr,
+                                    $"{{b}}Ready (Hold) {{icon:Reaction}}{{/b}}\n{{Blue}}{cr.Name}{{/Blue}} has entered your {S.PluralizeIf("range", promptWeapons.Count)}.\nMake a Strike?",
+                                    "*ready (hold)*",
+                                    1, qfThis.Value,
+                                    false,
+                                    promptWeapons.Contains);
+                        }
+                    },
+                    // Creatures who are in your range increments and maximum ranges
+                    Tag = enemies
+                            .SelectMany(
+                                enemy => rangedWeapons.Where(wep =>
+                                {
+                                    int range = wep.WeaponProperties!.RangeIncrement > 0
+                                        ? wep.WeaponProperties!.RangeIncrement
+                                        : wep.WeaponProperties!.MaximumRange;
+                                    return caster.DistanceTo(enemy) <= range;
+                                }),
+                                (enemy, wep) => (enemy, wep))
+                            .ToList(),
+                };
+                caster.AddQEffect(readiedHold);
+
+                List<Item> GetRangedAttacks(Creature cr)
+                {
+                    return cr.Weapons.Where(wep =>
+                            wep.HasTrait(Trait.Ranged)
+                            && wep.WeaponProperties is not null
+                            && (wep.WeaponProperties.RangeIncrement > 0
+                                || wep.WeaponProperties.MaximumRange > 0))
+                        .ToList();
+                }
+            });
+        return holdAction;
     }
 
     public static CombatAction CreateReadyFootwork(Creature owner)
@@ -397,13 +503,16 @@ public static class Ready
       string overhead,
       int numberOfStrikes,
       int attacksMade,
-      bool meleeOnly = true)
+      bool meleeOnly = true,
+      Func<Item, bool>? filter = null)
     {
+        filter ??= _ => true;
         IEnumerable<Item> listToUse = meleeOnly ? attacker.MeleeWeapons : attacker.Weapons;
         Item? primaryWeapon = meleeOnly ? attacker.PrimaryWeapon : attacker.PrimaryWeaponIncludingRanged;
         List<CombatAction> possibleStrikes = listToUse
             .Select(CreateReactiveAttackFromWeapon)
             .Where(IsStrikeOk)
+            .Where(ca => filter(ca.Item!))
             .ToList();
         CombatAction? combatAction = primaryWeapon != null
             ? CreateReactiveAttackFromWeapon(primaryWeapon)
