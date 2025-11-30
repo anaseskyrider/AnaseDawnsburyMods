@@ -1,7 +1,9 @@
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations.Movement;
+using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Intelligence;
@@ -49,12 +51,14 @@ public static class LongJump
             cr.AddQEffect(longJumpLoader);
         });
         
-        LoadQuickJump();
+        foreach (Feat ft in LoadFeats())
+            ModManager.AddFeat(ft);
     }
 
-    public static void LoadQuickJump()
+    public static IEnumerable<Feat> LoadFeats()
     {
-        ModManager.AddFeat(new TrueFeat(
+        // Quick Jump
+        yield return new TrueFeat(
                 ModData.FeatNames.QuickJump,
                 1,
                 null,
@@ -62,7 +66,20 @@ public static class LongJump
                 [ModData.Traits.MoreBasicActions, Trait.General, Trait.Skill])
             .WithPrerequisite(
                 values => values.HasFeat(FeatName.Athletics),
-                "You must be trained in Athletics."));
+                "You must be trained in Athletics.");
+        
+        // Acrobat - Graceful Leaper
+        yield return new TrueFeat(
+                ModData.FeatNames.GracefulLeaper,
+                7,
+                "Mass and muscle are meaningless when you leap; only grace and balance matter.",
+                "You can use Acrobatics instead of Athletics to Long Jump if it's better.",
+                [ModData.Traits.MoreBasicActions, Trait.Archetype, Trait.Skill])
+            .WithAvailableAsArchetypeFeat(Trait.Acrobat)
+            .WithRulesBlockForCombatAction(cr => CreateLongJump(cr, false))
+            .WithPrerequisite(
+                values => values.HasFeat(FeatName.MasterAcrobatics),
+                "You must be a master in Acrobatics");
     }
 
     public static CombatAction CreateLongJump(Creature owner, bool hasQuickJump = false)
@@ -90,7 +107,7 @@ public static class LongJump
                 (hasQuickJump ? "You " : "With a running start, you ")
                     + "attempt to jump through the air.",
                 (!hasQuickJump ? "Stride at least 10 feet in a straight line. At the end of your Stride, " : null)
-                    + $"Leap {(!hasQuickJump ? "in the direction of your Stride " : null)}with a DC 15 Athletics check ({S.SkillBonus(owner, Skill.Athletics)}) to increase the distance you jump, up to your Speed."
+                    + $"Leap {(!hasQuickJump ? "in the direction of your Stride " : null)}with a DC 15 {(bestSkill is Skill.Athletics ? "Athletics" : "{Blue}"+bestSkill.HumanizeTitleCase2()+"{/Blue}")} check ({S.SkillBonus(owner, bestSkill)}) to increase the distance you jump, up to your Speed."
                     + S.FourDegreesOfSuccess(
                         null,   
                         "You Leap up to a distance equal to your check result (round down to the nearest square).",
@@ -147,11 +164,17 @@ public static class LongJump
                 {
                     // Roll spec is added later so that it can be rolled without lost info.
                     // Breakdown is done manually to improve combat log printings.
+                    
+                    TaggedCalculatedNumberProducer jumpSkill = owner.HasFeat(ModData.FeatNames.GracefulLeaper)
+                        ? TaggedChecks.SkillCheck(Skill.Athletics, Skill.Acrobatics)
+                        : TaggedChecks.SkillCheck(Skill.Athletics);
                     CheckBreakdown breakdown = CombatActionExecution.BreakdownAttack(
                         innerLeap
                             .WithActiveRollSpecification(new ActiveRollSpecification(
-                                TaggedChecks.SkillCheck(Skill.Athletics),
-                                new TaggedCalculatedNumberProducer((_, _, _) => new CalculatedNumber(15, "Long Jump DC", [])))), caster);
+                                jumpSkill,
+                                new TaggedCalculatedNumberProducer((_, _, _) =>
+                                    new CalculatedNumber(15, "Long Jump DC", [])))),
+                        caster);
                     CheckBreakdownResult result = new CheckBreakdownResult(breakdown);
                     
                     int leapDistance = CalculateJumpDistanceResult(
