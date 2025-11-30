@@ -16,6 +16,7 @@ using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
+using Dawnsbury.Display.Text;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
@@ -281,7 +282,7 @@ public static class Ready
                 Target.Self())
             .WithActionCost(2)
             .WithActionId(ModData.ActionIds.Ready)
-            .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
+            .WithEffectOnEachTarget(async (_, caster, _, _) =>
             {
                 QEffect readiedFootwork = new QEffect(
                     "Evading Footwork",
@@ -318,7 +319,6 @@ public static class Ready
         return footworkAction;
     }
 
-    // BUG: Look at bizarre flanking triggers, reported by Erful
     public static CombatAction CreateReadySeize(Creature owner)
     {
         CombatAction seizeAction = new CombatAction(
@@ -330,7 +330,7 @@ public static class Ready
                 Target.Self())
             .WithActionCost(2)
             .WithActionId(ModData.ActionIds.Ready)
-            .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
+            .WithEffectOnEachTarget(async (_, caster, _, _) =>
             {
                 QEffect readiedSeize = new QEffect(
                     "Seeking Opportunity",
@@ -469,7 +469,7 @@ public static class Ready
                 }*/))
             .WithActionCost(2)
             .WithActionId(ModData.ActionIds.Ready)
-            .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
+            .WithEffectOnEachTarget(async (_, caster, _, _) =>
             {
                 // AoO tile icons are inaccurate. Nothing I can do to fix it.
                 QEffect readiedBrace = new QEffect(
