@@ -185,7 +185,7 @@ public static class Ready
                                 self,
                                 cr,
                                 $"{{b}}Ready (Seize Opportunity) {{icon:Reaction}}{{/b}}\n{{Blue}}{cr.Name}{{/Blue}} has become flat-footed to you.\nMake a Strike?",
-                                "ready (seize opportunity)",
+                                "*ready (seize opportunity)*",
                                 1,
                                 qfThis.Value,
                                 false);
@@ -383,7 +383,7 @@ public static class Ready
             reactor,
             provoker,
             $"{{b}}Ready (Brace) {{icon:Reaction}}{{/b}}\n{{Blue}}{provoker.Name}{{/Blue}} enters your reach using {{Blue}}{provokingAction.Name}{{/Blue}}.\nMake a melee Strike?",
-            "ready (brace)",
+            "*ready (brace)*",
             1,
             attacksMade);
 
