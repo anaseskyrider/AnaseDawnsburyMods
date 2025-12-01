@@ -57,6 +57,7 @@ public static class ModData
         
         #region Bastion
         public static readonly FeatName DisarmingBlock = ModManager.RegisterFeatName(IdPrepend+"Archetype.Bastion.DisarmingBlock", "Disarming Block");
+        public static readonly FeatName NimbleShieldHand = ModManager.RegisterFeatName(IdPrepend+"Archetype.Bastion.NimbleShieldHand", "Nimble Shield Hand");
         public static readonly FeatName FighterShieldedStride = ModManager.RegisterFeatName(IdPrepend+"Class.Fighter.ShieldedStride", "Shielded Stride");
         public static readonly FeatName FighterReflexiveShield = ModManager.RegisterFeatName(IdPrepend+"Class.Fighter.ReflexiveShield", "Reflexive Shield");
         #endregion
@@ -144,6 +145,9 @@ public static class ModData
     
     public static class QEffectIds
     {
+        // Bastion
+        public static readonly QEffectId NimbleShieldHand = ModManager.RegisterEnumMember<QEffectId>("NimbleShieldHand");
+        
         // Martial Artist
         public static readonly QEffectId PowderPunchStance = ModManager.RegisterEnumMember<QEffectId>("Powder Punch Stance");
         public static readonly QEffectId StumblingStance = ModManager.RegisterEnumMember<QEffectId>("Stumbling Stance");

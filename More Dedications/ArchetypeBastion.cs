@@ -30,6 +30,22 @@ public static class ArchetypeBastion
     {
         foreach (Feat ft in CreateFeats())
             ModManager.AddFeat(ft);
+        
+        ModManager.RegisterActionOnEachActionPossibility(ca =>
+        {
+            if (!ca.Owner.HasEffect(ModData.QEffectIds.NimbleShieldHand))
+                return;
+            if (ca.ActionId is not ActionId.ReplaceItemInHand and not ActionId.DrawItem and not ActionId.PickUpItem)
+                return;
+            if (!ca.Item!.HasTrait(Trait.Shield)
+                || ca.Item!.HasTrait(Trait.TowerShield)
+                // More Shields mod compatibility, apply to Fortress Shields too.
+                || (ModManager.TryParse("CoverShield", out Trait coverShield)
+                    && ca.Item!.HasTrait(coverShield)))
+                return;
+
+            ca.ActionCost = 0;
+        });
     }
 
     public static IEnumerable<Feat> CreateFeats()
@@ -203,7 +219,16 @@ public static class ArchetypeBastion
         // https://2e.aonprd.com/Feats.aspx?ID=1088&ArchLevel=6
         
         // Nimble Shield Hand
-        // Quick draw but only to replace an item with a shield or replace a shield with an item
+        yield return new TrueFeat(
+                ModData.FeatNames.NimbleShieldHand,
+                6,
+                "You are so used to wielding a shield that you can use another item and switch back to it effortlessly.",
+                "You can Draw or Pick Up a shield, or Replace an item with a shield, as a {icon:FreeAction} free action.\n\nThis benefit doesn't apply to tower shields, which are still too cumbersome.",
+                [ModData.Traits.MoreDedications])
+            .WithAvailableAsArchetypeFeat(ModData.Traits.BastionArchetype)
+            .WithPermanentQEffect(
+                "You can Draw, Pick Up, or Replace a shield as a {icon:FreeAction} free action. Except for tower shields.",
+                qfFeat => qfFeat.Id = ModData.QEffectIds.NimbleShieldHand);
         
         // Driveback
         // Knights of Lastwall content.
