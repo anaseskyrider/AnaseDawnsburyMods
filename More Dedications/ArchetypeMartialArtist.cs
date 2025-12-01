@@ -478,7 +478,7 @@ public static class ArchetypeMartialArtist
             .WithAvailableAsArchetypeFeat(ModData.Traits.MartialArtistArchetype);
         
         // Stumbling Feint
-        // PETR: If levels extend beyond 8, account for dedication FoB. For now, class-check is sufficient.
+        // PETR: If levels reach 12+, account for dedication FoB. For now, class-check is sufficient.
         yield return new TrueFeat(
                 ModData.FeatNames.StumblingFeint,
                 6,
@@ -721,6 +721,7 @@ public static class ArchetypeMartialArtist
         stokedFlameStance.Traits.Insert(0, ModData.Traits.MoreDedications);
         yield return stokedFlameStance;
         
+        // Inner Fire
         yield return new TrueFeat(
                 ModData.FeatNames.InnerFire,
                 6,
@@ -1081,7 +1082,9 @@ public static class ArchetypeMartialArtist
         Item? weapon = weaponProducer?.Invoke() ?? null;
         Illustration icon = weapon?.Illustration ?? IllustrationName.Action;
         string description = "Enter a stance.\n\n" + passiveBonus + "\n\n";
-        description = !useNewAttackExclusively ? description + "Also, you gain an additional attack option:\n" + Monk.DescribeAttack(weaponProducer()) : description + "Also, the only Strike you can make is this attack:\n" + Monk.DescribeAttack(weaponProducer());
+        description = !useNewAttackExclusively
+            ? description + "Also, you gain an additional attack option:\n" + (weaponProducer is not null ? Monk.DescribeAttack(weaponProducer()) : null)
+            : description + "Also, the only Strike you can make is this attack:\n" + (weaponProducer is not null ? Monk.DescribeAttack(weaponProducer()) : null);
         description = !requiresBeingUnarmored ? description + "\n\nUnlike most monk stances, you can enter this stance even if you're wearing armor." : description + "\n\nYou can't enter this stance if you're wearing armor.";
         Feat stanceFeat = new TrueFeat(
             featName,
@@ -1126,10 +1129,11 @@ public static class ArchetypeMartialArtist
                             if (useNewAttackExclusively)
                             {
                                 qeffect.PreventTakingAction = action =>
-                                    !action.HasTrait(Trait.Strike) ||
-                                    action.Item != null && action.Item.ItemName == weapon.ItemName
+                                    !action.HasTrait(Trait.Strike)
+                                    || action.Item != null
+                                    && action.Item.ItemName == weapon?.ItemName
                                         ? null
-                                        : "You can only make " + weapon.Name.ToLower() + " attacks.";
+                                        : "You can only make " + weapon?.Name.ToLower() + " attacks.";
                                 qeffect.StateCheck += qfThisStance =>
                                 {
                                     if (weaponProducer != null)
@@ -1141,7 +1145,7 @@ public static class ArchetypeMartialArtist
                                 };
                             }
                             else
-                                qeffect.AdditionalUnarmedStrike = weaponProducer();
+                                qeffect.AdditionalUnarmedStrike = weaponProducer?.Invoke();
 
                             additionalActionOnStance(qeffect);
                         });

@@ -13,6 +13,7 @@ using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
+
 //using Dawnsbury.Mods.DawnniExpanded;
 
 namespace Dawnsbury.Mods.MoreDedications;
@@ -75,7 +76,7 @@ public static class ArchetypeArcher
                 "+2 circumstance bonus to Crossbow damage, increment Simple Crossbow die.",
                 qfFeat =>
                 {
-                    qfFeat.IncreaseItemDamageDie = (qfThis, item) =>
+                    qfFeat.IncreaseItemDamageDie = (_, item) =>
                     {
                         if (!item.HasTrait(Trait.Crossbow) || !item.HasTrait(Trait.Simple))
                             return false;
@@ -88,7 +89,7 @@ public static class ArchetypeArcher
                         return true;
 
                     };
-                    qfFeat.BonusToDamage = (qfThis, action, defender) =>
+                    qfFeat.BonusToDamage = (_, action, _) =>
                         action.HasTrait(Trait.Crossbow) ?
                         new Bonus(2, BonusType.Circumstance, "Crossbow Terror") :
                         null;
@@ -104,7 +105,7 @@ public static class ArchetypeArcher
             .WithActionCost(2)
             .WithPermanentQEffect(
                 "You jump back and fire a quick shot that catches your opponent off guard.",
-                async qfFeat =>
+                qfFeat =>
                 {
                     qfFeat.ProvideStrikeModifier = item =>
                     {
@@ -120,7 +121,7 @@ public static class ArchetypeArcher
                                 Target.Self())
                             .WithActionCost(2)
                             .WithSoundEffect(SfxName.Footsteps)
-                            .WithPrologueEffectOnChosenTargetsBeforeRolls(async (action, caster, targets) =>
+                            .WithPrologueEffectOnChosenTargetsBeforeRolls(async (action, caster, _) =>
                             {
                                 if (!await caster.StepAsync("Choose where to Step with Parting Shot.", allowCancel: true, allowPass: true))
                                 {
@@ -130,7 +131,7 @@ public static class ArchetypeArcher
                                 {
                                     QEffect temporarilyFlatFooted = new QEffect()
                                     {
-                                        IsFlatFootedTo = (qfSelf, attacker, action) =>
+                                        IsFlatFootedTo = (_, attacker, _) =>
                                             attacker != caster ? null : "Parting Shot" 
                                     }.WithExpirationNever();
                                     caster.Battle.AllCreatures.ForEach(cr => cr.AddQEffect(temporarilyFlatFooted));
@@ -182,14 +183,14 @@ public static class ArchetypeArcher
                                         [ModData.Traits.MoreDedications, Trait.Basic],
                                         "You Stride, Step, or Sneak, then Interact to reload.",
                                         Target.Self()
-                                            .WithAdditionalRestriction(user =>
+                                            .WithAdditionalRestriction(_ =>
                                             {
-                                                bool needsReload = heldItem.EphemeralItemProperties != null && heldItem.EphemeralItemProperties.NeedsReload;
-                                                bool isLowMag = (heldItem.HasTrait(Trait.Repeating) && heldItem.EphemeralItemProperties.AmmunitionLeftInMagazine < 5) || false; // Modify for later compatibility.
+                                                bool needsReload = heldItem.EphemeralItemProperties is { NeedsReload: true };
+                                                bool isLowMag = (heldItem.HasTrait(Trait.Repeating)
+                                                                 && heldItem.EphemeralItemProperties.AmmunitionLeftInMagazine < 5)
+                                                                || false; // Modify for later compatibility.
                                                 if (!needsReload && !isLowMag)
-                                                {
                                                     return "Can not be reloaded.";
-                                                }
                                                 return null;
                                             }))
                                     .WithActionCost(1)

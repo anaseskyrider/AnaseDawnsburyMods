@@ -15,7 +15,6 @@ using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
-using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
