@@ -488,7 +488,7 @@ public static class ArchetypeMarshal
                 ModData.FeatNames.ToBattle,
                 8,
                 "With a resounding cry, you rally your ally to the offensive.",
-                "Choose one ally within your marshal's aura who has a reaction available. If you spend 1 action, that ally can use their reaction to immediately Stride. If you spend 2 actions, that ally can use their reaction to immediately Strike.",
+                "Choose one ally within your marshal's aura who has a reaction available. If you spend {icon:Action} 1 action, that ally can use their {icon:Reaction} reaction to immediately Stride. If you spend {icon:TwoActions} 2 actions, that ally can use their {icon:Reaction} reaction to immediately Strike.",
                 [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Flourish])
             .WithActionCost(-3)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
