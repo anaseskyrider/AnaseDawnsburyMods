@@ -435,7 +435,7 @@ public static class ArchetypeMarshal
                 ModData.FeatNames.BackToBack,
                 8,
                 "You excel at watching your allies' backs and helping them watch yours.",
-                "You gain the following benefit: You cannot be flat-footed due to flanking while none of your adjacent allies are flanked.\n\nYour adjacent allies gain the following benefit: You cannot be flat-footed due to flanking while the marshal with this feat isn't flanked.",
+                "You gain the following benefits: You cannot be flat-footed due to flanking while none of your adjacent allies are flanked.\n\nYour adjacent allies gain the following benefits: You cannot be flat-footed due to flanking while the marshal with this feat isn't flanked.",
                 [ModData.Traits.MoreDedications])
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
             .WithPermanentQEffect(
@@ -465,7 +465,7 @@ public static class ArchetypeMarshal
                                 
                                 qfTech2.Owner.AddQEffect(new QEffect(
                                     "Back to Back",
-                                    "You cannot be flat-footed due to flanking.",
+                                    "You cannot be flat-footed due to flanking while adjacent to {Blue}" + (qfTech.Owner == marshal ? "your allies" : marshal.Name) + "{/Blue}, unless they are also flanked.",
                                     ExpirationCondition.Ephemeral,
                                     marshal,
                                     IllustrationName.MirrorImage)
