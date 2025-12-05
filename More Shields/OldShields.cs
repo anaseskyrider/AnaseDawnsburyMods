@@ -2,6 +2,7 @@ using Dawnsbury.Auxiliary;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
@@ -80,25 +81,30 @@ public static class OldShields
 
                     int theirBonus = shield.HasTrait(ModData.Traits.CoverShield) ? 2 : 1;
                     bool hasShieldBlock = qfThis.Owner.HasEffect(QEffectId.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
-                    
+
                     CombatAction raiseGuardian = CommonShieldRules
                         .CreateRaiseShieldCore(qfThis.Owner, shield, hasShieldBlock)
-                        .WithName("Devoted Guardian ("+shield.Name.ToLower().Capitalize()+")")
+                        .With(ca =>
+                        {
+                            // Will apply Fighter.RaiseShield as Devoted Guardian on ally.
+                            ca.Target = Target.AdjacentFriend();
+                        })
+                        .WithName("Devoted Guardian (" + shield.Name.ToLower().Capitalize() + ")")
                         .WithDescription(
                             "You adopt a wide stance, ready to defend both yourself and your chosen ward.",
                             "Choose an adjacent ally. Until the start of your next turn, "
-                                + (isRaised
-                                    ? $"your ally gains a {{Blue}}+{theirBonus}{{/Blue}} circumstance bonus to AC"
-                                    : acBonus != theirBonus
-                                        ? $"you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC and the ally gains a {{Blue}}+{theirBonus}{{/Blue}} circumstance bonus to AC"
-                                        : $"both of you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC")
-                                + (hasShieldBlock && !isRaised
-                                    ? ", and you can use the Shield Block {icon:Reaction} reaction"
-                                    : null)
-                                + ".\n\nYour ally loses the bonus if they're no longer adjacent to you."
-                                + (isRaised
-                                    ? "\n\n{icon:Action} {Green}(Last action was to Raise this Shield){/Green}"
-                                    : null))
+                            + (isRaised
+                                ? $"your ally gains a {{Blue}}+{theirBonus}{{/Blue}} circumstance bonus to AC"
+                                : acBonus != theirBonus
+                                    ? $"you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC and the ally gains a {{Blue}}+{theirBonus}{{/Blue}} circumstance bonus to AC"
+                                    : $"both of you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC")
+                            + (hasShieldBlock && !isRaised
+                                ? ", and you can use the Shield Block {icon:Reaction} reaction"
+                                : null)
+                            + ".\n\nYour ally loses the bonus if they're no longer adjacent to you."
+                            + (isRaised
+                                ? "\n\n{icon:Action} {Green}(Last action was to Raise this Shield){/Green}"
+                                : null))
                         .WithActionCost(isRaised ? 1 : 2)
                         .WithActionId(ActionId.None) // So that you can't use this when offered to raise a shield
                         .WithEffectOnEachTarget(async (_, caster, target, _) =>

@@ -111,8 +111,7 @@ public static class ShieldPatches
     {
         internal static bool Prefix(Creature self, Item shield, ref Possibility __result)
         {
-            // Uses the feat ID as an identifier instead of the QEffect Id.
-            bool hasShieldBlock = self.HasFeat(FeatName.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
+            bool hasShieldBlock = self.HasEffect(QEffectId.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
             
             // Create action
             CombatAction raiseShield = CommonShieldRules.CreateRaiseShieldCore(self, shield, hasShieldBlock);
