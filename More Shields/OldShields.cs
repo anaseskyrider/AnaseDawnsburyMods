@@ -42,6 +42,7 @@ public static class OldShields
         // The feat now independently inserts its own action, and (homebrew) works with a Fortress Shield too. Description is also much more dynamic.
         Feat devotedGuardian = AllFeats.GetFeatByFeatName(Champion.DevotedGuardianFeatName);
         devotedGuardian.RulesText = devotedGuardian.RulesText.Replace("was a tower shield", "has the Cover Shield trait");
+        devotedGuardian.Traits.Insert(0, ModData.Traits.MoreShields);
         devotedGuardian.Traits.Add(ModData.Traits.ShieldActionFeat);
         devotedGuardian.OnCreature = null;
         devotedGuardian.WithPermanentQEffect(
