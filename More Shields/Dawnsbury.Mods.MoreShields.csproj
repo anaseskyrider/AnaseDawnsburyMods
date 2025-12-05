@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Platform>x64</Platform>
@@ -9,7 +9,7 @@
     <NoWarn>1998;NETSDK1206;NU1901;NU1902;NU1903;NU1904</NoWarn>
     <WarningsAsErrors>0618</WarningsAsErrors>
     <DevelopersDawnsburyInstall>Z:\Steam Library\steamapps\common\Dawnsbury Days</DevelopersDawnsburyInstall>
-    <WorkshopExport>..\[Exports]\More Shields</WorkshopExport>
+    <WorkshopExport>[Workshop Files]\[Export]</WorkshopExport>
     <AssetsFolder>MoreShieldsAssets</AssetsFolder>
   </PropertyGroup>
 
@@ -20,16 +20,13 @@
     <Reference Include="Dawnsbury Days">
       <HintPath>Z:\Steam Library\steamapps\common\Dawnsbury Days\Data\Dawnsbury Days.dll</HintPath>
     </Reference>
-    <!--<Reference Include="Dawnsbury.Mods.DawnniExpanded">
-      <HintPath>Z:\Steam Library\steamapps\workshop\content\2693730\3163146733\CustomMods\Dawnsbury.Mods.DawnniExpanded.dll</HintPath>
-    </Reference>-->
     <Reference Include="MonoGame.Framework">
       <HintPath>Z:\Steam Library\steamapps\common\Dawnsbury Days\Data\MonoGame.Framework.dll</HintPath>
     </Reference>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Lib.Harmony" Version="2.3.6"/>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
   </ItemGroup>
   
   <Target Name="CopyToGameModsFolder" AfterTargets="Build">
