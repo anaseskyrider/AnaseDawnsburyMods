@@ -141,13 +141,106 @@ public static class ShieldPatches
     }
 
     /// <summary>
-    /// The ShieldBlock ability now always contains YouAreDealtDamage information, requiring you to have a shield raised, and consolidating multiple raised shields to a single option if you have multiple. Does not rely on the RaiseShield action to handle anything beyond adding a single effect.
+    /// This function has been altered to add additional functionality to the Raised Shield effect to allow for the ability to raise and block with shields independently.
+    /// </summary>
+    /// <para>Devoted Guardian's effect tooltip gained some textual enhancements, has CountAsABuff set to true, and works with any cover shield instead of just tower shields.</para>
+    [HarmonyPatch(typeof(Fighter), nameof(Fighter.RaiseShield))]
+    internal static class PatchRaiseShieldExecution
+    {
+        internal static bool Prefix(
+            Creature caster,
+            Item shield,
+            Creature target,
+            bool devotedGuardian)
+        {
+            if (CommonShieldRules.GetAC(shield) is not {} acBonus)
+                throw new ArgumentException("Cannot get AC bonus from this item. See CommonShieldRules.GetAC().", nameof(shield));
+            
+            bool shieldBlock = caster.HasEffect(QEffectId.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
+            
+            QEffect qfRaised = QEffect.RaisingAShield(shieldBlock)
+                .With(qfThis =>
+                {
+                    qfThis.Name += " (" + shield.Name + ")";
+                    // Closely associate this effect with a shield.
+                    qfThis.Tag = shield;
+                    // Update the description to reflect this shield.
+                    qfThis.Description = qfThis.Description?.Replace("+2", "+" + acBonus);
+                    // Replace state check to end this specific effect when we no longer possess this specific shield.
+                    qfThis.StateCheck = qfThis2 =>
+                    {
+                        if (qfThis2.Tag is not Item tagShield ||
+                            !CommonShieldRules.IsShieldWielded(qfThis2.Owner, tagShield))
+                            qfThis2.ExpiresAt = ExpirationCondition.Immediately;
+                    };
+                    // Associates defensive bonuses to the raised shield
+                    qfThis.BonusToDefenses = (qfThis2, attackAction, targetDefense) =>
+                    {
+                        // Unchanged behavior
+                        if (targetDefense != Defense.AC
+                            && (!qfThis2.Owner.HasEffect(QEffectId.SparklingTarge)
+                                || !qfThis2.Owner.HasEffect(QEffectId.ArcaneCascade)
+                                || !targetDefense.IsSavingThrow()
+                                || attackAction == null
+                                || !attackAction.HasTrait(Trait.Spell)))
+                            return null;
+                    
+                        // Gets shield associated with effect
+                        if ((qfThis2.Tag as Item) is not { } shield2
+                            || CommonShieldRules.GetAC(shield2) is not { } shieldAC)
+                            return null;
+                
+                        return shield2.HasTrait(ModData.Traits.CoverShield) && qfThis2.Owner.HasEffect(QEffectId.TakingCover)
+                            ? new Bonus(4, BonusType.Circumstance, "raised shield in cover")
+                            : new Bonus(shieldAC, BonusType.Circumstance, "raised shield");
+
+                    };
+                });
+            
+            // Adds devoted guardian to the target
+            if (devotedGuardian)
+            {
+                bool isCoverShield = shield.HasAnyTraits(ModData.Traits.CoverShield, Trait.TowerShield);
+                int bonus = isCoverShield ? 2 : 1;
+                target.AddQEffect(new QEffect(
+                    "Devoted Guardian",
+                    $"You have a +{bonus} circumstance bonus to AC as long as you're adjacent to {{Blue}}{caster}{{/Blue}}.",
+                    ExpirationCondition.ExpiresAtStartOfSourcesTurn,
+                    caster,
+                    shield.Illustration)
+                {
+                    CountsAsABuff = true,
+                    BonusToDefenses = (_, _, defense) =>
+                        defense != Defense.AC
+                            ? null
+                            : new Bonus(bonus, BonusType.Circumstance, "Devoted Guardian"),
+                    StateCheck = qfSelf =>
+                    {
+                        if (caster.IsAdjacentTo(qfSelf.Owner))
+                            return;
+                        qfSelf.ExpiresAt = ExpirationCondition.Immediately;
+                    }
+                });
+            }
+            
+            caster.AddQEffect(qfRaised);
+            
+            // Always overwrite the function.
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// The ShieldBlock ability provides a wood-impact sound when blocking the attack, and always contains YouAreDealtDamage information, requiring you to have a shield raised, and consolidating multiple raised shields to a single option if you have multiple. Does not rely on the RaiseShield action to handle anything beyond adding a single effect.
     /// </summary>
     [HarmonyPatch(typeof(QEffect), nameof(QEffect.ShieldBlock))]
     internal static class PatchShieldBlock
     {
         internal static void Postfix(ref QEffect __result)
         {
+            __result.WhenYouUseShieldBlock = async (_, _, _, _) =>
+                Sfxs.Play(ModData.SfxNames.ShieldBlockWooodenImpact);
+            
             // qfThis.Owner is the creature receiving damage reduction.
             // defender is the creature reducing the damage.
             // ShieldWarden passes the shield-user as the defender to the effect-owner.
