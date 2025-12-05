@@ -140,6 +140,7 @@ public static class OldShields
         Feat? reflexiveShield = AllFeats.All.FirstOrDefault(feat => feat.Name.Contains("Reflexive Shield"));
         if (reflexiveShield is not null)
         {
+            reflexiveShield.Traits.Insert(0, ModData.Traits.MoreShields);
             reflexiveShield.OnCreature = null;
             reflexiveShield.WithPermanentQEffect(
                 "Raise a Shield benefits your Reflex saves. If you have Shield Block, you can block any damage from a Reflex save.",
