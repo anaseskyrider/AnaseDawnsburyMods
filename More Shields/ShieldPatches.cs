@@ -171,8 +171,9 @@ public static class ShieldPatches
     }
 
     /// <summary>
-    /// Improves the behavior of Reactive Shield. Now checks against other circumstances bonuses to see if raising a shield would downgrade a threshold. Now raises a shield properly, allowing you to Shield Block (if you have an extra reaction to do so). Includes enhanced log information.
+    /// Improves the behavior of Reactive Shield. Now allows you to specify which shield to raise if you have more than one option. Includes enhanced log information.
     /// </summary>
+    // TODO: Test reactive shield
     [HarmonyPatch(typeof(QEffect), nameof(QEffect.ReactiveShield))]
     internal static class PatchReactiveShield
     {
@@ -186,44 +187,43 @@ public static class ShieldPatches
                     || !action.HasTrait(Trait.Melee)) // Basic validity check
                     return false;
                 
-                // TODO: nat-20s still trigger (and don't help sometimes)
-                
                 Creature defender = qfThis.Owner;
-                Creature attacker = action.Owner;
-                
-                int highestCircumstance = action.ActiveRollSpecification.TaggedDetermineDC.CalculatedNumberProducer
-                    .Invoke(action, attacker, qfThis.Owner)
-                    .Bonuses
-                    .Where(bonus => bonus is { BonusType: BonusType.Circumstance, Amount: > 0 })
-                    .MaxBy(bonus => bonus?.Amount)
-                    ?.Amount ?? 0; // Find the highest circumstance bonuses, if any
-                
-                List<Item> raisableShields = CommonShieldRules
-                    .GetWieldedShields(defender)
+                int threshold = breakdownResult.GetCircumstanceBonusThresholdNeededToDowngrade();
+
+                if (CommonShieldRules.GetWieldedShields(defender) is not { Count: > 0 } shields)
+                    return false;
+
+                List<Item> raisableShields = shields
                     .Except(CommonShieldRules.GetRaisedShields(defender))
-                    .Where(shield =>
-                    {
-                        if (CommonShieldRules.GetAC(shield) is not { } acBonus)
-                            return false;
-                        
-                        int threshold = Math.Max(0, acBonus - highestCircumstance); // Find threshold
-
-                        if (threshold <= 0
-                            || breakdownResult.ThresholdToDowngrade > threshold)
-                            return false;
-
-                        return true;
-                    })
                     .ToList();
+                List<Item> downgradeShields = raisableShields
+                    .Where(shield =>
+                        threshold <= CommonShieldRules.GetAC(shield))
+                    .ToList();
+                bool canBeDowngraded = downgradeShields.Count > 0;
 
-                if (raisableShields.Count == 0)
+                string question = "{b}Reactive Shield{/b} {icon:Reaction}\nYou're about to be hit by {Blue}" + action.Name + "{/Blue}.\nUse reactive shield to Raise a Shield";
+                if (canBeDowngraded)
+                    question += $" and downgrade the {breakdownResult.CheckResult.HumanizeLowerCase2()} into a {(breakdownResult.CheckResult - 1).HumanizeLowerCase2()}?";
+                else
+                    question += "? {i}(You will still be hit but you'll be able to Shield Block.){/i}";
+
+                List<Item> shieldOptions = canBeDowngraded
+                    ? downgradeShields
+                    : raisableShields;
+                string[] stringOptions = shieldOptions
+                    .Select(shield =>
+                        shield.Illustration.IllustrationAsIconString + shield.ItemName)
+                    .ToArray();
+                
+                if (await defender.Battle.AskToUseReaction(
+                        defender,
+                        question,
+                        IllustrationName.Reaction,
+                        stringOptions) is not {} chosenIndex)
                     return false;
                 
-                CheckResult input = breakdownResult.CheckResult - 1;
-                if (!await defender.Battle.AskToUseReaction(
-                        defender,
-                        $"{{b}}Reactive Shield{{/b}} {{icon:Reaction}}\nYou're about to be hit by {{Blue}}{action.Name}{{/Blue}}.\nUse reactive shield to Raise a Shield and downgrade the {breakdownResult.CheckResult.HumanizeLowerCase2()} into a {input.HumanizeLowerCase2()}?"))
-                    return false;
+                Item chosenShield = shieldOptions[chosenIndex];
                     
                 // Custom overhead
                 qfThis.Owner.Overhead(
@@ -232,19 +232,17 @@ public static class ShieldPatches
                     defender + " uses {b}Reactive Shield{/b}.",
                     "Reactive Shield {icon:Reaction}",
                     "{i}You can snap your shield into place just as you would take a blow, avoiding the hit at the last second.{/i}\n\nIf you'd be hit by a melee Strike, you immediately Raise a Shield as a reaction.",
-                    new Traits([..AllFeats.GetFeatByFeatName(FeatName.ReactiveShield).Traits, ModData.Traits.ReactiveAction, Trait.DoNotShowOverheadOfActionName, Trait.DoNotShowInCombatLog]));
+                    new Traits([..AllFeats.GetFeatByFeatName(FeatName.ReactiveShield).Traits, ModData.Traits.ReactiveAction]));
                 
+                // TODO: Fighter.RaiseShield(defender, chosenShield, defender, false);
                 await CommonShieldRules.OfferToRaiseAShield(
                     qfThis.Owner,
-                    raiseAction =>
-                        raiseAction.Item is not null && raisableShields.Contains(raiseAction.Item));
+                    raiseAction => raiseAction.Item == chosenShield);
                 
                 return true;
             };
         }
     }
-    
-    // TODO: ^ Magus Emergency Targe
 
     // TODO: Delay execution for other actions such as Disarming Block
     /// <summary>Adjusts Aggressive Block to provide a shove sound effect and a prettier prompt.</summary>
