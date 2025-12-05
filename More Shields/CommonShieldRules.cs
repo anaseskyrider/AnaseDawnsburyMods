@@ -68,7 +68,6 @@ public static class CommonShieldRules
     /// <summary>Gets the damage reduction with this shield by the blocking creature.</summary>
     public static int GetDamageReduction(Creature blocker, DamageStuff dStuff, Item shield2)
     {
-        // In the distant future, if I find a use-case: Temporary hardness increase QFs.
         return Math.Min(
             shield2.Hardness
             + (blocker.HasEffect(QEffectId.ShieldAlly) ? 2 : 0)
@@ -77,68 +76,62 @@ public static class CommonShieldRules
     }
 
     #endregion
+    
+    #region Shield Effects
+
+    /// <summary>
+    /// Adds an invisible QEffect which doesn't expire that adds the listed amount of bonus hardness to Shield Block reaction events.
+    /// </summary>
+    /// <param name="bonus">An untyped bonus to apply to all shield block events.</param>
+    /// <param name="bonusSource">The bonus name.</param>
+    /// <param name="type">(Default: untyped) The bonus type.</param>
+    public static QEffect BonusToShieldHardness(int bonus, string bonusSource, BonusType type = BonusType.Untyped)
+    {
+        return BonusToShieldHardness((_,_,_,_) =>
+            new Bonus(bonus, type, bonusSource));
+    }
+
+    /// <summary>
+    /// Adds an invisible QEffect which doesn't expire that adds a Bonus to hardness to Shield Block reaction events.
+    /// </summary>
+    /// <param name="shouldApply">A lambda function which takes in the ATTACKER, the DAMAGESTUFF, the TARGET of the damage, and the one BLOCKING it. It returns the bonus to apply to the shield block event.</param>
+    public static QEffect BonusToShieldHardness(Func<Creature,DamageStuff,Creature,Creature,Bonus?> shouldApply)
+    {
+        return new QEffect()
+        {
+            Id = ModData.QEffectIds.BonusToHardness,
+            Tag = shouldApply,
+        };
+    }
+
+    /// <summary>
+    /// Gets the total bonuses to hardness for Shield Block events.
+    /// </summary>
+    /// <param name="attacker"></param>
+    /// <param name="dStuff"></param>
+    /// <param name="target"></param>
+    /// <param name="blocker"></param>
+    /// <returns></returns>
+    public static int GetShieldBlockHardnessBonuses(
+        Creature attacker,
+        DamageStuff dStuff,
+        Creature target,
+        Creature blocker)
+    {
+        List<Bonus?> bonuses = [];
+        foreach (QEffect qf in blocker.QEffects.Where(qf => qf.Id == ModData.QEffectIds.BonusToHardness))
+        {
+            if (qf.Tag is Func<Creature, DamageStuff, Creature, Creature, Bonus?> bonusToHardness)
+                bonuses.Add(bonusToHardness.Invoke(attacker, dStuff, target, blocker));
+        }
+
+        return Bonus.Sum(bonuses, false).BonusTotal;
+    }
+    
+    #endregion
 
     // These functions relate to raising a shield.
     #region Raising a Shield
-
-    /// <summary>
-    /// Enhanced version of <see cref="QEffect.RaisingAShield"/> which delineates which shield is raised. Functionality combines with <see cref="ShieldPatches.PatchRaisingAShield"/>, sometimes replacing its fallback logic.
-    /// </summary>
-    /// <param name="owner">The creature raising the shield.</param>
-    /// <param name="shield">The shield being raised.</param>
-    /// <param name="hasShieldBlock">(nullable) If you don't pass an override, this is calculated the same way the base CreateRaiseShield does it.</param>
-    /// <returns></returns>
-    public static QEffect RaisingAShield(Creature owner, Item shield, bool? hasShieldBlock)
-    {
-        if (GetAC(shield) is not {} acBonus)
-            throw new ArgumentException("Cannot get AC bonus from this item. See CommonShieldRules.GetAC().", nameof(shield));
-        
-        hasShieldBlock ??= owner.HasEffect(QEffectId.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
-        
-        // Create the basic effect, without needing to pass in whether we have Shield Block externally.
-        QEffect raisedShield = QEffect.RaisingAShield((bool)hasShieldBlock);
-        
-        raisedShield.Name += " (" + shield.Name + ")";
-
-        // Closely associate this effect with a shield.
-        raisedShield.Tag = shield;
-        
-        // Update the description to reflect this shield.
-        raisedShield.Description = raisedShield.Description?.Replace("+2", "+" + acBonus);
-        
-        // Replace state check to end this specific effect when we no longer possess this specific shield.
-        raisedShield.StateCheck = qfThis =>
-        {
-            if (qfThis.Tag is not Item tagShield ||
-                !IsShieldWielded(qfThis.Owner, tagShield))
-                qfThis.ExpiresAt = ExpirationCondition.Immediately;
-        };
-        
-        // Associates defensive bonuses to the raised shield
-        raisedShield.BonusToDefenses = (qfThis, attackAction, targetDefense) =>
-        {
-            // Unchanged behavior
-            if (targetDefense != Defense.AC
-                && (!qfThis.Owner.HasEffect(QEffectId.SparklingTarge)
-                    || !qfThis.Owner.HasEffect(QEffectId.ArcaneCascade)
-                    || !targetDefense.IsSavingThrow()
-                    || attackAction == null
-                    || !attackAction.HasTrait(Trait.Spell)))
-                return null;
-                
-            // Gets shield associated with effect
-            if ((qfThis.Tag as Item) is not { } shield2
-                || GetAC(shield2) is not { } shieldAC)
-                return null;
-            
-            return shield2.HasTrait(ModData.Traits.CoverShield) && qfThis.Owner.HasEffect(QEffectId.TakingCover)
-                ? new Bonus(4, BonusType.Circumstance, "raised shield in cover")
-                : new Bonus(shieldAC, BonusType.Circumstance, "raised shield");
-
-        };
-        
-        return raisedShield;
-    }
 
     /// <summary>
     /// Updated version of the local function contained in <see cref="Fighter.CreateRaiseShield"/>. Provides a simple CombatAction for applying <see cref="QEffect.RaisingAShield"/>. Applying the Shield Block functionality requires the patched <see cref="QEffect.ShieldBlock"/> QEffect, which checks when your shield is raised to add the YouAreDealtDamage logic.

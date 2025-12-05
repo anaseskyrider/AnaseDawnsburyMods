@@ -86,6 +86,7 @@ public static class ModData
 
     public static class QEffectIds
     {
+        public static readonly QEffectId BonusToHardness = ModManager.RegisterEnumMember<QEffectId>("BonusToHardness");
         public static readonly QEffectId CastersTargeUsed = ModManager.RegisterEnumMember<QEffectId>("CastersTargeUsed");
     }
 

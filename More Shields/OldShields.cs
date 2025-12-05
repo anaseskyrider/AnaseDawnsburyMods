@@ -136,6 +136,43 @@ public static class OldShields
                 };
             });
         
+        // Shield Ally
+        // The feat now adds a bonus to hardness that the game can broadly detect.
+        // TODO: Test shield ally
+        Feat shieldAlly = AllFeats.GetFeatByFeatName(Champion.ShieldAllyFeatName);
+        shieldAlly.Traits.Insert(0, ModData.Traits.MoreShields);
+        shieldAlly.OnCreature = null;
+        shieldAlly
+            .WithPermanentQEffect(
+                "When you prevent damage with Shield Block, you prevent 2 more damage.",
+                qfFeat =>
+                {
+                    qfFeat.Id = QEffectId.ShieldAlly;
+                })
+            .WithOnCreature(self =>
+            {
+                self.AddQEffect(CommonShieldRules.BonusToShieldHardness(2, "Shield ally"));
+            });
+        
+        // Sparkling Targe
+        // The subclass now adds a bonus to hardness that the game can broadly detect.
+        // The bonus also increases to 3 at level 15.
+        // TODO: Test sparkling targe
+        Feat sparklingTarge = AllFeats.GetFeatByFeatName(FeatName.SparklingTarge);
+        sparklingTarge.Traits.Insert(0, ModData.Traits.MoreShields);
+        sparklingTarge.OnCreature += (_, self) =>
+        {
+            self.AddQEffect(CommonShieldRules.BonusToShieldHardness((_, stuff, _, blocker) =>
+            {
+                if (!Magus.DoesSparklingTargeShieldBlockApply(stuff, blocker))
+                    return null;
+                return new Bonus(
+                    blocker.Level >= 15 ? 3 : blocker.Level >= 7 ? 2 : 1,
+                    BonusType.Untyped,
+                    "Sparkling targe");
+            }));
+        };
+        
         // Reflexive Shield (More Dedications, Bastion Dedication, modded)
         Feat? reflexiveShield = AllFeats.All.FirstOrDefault(feat => feat.Name.Contains("Reflexive Shield"));
         if (reflexiveShield is not null)
