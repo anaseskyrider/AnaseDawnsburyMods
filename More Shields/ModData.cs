@@ -1,5 +1,7 @@
 using Dawnsbury.Audio;
+using Dawnsbury.Core;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Display.Illustrations;
@@ -36,16 +38,15 @@ public static class ModData
 
     public static class Illustrations
     {
-        public static readonly Illustration Buckler = new ModdedIllustration("MoreShieldsAssets/buckler.png");
-        public static readonly Illustration MeteorShield = new ModdedIllustration("MoreShieldsAssets/frisbee2.png");
-        public static readonly Illustration FortressShield = new ModdedIllustration("MoreShieldsAssets/shield.png");
-        public static readonly Illustration HeavyRondache = new ModdedIllustration("MoreShieldsAssets/buckler 2.png");
-        // https://game-icons.net/icons/ffffff/000000/1x1/lorc/bordered-shield.svg
-        //public static readonly Illustration CastersTarge = IllustrationName.WoodenShieldBoss;  // TODO: Caster's Targe icon
-        // https://game-icons.net/icons/ffffff/000000/1x1/lorc/magic-shield.svg
-        public static readonly Illustration ShieldPlating = new ModdedIllustration("MoreShieldsAssets/steel.png");
-        public static readonly Illustration ShieldAugmentation = new ModdedIllustration("MoreShieldsAssets/repair.png");
-        public static readonly string DawnsburySunPath = "GuardianClassAssets/PatreonSunTransparent.png";
+        public const string ModFolder = "MoreShieldsAssets/";
+        
+        public static readonly Illustration Buckler = new ModdedIllustration(ModFolder+"buckler.png");
+        public static readonly Illustration MeteorShield = new ModdedIllustration(ModFolder+"frisbee2.png");
+        public static readonly Illustration FortressShield = new ModdedIllustration(ModFolder+"shield.png");
+        public static readonly Illustration HeavyRondache = new ModdedIllustration(ModFolder+"buckler 2.png");
+        public static readonly Illustration CastersTarge = new ModdedIllustration(ModFolder+"shield (2).png");
+        public static readonly Illustration ShieldPlating = new ModdedIllustration(ModFolder+"steel.png");
+        public static readonly Illustration ShieldAugmentation = new ModdedIllustration(ModFolder+"repair.png");
     }
 
     public static class ItemGreaterGroups
@@ -81,6 +82,11 @@ public static class ModData
         public static ItemName ShieldAugmentationVersatile; // GB
 
         #endregion
+    }
+
+    public static class QEffectIds
+    {
+        public static readonly QEffectId CastersTargeUsed = ModManager.RegisterEnumMember<QEffectId>("CastersTargeUsed");
     }
 
     public static class RuneKinds
@@ -123,19 +129,19 @@ public static class ModData
         public static readonly Trait ReactiveAction = ModManager.RegisterTrait("ReactiveAction",
             new TraitProperties("Reactive Action", false));
         
-        /// Hidden technical trait. A light shield has +1 AC.
+        /// Hidden technical trait. A light shield grants +1 to AC when raised.
         public static readonly Trait LightShield = ModManager.RegisterTrait("LightShield",
             new TraitProperties("Light Shield", false));
         
-        /// Hidden technical trait. A medium shield has +2 AC.
+        /// Hidden technical trait. A medium shield grants a +2 to AC when raised.
         public static readonly Trait MediumShield = ModManager.RegisterTrait("MediumShield",
             new TraitProperties("Medium Shield", false));
         
-        /// Hidden technical trait. A heavy shield has +2 AC.
+        /// Hidden technical trait. A heavy shield grants a +2 to AC when raised.
         public static readonly Trait HeavyShield = ModManager.RegisterTrait("HeavyShield",
             new TraitProperties("Heavy Shield", false));
         
-        /// A cover shield allows you to take cover behind it to gain a +4 AC.
+        /// A cover shield allows you to take cover behind it to gain a +4 to AC.
         public static readonly Trait CoverShield = ModManager.RegisterTrait("CoverShield",
             new TraitProperties("Cover Shield", true, "You can Take Cover if this shield is raised. Doing so increases the shield's bonus to AC to +4."));
         
