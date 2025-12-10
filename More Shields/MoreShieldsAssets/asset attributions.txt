@@ -3,3 +3,4 @@
 <a href="https://www.flaticon.com/free-icons/metal" title="metal icons">Metal icons created by surang - Flaticon</a>
 <a href="https://www.flaticon.com/free-icons/security" title="security icons">Security icons created by wanicon - Flaticon</a>
 <a href="https://www.flaticon.com/free-icons/knight" title="knight icons">Knight icons created by vectorsmarket15 - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/attack" title="attack icons">Attack icons created by Smashicons - Flaticon</a>

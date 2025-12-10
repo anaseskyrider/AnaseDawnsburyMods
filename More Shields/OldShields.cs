@@ -27,14 +27,24 @@ public static class OldShields
             "You can use Shield Block to prevent damage to an adjacent ally.",
             qfFeat =>
             {
+                qfFeat.Id = QEffectId.ShieldWarden;
                 qfFeat.AddGrantingOfTechnical(
                     cr =>
                         cr.FriendOfAndNotSelf(qfFeat.Owner) && cr.IsAdjacentTo(qfFeat.Owner),
                     qfTech =>
                     {
-                        qfTech.Id = QEffectId.DevotedGuardian; // The potentially-defended creature how has this effect ID, instead of the feat owner.
                         qfTech.YouAreDealtDamage = async (qfThis, attacker, damageStuff, defender) =>
-                            await CommonShieldRules.OfferAndReactWithShieldBlock(attacker, defender, damageStuff, qfFeat.Owner);
+                        {
+                            // Uses normal triggers for Shield Block
+                            if ((!damageStuff.Kind.IsPhysical()
+                                 || damageStuff.Power == null
+                                 || !damageStuff.Power.HasTrait(Trait.Attack))
+                                && !Magus.DoesSparklingTargeShieldBlockApply(damageStuff, qfFeat.Owner))
+                                return null;
+
+                            // TODO: Enhance stat block info from other SB triggers.
+                            return await CommonShieldRules.OfferAndMakeShieldBlock(attacker, defender, damageStuff, qfFeat.Owner);
+                        };
                     });
             });
         
@@ -107,30 +117,7 @@ public static class OldShields
                                 ? "\n\n{icon:Action} {Green}(Last action was to Raise this Shield){/Green}"
                                 : null))
                         .WithActionCost(isRaised ? 1 : 2)
-                        .WithActionId(ActionId.None) // So that you can't use this when offered to raise a shield
-                        .WithEffectOnEachTarget(async (_, caster, target, _) =>
-                        {
-                            target.AddQEffect(new QEffect(
-                                "Devoted Guardian",
-                                $"You have a +{theirBonus} circumstance bonus to AC as long as you're adjacent to {{Blue}}{caster}{{/Blue}}.",
-                                ExpirationCondition.ExpiresAtStartOfSourcesTurn,
-                                caster,
-                                shield.Illustration)
-                            {
-                                CountsAsABuff = true,
-                                BonusToDefenses = (_,_,defense) =>
-                                    defense != Defense.AC
-                                        ? null
-                                        : new Bonus(theirBonus, BonusType.Circumstance, "Devoted Guardian"),
-                                StateCheck = qfSelf =>
-                                {
-                                    if (caster.IsAdjacentTo(qfSelf.Owner))
-                                        return;
-                                    qfSelf.ExpiresAt = ExpirationCondition.Immediately;
-                                }
-                            });
-                        });
-                    raiseGuardian.Target = Target.AdjacentFriend();
+                        .WithActionId(ActionId.None); // So that you can't use this when offered to raise a shield
 
                     return new ActionPossibility(raiseGuardian);
                 };
@@ -138,7 +125,6 @@ public static class OldShields
         
         // Shield Ally
         // The feat now adds a bonus to hardness that the game can broadly detect.
-        // TODO: Test shield ally
         Feat shieldAlly = AllFeats.GetFeatByFeatName(Champion.ShieldAllyFeatName);
         shieldAlly.Traits.Insert(0, ModData.Traits.MoreShields);
         shieldAlly.OnCreature = null;
@@ -157,7 +143,6 @@ public static class OldShields
         // Sparkling Targe
         // The subclass now adds a bonus to hardness that the game can broadly detect.
         // The bonus also increases to 3 at level 15.
-        // TODO: Test sparkling targe
         Feat sparklingTarge = AllFeats.GetFeatByFeatName(FeatName.SparklingTarge);
         sparklingTarge.Traits.Insert(0, ModData.Traits.MoreShields);
         sparklingTarge.OnCreature += (_, self) =>
@@ -189,39 +174,55 @@ public static class OldShields
                         Creature defender = qfThis.Owner;
                         
                         if (def != Defense.Reflex
-                            || !defender.HasEffect(QEffectId.RaisingAShield))
+                            || CommonShieldRules.GetRaisedShields(defender) is not { Count: > 0 } shields
+                            || shields.MaxBy(CommonShieldRules.GetAC) is not {} bestShield)
                             return null;
 
-                        // Get the best currently raised shield
-                        List<Item> shields = CommonShieldRules.GetRaisedShields(defender);
-                        Item? bestShield = shields.MaxBy(CommonShieldRules.GetAC);
-                        if (bestShield is null)
-                            return null;
-
-                        bool takingCover = defender.HasEffect(QEffectId.TakingCover);
+                        bool takingCover = defender.HasEffect(QEffectId.TakingCover)
+                            && shields.Any(shield => shield.HasTrait(ModData.Traits.CoverShield));
 
                         // Use a higher bonus for the nearly-impossible circumstance you have a better AC from one shield but also have a lower-AC cover shield raised
-                        int acBonus =
-                            shields.Any(shield => shield.HasTrait(ModData.Traits.CoverShield))
-                            && takingCover
+                        int acBonus = takingCover
                             ? 4
                             : CommonShieldRules.GetAC(bestShield) ?? 0;
 
-                        return new Bonus(
-                            acBonus,
-                            BonusType.Circumstance,
-                            "raised shield" + (takingCover ? " in cover" : null));
+                        return new Bonus(acBonus, BonusType.Circumstance, "raised shield" + (takingCover ? " in cover" : null));
                     };
 
                     // Shield Block a Reflex save
                     qfFeat.YouAreDealtDamage = async (qfThis, attacker, dStuff, defender) =>
+                        IsReflexiveShieldDamage(dStuff)
+                            ? await CommonShieldRules.OfferAndMakeShieldBlock(attacker, defender, dStuff, defender)
+                            : null;
+                    
+                    // Delayed in case of feat load orders
+                    qfFeat.StartOfCombatAfterInitiativeOrderIsSetUp = async qfThis =>
                     {
-                        if (dStuff.Power?.SavingThrow?.Defense is not Defense.Reflex
-                            && dStuff.Power?.ActiveRollSpecification?.TaggedDetermineDC.InvolvedDefense is not Defense.Reflex)
-                            return null;
-
-                        return await CommonShieldRules.OfferAndReactWithShieldBlock(attacker, defender, dStuff, defender);
+                        // Fire once
+                        qfThis.StartOfCombatAfterInitiativeOrderIsSetUp = null;
+                        
+                        // Shield Warden compatibility
+                        if (qfFeat.Owner.HasEffect(QEffectId.ShieldWarden))
+                        {
+                            qfFeat.AddGrantingOfTechnical(
+                                ally =>
+                                    ally.FriendOfAndNotSelf(qfFeat.Owner) && ally.IsAdjacentTo(qfFeat.Owner),
+                                qfAlly =>
+                                    qfAlly.YouAreDealtDamage = async (_, attacker, dStuff, defender) =>
+                                        IsReflexiveShieldDamage(dStuff)
+                                            ? await CommonShieldRules.OfferAndMakeShieldBlock(attacker, defender,
+                                                dStuff, qfFeat.Owner)
+                                            : null);
+                        }
                     };
+
+                    return;
+
+                    bool IsReflexiveShieldDamage(DamageStuff dStuff)
+                    {
+                        return dStuff.Power?.SavingThrow?.Defense is Defense.Reflex
+                               || dStuff.Power?.ActiveRollSpecification?.TaggedDetermineDC.InvolvedDefense is Defense.Reflex;
+                    }
                 });
         }
     }

@@ -20,7 +20,7 @@ namespace Dawnsbury.Mods.MoreShields;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
-/// <item>v1.1: Added QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
+/// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
 /// <value>v1.1</value>
@@ -126,6 +126,18 @@ public static class LibraryOfAnase
     {
         color = color.Capitalize();
         return "{"+color+"}" + text + "{/"+color+"}";
+    }
+    
+    /// <summary>
+    /// Adds color tags to the given integer.
+    /// </summary>
+    /// <param name="number">The integer that this function extends off of.</param>
+    /// <param name="color">The color, formatted as "Green", to be added to the string.</param>
+    /// <returns></returns>
+    public static string WithColor(this int number, string color)
+    {
+        color = color.Capitalize();
+        return "{"+color+"}" + number + "{/"+color+"}";
     }
     
     /// <summary>

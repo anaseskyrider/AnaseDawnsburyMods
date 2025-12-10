@@ -9,6 +9,7 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Microsoft.Xna.Framework;
@@ -63,16 +64,6 @@ public static class CommonShieldRules
             .Select(qf => qf.Tag as Item)
             .WhereNotNull()
             .ToList();
-    }
-    
-    /// <summary>Gets the damage reduction with this shield by the blocking creature.</summary>
-    public static int GetDamageReduction(Creature blocker, DamageStuff dStuff, Item shield2)
-    {
-        return Math.Min(
-            shield2.Hardness
-            + (blocker.HasEffect(QEffectId.ShieldAlly) ? 2 : 0)
-            + (Magus.DoesSparklingTargeShieldBlockApply(dStuff, blocker) ? (blocker.Level >= 15 ? 3 : blocker.Level >= 7 ? 2 : 1) : 0),
-            dStuff.Amount);
     }
 
     #endregion
@@ -159,20 +150,15 @@ public static class CommonShieldRules
                         : null))
             .WithDescription(
                 "You position your shield to protect yourself.",
-                $"Until the start of your next turn, you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC{((bool)hasShieldBlock ? " and you can use the Shield Block {icon:Reaction} reaction" : null)}.")
+                $"Until the start of your next turn, you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC{((bool)hasShieldBlock ? " and can Shield Block {icon:Reaction}  with this shield" : null)}.")
             .WithItem(shield)
             .WithActionCost(shield.HasTrait(ModData.Traits.Hefty14) && self.Abilities.Strength < 2 ? 2 : 1)
             .WithActionId(ActionId.RaiseShield)
             .WithSoundEffect(SfxName.RaiseShield)
-            .WithEffectOnEachTarget(async (_,caster,_,_) =>
+            .WithEffectOnEachTarget(async (action, caster, target, _) =>
             {
-                QEffect qfRaisedShield = RaisingAShield(caster, shield, hasShieldBlock);
-                // Extra check in case this action is created with a variant target,
-                // such as with Devoted Guardian
-                if (!caster.QEffects.Any(qf =>
-                        qf.Id is QEffectId.RaisingAShield
-                        && qf.Tag == shield))
-                    caster.AddQEffect(qfRaisedShield);
+                bool isDevotedGuardian = action.Target is not SelfTarget;
+                Fighter.RaiseShield(caster, shield, target, isDevotedGuardian);
             });
     }
 
@@ -214,7 +200,7 @@ public static class CommonShieldRules
     // These functions relate to using Shield Block.
     #region Shield Block
 
-    public static async Task<DamageModification?> OfferAndReactWithShieldBlock(
+    public static async Task<DamageModification?> OfferAndMakeShieldBlock(
         Creature attacker,
         Creature defender,
         DamageStuff dStuff,
@@ -225,76 +211,64 @@ public static class CommonShieldRules
         // Do nothing if no shield options are found
         if (raisedShields.Count == 0)
             return null;
-        // Uses the normal reaction UI which contains more information about the expected damage reduction.
-        if (raisedShields.Count == 1)
-            return await AskToBlockWithShield(attacker, defender, dStuff, blocker);
         
         int? chosenItem = await blocker.Battle.AskToUseReaction(
             blocker,
-            $"{{b}}Shield Block{{/b}} {{icon:Reaction}}\n{(blocker == defender ? "You are" : defender + " is")} about to be dealt {dStuff.Amount} damage by {{Blue}}{dStuff.Power?.Name}{{/Blue}}.\nChoose a shield to block with.",
-            IllustrationName.Reaction,
+            $"{{b}}Shield Block{{/b}} {{icon:Reaction}}\n{(blocker == defender ? "You are" : defender + " is")} about to be dealt {dStuff.Amount} damage by {{Blue}}{dStuff.Power?.Name}{{/Blue}}.\nBlock with {(raisedShields.Count > 1 ? "one of your shields" : "your shield")}?",
+            ModData.Illustrations.ShieldBlock,
             [Trait.ShieldBlock],
             raisedShields
                 .Select(shield =>
                 {
                     string icon = shield.Illustration.IllustrationAsIconString;
-                    int reduction = GetDamageReduction(blocker, dStuff, shield);
-                    return icon + " " + shield.BaseHumanName + " (" + reduction + ")";
+                    int hardness = shield.Hardness + CommonShieldRules.GetShieldBlockHardnessBonuses(attacker, dStuff, defender, blocker);
+                    int preventHowMuch = Math.Min(hardness, dStuff.Amount);
+                    
+                    return $"{icon} {shield.BaseHumanName} ({hardness.WithColor(preventHowMuch == dStuff.Amount ? "Green" : "Blue")})";
                 })
                 .ToArray());
 
         if (chosenItem is null)
             return null;
+        
+        Item shield = raisedShields[(int)chosenItem];
+        int hardness = shield.Hardness + CommonShieldRules.GetShieldBlockHardnessBonuses(attacker, dStuff, defender, blocker);
+        int preventHowMuch = Math.Min(hardness, dStuff.Amount);
 
-        return await AskToBlockWithShield(attacker, defender, dStuff, blocker, raisedShields[(int)chosenItem]);
+        return await ShieldBlockYouAreDealtDamage(attacker, defender, blocker, shield.Name, hardness, preventHowMuch);
     }
 
     /// <summary>
-    /// Performs a Shield Block for a <see cref="QEffect.YouAreDealtDamage"/> event. Validity should be checked before calling this function (such as physical damage or Sparkling Targe requirements, or the Reflex handling for Reflexive Shield).
+    /// Performs a Shield Block logic execution, returning a damage modification. Unlike <see cref="Fighter.ShieldBlockYouAreDealtDamage"/>, this DOES NOT ASK TO USE YOUR REACTION. It simply executes Shield Block logic.
     /// </summary>
-    /// <param name="attacker">The creature dealing the damage (from YouAreDealtDamage).</param>
-    /// <param name="defender">The creature being targeted with damage (usually the YouAreDealtDamage defender).</param>
-    /// <param name="dStuff">The DamageStuff from YouAreDealtDamage.</param>
-    /// <param name="blocker">The creature shield blocking the damage (can be the YouAreDealtDamage defender, or another creature).</param>
-    /// <param name="shield">The shield to block with. If null, a shield is chosen for you. If not null, then this doesn't ask for your reaction (assuming one was chosen outside this method).</param>
-    public static async Task<DamageModification?> AskToBlockWithShield(
+    /// <param name="attacker">The creature doing the damage stuff.</param>
+    /// <param name="defender">The creature being targeted, who could be defended.</param>
+    /// <param name="blocker">The creature doing the blocking.</param>
+    /// <param name="shieldName">Usually the <see cref="Item.Name"/> of the shield.</param>
+    /// <param name="finalHardness">The shield's final hardness, after bonuses have been added up.</param>
+    /// <param name="preventHowMuch">The amount of damage actually prevented (the final hardness, but only up to the actual damage dealt).</param>
+    /// <returns></returns>
+    public static async Task<DamageModification?> ShieldBlockYouAreDealtDamage(
         Creature attacker,
         Creature defender,
-        DamageStuff dStuff,
         Creature blocker,
-        Item? shield = null)
+        string shieldName,
+        int finalHardness,
+        int preventHowMuch)
     {
-        // Handle reaction as normal if a shield isn't provided (standard functionality)
-        bool skipReaction = shield is not null;
-        if (shield is null)
-        {
-            shield = GetRaisedShields(defender)
-                .MaxBy(itm => itm.Hardness);
-            if (shield is null)
-                return null;
-        }
-
-        int preventHowMuch = GetDamageReduction(blocker, dStuff, shield);
-            
-        if (!skipReaction && !await blocker.Battle.AskToUseReaction(
-                blocker,
-                $"{{b}}Shield Block{{/b}} {{icon:Reaction}}\n{(blocker == defender ? "You are" : defender + " is")} about to be dealt {dStuff.Amount} damage by {{Blue}}{dStuff.Power?.Name}{{/Blue}}.\nUse Shield Block to prevent {(preventHowMuch == dStuff.Amount ? "all" : preventHowMuch) + " of that damage?"}",
-                [Trait.ShieldBlock]))
-            return null;
-        
         foreach (QEffect qf in blocker.QEffects.ToList())
             await qf.WhenYouUseShieldBlock.InvokeIfNotNull(qf, attacker, defender, preventHowMuch);
         
         // Enhanced overhead log information
         blocker.Overhead(
             "shield block", Color.White,
-            blocker + " uses {b}Shield Block{/b} to mitigate {b}" + preventHowMuch + "{/b} damage.",
-            "Shield block {icon:Reaction} (" + shield.Name + ")",
-            $"{{i}}You snap your shield in place to ward off a blow.{{/i}}\n\n{{b}}Trigger{{/b}} While you have your shield raised, you would take damage from a physical attack.\n\nYour shield prevents you from taking up to {{Blue}}{shield.Hardness}{{/Blue}} damage. You take any remaining damage.",
+            blocker + " uses {b}Shield Block{/b} {icon:Reaction} to mitigate {b}" + preventHowMuch + "{/b} damage.",
+            "Shield block {icon:Reaction}" + " (" + shieldName + ")",
+            "{i}You snap your shield in place to ward off a blow.{/i}\n\n{b}Trigger{/b} While you have your shield raised, you would take damage from a physical attack.\n\nYour {Blue}" + shieldName + "{/Blue} prevents you from taking up to {Blue}" + finalHardness + "{/Blue} damage. You take any remaining damage.",
             new Traits([Trait.General]));
         
         // Adds an impact sound
-        Sfxs.Play(ModData.SfxNames.ShieldBlockWooodenImpact);
+        //Sfxs.Play(ModData.SfxNames.ShieldBlockWooodenImpact);
         
         return new ReduceDamageModification(preventHowMuch, "Shield block");
     }

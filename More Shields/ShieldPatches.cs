@@ -141,9 +141,10 @@ public static class ShieldPatches
     }
 
     /// <summary>
-    /// This function has been altered to add additional functionality to the Raised Shield effect to allow for the ability to raise and block with shields independently.
+    /// This function has been altered to track which shield is associated with this effect, while removing the behavior of adding YouAreDealtDamage functionality to it.
     /// </summary>
     /// <para>Devoted Guardian's effect tooltip gained some textual enhancements, has CountAsABuff set to true, and works with any cover shield instead of just tower shields.</para>
+    /// <seealso cref="PatchShieldBlock"/>
     [HarmonyPatch(typeof(Fighter), nameof(Fighter.RaiseShield))]
     internal static class PatchRaiseShieldExecution
     {
@@ -223,7 +224,9 @@ public static class ShieldPatches
                 });
             }
             
-            caster.AddQEffect(qfRaised);
+            // Only raise once
+            if (!caster.QEffects.Any(qf => qf.Id == QEffectId.RaisingAShield && qf.Tag == shield))
+                caster.AddQEffect(qfRaised);
             
             // Always overwrite the function.
             return false;
@@ -231,7 +234,7 @@ public static class ShieldPatches
     }
 
     /// <summary>
-    /// The ShieldBlock ability provides a wood-impact sound when blocking the attack, and always contains YouAreDealtDamage information, requiring you to have a shield raised, and consolidating multiple raised shields to a single option if you have multiple. Does not rely on the RaiseShield action to handle anything beyond adding a single effect.
+    /// The ShieldBlock ability provides a wood-impact sound when blocking the attack, and always contains YouAreDealtDamage functionality (requires you to have a shield raised, consolidates multiple raised shields to a single prompt if you have multiple). Does not rely on any action or function to add anything beyond an effect with the <see cref="QEffectId.RaisingAShield"/> id and an Item in its .Tag field.
     /// </summary>
     [HarmonyPatch(typeof(QEffect), nameof(QEffect.ShieldBlock))]
     internal static class PatchShieldBlock
@@ -246,10 +249,6 @@ public static class ShieldPatches
             // ShieldWarden passes the shield-user as the defender to the effect-owner.
             __result.YouAreDealtDamage = async (qfThis, attacker, damageStuff, defender) =>
             {
-                // Extra handler, since this effect is now always listening
-                if (!qfThis.Owner.HasEffect(QEffectId.RaisingAShield))
-                    return null;
-                
                 // Still performs standard checks for standard shield blocking
                 if ((!damageStuff.Kind.IsPhysical()
                      || damageStuff.Power == null
@@ -257,8 +256,12 @@ public static class ShieldPatches
                     && !Magus.DoesSparklingTargeShieldBlockApply(damageStuff, defender))
                     return null;
 
+                /* Does not look for a raised shield
+                 * OfferAndMakeShieldBlock returns null if there's no shield
+                 */
+                
                 // Uses async function to pick just one shield to block with.
-                return await CommonShieldRules.OfferAndReactWithShieldBlock(attacker, defender, damageStuff, qfThis.Owner);
+                return await CommonShieldRules.OfferAndMakeShieldBlock(attacker, defender, damageStuff, qfThis.Owner);
             };
         }
     }
@@ -266,7 +269,6 @@ public static class ShieldPatches
     /// <summary>
     /// Improves the behavior of Reactive Shield. Now allows you to specify which shield to raise if you have more than one option. Includes enhanced log information.
     /// </summary>
-    // TODO: Test reactive shield
     [HarmonyPatch(typeof(QEffect), nameof(QEffect.ReactiveShield))]
     internal static class PatchReactiveShield
     {
@@ -294,26 +296,40 @@ public static class ShieldPatches
                         threshold <= CommonShieldRules.GetAC(shield))
                     .ToList();
                 bool canBeDowngraded = downgradeShields.Count > 0;
-
-                string question = "{b}Reactive Shield{/b} {icon:Reaction}\nYou're about to be hit by {Blue}" + action.Name + "{/Blue}.\nUse reactive shield to Raise a Shield";
-                if (canBeDowngraded)
-                    question += $" and downgrade the {breakdownResult.CheckResult.HumanizeLowerCase2()} into a {(breakdownResult.CheckResult - 1).HumanizeLowerCase2()}?";
-                else
-                    question += "? {i}(You will still be hit but you'll be able to Shield Block.){/i}";
-
                 List<Item> shieldOptions = canBeDowngraded
                     ? downgradeShields
                     : raisableShields;
+
+                if (shieldOptions.Count == 0)
+                    return false;
+
+                // Prettied text
+                string question = "{b}Reactive Shield{/b} {icon:Reaction}\n";
+                if (action.Owner == defender.Battle.Pseudocreature)
+                    question += "You're about to be hit by ";
+                else
+                    question += "{Blue}" + action.Owner + "{/Blue} is about to hit you with ";
+                question += "{Blue}" + action.Name + "{/Blue}.\nRaise a Shield";
+                if (canBeDowngraded)
+                    question += $" and downgrade the {breakdownResult.CheckResult.Greenify()} into a {(breakdownResult.CheckResult - 1).Greenify()}?";
+                // If you have a bonus reaction you could use
+                else if (defender.Actions.DetermineReactionToUse(
+                             question + "? {i}(You will still be hit but you'll be able to Shield Block.){/i}",
+                             [Trait.ShieldBlock]) is not null)
+                    question += "? {i}(You will still be hit but you'll be able to Shield Block.){/i}";
+                else
+                    return false;
+                
                 string[] stringOptions = shieldOptions
                     .Select(shield =>
-                        shield.Illustration.IllustrationAsIconString + shield.ItemName)
+                        shield.Illustration.IllustrationAsIconString + shield.Name)
                     .ToArray();
                 
                 if (await defender.Battle.AskToUseReaction(
                         defender,
                         question,
-                        IllustrationName.Reaction,
-                        stringOptions) is not {} chosenIndex)
+                        ModData.Illustrations.ReactiveShield, // New icon
+                        stringOptions) is not {} chosenIndex) // Lets you choose which shield to raise
                     return false;
                 
                 Item chosenShield = shieldOptions[chosenIndex];
@@ -327,10 +343,10 @@ public static class ShieldPatches
                     "{i}You can snap your shield into place just as you would take a blow, avoiding the hit at the last second.{/i}\n\nIf you'd be hit by a melee Strike, you immediately Raise a Shield as a reaction.",
                     new Traits([..AllFeats.GetFeatByFeatName(FeatName.ReactiveShield).Traits, ModData.Traits.ReactiveAction]));
                 
-                // TODO: Fighter.RaiseShield(defender, chosenShield, defender, false);
-                await CommonShieldRules.OfferToRaiseAShield(
+                Fighter.RaiseShield(defender, chosenShield, defender, false);
+                /*await CommonShieldRules.OfferToRaiseAShield(
                     qfThis.Owner,
-                    raiseAction => raiseAction.Item == chosenShield);
+                    raiseAction => raiseAction.Item == chosenShield)*/;
                 
                 return true;
             };
@@ -338,7 +354,7 @@ public static class ShieldPatches
     }
 
     // TODO: Delay execution for other actions such as Disarming Block
-    /// <summary>Adjusts Aggressive Block to provide a shove sound effect and a prettier prompt.</summary>
+    /// <summary>Adjusts Aggressive Block to provide a shove sound effect, a prettier prompt, and combat logging.</summary>
     [HarmonyPatch(typeof(Doorwarden), nameof(Doorwarden.CreateAggressiveBlockTemporaryQEffect))]
     internal static class PatchAggressiveBlock
     {
@@ -346,12 +362,23 @@ public static class ShieldPatches
         {
             __result.AfterYouTakeAction = async (qfThis, action) =>
             {
+                // Pretties the reaction prompt
                 if (!await defender.Battle.AskForConfirmation(
                         defender,
                         IllustrationName.SteelShield,
                         $"{{b}}Aggressive Block{{/b}} {{icon:FreeAction}}\nYou just used Shield Block. Push {{Blue}}{attacker}{{/Blue}} 5 feet away from you? {{i}}(They could become flat-footed if they cannot be moved.){{/i}}", // Pretties the prompt
                         "Push"))
                     return;
+                
+                // Adds some combat logging for this ability
+                defender.Overhead(
+                    "Aggressive Block",
+                    Color.Black,
+                    "{DarkBlue}{b}" + defender + "{/b}{/DarkBlue} uses {b}Aggressive Block{/b} {icon:FreeAction} against {DarkBlue}{b}" + attacker + "{/b}{/DarkBlue}",
+                    "Aggressive Block {icon:FreeAction}",
+                    "{i}You push back as you block the attack, knocking your foe away or off balance.{/i}\n\nWhen you use the Shield Block reaction against an attack of an adjacent enemy, you can choose to push that enemy 5 feet. If it can't be pushed away, it's instead flat-footed until the start of your next turn.",
+                    new Traits([..AllFeats.GetFeatByFeatName(FeatName.AggressiveBlock).Traits, ModData.Traits.ReactiveAction]));
+                
                 Tile previousPosition = attacker.Space.TopLeftTile;
                 
                 Sfxs.Play(SfxName.Shove); // Adds shove sound

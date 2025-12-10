@@ -40,6 +40,9 @@ public static class ModData
     {
         public const string ModFolder = "MoreShieldsAssets/";
         
+        public static readonly Illustration ShieldBlock = new ModdedIllustration(ModFolder+"shield_block.png");
+        public static readonly Illustration ReactiveShield = new ModdedIllustration(ModFolder+"reactive_shield.png");
+        
         public static readonly Illustration Buckler = new ModdedIllustration(ModFolder+"buckler.png");
         public static readonly Illustration MeteorShield = new ModdedIllustration(ModFolder+"frisbee2.png");
         public static readonly Illustration FortressShield = new ModdedIllustration(ModFolder+"shield.png");
