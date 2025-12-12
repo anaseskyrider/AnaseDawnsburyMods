@@ -37,7 +37,7 @@ public static class ArchetypeMedic
         ModData.FeatNames.TreatConditionSkillVariant = treatCondition.FeatName;
         yield return treatCondition;
 
-        // Doctor's Visitation
+        // Level 4: Doctor's Visitation
         yield return new TrueFeat(
                 ModData.FeatNames.DoctorsVisitation,
                 4,
