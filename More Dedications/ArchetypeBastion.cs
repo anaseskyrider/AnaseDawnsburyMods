@@ -299,13 +299,35 @@ public static class ArchetypeBastion
                                 .MaxBy(item => item.Hardness)
                             is not { } shield)
                             return null;
+                        
+                        /*// Force it to trigger through Magus effects via DoesSparklingTargeShieldBlockApply
+                        QEffect tempQf1 = new QEffect() { Id = QEffectId.SparklingTarge };
+                        QEffect tempQf2 = new QEffect() { Id = QEffectId.ArcaneCascade };
+                        qfThis.Owner
+                            .AddQEffect(tempQf1)
+                            .AddQEffect(tempQf2);
+                        // Add the trait even if it already has it, Remove() will apply only once, this is safe
+                        dStuff.Power.WithExtraTrait(Trait.Spell);
 
-                        return await ReflexiveShieldBlockYouAreDealtDamage(
+                        DamageModification? blockReduction = await Fighter.ShieldBlockYouAreDealtDamage(
+                            attacker,
+                            dStuff,
+                            defender,
+                            qfThis.Owner,
+                            shield.Hardness);
+                        
+                        // Remove work-arounds
+                        qfThis.Owner.RemoveAllQEffects(qf => qf == tempQf1 || qf == tempQf2);
+                        dStuff.Power.Traits.Remove(Trait.Spell);*/
+                        
+                        DamageModification? blockReduction = await ReflexiveShieldBlockYouAreDealtDamage(
                             attacker,
                             dStuff,
                             defender,
                             qfThis.Owner,
                             shield);
+                        
+                        return blockReduction;
                     };
                     
                     // PETR: The Improved Reflexive Shield feat should reduce some amount of UI prompts, since they have mechanical overlap.
