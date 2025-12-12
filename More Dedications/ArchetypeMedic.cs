@@ -151,6 +151,17 @@ public static class ArchetypeMedic
                     };
                 });
         
+        // Make skill feat variant of Holistic Care.
+        Feat holisticCare = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+                FeatName.HolisticCare, Trait.Medic, 4)
+            .WithEquivalent(values => values.HasFeat(FeatName.TreatCondition));
+        // Normal list order: 0:Archetype
+        holisticCare.Traits.Add(Trait.Skill);
+        holisticCare.Traits.Insert(0, ModData.Traits.MoreDedications);
+        holisticCare.RulesText += ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}More Dedications{/b} This is a skill feat variant of Holistic Care which can be taken as a general feat or skill feat (requires the {i}Skill Feats for Everyone{/i} mod).";
+        ModData.FeatNames.HolisticCareSkillVariant = holisticCare.FeatName;
+        yield return holisticCare;
+        
         // TODO: Lv8. Preventative Treatment
         // Can this even be done? Is it even any good?
         
