@@ -358,6 +358,10 @@ public static class ArchetypeBastion
             req.Description.Contains("must have Shield Ally") || req.Description.Contains("must be a Fighter,"));
         yield return bastionShieldWarden;
         
+        // Add Quick Shield Block to Bastion
+        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.QuickShieldBlock, ModData.Traits.BastionArchetype, 10);
+        
         /* Higher Level Feats
          * @10 Destructive Block
          * @12 (really: 10) Mirror Shield
