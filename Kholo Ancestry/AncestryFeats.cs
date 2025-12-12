@@ -308,7 +308,7 @@ public static class AncestryFeats
                             qfTech.WhenCreatureDiesAtStateCheckAsync = async qfDie =>
                             {
                                 // When a monster dies, place a tile effect that grants a state check ephemeral action to Kholos near the corpse.
-                                Tile here = qfDie.Owner.Occupies;
+                                Tile here = qfDie.Owner.Space.TopLeftTile;
                                 int level = Math.Max(qfDie.Owner.Level, 1);
                                 here.AddQEffect(new TileQEffect(here)
                                 {
