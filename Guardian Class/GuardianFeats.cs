@@ -550,9 +550,28 @@ public static class GuardianFeats
                         "Taunting Strike",
                         "Make a Strike. Then make a visual Taunt.");
                     // The actual action
-                    qfFeat.ProvideStrikeModifier = item =>
+                    qfFeat.ProvideStrikeModifier = item => CreateTauntingStrike(item, false);
+                    qfFeat.Owner.AddQEffect(new QEffect()
                     {
-                        CombatAction tauntingStrike = qfFeat.Owner.CreateStrike(item)
+                        Name = "[TAUNTING STRIKE THROWN VARIANT GRANTER]",
+                        ProvideStrikeModifier = item =>
+                            item.WeaponProperties!.ForcedMelee && item.WeaponProperties!.Throwable
+                                ? CreateTauntingStrike(item, true)
+                                : null
+                    });
+                    
+                    return;
+
+                    CombatAction CreateTauntingStrike(Item item, bool isThrown)
+                    {
+                        CombatAction tauntingStrike = StrikeRules
+                            .CreateStrike(
+                                qfFeat.Owner,
+                                item,
+                                isThrown ? RangeKind.Ranged : RangeKind.Melee,
+                                -1,
+                                isThrown)
+                            .WithName("Taunting Strike" + (isThrown ? " (Thrown)" : null))
                             .WithExtraTrait(Trait.Flourish)
                             .WithExtraTrait(ModData.Traits.Guardian)
                             .WithExtraTrait(Trait.Basic)
@@ -562,7 +581,6 @@ public static class GuardianFeats
                                     .WithActionCost(0);
                                 await caster.Battle.GameLoop.FullCast(taunt, ChosenTargets.CreateSingleTarget(target));
                             });
-                        tauntingStrike.Name = "Taunting Strike";
                         tauntingStrike.Illustration = new SideBySideIllustration(
                             item.Illustration,
                             ModData.Illustrations.Taunt);
@@ -575,7 +593,7 @@ public static class GuardianFeats
                                     ? Usability.NotUsableOnThisCreature("Immune to visual")
                                     : Usability.Usable);
                         return tauntingStrike;
-                    };
+                    }
                 });
         #endregion
         
