@@ -357,6 +357,11 @@ public static class ArchetypeBastion
         bastionShieldWarden.Prerequisites.RemoveAll(req =>
             req.Description.Contains("must have Shield Ally") || req.Description.Contains("must be a Fighter,"));
         yield return bastionShieldWarden;
+        
+        /* Higher Level Feats
+         * @10 Destructive Block
+         * @12 (really: 10) Mirror Shield
+         */
     }
 
     public static void ApplyDelayedShieldBlockEvent(Creature attacker, Func<CombatAction, Task> doWhat)

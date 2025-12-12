@@ -243,5 +243,14 @@ public static class ArchetypeDualWeaponWarrior
                             .WithPossibilityGroup("Abilities"); 
                     };
                 });
+        
+        /* Higher Level Feats
+         * @10 Dual-Weapon Blitz
+         * @12 (really: 10) Twin Riposte
+         * @14 Dual Onslaught
+         * @16 (really: 14) Improved Twin Riposte
+         * @16 (really: 14) Two-Weapon Flurry
+         * @18 (really: 16) Twinned Defense
+         */
     }
 }

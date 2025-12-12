@@ -91,7 +91,7 @@ public static class ArchetypeMarshal
         marshalDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
         yield return marshalDedication;
         
-        // Devrin's Cunning Stance?
+        // TODO: Devrin's Cunning Stance?
         // License Firebrands!!!
         
         // Dread Marshal Stance
@@ -304,7 +304,7 @@ public static class ArchetypeMarshal
                 values => values.HasFeat(FeatName.Diplomacy),
                 "Must be trained in Diplomacy");
         
-        // Snap Out of It! (Marshal) @lv4
+        // TODO: Snap Out of It! (Marshal) @lv4
         // Can this even be implemented?
         
         // Steel Yourself!
@@ -355,10 +355,10 @@ public static class ArchetypeMarshal
                     };
                 });
         
-        // Cadence Call @lv6
+        // TODO: Cadence Call @lv6
         // Can this even be implemented?
         
-        // Rallying Charge @lv6
+        // Rallying Charge
         yield return new TrueFeat(
                 ModData.FeatNames.RallyingCharge,
                 6,
@@ -428,7 +428,7 @@ public static class ArchetypeMarshal
                 FeatName.AttackOfOpportunity, ModData.Traits.MarshalArchetype, 8)
             .WithEquivalent(values => values.HasFeat(FeatName.Fighter));
 
-        // Back to Back @lv8
+        // Back to Back
         // Special thanks to SilchasRuin
         yield return new TrueFeat(
                 ModData.FeatNames.BackToBack,
@@ -585,6 +585,15 @@ public static class ArchetypeMarshal
                         }
                     };
                 });
+        
+        /* Higher Level Feats
+         * @10 (ORC) Form Up!
+         * @10 Topple Foe
+         * @12 Coordinated Charge
+         * @12 (ORC) General's Gambit
+         * @14 Tactical Cadence
+         * @14 Target of Opportunity
+         */
     }
 
     public static int GetMarshalAuraRange(Creature marshal)

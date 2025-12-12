@@ -660,6 +660,13 @@ public static class ArchetypeMartialArtist
                 "Tiger Stance");
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.TigerSlash, ModData.Traits.MartialArtistArchetype, 8);
+        
+        /* Higher Level Feat
+         * @10 Black Powder Flash
+         * @14 Path of Iron
+         * @16 (really: 14) Mountain Quake
+         * @18 (ORC) Echoing Violence
+         */
     }
 
     public static IEnumerable<Feat> CreateBonusFeats()

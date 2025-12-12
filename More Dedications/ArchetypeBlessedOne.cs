@@ -129,5 +129,14 @@ public static class ArchetypeBlessedOne
         // Invigorating Mercy
         
         // Greater Mercy (out of scope, but I'd probably have to add that too since it's lv8 for Champs)
+        
+        /* Higher Level Feats
+         * @12 Blessed Denial
+         * @12 (really: 10) Elucidating Mercy
+         * @12 (really: 10) Resilient Touch
+         * @14 (really: 12) Affliction Mercy
+         * @14 (really: 12) Amplifying Touch
+         * @20 (really: 18) Rejuvenating Touch
+         */
     }
 }

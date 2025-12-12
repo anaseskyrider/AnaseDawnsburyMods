@@ -154,6 +154,10 @@ public static class ArchetypeMedic
                         }
                     };
                 });
+        
+        /* Higher Level Feats
+         * @16 Resuscitate
+         */
     }
 
     public static bool IsBattleMedicine(CombatAction action) => action.Name.Contains("Battle Medicine");

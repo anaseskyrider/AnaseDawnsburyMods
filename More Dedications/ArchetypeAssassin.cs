@@ -213,6 +213,13 @@ public static class ArchetypeAssassin
                 ModData.FeatNames.PoisonWeapon, "Poison Weapon");
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.ImprovedPoisonWeapon, ModData.Traits.AssassinArchetype, 10);
+        
+        // TODO: Lv8: Public Execution?
+        // License Firebrands!
+        
+        /* Higher level feats
+         * @12 Assassinate
+         */
     }
 
     public static CombatAction CreateMarkForDeathAction(Creature self)

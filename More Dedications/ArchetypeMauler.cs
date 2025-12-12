@@ -214,6 +214,14 @@ public static class ArchetypeMauler
             .WithPrerequisite(
                 values => values.GetProficiency(Trait.Athletics) >= Proficiency.Expert,
                 "You must be expert in Athletics.");
+        
+        /* Higher Level Feats
+         * @12 (really: 10) Improved Knockdown
+         * @14 (really: 12) Brutal Finish
+         * @14 Hammer Quake
+         * @14 Unbalancing Sweep
+         * @16 Avalanche Strike
+         */
     }
 
     public static bool IsMaulerWeapon(Item item)

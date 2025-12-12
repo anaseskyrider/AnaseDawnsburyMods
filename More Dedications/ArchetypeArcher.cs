@@ -266,5 +266,13 @@ public static class ArchetypeArcher
                         return strike;
                     };
                 });
+        
+        // PETR: Mobile Shot Stance (too high level for this archetype at this time)
+        
+        /* Higher level feats
+         * @10 (really: 8) Mobile Shot Stance
+         * @10 (ORC) Unobstructed Shot.
+         * @18 (really: 16) Multishot Stance
+         */
     }
 }

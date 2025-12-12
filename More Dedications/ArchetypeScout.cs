@@ -201,9 +201,10 @@ public static class ArchetypeScout
                     qfFeat.BonusToAllSpeeds = qfThis =>
                         new Bonus(2, BonusType.Status, "Scout's Speed");
                 });
-
-        // Lv10: Scout's Pounce
-
-        // Lv12: Camouflage
+        
+        /* Higher Level Feats
+         * @10 Scout's Pounce
+         * @12 Camouflage
+         */
     }
 }
