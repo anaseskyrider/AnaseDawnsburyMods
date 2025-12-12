@@ -327,7 +327,7 @@ public static class ArchetypeBastion
                             shield.Hardness
                                 + (blockingCreature.HasEffect(QEffectId.ShieldAlly) ? 2 : 0)
                                 + (Magus.DoesSparklingTargeShieldBlockApply(damageStuff, blockingCreature)
-                                    ? blockingCreature.Level >= 7 ? 2 : 1 : 0),
+                                    ? blockingCreature.Level >= 15 ? 3 : blockingCreature.Level >= 7 ? 2 : 1 : 0),
                             damageStuff.Amount);
                         
                         if (await blockingCreature.Battle.AskToUseReaction(
