@@ -109,6 +109,12 @@ public static class ModData
         public static readonly FeatName FlensingSlice = ModManager.RegisterFeatName(IdPrepend+"Archetype.DualWeaponWarrior.FlensingSlice", "Flensing Slice");
 
         #endregion
+
+        #region Medic
+
+        public static readonly FeatName DoctorsVisitation = ModManager.RegisterFeatName("DoctorsVisitation", "Doctor's Visitation");
+
+        #endregion
         
         #region Bonus Stances
         public static readonly FeatName StokedFlameStance = ModManager.RegisterFeatName("StokedFlameStance", "Stoked Flame Stance");
