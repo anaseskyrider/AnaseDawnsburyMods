@@ -415,7 +415,7 @@ public static class GuardianClass
                             ModData.Traits.Guardian,
                             Trait.AttackOfOpportunity,
                             Trait.ShieldBlock,
-                        ]) 
+                        ]) || questionText.ToLower().Contains("reactive shield")
                             ? ModData.CommonReactionKeys.ReactionTime
                             : null;
                 });
