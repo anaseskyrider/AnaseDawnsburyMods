@@ -287,8 +287,10 @@ public static class ArchetypeBastion
                     // Trigger when you take damage from a Reflex save
                     qfFeat.YouAreDealtDamage = async (qfThis, attacker, dStuff, defender) =>
                     {
-                        if (dStuff.Power?.SavingThrow?.Defense is not Defense.Reflex
-                            && dStuff.Power?.ActiveRollSpecification?.TaggedDetermineDC.InvolvedDefense is not Defense.Reflex)
+                        // Checks included in local func
+                        if (/*(dStuff.Power?.SavingThrow?.Defense is not Defense.Reflex
+                             && dStuff.Power?.ActiveRollSpecification?.TaggedDetermineDC.InvolvedDefense is not Defense.Reflex)
+                            || */!qfThis.Owner.HasEffect(QEffectId.RaisingAShield))
                             return null;
 
                         // Get beefiest shield
@@ -306,7 +308,44 @@ public static class ArchetypeBastion
                             shield);
                     };
                     
-                    // NOTE: Do not collaborate with Shield Warden. The Improved Reflexive Shield feat serves this function.
+                    // PETR: The Improved Reflexive Shield feat should reduce some amount of UI prompts, since they have mechanical overlap.
+                    // Delayed in case of feat load orders
+                    qfFeat.StartOfCombatAfterInitiativeOrderIsSetUp = async qfThis =>
+                    {
+                        // Fire once
+                        qfThis.StartOfCombatAfterInitiativeOrderIsSetUp = null;
+    
+                        // Shield Warden compatibility
+                        if (qfFeat.Owner.HasEffect(QEffectId.ShieldWarden))
+                        {
+                            qfFeat.AddGrantingOfTechnical(
+                                ally =>
+                                    ally.FriendOfAndNotSelf(qfFeat.Owner) && ally.IsAdjacentTo(qfFeat.Owner),
+                                qfAlly =>
+                                    qfAlly.YouAreDealtDamage = async (_, attacker, dStuff, defender) =>
+                                    {
+                                        // Checks included in local func
+                                        if (/*(dStuff.Power?.SavingThrow?.Defense is not Defense.Reflex
+                                             && dStuff.Power?.ActiveRollSpecification?.TaggedDetermineDC.InvolvedDefense is not Defense.Reflex)
+                                            || */!qfFeat.Owner.HasEffect(QEffectId.RaisingAShield))
+                                            return null;
+                                        
+                                        // Get beefiest shield
+                                        if (qfFeat.Owner.HeldItems
+                                                .Where(item => item.HasTrait(Trait.Shield))
+                                                .MaxBy(item => item.Hardness)
+                                            is not { } shield)
+                                            return null;
+                                        
+                                        return await ReflexiveShieldBlockYouAreDealtDamage(
+                                            attacker,
+                                            dStuff,
+                                            defender,
+                                            qfFeat.Owner,
+                                            shield);
+                                    });
+                        }
+                    };
 
                     return;
                     
