@@ -875,7 +875,6 @@ public static class ArchetypeMartialArtist
                                 VfxStyle = new VfxStyle(1, ProjectileKind.Arrow, icon),
                                 Sfx = SfxName.AirSpell,
                             }
-                            .WithRangeIncrement(6)
                             .WithMaximumRange(6));
             });
         Feat wildWindsInitiate = CreateKiSpellFeat2(
