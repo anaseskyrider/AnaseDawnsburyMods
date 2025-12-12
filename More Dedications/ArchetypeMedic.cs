@@ -1,8 +1,11 @@
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes.Agnostic;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
+using Dawnsbury.Core.Creatures;
+using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Treasure;
@@ -30,7 +33,7 @@ public static class ArchetypeMedic
         // Normal list order: 0:Healing, 1:Manipulate, 2:Archetype
         treatCondition.Traits.Insert(2, Trait.Skill);
         treatCondition.Traits.Insert(0, ModData.Traits.MoreDedications);
-        treatCondition.RulesText += ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}More Dedications{/b} This is a skill feat variant of Treat Condition which can be taken as a general feat or skill feat (requires the {i}Skill Feats for Everyone{/i} mod).";
+        treatCondition.RulesText += "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}More Dedications{/b} This is a skill feat variant of Treat Condition which can be taken as a general feat or skill feat (requires the {i}Skill Feats for Everyone{/i} mod).";
         ModData.FeatNames.TreatConditionSkillVariant = treatCondition.FeatName;
         yield return treatCondition;
 
@@ -75,8 +78,41 @@ public static class ArchetypeMedic
                                 {icon:TwoActions} Stabilize, Staunch Bleeding, or Treat Condition {i}(if you have it){/i}.
                                 """,
                                 Target.DependsOnActionsSpent(
-                                    Target.Self(),
-                                    Target.Self(),
+                                    Target.Self()
+                                        .WithAdditionalRestriction(cr =>
+                                        {
+                                            List<Creature> frens = cr.Battle.AllCreatures
+                                                .Where(cr.FriendOf)
+                                                .ToList();
+                                            // Battle Medicine
+                                            if (frens.Any(fren =>
+                                                    fren.Damage > 0
+                                                    && !IsImmuneToBattleMedicine(cr, fren)))
+                                                return null;
+                                            // Treat Poison
+                                            if (frens.Any(fren => fren.QEffects.Any(qf => qf.RepresentsPoison)))
+                                                return null;
+                                            return "No allies to heal nor poisons to end";
+                                        }),
+                                    Target.Self()
+                                        .WithAdditionalRestriction(cr =>
+                                        {
+                                            List<Creature> frens = cr.Battle.AllCreatures
+                                                .Where(cr.FriendOf)
+                                                .ToList();
+                                            // Stabilize
+                                            if (frens.Any(fren => fren.HasEffect(QEffectId.Dying)))
+                                                return null;
+                                            // Staunch Bleeding
+                                            if (frens.Any(fren =>
+                                                    fren.QEffects.Any(qf =>
+                                                        qf.Id == QEffectId.PersistentDamage
+                                                        && qf.GetPersistentDamageKind() == DamageKind.Bleed)))
+                                                return null;
+                                            if (frens.Any(fren => CanBeTreated(cr, fren)))
+                                                return null;
+                                            return "No bleeding, dying, or treatable allies";
+                                        }),
                                     null!))
                             .WithCreateVariantDescription((actionCost, _) =>
                             {
@@ -91,7 +127,7 @@ public static class ArchetypeMedic
                             .WithEffectOnChosenTargets(async (thisAction, caster, _) =>
                             {
                                 // Stride
-                                if (!await caster.StrideAsync("Make a stride.", allowCancel: true, allowStep: false))
+                                if (!await caster.StrideAsync("Make a Stride.", allowCancel: true, allowStep: false))
                                 {
                                     thisAction.RevertRequested = true;
                                     return;
@@ -135,7 +171,7 @@ public static class ArchetypeMedic
     
                             List<Option> actions = await sourceAction.Owner.Battle.GameLoop.CreateActions(sourceAction.Owner, poss, null);
 
-                            if (actions.Any(opt => opt is not PassOption))
+                            if (!actions.Any(opt => opt is not PassOption))
                             {
                                 sourceAction.Owner.Battle.Log("{b}Doctor's Visitation{/b} was converted to a simple Stride.");
                                 sourceAction.RevertRequested = true;
@@ -153,12 +189,12 @@ public static class ArchetypeMedic
         
         // Make skill feat variant of Holistic Care.
         Feat holisticCare = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-                FeatName.HolisticCare, Trait.Medic, 4)
-            .WithEquivalent(values => values.HasFeat(FeatName.TreatCondition));
+                FeatName.HolisticCare, Trait.Medic, 6)
+            .WithEquivalent(values => values.HasFeat(FeatName.HolisticCare));
         // Normal list order: 0:Archetype
         holisticCare.Traits.Add(Trait.Skill);
         holisticCare.Traits.Insert(0, ModData.Traits.MoreDedications);
-        holisticCare.RulesText += ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}More Dedications{/b} This is a skill feat variant of Holistic Care which can be taken as a general feat or skill feat (requires the {i}Skill Feats for Everyone{/i} mod).";
+        holisticCare.RulesText += "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}More Dedications{/b} This is a skill feat variant of Holistic Care which can be taken as a general feat or skill feat (requires the {i}Skill Feats for Everyone{/i} mod).";
         ModData.FeatNames.HolisticCareSkillVariant = holisticCare.FeatName;
         yield return holisticCare;
         
@@ -168,6 +204,29 @@ public static class ArchetypeMedic
         /* Higher Level Feats
          * @16 Resuscitate
          */
+    }
+
+    public static bool IsImmuneToBattleMedicine(Creature medic, Creature patient) =>
+        patient.PersistentUsedUpResources.UsedUpActions.Contains("BattleMedicineFrom:" + medic.Name)
+        && (!medic.HasEffect(QEffectId.Medic)
+            || medic.HasEffect(QEffectId.BattleMedicineImmunityBypassUsedThisEncounter)
+            || medic.Proficiencies.Get(Trait.Medicine) < Proficiency.Master
+            && medic.PersistentUsedUpResources.UsedUpActions.Contains("BattleMedicineImmunityBypassUsed"));
+    
+    public static bool CanBeTreated(Creature medic, Creature patient)
+    {
+        List<QEffectId> effects =
+        [
+            QEffectId.Clumsy,
+            QEffectId.Enfeebled,
+            QEffectId.Sickened
+        ];
+        if (medic.HasEffect(QEffectId.HolisticCare))
+            effects.AddRange([QEffectId.Frightened, QEffectId.Stupefied, QEffectId.Stunned]);
+        return patient.QEffects.Any(qf =>
+            effects.Contains(qf.Id)
+            && qf.ExpiresAt != ExpirationCondition.Ephemeral
+            && qf is { Value: > 0, SourceAction: not null });
     }
 
     public static bool IsBattleMedicine(CombatAction action) => action.Name.Contains("Battle Medicine");
