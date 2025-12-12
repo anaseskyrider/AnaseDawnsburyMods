@@ -161,3 +161,4 @@ public static class ArchetypeMedic
     public static bool IsStabilize(CombatAction action) => action.Name == "Stabilize";
     public static bool IsStaunchBleeding(CombatAction action) => action.Name == "Staunch bleeding";
     public static bool IsTreatCondition(CombatAction action) => action.Name.Contains("Treat ") && !IsTreatPoison(action);
+}
