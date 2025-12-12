@@ -45,8 +45,12 @@ public static class RunesmithArchetype
                 values.SetProficiency(ModData.Traits.Runesmith, Proficiency.Trained); // Might be redundant, but just in case...
                 values.Proficiencies.AddProficiencyAdjustment(traits => traits.Contains(ModData.Traits.Runesmith), values.Class!.ClassTrait);
             })
-            .WithPrerequisite(values => // Can't use the built-in WithDemandsAbility, to avoid non-ORC text.
-                values.FinalAbilityScores.TotalScore(Ability.Intelligence) >= 14,
+            // Can't use the built-in WithDemandsAbility, to avoid non-ORC text.
+            .WithPrerequisite(
+                values =>
+                    (values.HasFeat(FeatName.Multitalented)
+                     && values.Ancestries.Contains(Trait.HalfElf))
+                    || values.FinalAbilityScores.TotalScore(Ability.Intelligence) >= 14,
                 "You must have Intelligence +2 or more.");
         runesmithDedication.Traits.Add(Trait.Homebrew);
         ModManager.AddFeat(runesmithDedication);

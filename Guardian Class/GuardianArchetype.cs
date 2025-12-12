@@ -17,10 +17,16 @@ public static class GuardianArchetype
                 ModData.Traits.Guardian,
                 "You've learned the advantages of wearing the sturdiest of armor and keeping your enemies' attention focused on you instead of your allies. You can eventually put yourself in harm's way to protect your friends.",
                 "You become trained in Athletics; if you were already trained in Athletics, you instead become trained in a skill of your choice.\n\nYou become trained in guardian class DC, and you can use the "+ModData.Tooltips.ActionTaunt("Taunt {icon:Action}")+" action.\n\nYou become trained in light armor and medium armor, or trained in heavy armor if you were already trained in both.\n\nYour proficiency in the armor types granted to you by this feat is equal to your best proficiency in any type of armor (but not unarmored defense). If you are expert in unarmored defense and are at least 13th-level, you also become an expert in the armor types granted to you by this feat.")
-            .WithPrerequisite(values => // Can't use the built-in WithDemandsAbility, to avoid non-ORC text.
+            .WithPrerequisite(values => // Don't use the built-in WithDemandsAbility, to avoid non-ORC text.
+                    (values.HasFeat(FeatName.Multitalented)
+                     && values.Ancestries.Contains(Trait.HalfElf))
+                    ||
                     values.FinalAbilityScores.TotalScore(Ability.Strength) >= 14,
                 "You must have Strength +2 or more.")
-            .WithPrerequisite(values => // Can't use the built-in WithDemandsAbility, to avoid non-ORC text.
+            .WithPrerequisite(values => // Don't use the built-in WithDemandsAbility, to avoid non-ORC text.
+                    (values.HasFeat(FeatName.Multitalented)
+                     && values.Ancestries.Contains(Trait.HalfElf))
+                    ||
                     values.FinalAbilityScores.TotalScore(Ability.Constitution) >= 14,
                 "You must have Constitution +2 or more.")
             .WithOnSheet(values =>
