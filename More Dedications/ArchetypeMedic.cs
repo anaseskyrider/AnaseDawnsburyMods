@@ -1,11 +1,8 @@
-using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
-using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
-using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Treasure;
@@ -28,14 +25,13 @@ public static class ArchetypeMedic
     {
         // Make skill feat variant of Treat Condition.
         Feat treatCondition = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-                FeatName.TreatCondition,
-                Trait.Medic,
-                4)
+                FeatName.TreatCondition, Trait.Medic, 4)
             .WithEquivalent(values => values.HasFeat(FeatName.TreatCondition));
         // Normal list order: 0:Healing, 1:Manipulate, 2:Archetype
         treatCondition.Traits.Insert(2, Trait.Skill);
         treatCondition.Traits.Insert(0, ModData.Traits.MoreDedications);
-        treatCondition.RulesText += ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}More Dedications{/b} This is a skill feat variant of Treat Condition. It can be taken as a general feat, or with the {i}Skill Feats for Everyone{/i} mod as a skill feat.";
+        treatCondition.RulesText += ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}More Dedications{/b} This is a skill feat variant of Treat Condition which can be taken as a general feat or skill feat (requires the {i}Skill Feats for Everyone{/i} mod).";
+        ModData.FeatNames.TreatConditionSkillVariant = treatCondition.FeatName;
         yield return treatCondition;
 
         // Doctor's Visitation
@@ -154,6 +150,9 @@ public static class ArchetypeMedic
                         }
                     };
                 });
+        
+        // TODO: Lv8. Preventative Treatment
+        // Can this even be done? Is it even any good?
         
         /* Higher Level Feats
          * @16 Resuscitate

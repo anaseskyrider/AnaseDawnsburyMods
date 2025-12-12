@@ -42,6 +42,10 @@ public static class ModData
     
     public static class FeatNames
     {
+        // In the early days of this mod, there were attempts to avoid mod conflicts by using unique strings.
+        // Changing these technical strings will result in breaking character sheets, so they will remain as is.
+        // However, later feats will usually have stock-like strings, as most modders tend not to overlap on feats, as cross-mod compatibility has become easier, as the base game now handles shared feat strings by ignoring the mod.
+        
         #region Mauler
         public static readonly FeatName ClearTheWay = ModManager.RegisterFeatName(IdPrepend+"Archetype.Mauler.ClearTheWay", "Clear the Way");
         public static readonly FeatName ShovingSweep = ModManager.RegisterFeatName(IdPrepend+"Archetype.Mauler.ShovingSweep", "Shoving Sweep");
@@ -113,6 +117,8 @@ public static class ModData
         #region Medic
 
         public static readonly FeatName DoctorsVisitation = ModManager.RegisterFeatName("DoctorsVisitation", "Doctor's Visitation");
+        public static FeatName TreatConditionSkillVariant;
+        public static FeatName HolisticCareSkillVariant;
 
         #endregion
         
