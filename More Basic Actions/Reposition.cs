@@ -30,6 +30,7 @@ public static class Reposition
             {
                 Name = "RepositionGranter",
                 Key = "RepositionGranter", // Last mod to add this effect will win out.
+                Value = 5, // Higher precedent than Commander
                 ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
                     if (section.PossibilitySectionId != PossibilitySectionId.TrueAttackManeuvers)
