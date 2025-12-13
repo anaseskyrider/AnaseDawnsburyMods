@@ -1,6 +1,6 @@
 ﻿using Dawnsbury.Modding;
 
-namespace AndroidAncestry;
+namespace Dawnsbury.Mods.AndroidAncestry;
 
 public static class ModLoader
 {

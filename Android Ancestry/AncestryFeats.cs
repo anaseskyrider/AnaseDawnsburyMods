@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
 using Dawnsbury.Audio;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations.AuraAnimations;
@@ -17,7 +15,7 @@ using Dawnsbury.Display;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
-namespace AndroidAncestry;
+namespace Dawnsbury.Mods.AndroidAncestry;
 
 public static class AncestryFeats
 {

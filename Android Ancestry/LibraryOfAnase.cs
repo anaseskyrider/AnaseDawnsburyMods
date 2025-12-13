@@ -1,6 +1,3 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Campaign.Encounters.Tutorial;
 using Dawnsbury.Campaign.Path;
@@ -20,7 +17,7 @@ using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Modding;
 
-namespace AndroidAncestry;
+namespace Dawnsbury.Mods.AndroidAncestry;
 
 /// <summary>
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.

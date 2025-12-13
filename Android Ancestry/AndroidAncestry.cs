@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
@@ -17,7 +14,7 @@ using Dawnsbury.IO;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
-namespace AndroidAncestry;
+namespace Dawnsbury.Mods.AndroidAncestry;
 
 public static class AndroidAncestry
 {

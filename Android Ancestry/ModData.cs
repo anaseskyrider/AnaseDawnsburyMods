@@ -1,4 +1,3 @@
-using System;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Mechanics;
@@ -6,7 +5,7 @@ using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 
-namespace AndroidAncestry;
+namespace Dawnsbury.Mods.AndroidAncestry;
 
 public static class ModData
 {
