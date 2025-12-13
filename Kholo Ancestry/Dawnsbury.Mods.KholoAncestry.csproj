@@ -40,14 +40,14 @@
   <Target Name="CopyToWorkshopUploadable" AfterTargets="Build">
     <ItemGroup>
       <Assets Include="$(AssetsFolder)\**\*.*"/>
-      <!--<Tokens2 Include="$(Tokens1Folder)\**\*.*"/>-->
+      <!--<Tokens1 Include="$(Tokens1Folder)\**\*.*"/>-->
       <Tokens2 Include="$(Tokens2Folder)\**\*.*"/>
     </ItemGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopExport)\CustomModsV3"/>
     <Copy SourceFiles="ORC copyright notice.html" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
     <Copy SourceFiles="optional-dependencies.txt" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
     <Copy SourceFiles="@(Assets)" DestinationFolder="$(WorkshopExport)\CustomModsV3\$(AssetsFolder)\%(RecursiveDir)"/>
-    <!--<Copy SourceFiles="@(Tokens1)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomPortraitsWithCustomRing\$(Tokens1Folder)\%(RecursiveDir)"/>-->
-    <Copy SourceFiles="@(Tokens2)" DestinationFolder="$(WorkshopExport)\CustomPortraitsWithCustomRing\%(RecursiveDir)"/>
+    <!--<Copy SourceFiles="@(Tokens1)" DestinationFolder="$(WorkshopExport)\$(Tokens1Folder)\%(RecursiveDir)"/>-->
+    <Copy SourceFiles="@(Tokens2)" DestinationFolder="$(WorkshopExport)\$(Tokens2Folder)\%(RecursiveDir)"/>
   </Target>
 </Project>
