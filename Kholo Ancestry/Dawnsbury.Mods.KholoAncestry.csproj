@@ -34,8 +34,8 @@
     </ItemGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods"/>
     <Copy SourceFiles="@(Assets)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods\$(AssetsFolder)\%(RecursiveDir)"/>
-    <!--<Copy SourceFiles="@(Tokens1)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomPortraitsWithCustomRing\%(RecursiveDir)"/>-->
-    <Copy SourceFiles="@(Tokens2)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomPortraitsWithCustomRing\%(RecursiveDir)"/>
+    <!--<Copy SourceFiles="@(Tokens1)" DestinationFolder="$(DevelopersDawnsburyInstall)\$(Tokens1Folder)\%(RecursiveDir)"/>-->
+    <Copy SourceFiles="@(Tokens2)" DestinationFolder="$(DevelopersDawnsburyInstall)\$(Tokens2Folder)\%(RecursiveDir)"/>
   </Target>
   <Target Name="CopyToWorkshopUploadable" AfterTargets="Build">
     <ItemGroup>
