@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0-windows</TargetFramework>
+        <TargetFramework>net10.0-windows</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Platform>x64</Platform>
@@ -9,9 +9,11 @@
         <NoWarn>1998;NETSDK1206;NU1901;NU1902;NU1903;NU1904</NoWarn>
         <WarningsAsErrors>0618</WarningsAsErrors>
         <DevelopersDawnsburyInstall>Z:\Steam Library\steamapps\common\Dawnsbury Days</DevelopersDawnsburyInstall>
-        <WorkshopExport>..\[Exports]\Android Ancestry</WorkshopExport>
-        <AssemblyName>AndroidAncestry</AssemblyName>
-        <RootNamespace>AndroidAncestry</RootNamespace>
+        <WorkshopExport>[Workshop Files]\[Export]</WorkshopExport>
+        <!--<Tokens1Folder>CustomPortraits</Tokens1Folder>-->
+        <!--<Tokens2Folder>CustomPortraitsWithCustomRing</Tokens2Folder>-->
+        <!--Modify This For Each Project-->
+        <AssetsFolder>AndroidAncestryAssets</AssetsFolder>
     </PropertyGroup>
 
     <ItemGroup>
@@ -27,22 +29,25 @@
     </ItemGroup>
     <Target Name="CopyToGameModsFolder" AfterTargets="Build">
         <ItemGroup>
-            <AndroidAncestryAssets Include="AndroidAncestryAssets\**\*.*"/>
-            <AndroidAncestryPortraits Include="CustomPortraits\**\*.*"/>
+            <Assets Include="$(AssetsFolder)\**\*.*"/>
+            <!--<Tokens1 Include="$(Tokens1Folder)\**\*.*"/>-->
+            <!--<Tokens2 Include="$(Tokens2Folder)\**\*.*"/>-->
         </ItemGroup>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods"/>
-        <Copy SourceFiles="@(AndroidAncestryAssets)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods\AndroidAncestryAssets\%(RecursiveDir)"/>
-        <Copy SourceFiles="@(AndroidAncestryPortraits)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomPortraits\%(RecursiveDir)"/>
+        <Copy SourceFiles="@(Assets)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods\$(AssetsFolder)\%(RecursiveDir)"/>
+        <!--<Copy SourceFiles="@(Tokens1)" DestinationFolder="$(DevelopersDawnsburyInstall)\$(Tokens1Folder)\%(RecursiveDir)"/>-->
+        <!--<Copy SourceFiles="@(Tokens2)" DestinationFolder="$(DevelopersDawnsburyInstall)\$(Tokens2Folder)\%(RecursiveDir)"/>-->
     </Target>
     <Target Name="CopyToWorkshopUploadable" AfterTargets="Build">
         <ItemGroup>
-            <AndroidAncestryAssets Include="AndroidAncestryAssets\**\*.*"/>
-            <AndroidAncestryPortraits Include="CustomPortraits\**\*.*"/>
+            <Assets Include="$(AssetsFolder)\**\*.*"/>
+            <!--<Tokens1 Include="$(Tokens1Folder)\**\*.*"/>-->
+            <!--<Tokens2 Include="$(Tokens2Folder)\**\*.*"/>-->
         </ItemGroup>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopExport)\CustomModsV3"/>
         <Copy SourceFiles="OGL copyright notice.html" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
         <Copy SourceFiles="optional-dependencies.txt" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
-        <Copy SourceFiles="@(AndroidAncestryAssets)" DestinationFolder="$(WorkshopExport)\CustomModsV3\AndroidAncestryAssets\%(RecursiveDir)"/>
-        <Copy SourceFiles="@(AndroidAncestryPortraits)" DestinationFolder="$(WorkshopExport)\CustomPortraits\%(RecursiveDir)"/>
+        <!--<Copy SourceFiles="@(Tokens1)" DestinationFolder="$(WorkshopExport)\$(Tokens1Folder)\%(RecursiveDir)"/>-->
+        <!--<Copy SourceFiles="@(Tokens2)" DestinationFolder="$(WorkshopExport)\$(Tokens2Folder)\%(RecursiveDir)"/>-->
     </Target>
 </Project>
