@@ -177,9 +177,6 @@ public static class Ready
             .WithActionId(ModData.ActionIds.Ready)
             .WithEffectOnEachTarget(async (_, caster, _, _) =>
             {
-                List<Creature> enemies = caster.Battle.AllCreatures
-                    .Where(caster.EnemyOf)
-                    .ToList();
                 List<Item> rangedWeapons = GetRangedAttacks(caster);
                 
                 QEffect readiedHold = new QEffect(
@@ -202,9 +199,11 @@ public static class Ready
                             return;
                         
                         List<(Creature, Item)> provokeQueue = (qfThis.Tag as List<(Creature, Item)>)!;
+                        List<Creature> enemies = qfThis.Owner.Battle.AllCreatures
+                            .Where(qfThis.Owner.EnemyOf)
+                            .ToList();
 
-                        foreach (Creature cr in qfThis.Owner.Battle.AllCreatures
-                                     .Where(cr => !cr.FriendOf(qfThis.Owner)))
+                        foreach (Creature cr in enemies)
                         {
                             List<Item> promptWeapons = [];
                             
@@ -244,17 +243,18 @@ public static class Ready
                         }
                     },
                     // Creatures who are in your range increments and maximum ranges
-                    Tag = enemies
-                            .SelectMany(
-                                enemy => rangedWeapons.Where(wep =>
-                                {
-                                    int range = wep.WeaponProperties!.RangeIncrement > 0
-                                        ? wep.WeaponProperties!.RangeIncrement
-                                        : wep.WeaponProperties!.MaximumRange;
-                                    return caster.DistanceTo(enemy) <= range;
-                                }),
-                                (enemy, wep) => (enemy, wep))
-                            .ToList(),
+                    Tag = caster.Battle.AllCreatures
+                        .Where(caster.EnemyOf)
+                        .SelectMany(
+                            enemy => rangedWeapons.Where(wep =>
+                            {
+                                int range = wep.WeaponProperties!.RangeIncrement > 0
+                                    ? wep.WeaponProperties!.RangeIncrement
+                                    : wep.WeaponProperties!.MaximumRange;
+                                return caster.DistanceTo(enemy) <= range;
+                            }),
+                            (enemy, wep) => (enemy, wep))
+                        .ToList(),
                 };
                 caster.AddQEffect(readiedHold);
 
