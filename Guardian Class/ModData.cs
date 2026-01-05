@@ -13,12 +13,30 @@ using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.GuardianClass;
 
-// TODO: Cleanup ModData
 public static class ModData
 {
+    
+    /// <summary>
+    /// Loads all mod data. This should typically be called by a mod before anything else.
+    /// </summary>
+    /// <para>
+    /// When registering mod data, certain data must be called through the execution of lines of code, rather than assigned in their initialization. The Initializer skips these data until they're first called, which can result in errors due to out of order registration calls (especially when another mod isn't using <see cref="ModManager.TryParse"/>).
+    /// </para>
+    /// <para>The following data forms are typically safe due to the way Dawnsbury Days loads mods (or because their initialization nearly always gets called before errors could arise): <see cref="FeatName"/>, <see cref="Illustration"/>, <see cref="Trait"/>, <see cref="SfxNames"/>, <see cref="SpellId"/>. Tooltips from <see cref="ModManager.RegisterInlineTooltip(string, string)"/> likely aren't safe to assign as part of the initializer, but they typically shouldn't be shared between mods either.
+    /// </para>
+    /// <para>
+    /// In general, trigger the initializer by separating declaration and assignment for the following data forms:
+    /// <list type="bullet">
+    /// <item>All other enums (e.g. <see cref="ActionId"/>, <see cref="QEffectId"/>)</item>
+    /// <item>Mod settings registered with <see cref="ModManager.RegisterBooleanSettingsOption"/></item>
+    /// </list>
+    /// </para>
     public static void LoadData()
     {
-        
+        ActionIds.Initialize();
+        PossibilitySectionIds.Initialize();
+        QEffectIds.Initialize();
+        SubmenuIds.Initialize();
     }
 
     /// <summary>
@@ -29,41 +47,21 @@ public static class ModData
     /// <returns>The newly registered enum.</returns>
     public static T SafelyRegister<T>(string technicalName) where T : struct, Enum
     {
-        return ModManager.TryParse<T>(technicalName, out T alreadyRegistered)
+        return ModManager.TryParse(technicalName, out T alreadyRegistered)
             ? alreadyRegistered
             : ModManager.RegisterEnumMember<T>(technicalName);
     }
 
     public static class ActionIds
     {
-        public static readonly ActionId Taunt = ModManager.RegisterEnumMember<ActionId>("Taunt");
-        public static readonly ActionId InterceptAttack = ModManager.RegisterEnumMember<ActionId>("InterceptAttack");
-    }
-    
-    /// <summary>
-    /// Keeps the options registered with <see cref="ModManager.RegisterBooleanSettingsOption"/>. To read the registered options, use <see cref="PlayerProfile.Instance.IsBooleanOptionEnabled(string)"/>.
-    /// </summary>
-    public static class BooleanOptions
-    {
-        /*public static readonly string UnrestrictedTrace = RegisterBooleanOption(
-            "RunesmithPlaytest.UnrestrictedTrace",
-            "Runesmith: Less Restrictive Rune Tracing",
-            "Enabling this option removes protections against \"bad decisions\" with tracing certain runes on certain targets.\n\nThe Runesmith is a class on the more advanced end of tactics and creativity. For example, you might want to trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy. Or you might trace Atryl on yourself as a 3rd action so that you can move it with Transpose Etching (just 1 action) on your next turn, because you're a ranged build.\n\nThis option is for those players.",
-            true);*/
-        
-        /// <summary>
-        /// Functions as <see cref="ModManager.RegisterBooleanSettingsOption"/>, but also returns the technicalName.
-        /// </summary>
-        /// <returns>(string) The technical name for the option.</returns>
-        public static string RegisterBooleanOption(
-            string technicalName,
-            string caption,
-            string longDescription,
-            bool defaultValue)
+        public static void Initialize()
         {
-            ModManager.RegisterBooleanSettingsOption(technicalName, caption, longDescription, defaultValue);
-            return technicalName;
+            Taunt = SafelyRegister<ActionId>("Taunt");
+            InterceptAttack = SafelyRegister<ActionId>("InterceptAttack");
         }
+        
+        public static ActionId Taunt;
+        public static ActionId InterceptAttack;
     }
 
     public static class CommonQfKeys
@@ -215,15 +213,28 @@ public static class ModData
     
     public static class PossibilitySectionIds
     {
-        public static readonly PossibilitySectionId BasicTaunts = ModManager.RegisterEnumMember<PossibilitySectionId>("BasicTaunts");
+        public static void Initialize()
+        {
+            BasicTaunts = SafelyRegister<PossibilitySectionId>("BasicTaunts");
+        }
+        
+        public static PossibilitySectionId BasicTaunts;
     }
     
     public static class QEffectIds
     {
-        public static readonly QEffectId TauntTarget = ModManager.RegisterEnumMember<QEffectId>("TauntTarget");
-        public static readonly QEffectId ReactionTime = ModManager.RegisterEnumMember<QEffectId>("ReactionTime");
-        public static readonly QEffectId BodyguardCharge = ModManager.RegisterEnumMember<QEffectId>("Bodyguard's Charge");
-        public static readonly QEffectId HamperingStance = ModManager.RegisterEnumMember<QEffectId>("HamperingStance");
+        public static void Initialize()
+        {
+            TauntTarget = SafelyRegister<QEffectId>("TauntTarget");
+            ReactionTime = SafelyRegister<QEffectId>("ReactionTime");
+            BodyguardCharge = SafelyRegister<QEffectId>("Bodyguard's Charge");
+            HamperingStance = SafelyRegister<QEffectId>("HamperingStance");
+        }
+        
+        public static QEffectId TauntTarget;
+        public static QEffectId ReactionTime;
+        public static QEffectId BodyguardCharge;
+        public static QEffectId HamperingStance;
     }
     
     public static class SfxNames
@@ -239,7 +250,12 @@ public static class ModData
     
     public static class SubmenuIds
     {
-        public static readonly SubmenuId Taunt = ModManager.RegisterEnumMember<SubmenuId>("Taunt");
+        public static void Initialize()
+        {
+            Taunt = SafelyRegister<SubmenuId>("Taunt");
+        }
+        
+        public static SubmenuId Taunt;
     }
     
     public static class Traits
