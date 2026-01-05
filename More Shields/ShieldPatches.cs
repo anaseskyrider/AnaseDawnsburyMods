@@ -201,7 +201,7 @@ public static class ShieldPatches
             // Adds devoted guardian to the target
             if (devotedGuardian)
             {
-                bool isCoverShield = shield.HasAnyTraits(ModData.Traits.CoverShield, Trait.TowerShield);
+                bool isCoverShield = shield.HasAnyTraits(ModData.Traits.CoverShield!, Trait.TowerShield!);
                 int bonus = isCoverShield ? 2 : 1;
                 target.AddQEffect(new QEffect(
                     "Devoted Guardian",
