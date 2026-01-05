@@ -47,11 +47,18 @@ public static class GuardianClass
                 [Trait.Perception, Trait.Reflex, Trait.Athletics, Trait.Unarmed, Trait.Simple, Trait.Martial, Trait.UnarmoredDefense, Trait.Armor],
                 [Trait.Fortitude, Trait.Will],
                 3,
-                "{b}1. Guardian's Armor.{/b} While wearing medium or heavy armor, you gain resistance to physical damage equal to 1 + half your level. In addition, you can "+ModData.Tooltips.ArmorResting("rest normally")+" while wearing medium and heavy armor."
-                + "\r\n\r\n{b}2. Taunt.{/b} Often, the best way to protect your allies is to have the enemy want to attack you instead. You gain the "+ModData.Tooltips.ActionTaunt("Taunt {icon:Action}")+" action."
-                + "\r\n\r\n{b}3. Intercept Attack.{/b} You keep your charges safe from harm, even if it means you\nget hurt yourself. You gain the "+ModData.Tooltips.ActionInterceptAttack("Intercept Attack {icon:Reaction}")+" reaction."
-                + "\r\n\r\n{b}4. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks."
-                + "\r\n\r\n{b}5. Guardian feat.{/b}",
+                $$"""
+                {b}1. Guardian's Armor.{/b} While wearing medium or heavy armor, you gain resistance to physical damage equal to 1 + half your level. In addition, you can {{ModData.Tooltips.ArmorResting("rest normally")}} while wearing medium and heavy armor.
+                
+                {b}2. Taunt.{/b} Often, the best way to protect your allies is to have the enemy want to attack you instead. You gain the {{ModData.Tooltips.ActionTaunt("Taunt {icon:Action}")}} action.
+                
+                {b}3. Intercept Attack.{/b} You keep your charges safe from harm, even if it means you
+                get hurt yourself. You gain the {{ModData.Tooltips.ActionInterceptAttack("Intercept Attack {icon:Reaction}")}} reaction.
+                
+                {b}4. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks.
+                
+                {b}5. Guardian feat.{/b}
+                """,
                 null)
             .WithClassFeatures(cf =>
             {
