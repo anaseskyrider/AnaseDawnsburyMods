@@ -121,6 +121,28 @@ public static class CommonShieldRules
     
     #endregion
 
+    #region Shield Abilities
+
+    /// <summary>
+    /// Does the Reflexive Shield feat apply to this action.
+    /// </summary>
+    /// <param name="power">The CombatAction being checked against, usually an action that imposes a saving throw.</param>
+    public static bool DoesReflexiveShieldApply(CombatAction? power)
+    {
+        return power?.SavingThrow?.Defense is Defense.Reflex
+               || power?.ActiveRollSpecification?.TaggedDetermineDC.InvolvedDefense is Defense.Reflex;
+    }
+    
+    /// <summary>
+    /// Functions as <see cref="Magus.DoesSparklingTargeShieldBlockApply"/> but with a different overload.
+    /// </summary>
+    public static bool DoesSparklingTargeShieldBlockApply(CombatAction? power, Creature magus)
+    {
+        return magus.HasEffect(QEffectId.SparklingTarge) && magus.HasEffect(QEffectId.ArcaneCascade) && power != null && power.HasTrait(Trait.Spell);
+    }
+
+    #endregion
+
     // These functions relate to raising a shield.
     #region Raising a Shield
 
