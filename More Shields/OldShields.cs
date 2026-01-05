@@ -1,8 +1,10 @@
 using Dawnsbury.Auxiliary;
+using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
+using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
@@ -11,7 +13,9 @@ using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Display;
 using Dawnsbury.Modding;
+using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.MoreShields;
 
@@ -218,9 +222,168 @@ public static class OldShields
                 });
         }
 
-
+        Feat emergencyTarge = AllFeats.GetFeatByFeatName(FeatName.EmergencyTarge);
+        emergencyTarge.FlavorText = "Your targe comes readily in times of danger to avoid blows and spells.";
+        emergencyTarge.Traits.Insert(0, ModData.Traits.MoreShields);
+        emergencyTarge.OnCreature = null;
+        emergencyTarge.WithPermanentQEffect(
+            "You can Raise a Shield or cast {i}shield{/i} when you'd be hit by a melee attack or fail an enemy's spell save.",
+            qfFeat =>
+            {
+                qfFeat.YouAreTargetedByARoll = async (qfThis, action, breakdown) =>
+                {
+                    bool isSavingThrow;
+                    // is attack
+                    if (action.HasAnyTraits(Trait.Strike!, Trait.Spell!)
+                        && action.HasTrait(Trait.Melee)
+                        && action.ActiveRollSpecification == null)
                     {
+                        if (breakdown.CheckResult < CheckResult.Success)
+                            return false;
+                        isSavingThrow = false;
                     }
+                    // is saving throw
+                    else if (action.HasAnyTraits(Trait.Spell!, Trait.Magical!)
+                             && action.SavingThrow is not null)
+                    {
+                        if (breakdown.CheckResult > CheckResult.Failure)
+                            return false;
+                        isSavingThrow = true;
+                    }
+                    // neither
+                    else
+                        return false;
+
+                    return await AskToEmergencyTarge(qfThis.Owner, action, breakdown, isSavingThrow);
+                };
+
+                return;
+
+                async Task<bool> AskToEmergencyTarge(Creature defender, CombatAction action, CheckBreakdownResult breakdown, bool isSavingThrow = false)
+                {
+                    List<Item> shields = CommonShieldRules
+                        .GetWieldedShields(defender)
+                        .Union(defender.Spellcasting!.Sources
+                            .SelectMany(src => src.Spells
+                                .Where(spell => spell.SpellId is SpellId.Shield)
+                                .Select(spell =>
+                                    new Item(spell.Illustration, spell.Name)
+                                    {
+                                        Tag = spell
+                                    }))
+                            .ToList())
+                        .ToList();
+                    // Add shield spell as a dummy item.
+                    Item? shieldSpell = null;
+                    if (defender.Spellcasting?.Sources.Any(src =>
+                            src.Cantrips.Any(spell =>
+                                spell.SpellId is SpellId.Shield))
+                        ?? false)
+                    {
+                        shieldSpell = CreateShieldSpellItem();
+                        shields.Add(shieldSpell);
+                    }
+                    if (shields.Count == 0)
+                        return false;
+
+                    List<Item> raisableShields = shields
+                        .Except(CommonShieldRules.GetRaisedShields(defender))
+                        .ToList();
+                    if (shieldSpell is not null && defender.HasEffect(QEffectId.ShieldSpell))
+                        raisableShields.Remove(shieldSpell);
+
+                    int? threshold = null;
+                    List<Item> downgradeShields = [];
+                    if (isSavingThrow)
+                    {
+                        // If targe can handle it, then it's fine
+                        if (CommonShieldRules.DoesSparklingTargeShieldBlockApply(action, defender))
+                            threshold = breakdown.DetermineCircumstanceBonusThresholdNeededToUpgrade();
+                        // But if it's only because of Reflexive Shield, then the shield spell can't
+                        // actually block it, so remove it as a legal option.
+                        else if (reflexiveShield is not null
+                                 && defender.HasFeat(reflexiveShield.FeatName)
+                                 && CommonShieldRules.DoesReflexiveShieldApply(action))
+                        {
+                            threshold = breakdown.DetermineCircumstanceBonusThresholdNeededToUpgrade();
+                            if (shieldSpell is not null)
+                                raisableShields.Remove(shieldSpell);
+                        }
+                    }
+                    else // is melee attack
+                        threshold = breakdown.GetCircumstanceBonusThresholdNeededToDowngrade();
+                    
+                    if (threshold.HasValue)
+                        downgradeShields = raisableShields
+                            .Where(shield =>
+                                threshold <= CommonShieldRules.GetAC(shield))
+                            .ToList();
+                    bool canBeDowngraded = downgradeShields.Count > 0;
+                    List<Item> shieldOptions = canBeDowngraded
+                        ? downgradeShields
+                        : raisableShields;
+
+                    if (shieldOptions.Count == 0)
+                        return false;
+                    
+                    // Prettied text
+                    string question = "{b}Emergency Targe{/b} {icon:Reaction}\n";
+                    if (action.Owner == defender.Battle.Pseudocreature)
+                        question += "You're about to be hit by ";
+                    else
+                        question += "{Blue}" + action.Owner + "{/Blue} is about to hit you with ";
+                    question += "{Blue}" + action.Name + "{/Blue}.\nRaise a Shield";
+                    if (canBeDowngraded)
+                        question += $" and {(isSavingThrow ? "up" : "down")}grade the {breakdown.CheckResult.Greenify()} into a {(breakdown.CheckResult + (isSavingThrow ? 1 : -1)).Greenify()}?";
+                    // If you have a bonus reaction you could use
+                    else if (defender.Actions.DetermineReactionToUse(
+                                 question + "? {i}(You will still be hit but you'll be able to Shield Block.){/i}",
+                                 [Trait.ShieldBlock]) is not null)
+                        question += "? {i}(You will still be hit but you'll be able to Shield Block.){/i}";
+                    else
+                        return false;
+                    
+                    string[] stringOptions = shieldOptions
+                        .Select(shield =>
+                            shield.Illustration.IllustrationAsIconString + shield.Name)
+                        .ToArray();
+                    
+                    if (await defender.Battle.AskToUseReaction(
+                            defender,
+                            question,
+                            ModData.Illustrations.ReactiveShield, // New icon
+                            stringOptions) is not {} chosenIndex) // Lets you choose which shield to raise
+                        return false;
+                    
+                    Item chosenShield = shieldOptions[chosenIndex];
+                        
+                    // Custom overhead
+                    defender.Overhead(
+                        "emergency targe",
+                        Color.Lime,
+                        defender + " uses {b}Emergency Targe{/b}.",
+                        "Emergency Targe {icon:Reaction}",
+                        "{i}Your targe comes readily in times of danger to avoid blows and spells.{/i}\n\nWhen an enemy would hit you with a melee Strike or a melee spell attack roll, or you would fail a save against an enemy's spell, as {icon:Reaction}a reaction, you can immediately raise a shield or cast {i}shield{/i} (its circumstance bonus applies to the triggering attack or spell).",
+                        new Traits([..AllFeats.GetFeatByFeatName(FeatName.EmergencyTarge).Traits, ModData.Traits.ReactiveAction]));
+
+                    if (chosenShield.Tag is SpellId.Shield)
+                        await LibraryOfAnase.OfferOptions2(
+                            defender,
+                            ap => ap.CombatAction.SpellId is SpellId.Shield);
+                    else
+                        Fighter.RaiseShield(defender, chosenShield, defender, false);
+
+                    return true;
+
+                    Item CreateShieldSpellItem() =>
+                        new Item(
+                            IllustrationName.ShieldSpell, "Shield",
+                            [Trait.Shield, ModData.Traits.LightShield])
+                        {
+                            Tag = SpellId.Shield
+                        };
+                }
+            });
     }
     
     public static void ModifyOldShields()
