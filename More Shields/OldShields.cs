@@ -191,7 +191,7 @@ public static class OldShields
 
                     // Shield Block a Reflex save
                     qfFeat.YouAreDealtDamage = async (qfThis, attacker, dStuff, defender) =>
-                        IsReflexiveShieldDamage(dStuff)
+                        CommonShieldRules.DoesReflexiveShieldApply(dStuff.Power)
                             ? await CommonShieldRules.OfferAndMakeShieldBlock(attacker, defender, dStuff, defender)
                             : null;
                     
@@ -209,22 +209,18 @@ public static class OldShields
                                     ally.FriendOfAndNotSelf(qfFeat.Owner) && ally.IsAdjacentTo(qfFeat.Owner),
                                 qfAlly =>
                                     qfAlly.YouAreDealtDamage = async (_, attacker, dStuff, defender) =>
-                                        IsReflexiveShieldDamage(dStuff)
+                                        CommonShieldRules.DoesReflexiveShieldApply(dStuff.Power)
                                             ? await CommonShieldRules.OfferAndMakeShieldBlock(attacker, defender,
                                                 dStuff, qfFeat.Owner)
                                             : null);
                         }
                     };
-
-                    return;
-
-                    bool IsReflexiveShieldDamage(DamageStuff dStuff)
-                    {
-                        return dStuff.Power?.SavingThrow?.Defense is Defense.Reflex
-                               || dStuff.Power?.ActiveRollSpecification?.TaggedDetermineDC.InvolvedDefense is Defense.Reflex;
-                    }
                 });
         }
+
+
+                    {
+                    }
     }
     
     public static void ModifyOldShields()
