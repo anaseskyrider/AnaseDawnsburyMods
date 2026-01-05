@@ -683,10 +683,10 @@ public static class GuardianClass
                                     PermitsStep = true
                                 }
                             })
-                        .Where(tile => IsLegalTile(tile, self, ally, canStride)),
+                        .Intersect(GetLegalTiles(self, ally, canStride)),
                     ModData.Illustrations.InterceptAttack,
                     question, "Move here",
-                    true, true, null,
+                    true, true, self,
                     button);
                 // Step/Stride to that tile
                 if (chosenTile == null)
@@ -734,18 +734,58 @@ public static class GuardianClass
 
         List<Tile> GetLegalTiles(Creature guardian, Creature ally_2, bool canStride_2)
         {
-            return guardian.Battle.Map.AllTiles
+            // Get the rectangular region of tiles that the Guardian can attempt to move to based on its size.
+            // (0,0) is located in the top left.
+            // Therefor the top-left corner of the rectangle around the ally is a decreased X and increased Y.
+            Point topLeft = new Point(
+                ally_2.Space.TopLeftTile.X - guardian.Space.SizeInSquares,
+                ally_2.Space.TopLeftTile.Y - guardian.Space.SizeInSquares
+            );
+            Point bottomRight = new Point(
+                (ally_2.Space.TopLeftTile.X + (ally_2.Space.SizeInSquares - 1)) + guardian.Space.SizeInSquares,
+                (ally_2.Space.TopLeftTile.Y + (ally_2.Space.SizeInSquares - 1)) + guardian.Space.SizeInSquares
+            );
+            List<Tile> rectangle = guardian.Battle.Map
+                .TilesInRectangle(topLeft.X, topLeft.Y, bottomRight.X, bottomRight.Y)
+                .ToList();
+            // Don't just accept top-left aligned large spaces,
+            // the entire creature must be contained within this distance to be adjacent
+            List<Tile> spaces = rectangle
+                .Where(tile => tile.TilesToTheBottomRight(guardian.Space.SizeInSquares).All(subspace => rectangle.Contains(subspace)))
+                .ToList();
+            return spaces
                 .Where(tile => IsLegalTile(tile, guardian, ally_2, canStride_2))
                 .ToList();
         }
 
         bool IsLegalTile(Tile tile, Creature guardian, Creature ally_2, bool canStride_2)
         {
-            return tile.IsAdjacentTo(ally_2.Occupies)
-                    && tile.LooksFreeTo(guardian)
-                    && (canStride_2 || guardian.HasEffect(QEffectId.FeatherStep) ||
-                        !tile.CountsAsNonignoredDifficultTerrainFor(guardian))
-                    && guardian.DistanceTo(tile) <= (canStride_2 ? guardian.Speed : stepSpeed);
+            // Must be within Step distance or Stride distance
+            if (guardian.Space.TopLeftTile.DistanceTo(tile) > (canStride_2 ? guardian.Speed : stepSpeed))
+                return false;
+            // If I can't Stride, then I must be able to Step
+            if (!canStride_2)
+            {
+                // Is DT and I can't Step in DT.
+                if (!guardian.HasEffect(QEffectId.FeatherStep)
+                    && tile.CountsAsNonignoredDifficultTerrainFor(guardian))
+                    return false;
+            }
+            if (!tile.LooksFreeTo(guardian))
+                return false;
+            if (DistanceToAbs(ally_2, tile) > guardian.Space.SizeInSquares)
+                return false;
+            return true;
+        }
+
+        int DistanceToAbs(Creature cr, Tile tile)
+        {
+            if (!cr.Space.OccupiesSpace || tile == null)
+                return 10000;
+            Tile closestTileTo = cr.Space.GetClosestTileTo(tile);
+            int num1 = Math.Abs(tile.X - closestTileTo.X);
+            int num2 = Math.Abs(tile.Y - closestTileTo.Y);
+            return Math.Max(num1, num2);
         }
     }
 }
