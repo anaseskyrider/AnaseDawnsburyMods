@@ -5,6 +5,8 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
+using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
@@ -14,11 +16,18 @@ using Dawnsbury.Modding;
 namespace Dawnsbury.Mods.GuardianClass;
 
 /// <summary>
-/// A local library for parry trait logic. Call <see cref="Load(string)"/> to run the parry action granter.
+/// A local library for parry trait logic. Call <see cref="Load(string, Illustration, Illustration)"/> to run the parry action granter.
 /// </summary>
-/// <value>v1.0</value>
+/// <list type="bullet">
+/// <item>v1.1: Added default Value to the field of the granter QF based on library version number. Added requirement to properly wield two-handed weapons to initiate and maintain parrying. TemporaryParry is now a hidden trait. Updated documentation of IconToggle. Greater parry effects now display the bonus on the action.</item>
+/// <item>v1.0: Initial.</item>
+/// </list>
+/// <value>v1.1</value>
 public static class ParryLogic
 {
+    /// When the library is updated, this should be incremented so that more recent versions will be given priority. Initial release is 0.
+    public const int VersionNumber = 1;
+
     /// The Parry action from the Parry trait.
     public static ActionId ParryAction { set; get; }
 
@@ -36,9 +45,10 @@ public static class ParryLogic
         new TraitProperties("Parry", true, "You can Parry {icon:Action} to gain a +1 circumstance bonus to AC for 1 round while you wield it (must be trained).", true) { RelevantForItemBlock = true });
     
     /// A hidden technical trait that indicates a temporary parry trait.
-    public static readonly Trait TemporaryParryTrait = ModManager.RegisterTrait("TemporaryParry");
+    public static readonly Trait TemporaryParryTrait = ModManager.RegisterTrait("TemporaryParry",
+        new TraitProperties("TemporaryParry", false));
 
-    /// Mod option to show/hide the unique parry icon. Will not be registered if your mod does not provide an <see cref="Illustration"/> to <see cref="Load"/>.
+    /// Mod option to show/hide the unique parry icon. Will not be registered if your mod does not provide an action icon <see cref="Illustration"/> to <see cref="Load"/>.
     public const string IconToggle = "ParryLogic.UseSideBySide";
 
     /// The icon used in a side-by-side for the parry action.
@@ -88,6 +98,7 @@ public static class ParryLogic
             {
                 Name = "[PARRY GRANTER: " + modName + "]",
                 Key = "ParryGranter",
+                Value = VersionNumber,
                 ProvideActionsIntoPossibilitySection = (qfThis, section) =>
                 {
                     if (section.PossibilitySectionId != PossibilitySectionId.ItemActions)
@@ -127,6 +138,17 @@ public static class ParryLogic
         Item weapon,
         Illustration? parryIcon = null)
     {
+        bool isGreaterParry = owner.QEffects.Any(qf =>
+            qf.Id == GreaterParryQf
+            && ((GreaterParryTag)qf.Tag!).IsGreater(qf, weapon));
+        
+        SelfTarget selfTar = Target.Self((cr, ai) =>
+            ai.GainBonusToAC(isGreaterParry ? 2 : 1));
+        
+        string bonus = isGreaterParry 
+            ? "{Blue}+2{/Blue}"
+            : "+1";
+        
         CombatAction parry = new CombatAction(
                 owner,
                 parryIcon is not null
@@ -134,13 +156,15 @@ public static class ParryLogic
                     : weapon.Illustration,
                 $"Parry ({weapon.Name})",
                 [Trait.Basic, Trait.DoNotShowOverheadOfActionName],
-                "",
-                Target.Self((cr, ai) =>
-                    ai.GainBonusToAC(cr.HasEffect(GreaterParryQf) ? 2 : 1)))
-            .WithDescription(
-                "You position your weapon defensively.",
-                "{b}Requirements{/b} You are wielding this weapon, and your proficiency with it is trained or better.\n\nYou gain a +1 circumstance bonus to AC until the start of your next turn.")
-            .WithShortDescription("Gain a +1 circumstance bonus to AC until the start of your next turn.")
+                $$"""
+                {i}You position your weapon defensively.{/i}
+
+                {b}Requirements{/b} You are wielding this weapon, and your proficiency with it is trained or better.
+
+                You gain a {{bonus}} circumstance bonus to AC until the start of your next turn.
+                """,
+                selfTar)
+            .WithShortDescription("Gain a "+bonus+" circumstance bonus to AC until the start of your next turn.")
             .WithActionCost(1)
             .WithItem(weapon)
             .WithActionId(ParryAction)
@@ -149,6 +173,13 @@ public static class ParryLogic
             {
                 self.AddQEffect(Parrying(action, self, weapon));
             });
+        if (weapon.HasTrait(Trait.TwoHanded))
+        {
+            TwoHandedRequirement twoHandReq = new TwoHandedRequirement(weapon);
+            selfTar.WithAdditionalRestriction(self =>
+                twoHandReq.Satisfied(self, self).UnusableReason
+            );
+        }
         return parry;
     }
 
@@ -179,6 +210,8 @@ public static class ParryLogic
                 {
                     if (!qfThis2.Owner.HeldItems.Contains(weapon))
                         qfThis2.ExpiresAt = ExpirationCondition.Immediately;
+                    if (weapon.HasTrait(Trait.TwoHanded) && !weapon.WieldedInTwoHands)
+                        qfThis2.ExpiresAt = ExpirationCondition.Immediately;
                 },
                 BonusToDefenses = (_, _, def) =>
                     def == Defense.AC
@@ -194,7 +227,7 @@ public static class ParryLogic
     /// <summary>
     /// <para>An innate effect for abilities which allow you to parry with certain items.</para>
     /// <para>Increase the value of the Parry bonus to 2 if that certain item also has the Parry trait.</para>
-    /// <para>To upgrade the parry bonus, it must be caused by a <see cref="CombatAction"/> with the Parry <see cref="ActionId"/>.</para>
+    /// <para>To upgrade the parry bonus, the <see cref="QEffect.SourceAction"/> must have the Parry <see cref="ActionId"/>.</para>
     /// </summary>
     /// <param name="name">The name of this effect on the stat block.</param>
     /// <param name="description">The description of this effect on the stat block.</param>
@@ -205,36 +238,35 @@ public static class ParryLogic
         string? description,
         Func<QEffect, Item, bool> weaponTest)
     {
+        GreaterParryTag parryTag = new GreaterParryTag([], weaponTest);
         return new QEffect(name!, description!)
         {
             Id = GreaterParryQf,
-            Tag = new List<Item>(), // Tracked items
-            // Manage temporary parry for wielded items
+            Tag = parryTag,
+            // Manage temporary parry for held items
             StateCheck = qfThis =>
             {
-                List<Item> items = (qfThis.Tag as List<Item>)!;
-                
                 // Remove parry to dropped items.
-                foreach (Item item in items
+                foreach (Item item in parryTag.ModifiedItems
                              .Where(item =>
                                  !qfThis.Owner.HeldItems.Contains(item)))
                 {
                     item.Traits.Remove(ParryTrait);
                     item.Traits.Remove(TemporaryParryTrait);
                 }
-                items = items
+                parryTag.ModifiedItems = parryTag.ModifiedItems
                     .Where(qfThis.Owner.HeldItems.Contains)
                     .ToList();
                 
-                // Add parry stuff to wielded items.
+                // Add parry stuff to held items.
                 foreach (Item item in qfThis.Owner.HeldItems
                              .Where(item =>
-                                 weaponTest.Invoke(qfThis, item)
+                                 parryTag.WeaponTest.Invoke(qfThis, item)
                                  && !item.HasTrait(ParryTrait)
                                  && !item.HasTrait(TemporaryParryTrait)))
                 {
                     item.Traits.AddRange([ParryTrait, TemporaryParryTrait]);
-                    items.Add(item);
+                    parryTag.ModifiedItems.Add(item);
                 }
             },
             // Increase the bonus to 2 for certain items.
@@ -244,8 +276,8 @@ public static class ParryLogic
                     && qfAcquired.SourceAction?.ActionId == ParryAction
                     && qfAcquired.Tag is Item weapon
                     && weapon.HasTrait(ParryTrait) // If some other effect parries this weapon, it must properly be from the Parry trait's action.
-                    && !weapon.HasTrait(TemporaryParryTrait) // Only upgrade already-parry weapons
-                    && weaponTest.Invoke(qfThis, weapon))
+                    // Only upgrade already-parry weapons
+                    && parryTag.IsGreater(qfThis, weapon))
                 {
                     qfAcquired.Description = qfAcquired.Description!.Replace("+1", "{Blue}+2{/Blue}");
                     qfAcquired.BonusToDefenses = (_, _, def) =>
@@ -258,5 +290,21 @@ public static class ParryLogic
                 }
             },
         };
+    }
+
+    /// <summary>
+    /// Encapsulates data for effects that add and increase parry. Knows what items are currently being modified and holds its criteria test.
+    /// </summary>
+    public class GreaterParryTag(List<Item> items, Func<QEffect, Item, bool> weaponTest)
+    {
+        /// Currently modified items in your hands.
+        public List<Item> ModifiedItems { get; set; } = items;
+
+        /// Function that returns true if the item is allowed to gain Parry or increase its Parry bonus.
+        public Func<QEffect, Item, bool> WeaponTest { get; set; } = weaponTest;
+
+        /// If weapon passes the test and doesn't have a temporary parry, then it is a greater parry weapon (+2).
+        public bool IsGreater(QEffect greaterParry, Item weapon) =>
+            WeaponTest.Invoke(greaterParry, weapon) && !weapon.HasTrait(TemporaryParryTrait);
     }
 }
