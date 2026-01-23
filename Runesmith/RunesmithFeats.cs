@@ -101,7 +101,7 @@ public static class RunesmithFeats
                 ModData.FeatNames.EngravingStrike,
                 1,
                 "You draw a rune onto the surface of your weapon in reverse, the mark branding or bruising itself into your target in the moment of impact.",
-                "{b}Frequency{/b} once per round\n{b}Requirements{/b} {i}(due to Trace Rune){/i} You have a free hand\n\nMake a melee Strike. On a success, you "+ModData.Tooltips.ActionTraceRune("Trace a Rune")+" onto the target of the Strike.\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Playtest Ruling{/b} You can Trace runes that draw onto the target's equipment, not just the creature itself. You can also use any unarmed strike with this feat (due to the lack of free-hand weapons).",
+                "{b}Frequency{/b} once per round\n{b}Requirements{/b} {i}(due to Trace Rune){/i} You have a free hand\n\nMake a melee Strike. On a success, you "+ModData.Tooltips.ActionTraceRune("Trace a Rune")+" onto the target of the Strike.\n\n"+ModData.Illustrations.DdSun.IllustrationAsIconString+" {b}Playtest Ruling{/b} You can Trace runes that draw onto the target's equipment, not just the creature itself. You can also use any unarmed strike with this feat (due to the lack of free-hand weapons).",
                 [ModData.Traits.Runesmith])
             .WithActionCost(1)
             .WithPermanentQEffect(
@@ -605,7 +605,7 @@ public static class RunesmithFeats
                 ModData.FeatNames.RunicTattoo,
                 2,
                 "Drawing your favorite rune in your flesh, you know you'll never be without it.",
-                "Choose one rune you know. The rune is etched at the beginning of combat and doesn't count toward your maximum limit of etched runes. You can invoke this rune like any of your other runes, but once invoked, the rune fades significantly and is drained of power until your next daily preparations.\n\n{b}Special{/b} This feat can be retrained to select runes which were learned at higher levels. {i}(May fail to apply if playing at a level that's too low for your selection in Free Encounter Mode.){/i}\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Implementation{/b} This feat is expanded to allow you to etch onto items you're wielding each combat, rather than only runes drawn onto creatures. At level 6, the feat "+ModData.Tooltips.FeatsWordsFlyFree("Words, Fly Free")+" offers a way to use tattoo options that would otherwise be detrimental or useless on yourself.",
+                "Choose one rune you know. The rune is etched at the beginning of combat and doesn't count toward your maximum limit of etched runes. You can invoke this rune like any of your other runes, but once invoked, the rune fades significantly and is drained of power until your next daily preparations.\n\n{b}Special{/b} This feat can be retrained to select runes which were learned at higher levels. {i}(May fail to apply if playing at a level that's too low for your selection in Free Encounter Mode.){/i}\n\n"+ModData.Illustrations.DdSun.IllustrationAsIconString+" {b}Implementation{/b} This feat is expanded to allow you to etch onto items you're wielding each combat, rather than only runes drawn onto creatures. At level 6, the feat "+ModData.Tooltips.FeatsWordsFlyFree("Words, Fly Free")+" offers a way to use tattoo options that would otherwise be detrimental or useless on yourself.",
                 [ModData.Traits.Runesmith])
             .WithOnSheet(values =>
             {
@@ -715,7 +715,7 @@ public static class RunesmithFeats
                 ModData.FeatNames.SmithingWeaponsFamiliarity,
                 2,
                 "Though you are an artisan, you are well versed in using the tools of the trade to fend off enemies.",
-                "You have familiarity with weapons in the hammer, pick, and knife weapon groups -- for the purposes of proficiency, you treat any of these that are martial weapons as simple weapons and any that are advanced weapons as martial weapons.\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Modding{/b} Other mods which add advanced weapons are required to benefit from this feat.",
+                "You have familiarity with weapons in the hammer, pick, and knife weapon groups -- for the purposes of proficiency, you treat any of these that are martial weapons as simple weapons and any that are advanced weapons as martial weapons.\n\n"+ModData.Illustrations.DdSun.IllustrationAsIconString+" {b}Modding{/b} Other mods which add advanced weapons are required to benefit from this feat.",
                 [ModData.Traits.Runesmith])
             .WithOnSheet(sheet =>
             {
@@ -739,7 +739,7 @@ public static class RunesmithFeats
                 ModData.FeatNames.ArtistsAttendance,
                 4,
                 "Your runes call you to better attend to your art.",
-                "{b}Frequency{/b} once per round\n\nStride twice. If you end your movement within reach of a creature that is bearing one of your runes, you can "+ModData.Tooltips.ActionTraceRune("Trace a Rune")+" upon any creature adjacent to you (even a different creature).\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Playtest Ruling{/b} You can also be a rune-bearer within your reach, and your reach can be based on a weapon or unarmed attack with the Reach trait. The Trace target must still be adjacent.",
+                "{b}Frequency{/b} once per round\n\nStride twice. If you end your movement within reach of a creature that is bearing one of your runes, you can "+ModData.Tooltips.ActionTraceRune("Trace a Rune")+" upon any creature adjacent to you (even a different creature).\n\n"+ModData.Illustrations.DdSun.IllustrationAsIconString+" {b}Playtest Ruling{/b} You can also be a rune-bearer within your reach, and your reach can be based on a weapon or unarmed attack with the Reach trait. The Trace target must still be adjacent.",
                 [ModData.Traits.Runesmith])
             .WithActionCost(2)
             .WithPermanentQEffect(
@@ -814,7 +814,7 @@ public static class RunesmithFeats
                 ModData.FeatNames.GhostlyResonance,
                 4,
                 "Your runes can not only draw power from the world of the spirits, but they can let even the most mundane objects harm spiritual beings as well.",
-                "Any ally, or any items your allies wield, which bears one of your divine or occult runes gains the benefits of a ghost touch rune for as long as they are bearing your rune.\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Implementation{/b} Any rune which lacks a tradition trait (Arcane, Divine, Primal, or Occult) is considered Divine if you're trained in Religion, or Occult if you're trained in Occultism, or both.",
+                "Any ally, or any items your allies wield, which bears one of your divine or occult runes gains the benefits of a ghost touch rune for as long as they are bearing your rune.\n\n"+ModData.Illustrations.DdSun.IllustrationAsIconString+" {b}Implementation{/b} Any rune which lacks a tradition trait (Arcane, Divine, Primal, or Occult) is considered Divine if you're trained in Religion, or Occult if you're trained in Occultism, or both.",
                 [ModData.Traits.Runesmith])
             .WithPermanentQEffect(
                 "Your divine and occult runes grant the benefits of a ghost touch rune to allied creatures or items.",
@@ -1236,7 +1236,7 @@ public static class RunesmithFeats
                 ModData.FeatNames.VitalCompositeInvocation,
                 6,
                 "As you invoke runes from traditions that manipulate vital energy, you can release that energy to restore flesh.",
-                "{b}Frequency{/b} once per combat\n\nYou "+ModData.Tooltips.ActionInvokeRune("Invoke two Runes")+" of your choice on a single creature or on any items it's wielding; one must be a divine rune, and one must be a primal rune. In addition to the runes' normal effects, the creature also regains Hit Points equal to your Intelligence modifier + double your level.\n\n"+new ModdedIllustration(ModData.Illustrations.DawnsburySunPath).IllustrationAsIconString+" {b}Implementation{/b} Any rune without a tradition trait (Arcane, Divine, Primal, or Occult) is considered Divine if you're trained in Religion, or Primal if you're trained in Nature, or both.",
+                "{b}Frequency{/b} once per combat\n\nYou "+ModData.Tooltips.ActionInvokeRune("Invoke two Runes")+" of your choice on a single creature or on any items it's wielding; one must be a divine rune, and one must be a primal rune. In addition to the runes' normal effects, the creature also regains Hit Points equal to your Intelligence modifier + double your level.\n\n"+ModData.Illustrations.DdSun.IllustrationAsIconString+" {b}Implementation{/b} Any rune without a tradition trait (Arcane, Divine, Primal, or Occult) is considered Divine if you're trained in Religion, or Primal if you're trained in Nature, or both.",
                 [Trait.Healing, ModData.Traits.Invocation, ModData.Traits.Runesmith, Trait.Positive])
             .WithActionCost(2)
             .WithPermanentQEffect(

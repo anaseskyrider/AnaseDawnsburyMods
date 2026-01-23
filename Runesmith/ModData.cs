@@ -17,15 +17,38 @@ public static class ModData
     
     public static void LoadData()
     {
-        // Runs the initializer, registering the option.
-        BooleanOptions.UnrestrictedTrace = BooleanOptions.UnrestrictedTrace;
+        ActionIds.Initialize();
+        BooleanOptions.Initialize();
+        PossibilitySectionIds.Initialize();
+        QEffectIds.Initialize();
+        SubmenuIds.Initialize();
+    }
+
+    /// <summary>
+    /// Registers the source enum to the game, or returns the original if it's already registered.
+    /// </summary>
+    /// <param name="technicalName">The technicalName string of the enum being registered.</param>
+    /// <typeparam name="T">The enum being registered to.</typeparam>
+    /// <returns>The newly registered enum.</returns>
+    public static T SafelyRegister<T>(string technicalName) where T : struct, Enum
+    {
+        return ModManager.TryParse(technicalName, out T alreadyRegistered)
+            ? alreadyRegistered
+            : ModManager.RegisterEnumMember<T>(technicalName);
     }
 
     public static class ActionIds
     {
-        public static readonly ActionId TraceRune = ModManager.RegisterEnumMember<ActionId>("TraceRune");
-        public static readonly ActionId EtchRune = ModManager.RegisterEnumMember<ActionId>("EtchRune");
-        public static readonly ActionId InvokeRune = ModManager.RegisterEnumMember<ActionId>("InvokeRune");
+        public static ActionId TraceRune;
+        public static ActionId EtchRune;
+        public static ActionId InvokeRune;
+        
+        public static void Initialize()
+        {
+            TraceRune = ModManager.RegisterEnumMember<ActionId>("TraceRune");
+            EtchRune = ModManager.RegisterEnumMember<ActionId>("EtchRune");
+            InvokeRune = ModManager.RegisterEnumMember<ActionId>("InvokeRune");
+        }
     }
     
     /// <summary>
@@ -34,11 +57,16 @@ public static class ModData
     public static class BooleanOptions
     {
         //public const string HideRuneDialogs = "RunesmithPlaytest.HideRuneDialogs"; // Unused, but kept just in case.
-        public static string UnrestrictedTrace = RegisterBooleanOption(
-            IdPrepend+"UnrestrictedTrace",
-            "Runesmith: Less Restrictive Rune Tracing",
-            "Enabling this option removes protections against \"bad decisions\" with tracing certain runes on certain targets.\n\nThe Runesmith is a class on the more advanced end of tactics and creativity. For example, you might want to trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy. Or you might trace Atryl on yourself as a 3rd action so that you can move it with Transpose Etching (just 1 action) on your next turn, because you're a ranged build.\n\nThis option is for those players.",
-            true);
+        public static string UnrestrictedTrace = null!;
+        
+        public static void Initialize()
+        {
+            UnrestrictedTrace = RegisterBooleanOption(
+                IdPrepend+"UnrestrictedTrace",
+                "Runesmith: Less Restrictive Rune Tracing",
+                "Enabling this option removes protections against \"bad decisions\" with tracing certain runes on certain targets.\n\nThe Runesmith is a class on the more advanced end of tactics and creativity. For example, you might want to trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy. Or you might trace Atryl on yourself as a 3rd action so that you can move it with Transpose Etching (just 1 action) on your next turn, because you're a ranged build.\n\nThis option is for those players.",
+                true);
+        }
         
         /// <summary>
         /// Functions as <see cref="ModManager.RegisterBooleanSettingsOption"/>, but also returns the technicalName.
@@ -124,25 +152,25 @@ public static class ModData
 
     public static class Illustrations
     {
+        public const string ModFolder = "RunesmithAssets/";
+        
         #region Class Features
-        public static readonly Illustration TraceRune = new ModdedIllustration("RunesmithAssets/trace rune.png");
-        public static readonly Illustration InvokeRune = new ModdedIllustration("RunesmithAssets/invoke rune.png");
-        public static readonly Illustration EtchRune = new ModdedIllustration("RunesmithAssets/handcraft.png");
+        public static readonly Illustration TraceRune = new ModdedIllustration(ModFolder+"trace rune.png");
+        public static readonly Illustration InvokeRune = new ModdedIllustration(ModFolder+"invoke rune.png");
+        public static readonly Illustration EtchRune = new ModdedIllustration(ModFolder+"handcraft.png");
         #endregion
         #region Feats
-        public static readonly Illustration TransposeEtching = new ModdedIllustration("RunesmithAssets/hand.png");
-        public static readonly Illustration DrawnInRed = new ModdedIllustration("RunesmithAssets/knife.png");
-        public static readonly Illustration RuneSinger = new ModdedIllustration("RunesmithAssets/musical-note.png");
+        public static readonly Illustration TransposeEtching = new ModdedIllustration(ModFolder+"hand.png");
+        public static readonly Illustration DrawnInRed = new ModdedIllustration(ModFolder+"knife.png");
+        public static readonly Illustration RuneSinger = new ModdedIllustration(ModFolder+"musical-note.png");
         #endregion
         #region Items
-        public static readonly Illustration ArtisansHammer = new ModdedIllustration("RunesmithAssets/blacksmith.png");
+        public static readonly Illustration ArtisansHammer = new ModdedIllustration(ModFolder+"blacksmith.png");
         #endregion
         #region Misc
-        public static readonly Illustration NoSymbol = new ModdedIllustration("RunesmithAssets/no symbol.png");
-        public static readonly Illustration CheckSymbol = new ModdedIllustration("RunesmithAssets/check symbol.png");
-        public static readonly Illustration DawnsburySun = new ModdedIllustration("RunesmithAssets/PatreonSunTransparent.png");
-        // TODO: Switch to singular modded illus reference now that it works consistently
-        public static readonly string DawnsburySunPath = "RunesmithAssets/PatreonSunTransparent.png";
+        public static readonly Illustration NoSymbol = new ModdedIllustration(ModFolder+"no symbol.png");
+        public static readonly Illustration CheckSymbol = new ModdedIllustration(ModFolder+"check symbol.png");
+        public static readonly Illustration DdSun = new ModdedIllustration(ModFolder+"PatreonSunTransparent.png");
         #endregion
     }
 
@@ -161,18 +189,33 @@ public static class ModData
     
     public static class PossibilitySectionIds
     {
-        public static readonly PossibilitySectionId RuneSinger = ModManager.RegisterEnumMember<PossibilitySectionId>("RuneSinger");
+        public static PossibilitySectionId RuneSinger;
+        
+        public static void Initialize()
+        {
+            RuneSinger = SafelyRegister<PossibilitySectionId>("RuneSinger");
+        }
     }
     
     public static class QEffectIds // Technical names are often used directly for the readable name, write accordingly.
     {
-        public static readonly QEffectId RunicCrafter = ModManager.RegisterEnumMember<QEffectId>("RunicCrafter");
-        public static readonly QEffectId RuneSinger = ModManager.RegisterEnumMember<QEffectId>("Rune-Singer");
-        public static readonly QEffectId RuneSingerCreator = ModManager.RegisterEnumMember<QEffectId>("RuneSingerCreator");
+        public static QEffectId RunicCrafter;
+        public static QEffectId RuneSinger;
+        public static QEffectId RuneSingerCreator;
         /// The DrawnRune that is tattooed
-        public static readonly QEffectId TattooedRune = ModManager.RegisterEnumMember<QEffectId>("TattooedRune");
-        public static readonly QEffectId DrawnInRed = ModManager.RegisterEnumMember<QEffectId>("Drawn in Red");
-        public static readonly QEffectId JurrozDamageTracker = ModManager.RegisterEnumMember<QEffectId>("JurrozDamageTracker");
+        public static QEffectId TattooedRune;
+        public static QEffectId DrawnInRed;
+        public static  QEffectId JurrozDamageTracker;
+        
+        public static void Initialize()
+        {
+            RunicCrafter = ModManager.RegisterEnumMember<QEffectId>("RunicCrafter");
+            RuneSinger = ModManager.RegisterEnumMember<QEffectId>("Rune-Singer");
+            RuneSingerCreator = ModManager.RegisterEnumMember<QEffectId>("RuneSingerCreator");
+            TattooedRune = ModManager.RegisterEnumMember<QEffectId>("TattooedRune");
+            DrawnInRed = ModManager.RegisterEnumMember<QEffectId>("Drawn in Red");
+            JurrozDamageTracker = ModManager.RegisterEnumMember<QEffectId>("JurrozDamageTracker");
+        }
     }
 
     public static class SfxNames
@@ -205,7 +248,12 @@ public static class ModData
 
     public static class SubmenuIds
     {
-        public static readonly SubmenuId TraceRune = ModManager.RegisterEnumMember<SubmenuId>("TraceRune");
+        public static SubmenuId TraceRune;
+        
+        public static void Initialize()
+        {
+            TraceRune = SafelyRegister<SubmenuId>("TraceRune");
+        }
     }
     
     public static class Tooltips
