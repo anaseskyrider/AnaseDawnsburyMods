@@ -1,8 +1,10 @@
+using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Display.ContextMenu;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
@@ -162,6 +164,15 @@ public class Rune
     /// <param name="Creature">The TARGET <see cref="Creature"/> of the INVOCATION.</param>
     /// <param name="DrawnRune">The <see cref="DrawnRune"/> representing the rune being INVOKED.</param>
     public Func<CombatAction, Rune, Creature, Creature, DrawnRune, Task>? InvocationBehavior { get; set; }
+    
+    /// <summary>
+    /// If a rune can be etched onto players or their items (under practical circumstances), this function provides the ContextMenuItem for that option to etch it.
+    /// </summary>
+    /// <param name="Rune">A self-reference to this rune.</param>
+    /// <param name="CalculatedCharacterSheetValues">The player character sheet whose inventory is being inspected.</param>
+    /// <param name="Item">(nullable) The item being inspected.</param>
+    /// <param name="ContextMenuItem">The context menu option for this rune.</param>
+    public Func<Rune, CalculatedCharacterSheetValues, Item?, ContextMenuItem>? EtchOption { get; set; }
     #endregion
     
     #region String Properties

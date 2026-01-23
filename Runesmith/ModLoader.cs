@@ -1,5 +1,6 @@
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
+using Dawnsbury.Display.Controls;
 using Dawnsbury.Display.Controls.Statblocks;
 using Dawnsbury.Modding;
 
@@ -28,6 +29,12 @@ public static class ModLoader
         int abilitiesIndex = CreatureStatblock.CreatureStatblockSectionGenerators.FindIndex(gen => gen.Name == "Abilities");
         CreatureStatblock.CreatureStatblockSectionGenerators.Insert(abilitiesIndex,
             new CreatureStatblockSectionGenerator("Runic repertoire", CommonRuneRules.DescribeRunicRepertoire));
+        
+        ////////////////////////////
+        // Inventory Rune Etching //
+        ////////////////////////////
+        // TODO: Delayed refactorization until full release version of Runesmith.
+        //InventoryContextMenu.Options.Add(CommonRuneRules.GetEtchRuneOptions());
 
         // Update class language
         LoadOrder.AtEndOfLoadingSequence += () =>

@@ -49,6 +49,8 @@ public static class RunesmithRunes
          */
         
         // TODO: Consolidate item-targeting routines with task functions in CommonRuneRules
+        
+        // TODO: For full-release of Runesmith, refactor runes to produce ItemModification s using ModifyItem and UnmodifyItem.
 
         #region Level 1 Runes
 

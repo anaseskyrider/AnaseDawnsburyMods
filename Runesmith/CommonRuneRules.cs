@@ -14,6 +14,8 @@ using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display;
+using Dawnsbury.Display.ContextMenu;
+using Dawnsbury.Display.Controls;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
@@ -518,6 +520,31 @@ public static class CommonRuneRules
     #endregion
 
     #region Drawing Runes
+
+    // TODO: Delayed refactorization until full release version of Runesmith.
+    public static InventoryContextMenuOption GetEtchRuneOptions()
+    {
+        return new InventoryContextMenuOption((slot, item, inventory) =>
+        {
+            if (item is null)
+                return null;
+            if (slot.CharacterSheet?.Calculated is not {} sheet)
+                return null;
+            if (RunicRepertoireFeat.GetRepertoireOnSheet(sheet) is not { } repertoire)
+                return null;
+
+            IEnumerable<ContextMenuItem> items = [];
+            foreach (Rune rune in repertoire.GetRunesKnown(sheet))
+            {
+                if (rune.EtchOption is null)
+                    continue;
+                items = items.Append(rune.EtchOption.Invoke(rune, sheet, item));
+            }
+            
+            return items.ToArray();
+        });
+    }
+    
     /// <summary>
     /// The CASTER uses an ACTION to apply the RUNE's <see cref="Rune.NewDrawnRune"/> to the TARGET, which might IGNORE targeting restrictions.
     /// </summary>
