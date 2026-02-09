@@ -162,7 +162,10 @@ public static class ModData
         
         /// A worn shield doesn't occupy a hand, but is usually also a light shield and cannot always be raised.
         public static readonly Trait WornShield = ModManager.RegisterTrait("WornShield",
-            new TraitProperties("Worn Shield", true, "This shield doesn't occupy your hands, but you can't raise it unless you have a free hand or have a hand that's not wielding a weapon."));
+            new TraitProperties("Worn Shield", true, "This shield doesn't occupy your hands, but you can't raise it unless you have a free hand or have a hand that's not wielding a weapon.")
+            {
+                BackgroundColor = Color.BurlyWood
+            });
 
         /// <summary>
         /// Hidden technical trait. A feat with this trait tells the action possibility generator to make a menu for Raise a Shield instead of just generating the action directly, allowing items to be added to the "Raise shield" menu.
