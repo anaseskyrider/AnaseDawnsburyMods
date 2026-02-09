@@ -14,6 +14,7 @@ using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display;
+using Dawnsbury.Display.Controls.Statblocks;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
@@ -395,6 +396,54 @@ public static class OldShields
             Item replaced = ReplaceSturdyShield(modified);
             return replaced;
         });
+    }
+
+    public static void UpdateDescriptions()
+    {
+        // Get shield properties generator
+        int shieldPropsIndex =
+            ItemStatblock.ItemStatblockSectionGenerators.FindIndex(block => block.Name == "Shield properties");
+        
+        if (shieldPropsIndex == -1) // Exit func if not found
+            return;
+        
+        // Replace with new generator
+        ItemStatblock.ItemStatblockSectionGenerators[shieldPropsIndex] = new ItemStatblockSectionGenerator(
+            "Shield properties",
+            item =>
+            {
+                List<string> details = [];
+
+                // AC
+                if (CommonShieldRules.GetAC(item) is { } acBonus)
+                    details.Add("{b}AC{/b} +" + acBonus + " {i}(Only when you " + ModData.Tooltips.ActionRaiseAShield("Raise this Shield") + "){/i}"); //+ (item.HasTrait(ModData.Traits.CoverShield) ? " (+4, {i}if you Take Cover behind it{/i})" : null));
+                else
+                    return null;
+                
+                // Hardness
+                if (item.Hardness > 0)
+                    details.Add($"{{b}}Hardness{{/b}} {item.Hardness.ToString()} {{i}}(Used for {ModData.Tooltips.ActionShieldBlock("Shield Block {icon:Reaction}")}){{/i}}");
+                else
+                    return null;
+        
+                // Speed penalty
+                int speedPenalty = item.HasTrait(ModData.Traits.FortressShield)
+                    ? -2
+                    : item.HasTrait(Trait.TowerShield)
+                        ? -1
+                        : 0;
+                if (speedPenalty < 0)
+                    details.Add("{b}Speed Penalty{/b} " + speedPenalty * 5 + " feet");
+                
+                // Hefty
+                if (item.HasTrait(ModData.Traits.Hefty14))
+                    details.Add("{b}Minimum Strength{/b} 14 {i}(if not met, Raise a Shield takes +1 action){/i}");
+
+                return new StatblockGeneratedSection(
+                    "SHIELD PROPERTIES",
+                    string.Join("\n", details)
+                        /*.TrimEnd('\n')*/);
+            });
     }
 
     public static Item ShieldAlterations(Item item)

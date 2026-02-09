@@ -425,44 +425,4 @@ public static class ShieldPatches
                 Speed.SetValue(__instance, value2 + finalPenalty); // Apply final penalty
         }
     }
-    
-    /// Improves the item description of shields.
-    [HarmonyPatch(typeof(RulesBlock), nameof(RulesBlock.GetItemDescriptionWithoutUsability))]
-    internal static class PatchShieldDescriptions
-    {
-        internal static void Postfix(Item item, ref string __result)
-        {
-            // Formatted hardness
-            string hardness = "{b}Hardness{/b} " + item.Hardness + "\n";
-            
-            // If the item has no hardness, skip.
-            int index = __result.IndexOf(hardness);
-            if (index == -1)
-                return;
-
-            // Formatted AC
-            int? acBonus = CommonShieldRules.GetAC(item); // Suppressed. Would never execute unless it was a shield.
-            string? acString = acBonus != null ? "{b}AC{/b} +" + acBonus + (item.HasTrait(ModData.Traits.CoverShield) ? " (+4)" : null) + "\n" : null;
-            
-            // Formatted speed penalty
-            int speedPenalty = item.HasTrait(ModData.Traits.FortressShield)
-                ? -2
-                : item.HasTrait(Trait.TowerShield)
-                    ? -1
-                    : 0;
-            string? speedString = speedPenalty < 0
-                ? "{b}Speed Penalty{/b} " + speedPenalty*5 + " ft.\n"
-                : null;
-
-            // New format
-            string[] details = [];
-            if (acString != null)
-                details = details.Append(acString).ToArray();
-            details = details.Append(hardness).ToArray();
-            if (speedString != null)
-                details = details.Append(speedString).ToArray();
-
-            __result = __result.Replace(hardness, details.Join(null, ""));
-        }
-    }
 }
