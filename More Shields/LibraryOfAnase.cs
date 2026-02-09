@@ -24,6 +24,7 @@ namespace Dawnsbury.Mods.MoreShields;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
+/// <item>v1.4: Added Item.WithDescription(flavorText, rulesText).</item>
 /// <item>v1.3: Added CombatAction.HasAllTraits, CombatAction.HasAnyTraits, OfferOptions2 with variants for ActionPossibility and Possibility.</item>
 /// <item>v1.2: Added CreateSpellLink(SpellId, Trait, int). Refactored into Extension blocks.</item>
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
@@ -140,6 +141,17 @@ public static class LibraryOfAnase
         /// </summary>
         public bool HasAnyTraits(params Trait[] traits) =>
             item.Traits.Any(traits.Contains);
+
+        /// <summary>
+        /// Adds flavor text to the item. If the flavorText or the rulesText is null, it won't add new lines.
+        /// </summary>
+        public Item WithDescription(string flavorText, string rulesText)
+        {
+            string newFlavor =
+                (string.IsNullOrEmpty(flavorText) ? flavorText : "{i}" + flavorText + "{/i}")
+                + (string.IsNullOrEmpty(rulesText) ? null : "\n\n");
+            return item.WithDescription(newFlavor + rulesText);
+        }
     }
 
     extension(string text)
