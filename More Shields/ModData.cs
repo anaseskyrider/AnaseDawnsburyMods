@@ -155,7 +155,10 @@ public static class ModData
         
         /// A cover shield allows you to take cover behind it to gain a +4 to AC.
         public static readonly Trait CoverShield = ModManager.RegisterTrait("CoverShield",
-            new TraitProperties("Cover Shield", true, "You can Take Cover if this shield is raised. Doing so increases the shield's bonus to AC to +4."));
+            new TraitProperties("Cover Shield", true, "While this shield is raised, you can Take Cover to increase its bonus to AC to +4.")
+            {
+                RelevantForItemBlock = true
+            });
         
         /// A worn shield doesn't occupy a hand, but is usually also a light shield and cannot always be raised.
         public static readonly Trait WornShield = ModManager.RegisterTrait("WornShield",
