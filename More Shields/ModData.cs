@@ -6,6 +6,7 @@ using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
+using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.MoreShields;
 
@@ -28,7 +29,10 @@ public static class ModData
             shieldProperties.HumanizedName,
             shieldProperties.Relevant,
             $"You can use this item to {Tooltips.ActionRaiseAShield("Raise a Shield {icon:Action}")}. If you score a crit and have unlocked {{tooltip:criteffect}}critical specialization effects{{/}} for this weapon: Push the target 5 feet.",
-            shieldProperties.RelevantForShortBlock);
+            shieldProperties.RelevantForShortBlock,
+            shieldProperties.BackgroundColor,
+            shieldProperties.WhiteForeground,
+            shieldProperties.IsFeatOnlyTrait);
         
         // RuneKind registration //
         RuneKinds.ShieldPlating = ModManager.TryParse("ShieldPlating", out RuneKind shieldPlating)
