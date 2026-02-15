@@ -16,5 +16,6 @@ public class MoreBasicActions
         LongJump.LoadLongJump();
         Reposition.LoadReposition();
         DropProne.LoadDropProne();
+        Reload.LoadReload();
     }
 }
