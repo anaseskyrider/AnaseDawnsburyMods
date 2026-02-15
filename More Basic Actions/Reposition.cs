@@ -1,6 +1,5 @@
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
-using Dawnsbury.Core;
 using Dawnsbury.Core.Animations.Movement;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CombatActions;
@@ -52,10 +51,10 @@ public static class Reposition
                 "Reposition",
                 [Trait.Basic, ModData.Traits.MoreBasicActions, Trait.Attack, Trait.AttackDoesNotTargetAC],
                 "{i}You forcefully relocate a creature.{/i}\n\n{b}Requirements{/b} You have a free hand, are holding the target or have a grapple weapon, and the target isn't more than one size larger than you.\n\nMake an Athletics check against the target's Fortitude DC."
-                + S.FourDegreesOfSuccess("You move the creature up to 10 feet along any unobstructed path within your reach.",
+                + S.FourDegreesOfSuccess("You move the creature up to 10 feet along any unobstructed path, staying within your reach.",
                 "As critical success, but you move the creature 5 feet.",
                 null,
-                "The target Repositions you to a random square instead, as if a success.")
+                "The target Repositions you randomly, as if a success.")
                 + "\n\n{b}Special{/b} You automatically get one degree of success better when targeting an ally with Reposition.",
                 new CreatureTarget( // Custom target that will let you target allies
                     RangeKind.Melee, 
@@ -139,8 +138,10 @@ public static class Reposition
             .Where(tile =>
                 !ReferenceEquals(defender.Space.TopLeftTile, tile)
                 && tile.IsTrulyGenuinelyFreeTo(defender)
-                && tile.DistanceTo(defender.Occupies) <= distance
-                && attacker.DistanceToWith10FeetException(tile) <= reach)
+                && defender.Space.TopLeftTile.DistanceTo(tile) <= distance
+                && tile
+                    .TilesToTheBottomRight(defender.Space.SizeInSquares)
+                    .Any(subspace => attacker.DistanceToWith10FeetException(subspace) <= reach))
             .ToList();
         if (tiles.Count == 0)
         {
