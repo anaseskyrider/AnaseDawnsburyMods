@@ -30,7 +30,7 @@ public static class QuickRepair
                     null,
                     "The construct takes 1d8 damage.")
                 + "\n\nRegardless of your result, the construct is then temporarily immune to your Quick Repair for the rest of the day.\n\nIf you are expert or higher with Crafting, you can choose to make the check at a higher DC for additional HP restored. At expert, you can choose DC 20 for +10 HP, master can choose DC 30 for +30 HP, and legendary can choose DC 40 for +50 HP.\n\n"
-                + new ModdedIllustration(ModData.Illustrations.DDSunPath).IllustrationAsIconString + "{b}Modding{/b} This skill feat is intended for use with mods which provide a construct companion, or for other summons",
+                + ModData.Illustrations.DdSun.IllustrationAsIconString + "{b}Modding{/b} This skill feat is intended for use with mods which provide a construct companion, or for other summons",
             [Trait.General, Trait.Manipulate, Trait.Skill])
             .WithActionCost(1)
             .WithPrerequisite(values => values.GetProficiency(Trait.Crafting) >= Proficiency.Trained, "You must be trained in Crafting.")
