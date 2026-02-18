@@ -1,5 +1,6 @@
 ﻿using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Modding;
+using Dawnsbury.Mods.MoreDedications.Archetypes;
 
 namespace Dawnsbury.Mods.MoreDedications;
 public static class ModLoader
@@ -12,20 +13,21 @@ public static class ModLoader
         ////////////////////////
         // Updated Archetypes //
         ////////////////////////
-        ArchetypeArcher.LoadArchetype();
-        ArchetypeMedic.LoadArchetype();
+        Archer.LoadArchetype();
+        Medic.LoadArchetype();
         // TODO: Update Sentinel to add the resting-armor feat.
         
         ////////////////////
         // New Archetypes //
         ////////////////////
-        ArchetypeMauler.LoadArchetype();
-        ArchetypeBastion.LoadArchetype();
-        ArchetypeMartialArtist.LoadArchetype();
-        ArchetypeMarshal.LoadArchetype();
-        ArchetypeBlessedOne.LoadArchetype();
-        ArchetypeScout.LoadArchetype();
-        ArchetypeAssassin.LoadArchetype();
-        ArchetypeDualWeaponWarrior.LoadArchetype();
+        Mauler.LoadArchetype();
+        Bastion.LoadArchetype();
+        MartialArtist.LoadArchetype();
+        Marshal.LoadArchetype();
+        BlessedOne.LoadArchetype();
+        Scout.LoadArchetype();
+        Assassin.LoadArchetype();
+        DualWeaponWarrior.LoadArchetype();
+        FamiliarMaster.LoadArchetype();
     }
 }

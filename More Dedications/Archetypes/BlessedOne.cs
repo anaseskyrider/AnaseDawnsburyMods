@@ -12,9 +12,9 @@ using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
-namespace Dawnsbury.Mods.MoreDedications;
+namespace Dawnsbury.Mods.MoreDedications.Archetypes;
 
-public static class ArchetypeBlessedOne
+public static class BlessedOne
 {
     public static void LoadArchetype()
     {

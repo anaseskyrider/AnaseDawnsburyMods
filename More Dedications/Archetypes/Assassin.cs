@@ -18,9 +18,9 @@ using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
-namespace Dawnsbury.Mods.MoreDedications;
+namespace Dawnsbury.Mods.MoreDedications.Archetypes;
 
-public static class ArchetypeAssassin
+public static class Assassin
 {
     public static void LoadArchetype()
     {

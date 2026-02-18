@@ -14,9 +14,9 @@ using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 
-namespace Dawnsbury.Mods.MoreDedications;
+namespace Dawnsbury.Mods.MoreDedications.Archetypes;
 
-public static class ArchetypeScout
+public static class Scout
 {
     public static void LoadArchetype()
     {

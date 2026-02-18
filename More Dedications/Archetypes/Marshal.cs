@@ -20,9 +20,9 @@ using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
-namespace Dawnsbury.Mods.MoreDedications;
+namespace Dawnsbury.Mods.MoreDedications.Archetypes;
 
-public static class ArchetypeMarshal
+public static class Marshal
 {
     public static readonly Func<Creature, Creature, Usability> IsInMarshalAura = (_, defender) =>
         defender.HasEffect(ModData.QEffectIds.MarshalsAuraEffect)

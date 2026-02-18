@@ -12,9 +12,9 @@ using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 
-namespace Dawnsbury.Mods.MoreDedications;
+namespace Dawnsbury.Mods.MoreDedications.Archetypes;
 
-public static class ArchetypeMauler
+public static class Mauler
 {
     public static void LoadArchetype()
     {

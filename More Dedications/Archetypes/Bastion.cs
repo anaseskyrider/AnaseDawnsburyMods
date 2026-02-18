@@ -1,9 +1,9 @@
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
-using Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Requests;
@@ -21,9 +21,9 @@ using Microsoft.Xna.Framework;
 
 //using Dawnsbury.Mods.DawnniExpanded;
 
-namespace Dawnsbury.Mods.MoreDedications;
+namespace Dawnsbury.Mods.MoreDedications.Archetypes;
 
-public static class ArchetypeBastion
+public static class Bastion
 {
     public static void LoadArchetype()
     {

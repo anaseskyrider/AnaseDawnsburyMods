@@ -16,10 +16,10 @@ using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 
-namespace Dawnsbury.Mods.MoreDedications;
+namespace Dawnsbury.Mods.MoreDedications.Archetypes;
 
 // Credits to SilchasRuin for providing prewritten code.
-public static class ArchetypeDualWeaponWarrior
+public static class DualWeaponWarrior
 {
     public static void LoadArchetype()
     {
