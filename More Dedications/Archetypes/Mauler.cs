@@ -31,6 +31,7 @@ public static class Mauler
                 "You become trained in all simple and martial melee weapons that require two hands to wield or that have the two-hand trait.\n\nWhenever you become expert, master, or legendary in any weapon, you also gain that proficiency rank in these weapons.\n\nAs long as you're at least expert in such a weapon, that weapon triggers {tooltip:criteffect}critical specialization effects{/}.")
             .WithOnSheet(values =>
             {
+                // Become trained in all melee 2hs.
                 values.Proficiencies.Set(
                     [Trait.Simple, Trait.TwoHanded, Trait.Melee],
                     Proficiency.Trained);
@@ -41,31 +42,20 @@ public static class Mauler
                     [Trait.Simple, Trait.TwoHanded, Trait.Melee]);
                 values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
                     [Trait.Martial, Trait.TwoHanded, Trait.Melee]);
-                if (ModManager.TryParse("Two-Hand 1d12", out Trait thd12))
+
+                // Become trained in all melee with the two-hand traits.
+                foreach (Trait twoHDie in (Trait[])[Trait.TwoHand1d8, Trait.TwoHand1d10, Trait.TwoHand1d12])
                 {
                     values.Proficiencies.Set(
-                        [Trait.Simple, thd12, Trait.Melee],
+                        [Trait.Simple, twoHDie, Trait.Melee],
                         Proficiency.Trained);
                     values.Proficiencies.Set(
-                        [Trait.Martial, thd12, Trait.Melee],
+                        [Trait.Martial, twoHDie, Trait.Melee],
                         Proficiency.Trained);
                     values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
-                        [Trait.Simple, thd12, Trait.Melee]);
+                        [Trait.Simple, twoHDie, Trait.Melee]);
                     values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
-                        [Trait.Martial, thd12, Trait.Melee]);
-                }
-                if (ModManager.TryParse("Two-Hand 1d10", out Trait thd10))
-                {
-                    values.Proficiencies.Set(
-                        [Trait.Simple, thd10, Trait.Melee],
-                        Proficiency.Trained);
-                    values.Proficiencies.Set(
-                        [Trait.Martial, thd10, Trait.Melee],
-                        Proficiency.Trained);
-                    values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
-                        [Trait.Simple, thd10, Trait.Melee]);
-                    values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
-                        [Trait.Martial, thd10, Trait.Melee]);
+                        [Trait.Martial, twoHDie, Trait.Melee]);
                 }
             })
             .WithPermanentQEffect(
