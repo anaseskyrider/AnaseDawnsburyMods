@@ -14,17 +14,48 @@ public static class ModData
 {
     public const string IdPrepend = "MoreDedications.";
     
+    /// <summary>
+    /// Loads all mod data. This should typically be called by a mod before anything else.
+    /// </summary>
+    /// <para>
+    /// When registering mod data, certain data must be called through the execution of lines of code, rather than assigned in their initialization. The Initializer skips these data until they're first called, which can result in errors due to out of order registration calls (especially when another mod isn't using <see cref="ModManager.TryParse"/>).
+    /// </para>
+    /// <para>The following data forms are typically safe due to the way Dawnsbury Days loads mods (or because their initialization nearly always gets called before errors could arise): <see cref="FeatName"/>, <see cref="Illustration"/>, <see cref="Trait"/>, <see cref="SfxNames"/>, <see cref="SpellId"/>. Tooltips from <see cref="ModManager.RegisterInlineTooltip(string, string)"/> likely aren't safe to assign as part of the initializer, but they typically shouldn't be shared between mods either.
+    /// </para>
+    /// <para>
+    /// In general, trigger the initializer by separating declaration and assignment for the following data forms:
+    /// <list type="bullet">
+    /// <item>All other enums (e.g. <see cref="ActionId"/>, <see cref="QEffectId"/>)</item>
+    /// <item>Mod settings registered with <see cref="ModManager.RegisterBooleanSettingsOption"/></item>
+    /// </list>
+    /// </para>
     public static void LoadData()
     {
-        // QEffects
-        QEffectIds.GreaterScoutActivity = ModManager.TryParse("GreaterScoutActivity", out QEffectId greaterScout)
-            ? greaterScout
-            : ModManager.RegisterEnumMember<QEffectId>("GreaterScoutActivity");
+        ActionIds.Initialize();
+        QEffectIds.Initialize();
+    }
+
+    /// <summary>
+    /// Registers the source enum to the game, or returns the original if it's already registered.
+    /// </summary>
+    /// <param name="technicalName">The technicalName string of the enum being registered.</param>
+    /// <typeparam name="T">The enum being registered to.</typeparam>
+    /// <returns>The newly registered enum.</returns>
+    public static T SafelyRegister<T>(string technicalName) where T : struct, Enum
+    {
+        return ModManager.TryParse(technicalName, out T alreadyRegistered)
+            ? alreadyRegistered
+            : ModManager.RegisterEnumMember<T>(technicalName);
     }
 
     public static class ActionIds
     {
-        public static readonly ActionId TigerSlash = ModManager.RegisterEnumMember<ActionId>("TigerSlash");
+        public static ActionId TigerSlash;
+        
+        public static void Initialize()
+        {
+            TigerSlash = SafelyRegister<ActionId>("TigerSlash");
+        }
     }
 
     public static class CommonRequirements
@@ -158,38 +189,75 @@ public static class ModData
     public static class QEffectIds
     {
         // Bastion
-        public static readonly QEffectId NimbleShieldHand = ModManager.RegisterEnumMember<QEffectId>("NimbleShieldHand");
+        public static QEffectId NimbleShieldHand;
         
         // Martial Artist
-        public static readonly QEffectId PowderPunchStance = ModManager.RegisterEnumMember<QEffectId>("Powder Punch Stance");
-        public static readonly QEffectId StumblingStance = ModManager.RegisterEnumMember<QEffectId>("Stumbling Stance");
-        public static readonly QEffectId TigerStance = ModManager.RegisterEnumMember<QEffectId>("Tiger Stance");
-        public static readonly QEffectId FlatFootedToStumblingFeint = ModManager.RegisterEnumMember<QEffectId>("FlatFootedToStumblingFeint");
+        public static QEffectId PowderPunchStance;
+        public static QEffectId StumblingStance;
+        public static QEffectId TigerStance;
+        public static QEffectId FlatFootedToStumblingFeint;
         
         // Marshal
-        public static readonly QEffectId MarshalsAuraProvider = ModManager.RegisterEnumMember<QEffectId>("MarshalsAuraProvider");
-        public static readonly QEffectId MarshalsAuraEffect = ModManager.RegisterEnumMember<QEffectId>("Marshal's Aura");
-        public static readonly QEffectId DreadMarshalStance = ModManager.RegisterEnumMember<QEffectId>("Dread Marshal Stance");
-        public static readonly QEffectId InspiringMarshalStance = ModManager.RegisterEnumMember<QEffectId>("Inspiring Marshal Stance");
+        public static QEffectId MarshalsAuraProvider;
+        public static QEffectId MarshalsAuraEffect;
+        public static QEffectId DreadMarshalStance;
+        public static QEffectId InspiringMarshalStance;
         
         // Assassin
-        public static readonly QEffectId MarkForDeathCaster = ModManager.RegisterEnumMember<QEffectId>("MarkForDeathCaster");
-        public static readonly QEffectId MarkForDeathTarget = ModManager.RegisterEnumMember<QEffectId>("MarkForDeathTarget");
-        public static readonly QEffectId ExpertBackstabber = ModManager.RegisterEnumMember<QEffectId>("ExpertBackstabber");
+        public static QEffectId MarkForDeathCaster;
+        public static QEffectId MarkForDeathTarget;
+        public static QEffectId ExpertBackstabber;
         
         // Dual-Weapon Warrior
-        public static readonly QEffectId FlenseCounter = ModManager.RegisterEnumMember<QEffectId>("FlenseCounter");
-        public static readonly QEffectId FlenseWeapons = ModManager.RegisterEnumMember<QEffectId>("FlenseWeapons");
+        public static QEffectId FlenseCounter;
+        public static QEffectId FlenseWeapons;
         
         // Bonus stances
-        public static readonly QEffectId StokedFlameStance = ModManager.RegisterEnumMember<QEffectId>("Stoked Flame Stance");
-        public static readonly QEffectId WildWindsStance = ModManager.RegisterEnumMember<QEffectId>("Wild Winds Stance");
-        public static readonly QEffectId ClingingShadowsStance = ModManager.RegisterEnumMember<QEffectId>("Clinging Shadows Stance");
-        public static readonly QEffectId TangledForestStance = ModManager.RegisterEnumMember<QEffectId>("Tangled Forest Stance");
-        public static readonly QEffectId JellyfishStance = ModManager.RegisterEnumMember<QEffectId>("Jellyfish Stance");
+        public static QEffectId StokedFlameStance;
+        public static QEffectId WildWindsStance;
+        public static QEffectId ClingingShadowsStance;
+        public static QEffectId TangledForestStance;
+        public static QEffectId JellyfishStance;
         
         // Misc
         public static QEffectId GreaterScoutActivity;
+        
+        public static void Initialize()
+        {
+            // Bastion
+            NimbleShieldHand = SafelyRegister<QEffectId>("NimbleShieldHand");
+            
+            // Martial Artist
+            PowderPunchStance = SafelyRegister<QEffectId>("Powder Punch Stance");
+            StumblingStance = SafelyRegister<QEffectId>("Stumbling Stance");
+            TigerStance = SafelyRegister<QEffectId>("Tiger Stance");
+            FlatFootedToStumblingFeint = SafelyRegister<QEffectId>("FlatFootedToStumblingFeint");
+            
+            // Marshal
+            MarshalsAuraProvider = SafelyRegister<QEffectId>("MarshalsAuraProvider");
+            MarshalsAuraEffect = SafelyRegister<QEffectId>("Marshal's Aura");
+            DreadMarshalStance = SafelyRegister<QEffectId>("Dread Marshal Stance");
+            InspiringMarshalStance = SafelyRegister<QEffectId>("Inspiring Marshal Stance");
+            
+            // Assassin
+            MarkForDeathCaster = SafelyRegister<QEffectId>("MarkForDeathCaster");
+            MarkForDeathTarget = SafelyRegister<QEffectId>("MarkForDeathTarget");
+            ExpertBackstabber = SafelyRegister<QEffectId>("ExpertBackstabber");
+            
+            // Dual-Weapon Warrior
+            FlenseCounter = SafelyRegister<QEffectId>("FlenseCounter");
+            FlenseWeapons = SafelyRegister<QEffectId>("FlenseWeapons");
+            
+            // Bonus stances
+            StokedFlameStance = SafelyRegister<QEffectId>("Stoked Flame Stance");
+            WildWindsStance = SafelyRegister<QEffectId>("Wild Winds Stance");
+            ClingingShadowsStance = SafelyRegister<QEffectId>("Clinging Shadows Stance");
+            TangledForestStance = SafelyRegister<QEffectId>("Tangled Forest Stance");
+            JellyfishStance = SafelyRegister<QEffectId>("Jellyfish Stance");
+            
+            // Misc
+            GreaterScoutActivity = SafelyRegister<QEffectId>("GreaterScoutActivity");
+        }
     }
     
     public static class SpellIds
