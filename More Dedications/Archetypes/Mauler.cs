@@ -28,7 +28,7 @@ public static class Mauler
         Feat maulerDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.MaulerArchetype,
                 "You shove your way through legions of foes, knock enemies on all sides to the ground, and deal massive blows to anyone or anything that comes near.",
-                "You become trained in all simple and martial melee weapons that require two hands to wield or that have the two-hand trait.\n\nWhenever you become expert, master, or legendary in any weapon, you also gain that proficiency rank in these weapons.\n\nAs long as you're at least expert in such a weapon, that weapon triggers {tooltip:criteffect}critical specialization effects{/}.")
+                "You become trained in all simple and martial melee weapons that require two hands to wield or that have the two-hand trait.\n\nWhenever you become expert, master, or legendary in any weapon, you also gain that proficiency rank in these mauler weapons.\n\nAs long as you're at least expert in a mauler weapon, that weapon triggers {tooltip:criteffect}critical specialization effects{/}.")
             .WithOnSheet(values =>
             {
                 // Become trained in all melee 2hs.
@@ -63,7 +63,7 @@ public static class Mauler
                 }
             })
             .WithPermanentQEffect(
-                "As long as you're at least expert in the two-handed melee weapon you're using, that triggers {tooltip:criteffect}critical specialization effects{/}.",
+                "You trigger {tooltip:criteffect}critical specialization effects{/} with mauler weapons you're at least expert with.",
                 qfFeat =>
                 {
                     qfFeat.YouHaveCriticalSpecialization = (qfThis, weapon, _, _) =>
