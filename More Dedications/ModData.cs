@@ -153,6 +153,15 @@ public static class ModData
 
         #endregion
         
+        #region Familiar Master
+        
+        public static readonly FeatName OverloadFamiliar = ModManager.RegisterFeatName(IdPrepend+"Archetype.FamiliarMaster.OverloadFamiliar", "Overload Familiar");
+        public static readonly FeatName FastCommand = ModManager.RegisterFeatName(IdPrepend+"Archetype.FamiliarMaster.FastCommand", "Fast Command");
+        public static readonly FeatName MutableFamiliar = ModManager.RegisterFeatName(IdPrepend+"Archetype.FamiliarMaster.MutableFamiliar", "Mutable Familiar");
+        public static readonly FeatName IncredibleFamiliar = ModManager.RegisterFeatName(IdPrepend+"Archetype.FamiliarMaster.IncredibleFamiliar", "Incredible Familiar");
+        
+        #endregion
+        
         #region Bonus Stances
         public static readonly FeatName StokedFlameStance = ModManager.RegisterFeatName("StokedFlameStance", "Stoked Flame Stance");
         public static readonly FeatName InnerFire = ModManager.RegisterFeatName("InnerFireSOM", "Inner Fire (SoM)");
@@ -184,6 +193,8 @@ public static class ModData
     public static class PersistentActions
     {
         public const string PoisonWeaponCharge = "PoisonWeaponCharge";
+        public const string OverloadFamiliar = "OverloadFamiliar";
+        public const string FastCommand = "FastCommand";
     }
     
     public static class QEffectIds
@@ -299,6 +310,7 @@ public static class ModData
         public static readonly Trait ScoutArchetype = ModManager.RegisterTrait(IdPrepend+"Scout", new TraitProperties("Scout", true));
         public static readonly Trait AssassinArchetype = ModManager.RegisterTrait(IdPrepend+"Assassin", new TraitProperties("Assassin", true));
         public static readonly Trait DualWeaponWarriorArchetype = ModManager.RegisterTrait(IdPrepend+"DualWeaponWarrior", new TraitProperties("Dual-Weapon Warrior", true));
+        public static readonly Trait FamiliarMasterArchetype = ModManager.RegisterTrait(IdPrepend+"FamiliarMaster", new TraitProperties("Familiar Master", true));
         
         // Other traits
         public static readonly Trait Shadow = ModManager.RegisterTrait("Shadow");
