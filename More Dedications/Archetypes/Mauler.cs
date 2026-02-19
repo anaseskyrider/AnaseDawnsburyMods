@@ -32,30 +32,34 @@ public static class Mauler
             .WithOnSheet(values =>
             {
                 // Become trained in all melee 2hs.
-                values.Proficiencies.Set(
-                    [Trait.Simple, Trait.TwoHanded, Trait.Melee],
-                    Proficiency.Trained);
-                values.Proficiencies.Set(
-                    [Trait.Martial, Trait.TwoHanded, Trait.Melee],
-                    Proficiency.Trained);
-                values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
-                    [Trait.Simple, Trait.TwoHanded, Trait.Melee]);
-                values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
-                    [Trait.Martial, Trait.TwoHanded, Trait.Melee]);
+                values.Proficiencies
+                    .Set(
+                        [Trait.Simple, Trait.TwoHanded, Trait.Melee],
+                        Proficiency.Trained)
+                    .AutoupgradeAlongBestWeaponProficiency(
+                        [Trait.Simple, Trait.TwoHanded, Trait.Melee]);
+                values.Proficiencies
+                    .Set(
+                        [Trait.Martial, Trait.TwoHanded, Trait.Melee],
+                        Proficiency.Trained)
+                    .AutoupgradeAlongBestWeaponProficiency(
+                        [Trait.Martial, Trait.TwoHanded, Trait.Melee]);
 
                 // Become trained in all melee with the two-hand traits.
                 foreach (Trait twoHDie in (Trait[])[Trait.TwoHand1d8, Trait.TwoHand1d10, Trait.TwoHand1d12])
                 {
-                    values.Proficiencies.Set(
-                        [Trait.Simple, twoHDie, Trait.Melee],
-                        Proficiency.Trained);
-                    values.Proficiencies.Set(
-                        [Trait.Martial, twoHDie, Trait.Melee],
-                        Proficiency.Trained);
-                    values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
-                        [Trait.Simple, twoHDie, Trait.Melee]);
-                    values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
-                        [Trait.Martial, twoHDie, Trait.Melee]);
+                    values.Proficiencies
+                        .Set(
+                            [Trait.Simple, twoHDie, Trait.Melee],
+                            Proficiency.Trained)
+                        .AutoupgradeAlongBestWeaponProficiency(
+                            [Trait.Simple, twoHDie, Trait.Melee]);
+                    values.Proficiencies
+                        .Set(
+                            [Trait.Martial, twoHDie, Trait.Melee],
+                            Proficiency.Trained)
+                        .AutoupgradeAlongBestWeaponProficiency(
+                            [Trait.Martial, twoHDie, Trait.Melee]);
                 }
             })
             .WithPermanentQEffect(
@@ -216,26 +220,10 @@ public static class Mauler
 
     public static bool IsMaulerWeapon(Item item)
     {
-        return item.HasTrait(Trait.Melee) && (item.HasTrait(Trait.TwoHanded) || HasTwoHandTrait(item));
-    }
-
-    public static bool HasTwoHandTrait(Item item)
-    {
-        return HasTwoHandTrait(item.Traits);
-    }
-
-    public static bool HasTwoHandTrait(List<Trait> traits)
-    {
-        if (ModManager.TryParse("Two-Hand 1d12", out Trait thd12))
-        {
-            return traits.Contains(thd12);
-        }
-
-        if (ModManager.TryParse("Two-Hand 1d10", out Trait thd10))
-        {
-            return traits.Contains(thd10);
-        }
-
-        return false;
+        return item.HasTrait(Trait.Melee)
+               && (item.HasTrait(Trait.TwoHanded)
+                   || item.HasTrait(Trait.TwoHand1d8)
+                   || item.HasTrait(Trait.TwoHand1d10)
+                   || item.HasTrait(Trait.TwoHand1d12));
     }
 }
