@@ -4,10 +4,13 @@ using Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Spellbook;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
+using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
@@ -33,7 +36,8 @@ public static class BlessedOne
                 values.SetProficiency(Trait.Spell, Proficiency.Trained);
                 
                 // DD code safeguards allow you to learn a focus spell multiple times, so...
-                if (values.FocusSpells.TryGetValue(Trait.Champion, out FocusSpells? champSpells) && champSpells.Spells.Any(spell => spell.SpellId == ChampionFocusSpells.LayOnHands))
+                if (values.FocusSpells.TryGetValue(Trait.Champion, out FocusSpells? champSpells)
+                    && champSpells.Spells.Any(spell => spell.SpellId == ChampionFocusSpells.LayOnHands))
                     values.FocusPointCount = Math.Min(values.FocusPointCount+1, 3);
                 else
                     values.AddFocusSpellAndFocusPoint(
@@ -68,13 +72,34 @@ public static class BlessedOne
                         .WithCastsAsAReaction((qfThis, spell, castable) =>
                         {
                             Creature cleric = qfThis.Owner;
+
+                            bool isOn = true;
                             
+                            qfThis.ProvideActionIntoPossibilitySection = (qfThis2, section) =>
+                            {
+                                if (section.PossibilitySectionId != PossibilitySectionId.SkillActions)
+                                    return null;
+                                
+                                return new ActionPossibility(new CombatAction(
+                                            qfThis2.Owner,
+                                            new CornerIllustration(ModData.Illustrations.ProtectorsSacrifice, isOn ? ModData.Illustrations.NoSymbol : ModData.Illustrations.CheckSymbol, Direction.Southeast),
+                                            (isOn ? "Disable" : "Enable") + " Protector's Sacrifice",
+                                            [],
+                                            (isOn ? "Never ask" : "Always ask") + " to use {link:ProtectorsSacrifice}protector's sacrifice{/}.\n\n{i}(This setting does not persist between encounters.){/i}",
+                                            Target.Self())
+                                        .WithActionCost(0)
+                                        .WithEffectOnSelf(async _ =>
+                                        {
+                                            isOn = !isOn;
+                                        }))
+                                    .WithPossibilityGroup(Constants.POSSIBILITY_GROUP_TOGGLES);
+                            };
                             qfThis.AddGrantingOfTechnical(
                                 cr => cr.FriendOfAndNotSelf(cleric) && cr.DistanceTo(cleric) <= 6,
                                 qfTech =>
                                 {
                                     Creature ally = qfTech.Owner;
-                                    if (qfThis.Owner.Spellcasting?.FocusPoints <= 0 || !castable.Invoke())
+                                    if (qfThis.Owner.Spellcasting?.FocusPoints <= 0 || !castable.Invoke() || !isOn)
                                         return;
                                     qfTech.YouAreDealtDamage = async (qfTech2, attacker, dStuff, defender) =>
                                     {

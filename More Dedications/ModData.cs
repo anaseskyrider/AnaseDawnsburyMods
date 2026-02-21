@@ -177,6 +177,8 @@ public static class ModData
         public const string ModFolder = "MoreDedicationsAssets/";
         
         public static readonly Illustration DawnsburySun = new ModdedIllustration(ModFolder+"PatreonSunTransparent.png");
+        public static readonly Illustration CheckSymbol = new ModdedIllustration(ModFolder+"check symbol.png");
+        public static readonly Illustration NoSymbol = new ModdedIllustration(ModFolder+"no symbol.png");
         public static readonly Illustration PowderPunchStance = IllustrationName.AlchemistsFire;
         public static readonly Illustration StumblingStance = new ModdedIllustration(ModFolder+"calabash.png");
         public static readonly Illustration DreadMarshalStance = IllustrationName.HideousLaughter;
