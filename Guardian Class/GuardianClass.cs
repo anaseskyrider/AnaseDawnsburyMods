@@ -1,10 +1,9 @@
 using Dawnsbury.Auxiliary;
-using Dawnsbury.Campaign.Encounters.Tutorial;
-using Dawnsbury.Campaign.Path;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.AbilityScores;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.Feats.Features;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
@@ -15,10 +14,14 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
+using Dawnsbury.Display;
+using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
@@ -27,6 +30,11 @@ namespace Dawnsbury.Mods.GuardianClass;
 /// <summary>Contains all methods for creating and loading the Guardian class, its features, and common actions and effects (Taunt, Intercept Attack).</summary>
 public static class GuardianClass
 {
+    /// <summary>
+    /// A list of all the existing toggle feats. List is added-to when <see cref="CreateInterceptAttackToggle"/> is invoked, and the size of the list is called to increase the multiple-choice list to allow all feats as options.
+    /// </summary>
+    public static readonly List<FeatName> InterceptAttackToggles = [];
+    
     /// <summary>Creates and loads the Guardian class feat and class features.</summary>
     public static void LoadClass()
     {
@@ -48,7 +56,7 @@ public static class GuardianClass
                 [Trait.Fortitude, Trait.Will],
                 3,
                 $$"""
-                {b}1. Guardian's Armor.{/b} While wearing medium or heavy armor, you gain resistance to physical damage equal to 1 + half your level. In addition, you can {{ModData.Tooltips.ArmorResting("rest normally")}} while wearing medium and heavy armor.
+                {b}1. Guardian's Armor.{/b} While wearing medium or heavy armor, you gain resistance to {{ModData.Tooltips.CommonDamageTypesRemastered("physical")}} damage equal to 1 + half your level. In addition, you can {{ModData.Tooltips.ArmorResting("rest normally")}} while wearing medium and heavy armor.
                 
                 {b}2. Taunt.{/b} Often, the best way to protect your allies is to have the enemy want to attack you instead. You gain the {{ModData.Tooltips.ActionTaunt("Taunt {icon:Action}")}} action.
                 
@@ -196,6 +204,7 @@ public static class GuardianClass
             });
         classFeat.RulesText = classFeat.RulesText
             .Replace("Key ability", "Key attribute");
+        classFeat.Traits.Insert(0, ModData.Traits.ModSource);
         return classFeat;
     }
     
@@ -203,62 +212,71 @@ public static class GuardianClass
     public static IEnumerable<Feat> CreateFeatures()
     {
         // Guardian's Armor
-        yield return new TrueFeat(
+        yield return new Feat(
                 ModData.FeatNames.GuardiansArmor,
-                1,
                 "Even when you are struck, your armor protects you from some harm.",
-                "While wearing medium or heavy armor, you gain resistance to physical damage equal to 1 + half your level.\n\nIn addition, you can rest normally while wearing medium and heavy armor.",
-                [])
-            .WithPermanentQEffect("While wearing medium or heavy armor, you resist an amount of physical damage equal to 1 + half your level. You can also rest normally in all armor", qfFeat =>
-            {
-                qfFeat.Description = $"While wearing medium or heavy armor, you resist {{Blue}}{1 + (qfFeat.Owner.Level / 2)}{{/Blue}} physical damage. You can also rest normally in all armor.";
-                qfFeat.StateCheck = self =>
+                $"While wearing medium or heavy armor, you gain resistance to {ModData.Tooltips.CommonDamageTypesRemastered("physical")} damage equal to 1 + half your level.\n\nIn addition, you can rest normally while wearing medium and heavy armor.",
+                [ModData.Traits.ModSource],
+                null)
+            .WithPermanentQEffect(
+                $"While wearing medium or heavy armor, you resist an amount of {ModData.Tooltips.CommonDamageTypesRemastered("physical")} damage equal to 1 + half your level. You can also rest normally in all armor",
+                qfFeat =>
                 {
-                    if (self.Owner.Armor.Item is not { } item ||
-                        (!item.HasTrait(Trait.MediumArmor) && !item.HasTrait(Trait.HeavyArmor)))
-                        return;
-                    int amount = 1 + (self.Owner.Level / 2);
-                    self.Owner.WeaknessAndResistance.AddSpecialResistance(
-                        "physical",
-                        (_, dk) => dk.IsPhysical(),
-                        amount,
-                        null);
-                };
-                qfFeat.StartOfCombatBeforeOpeningCutscene = async qfThis =>
-                {
-                    qfThis.Tag = qfThis.Owner.BaseArmor;
-                };
-                qfFeat.StartOfCombat = async qfThis =>
-                {
-                    if (qfThis.Owner.BaseArmor is null && qfThis.Tag is Item { ArmorProperties: not null } tagItem)
+                    qfFeat.Description = $"While wearing medium or heavy armor, you resist {{Blue}}{1 + (qfFeat.Owner.Level / 2)}{{/Blue}} {ModData.Tooltips.CommonDamageTypesRemastered("physical")} damage. You can also rest normally in all armor.";
+                    qfFeat.StateCheck = self =>
                     {
-                        qfThis.Owner.BaseArmor = tagItem;
-                        // TODO: Comfort trait
-                        // Heavy armor is replaced with padded armor?
-                        if ((tagItem.HasTrait(Trait.MediumArmor) || tagItem.HasTrait(Trait.HeavyArmor)) && qfThis.Owner.FindQEffect(QEffectId.SpeakAboutMissingArmor) is { } s2e3_armor)
-                            s2e3_armor.StartOfYourPrimaryTurn = async (effect, self) =>
-                            {
-                                if (!self.Actions.CanTakeActions())
-                                    return;
-                                effect.ExpiresAt = ExpirationCondition.Immediately;
-                                await self.Battle.Cinematics.ShowQuickBubble(
-                                    self,
-                                    "{Green}{b}Guardian's Armor!{b}{/Green}\nIt's a good thing I can sleep in my armor. Now to pick up my weapons.");
-                            };
-                    }
-                };
-            });
+                        if (self.Owner.Armor.Item is not { } item ||
+                            (!item.HasTrait(Trait.MediumArmor) && !item.HasTrait(Trait.HeavyArmor)))
+                            return;
+                        int amount = 1 + (self.Owner.Level / 2);
+                        self.Owner.WeaknessAndResistance.AddSpecialResistance(
+                            "physical",
+                            (_, dk) => dk.IsPhysical(),
+                            amount,
+                            null);
+                    };
+                    qfFeat.StartOfCombatBeforeOpeningCutscene = async qfThis =>
+                    {
+                        qfThis.Tag = qfThis.Owner.BaseArmor;
+                    };
+                    qfFeat.StartOfCombat = async qfThis =>
+                    {
+                        if (qfThis.Owner.BaseArmor is null && qfThis.Tag is Item { ArmorProperties: not null } tagItem)
+                        {
+                            qfThis.Owner.BaseArmor = tagItem;
+                            // TODO: Comfort trait
+                            // Heavy armor is replaced with padded armor?
+                            if ((tagItem.HasTrait(Trait.MediumArmor) || tagItem.HasTrait(Trait.HeavyArmor)) && qfThis.Owner.FindQEffect(QEffectId.SpeakAboutMissingArmor) is { } s2e3_armor)
+                                s2e3_armor.StartOfYourPrimaryTurn = async (effect, self) =>
+                                {
+                                    if (!self.Actions.CanTakeActions())
+                                        return;
+                                    effect.ExpiresAt = ExpirationCondition.Immediately;
+                                    await self.Battle.Cinematics.ShowQuickBubble(
+                                        self,
+                                        "{Green}{b}Guardian's Armor!{b}{/Green}\nIt's a good thing I can sleep in my armor. Now to pick up my weapons.");
+                                };
+                        }
+                    };
+                });
+        
         // Taunt
-        yield return new TrueFeat(
+        yield return new Feat(
                 ModData.FeatNames.Taunt,
-                1,
                 "With an attention-grabbing gesture, noise, cutting remark, or threatening shout, you attempt to draw an enemy to you instead of your allies. Even mindless creatures are drawn to your taunts.",
-                "Choose an enemy within 30 feet to be your taunted enemy. If your taunted enemy takes a hostile action that includes at least one of your allies but doesn't include you, they take a –1 circumstance penalty to their attack rolls and DCs for that action, and they also become off-guard until the start of their next turn.\n\nYour enemy remains taunted until the start of your next turn, and you can have only one Taunt in effect at a time. Taunting a new enemy ends this effect on any current target.\n\nTaunt gains the auditory trait, visual trait, or both, depending on how you draw the target's attention.",
-                [Trait.Concentrate])
-            .WithActionCost(1)
+                """
+                Choose an enemy within 30 feet to be your taunted enemy. If your taunted enemy takes a hostile action that includes at least one of your allies but doesn't include you, they take a –1 circumstance penalty to their attack rolls and DCs for that action, and they also become off-guard until the start of their next turn.
+
+                Your enemy remains taunted until the start of your next turn, and you can have only one Taunt in effect at a time. Taunting a new enemy ends this effect on any current target.
+
+                Taunt gains the auditory trait, visual trait, or both, depending on how you draw the target's attention.
+                """,
+                [ModData.Traits.ModSource, Trait.Concentrate],
+                null)
             .WithPermanentQEffect("Designate an enemy within 30 feet. Hostile actions which don't include you take penalties and make them off-guard.",
                 qfFeat =>
                 {
+                    qfFeat.Name += " {icon:Action}";
                     if (qfFeat.Owner.HasFeat(ModData.FeatNames.GroupTaunt))
                         qfFeat.Description = qfFeat.Description?.Replace(
                             "a taunted enemy",
@@ -275,7 +293,7 @@ public static class GuardianClass
                         audibleTaunt.ContextMenuName = "Taunt (Auditory)";
                         
                         return new SubmenuPossibility(
-                            ModData.Illustrations.Taunt,
+                            qfThis.Owner.HasFeat(ModData.FeatNames.GroupTaunt) ? ModData.Illustrations.Taunt_3 : ModData.Illustrations.Taunt_1,
                             "Taunt")
                         {
                             SubmenuId = ModData.SubmenuIds.Taunt,
@@ -294,19 +312,117 @@ public static class GuardianClass
                         };
                     };
                 });
+        
+        // Intercept Attack Toggles
+        yield return CreateInterceptAttackToggle(
+            ModData.FeatNames.InterceptToggleAlreadyReducedDamage,
+            "for damage that's already being reduced by any amount, unless that damage would knock out an ally.",
+            "For most builds, there's not much point in responding to damage that's already been reduced, since the gains in value are small.",
+            (action, dEvent) =>
+                dEvent.KindedDamages.Any(kd => kd.ResolvedDamage < kd.OriginalResolvedDamage)
+                && dEvent.TargetCreature.HP > dEvent.KindedDamages.Sum(kd => kd.ResolvedDamage)
+                    ? "Damage is already being reduced"
+                    : null,
+            IllustrationName.DeflectCriticalHit);
+        yield return CreateInterceptAttackToggle(
+            ModData.FeatNames.InterceptToggleCompanions,
+            "for animal companions.",
+            "You may have companions which are expendable to your party, have an easier time healing them than the guardian, or otherwise are in a tough fight where losing your companion is a necessary sacrifice.",
+            (action, dEvent) =>
+                dEvent.TargetCreature.HasTrait(Trait.AnimalCompanion)
+                    ? "Creature is a companion"
+                    : null,
+            IllustrationName.AnimalFormBear);
+        yield return CreateInterceptAttackToggle(
+            ModData.FeatNames.InterceptToggleCrits,
+            "a critical hit, unless that ally would be knocked out.",
+            "Resistance is a flat reduction, barely affecting the damage total. Your guardian might be one of your party's primary damage dealers, and can't afford to eat a crit slightly better than another party member. You might also have better tools to mitigate or avenge a wild crits.",
+            (action, dEvent) =>
+                dEvent.CheckResult >= CheckResult.CriticalSuccess
+                && dEvent.TargetCreature.HP > dEvent.KindedDamages.Sum(kd => kd.ResolvedDamage)
+                    ? "Damage is critical"
+                    : null,
+            IllustrationName.StarHit);
+        yield return CreateInterceptAttackToggle(
+            ModData.FeatNames.InterceptToggleHits,
+            "a normal hit, unless that ally would be knocked out.",
+            "Your Guardian might be using their reaction in a highly offensive way, such as for Reactive Strike, or prefer to use Shield Block instead. Whatever the reason, this ensures you only use Intercept Attack when absolutely necessary (critical hits).",
+            (action, dEvent) =>
+                dEvent.CheckResult < CheckResult.CriticalSuccess
+                && dEvent.TargetCreature.HP > dEvent.KindedDamages.Sum(kd => kd.ResolvedDamage)
+                    ? "Damage is just a normal hit"
+                    : null,
+            IllustrationName.Swipe);
+        yield return CreateInterceptAttackToggle(
+            ModData.FeatNames.InterceptToggleKO,
+            "a hit that would knock you out. {i}(Note: Guardian's Armor is factored in, but not any other potential damage reduction.){/i}",
+            "Your Guardian might be a medic or can cast healing spells. You might be a major striker in the party (using 2H weapons instead of having a 2nd reaction for Shield Block). Either way, you can't afford to be the one to go down most of the time.",
+            (action, dEvent) =>
+            {
+                int totalDamage = dEvent.KindedDamages.Sum(kd => kd.ResolvedDamage);
+                int appliedGuardiansArmor = dEvent.KindedDamages.Count(kd =>
+                    kd.DamageKind.IsPhysical()) * (1 + (action.Owner.HP / 2));
+                    /*? action.Owner.WeaknessAndResistance.Resistances.MaxBy(res =>
+                        (res.DamageKind.IsPhysical() || (res is SpecialResistance {} spec && spec.Applicable.Invoke(dEvent.CombatAction, kd, dEvent)))
+                            ? res.Value
+                            : 0)*/
+                int hp = action.Owner.HP + appliedGuardiansArmor;
+                return totalDamage > hp
+                    ? "Damage would knock you out"
+                    : null;
+            },
+            IllustrationName.Dying);
+        yield return CreateInterceptAttackToggle(
+            ModData.FeatNames.InterceptToggleSummons,
+            "for summoned creatures (including the tree produced by {i}{link:ProtectorTree}protector tree{/}{/i}).",
+            "Your party might have a large number of summons, either in quantity or in spawn-rate; or otherwise you value your own HP more than theirs.",
+            (action, dEvent) =>
+                dEvent.TargetCreature.HasTrait(Trait.Summoned)
+                || dEvent.TargetCreature.CreatureId == CreatureId.ProtectorTree
+                    ? "Creature is a summon"
+                    : null,
+            IllustrationName.SummonElemental);
+        
         // Intercept Attack
-        yield return new TrueFeat(
+        yield return new Feat(
                 ModData.FeatNames.InterceptAttack,
-                1,
                 "You fling yourself in the way of oncoming harm to protect an ally.",
-                "You can Step, but you must end your movement adjacent to the triggering ally. You take the damage instead of the triggering ally. Apply your own immunities, weaknesses, and resistances to the damage, not the ally's.\n\n{b}Special{/b} You can extend this ability to an ally within 15 feet of you if the damage comes from your taunted enemy. If this ally is farther than you can Step to reach, you can Stride instead of Stepping; you still must end the movement adjacent to your ally.",
-                [])
-            .WithActionCost(-2)
-            .WithPermanentQEffect("Take damage for an adjacent ally, Stepping towards the ally if necessary, or Striding if the attacker is your taunted enemy.",
+                """
+                {b}Trigger{/b} An ally within 10 feet of you takes physical damage.
+                
+                You can Step, but you must end your movement adjacent to the triggering ally. You take the damage instead of the triggering ally. Apply your own immunities, weaknesses, and resistances to the damage, not the ally's.
+
+                {b}Special{/b} You can extend this ability to an ally within 15 feet of you if the damage comes from your taunted enemy. If this ally is farther than you can Step to reach, you can Stride instead of Stepping; you still must end the movement adjacent to your ally.
+                """,
+                [ModData.Traits.ModSource, ModData.Traits.Guardian],
+                null)
+            .WithOnSheet(values =>
+            {
+                values.AddSelectionOption(new MultipleFeatSelectionOption(
+                        "InterceptAttackToggles",
+                        ModData.Illustrations.InterceptAttack.IllustrationAsIconString + "Don't Intercept for...",
+                        SelectionOption.PRECOMBAT_PREPARATIONS_LEVEL,
+                        ft => ft.HasTrait(ModData.Traits.InterceptAttackToggle),
+                        InterceptAttackToggles.Count)
+                    .WithIsOptional());
+            })
+            .WithPermanentQEffect(
+                "Take physical damage for an adjacent ally, Stepping towards the ally if necessary, or Striding if the attacker is your taunted enemy.",
                 qfFeat =>
                 {
+                    qfFeat.Name += " {icon:Reaction}";
+                    qfFeat.Traits.Add(ModData.Traits.InterceptAttackToggle);
+                    qfFeat.Tag = new List<FeatName>(); // Don't intercept for
+                    
                     if (qfFeat.Owner.HasFeat(ModData.FeatNames.GuardiansIntercept))
                         qfFeat.Description = "{Green}(once per combat){/Green} " + qfFeat.Description;
+                    qfFeat.Description = qfFeat.Description!.Replace(
+                        "physical",
+                        qfFeat.Owner.HasFeat(ModData.FeatNames.EnergyInterceptor)
+                            ? ModData.Tooltips.CommonDamageTypesRemastered("physical {Blue}or energy (but not vitality or void){/Blue}")
+                            : ModData.Tooltips.CommonDamageTypesRemastered("physical"));
+
+                    // Intercept Attack functionality
                     const int interceptRange = 3;
                     qfFeat.AddGrantingOfTechnical(cr =>
                             qfFeat.Owner.FriendOfAndNotSelf(cr)
@@ -319,21 +435,24 @@ public static class GuardianClass
                                 Creature ally = qfTech2.Owner;
                                 Creature attacker = @event.Source;
                                 bool isCritical = @event.CheckResult is CheckResult.CriticalSuccess or CheckResult.CriticalFailure;
+                                int totalResolved = @event.KindedDamages
+                                    .Sum(kd => kd.ResolvedDamage);
+                                int totalOriginal = @event.KindedDamages
+                                    .Sum(kd => kd.OriginalResolvedDamage);
+                                string describeDamage = totalResolved + (totalResolved < totalOriginal ? " of " + totalOriginal : null);
+                                string question =
+                                    $$"""
+                                      {b}Intercept Attack{/b} {icon:Reaction}
+                                      {Blue}{{attacker}}{/Blue} is about to{{(isCritical ? " {Red}critically{/Red}" : null)}} deal {{describeDamage}} damage to {Blue}{{ally}}{/Blue}. Take {{totalOriginal}} damage for them instead?
+                                      """;
+                                Trait[] reactionTraits = [ModData.Traits.Guardian];
                                 
-                                CombatAction interceptAttack = CreateInterceptAttack(
-                                    guardian,
-                                    attacker,
-                                    @event,
-                                    !guardian.Actions.ReactionsUsedUpThisRound.Contains(ModData.CommonReactionKeys.ReactionTime));
+                                CombatAction interceptAttack = CreateInterceptAttack(guardian, attacker, @event, guardian.Actions.DetermineReactionToUse(question, reactionTraits));
                                 
                                 if (!interceptAttack.CanBeginToUse(qfFeat.Owner))
                                     return;
                                 
-                                if (await guardian.Battle.AskToUseReaction(
-                                        guardian,
-                                        $"{{b}}Intercept Attack{{/b}} {{icon:Reaction}}\n{{Blue}}{attacker}{{/Blue}} is about to deal {(isCritical ? "{Red}critical{/Red} " : null)}damage to {{Blue}}{ally}{{/Blue}}. Take the damage instead?",
-                                        ModData.Illustrations.InterceptAttack,
-                                        [ModData.Traits.Guardian]))
+                                if (await guardian.Battle.AskToUseReaction(guardian, question, ModData.Illustrations.InterceptAttack, reactionTraits))
                                 {
                                     await guardian.Battle.GameLoop.FullCast(
                                         interceptAttack, ChosenTargets.CreateSingleTarget(ally));
@@ -343,14 +462,102 @@ public static class GuardianClass
                                 }
                             };
                         });
+                    
+                    // Intercept filter toggles
+                    qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                    {
+                        if (qfThis.Owner.PersistentCharacterSheet is null)
+                            return null;
+                        if (section.PossibilitySectionId is not PossibilitySectionId.SkillActions)
+                            return null;
+                        
+                        return new SubmenuPossibility(
+                                ModData.Illustrations.InterceptAttack,
+                                "Intercept Attack Options")
+                        {
+                            Subsections =
+                            [
+                                new PossibilitySection("Intercept for...")
+                                {
+                                    PossibilitySectionId = ModData.PossibilitySectionIds.InterceptAttackToggles,
+                                    Possibilities = InterceptAttackToggles
+                                        .Select(fn => (Possibility)CreateToggleAction(AllFeats.GetFeatByFeatName(fn)))
+                                        .ToList()
+                                }
+                            ]
+                        }
+                        .WithPossibilityGroup(Constants.POSSIBILITY_GROUP_TOGGLES);
+
+                        ActionPossibility CreateToggleAction(Feat toggle)
+                        {
+                            List<FeatName>? activeToggles = qfFeat.Tag as List<FeatName>;
+                            bool noIntercept =
+                                activeToggles is not null
+                                && activeToggles.Contains(toggle.FeatName);
+                            string baseName = toggle.DisplayName(qfThis.Owner.PersistentCharacterSheet!);
+                            return new ActionPossibility(
+                                new CombatAction(
+                                    qfThis.Owner,
+                                    new CornerIllustration(
+                                        toggle.Illustration ?? IllustrationName.Shield,
+                                        noIntercept ? ModData.Illustrations.NoSymbol : ModData.Illustrations.CheckSymbol,
+                                        Direction.Southeast),
+                                    baseName + (noIntercept ? " (Enable)" : " (Disable)"),
+                                    [Trait.Basic, Trait.DoesNotPreventDelay, Trait.DoNotShowOverheadOfActionName],
+                                    noIntercept
+                                        ? toggle.RulesText.Replace("Don't ask to", "Ask to")
+                                        : toggle.RulesText,
+                                    Target.Self())
+                                .WithActionCost(0)
+                                .WithEffectOnSelf(async (action, self) =>
+                                {
+                                    if (activeToggles is null)
+                                        return;
+                                    if (noIntercept)
+                                        activeToggles.Remove(toggle.FeatName);
+                                    else
+                                        activeToggles.Add(toggle.FeatName);
+                                    noIntercept = !noIntercept;
+                                    self.Overhead(
+                                        // Text is mirrored; overhead tells you what you set it to
+                                        (noIntercept ? "Don't Intercept: " : "Intercept: ") + baseName,
+                                        Color.Black,
+                                        self.Name + "");
+                                }))
+                            {
+                                Caption = baseName + (noIntercept ? " (Disabled)" : " (Enabled)")
+                            };
+                        }
+                    };
+                    
+                    // Applying Intercept filter toggles
+                    qfFeat.PreventTakingAction = action =>
+                    {
+                        if (action.ActionId != ModData.ActionIds.InterceptAttack)
+                            return null;
+                        if (action.Tag is not DamageEvent dEvent)
+                            return null;
+                        if (qfFeat.Owner.QEffects.FirstOrDefault(qf => qf.Traits.Contains(ModData.Traits.InterceptAttackToggle))
+                                is not { Tag: List<FeatName> activeToggles })
+                            return null;
+                        foreach (Feat feat in activeToggles.Select(AllFeats.GetFeatByFeatName))
+                        {
+                            if (feat.Tag is not Func<CombatAction, DamageEvent, string?> preventAction)
+                                continue;
+                            if (preventAction.Invoke(action, dEvent) is { } reason)
+                                return reason;
+                        }
+                        return null;
+                    };
                 });
+        
         // Tough to Kill
-        yield return new TrueFeat(
+        yield return new Feat(
                 ModData.FeatNames.ToughToKill,
-                3,
                 "The protectiveness of your armor ensures that even if you fall, you take longer to die.",
                 "You gain the Diehard general feat {i}(you should retrain it if you already have it){/i}. Additionally, the first time each day you'd be reduced to dying 3 or higher, you stay at dying 2 instead.",
-                [])
+                [ModData.Traits.ModSource, ModData.Traits.Guardian],
+                null)
             .WithOnSheet(values =>
             {
                 if (values.HasFeat(FeatName.Diehard))
@@ -362,7 +569,8 @@ public static class GuardianClass
                 else
                     values.GrantFeat(FeatName.Diehard);
             })
-            .WithPermanentQEffect("The {Green}first time{/Green} each day you reach dying 3+, you stay at dying 2.",
+            .WithPermanentQEffect(
+                "The {Green}first time{/Green} each day you reach dying 3+, you stay at dying 2.",
                 qfFeat =>
                 {
                     // Update description to red /*Remove if found*/
@@ -405,15 +613,17 @@ public static class GuardianClass
                         qfFeat.Description = qfFeat.Description?.Replace("{Green}first time{/Green}", "{Red}first time{/Red}");
                     }
                 });
+        
         // Reaction Time
-        yield return new TrueFeat(
+        yield return new Feat(
                 ModData.FeatNames.ReactionTime,
-                7,
                 "You're always on the lookout for danger and can react to it in an instant.",
                 // Wording altered slightly since multiclasses cannot acquire Ever Ready, nor Reaction Time.
                 "At the start of combat and for each of your turns, you gain an additional reaction that you can use only for reactions from guardian feats or class features (including Shield Block).",
-                [])
-            .WithPermanentQEffect("You gain an additional reaction you can use for guardian feats and features (including Shield Block).",
+                [ModData.Traits.ModSource, ModData.Traits.Guardian],
+                null)
+            .WithPermanentQEffect(
+                "You have an extra reaction you can use for guardian feats and features (including Shield Block).",
                 qfFeat =>
                 {
                     qfFeat.Id = ModData.QEffectIds.ReactionTime;
@@ -426,15 +636,17 @@ public static class GuardianClass
                             ? ModData.CommonReactionKeys.ReactionTime
                             : null;
                 });
+        
         // Guardian Mastery
-        yield return new TrueFeat(
+        yield return new Feat(
                 ModData.FeatNames.GuardianMastery,
-                19,
                 "You are known for your suit of armor more than the person inside.",
                 "While wearing armor, when you attempt a Reflex save, you can add your armor's item bonus to AC instead of your Dexterity modifier if it's higher; if your armor has the bulwark trait, increase this bonus by 1. If you get a success when you do this, you get a critical success instead.",
                 /*"While wearing armor, when you attempt a Reflex save to avoid a damaging effect, such as a fireball, you can add your armor's item bonus to AC instead of your Dexterity modifier; if your armor has the bulwark trait, increase this bonus by 1. If you get a success when you do this, you get a critical success instead."*/
-                [])
-            .WithPermanentQEffect("{b}Requires{/b} wearing armor; {b}Effect{/b} You use your armor's AC instead of your Dexterity for Reflex saves (+1 more with bulwark). Additionally, if you succeed on a Reflex save, you critically succeed instead.",
+                [ModData.Traits.ModSource, ModData.Traits.Guardian],
+                null)
+            .WithPermanentQEffect(
+                "{b}Requires{/b} wearing armor; {b}Effect{/b} You use your armor's AC instead of your Dexterity for Reflex saves (+1 more with bulwark). Additionally, if you succeed on a Reflex save, you critically succeed instead.",
                 qfFeat =>
                 {
                     qfFeat.StateCheck = qfThis =>
@@ -469,15 +681,20 @@ public static class GuardianClass
     /// <summary>
     /// Creates the Taunt <see cref="CombatAction"/>.
     /// </summary>
-    /// <param name="owner">The <see cref="Creature"/> that owns this action.</param>
+    /// <param name="owner">The guardian that owns this action.</param>
     /// <param name="oneCreatureOnly">If TRUE, then this Taunt only affects one creature, even if it could affect more due to some other ability.</param>
     /// <param name="extraTraits">Extra <see cref="Trait"/>s, if any, to add to the action. This will usually be <see cref="Trait.Auditory"/> and <see cref="Trait.Visual"/>.</param>
     /// <returns></returns>
     public static CombatAction CreateTaunt(Creature owner, bool oneCreatureOnly = false, params Trait[] extraTraits)
     {
+        if (extraTraits.Contains(Trait.Auditory) && !extraTraits.Contains(Trait.UnaffectedByConcealment))
+            extraTraits = extraTraits.Append(Trait.UnaffectedByConcealment).ToArray();
         bool hasGroupTaunt = owner.HasFeat(ModData.FeatNames.GroupTaunt);
         int tauntLimit = hasGroupTaunt ? 3 : 1;
         int distance = (owner.HasFeat(ModData.FeatNames.LongDistanceTaunt) ? 120 : 30) / 5;
+        Illustration tauntIcon = !oneCreatureOnly && hasGroupTaunt
+            ? ModData.Illustrations.Taunt_3
+            : ModData.Illustrations.Taunt_1;
         Target tauntTargeting = Target.MultipleCreatureTargets(
             !oneCreatureOnly && hasGroupTaunt ? tauntLimit : 1,
             () => extraTraits.Contains(Trait.Visual)
@@ -485,19 +702,47 @@ public static class GuardianClass
                 : Target.Distance(distance));
         return new CombatAction(
                 owner,
-                ModData.Illustrations.Taunt,
+                tauntIcon,
                 "Taunt",
-                [Trait.Basic, ModData.Traits.Guardian, Trait.Concentrate, Trait.DoNotShowOverheadOfActionName, ..extraTraits],
-                "{i}With an attention-grabbing gesture, noise, cutting remark, or threatening shout, you attempt to draw an enemy to you instead of your allies. Even mindless creatures are drawn to your taunts.{/i}"
-                    + $"\n\n{{b}}Range{{b}} {distance*5} feet\n\nThe target becomes your taunted enemy. If they take a hostile action that includes at least one of your allies but doesn't include you, they take a –1 circumstance penalty to their attack rolls and DCs for that action, and they also become off-guard until the start of their next turn.\n\nYour enemy remains taunted until the start of your next turn, and you can have only one Taunt in effect at a time. Taunting a new enemy ends this effect on any current target."
-                    + (extraTraits.Length == 0 ? "\n\nTaunt gains the auditory trait, visual trait, or both, depending on how you draw the target's attention." : null),
+                [Trait.Basic, ModData.Traits.ModSource, ModData.Traits.Guardian, Trait.Concentrate, Trait.DoNotShowOverheadOfActionName, ..extraTraits],
+                $$"""
+                  {i}With an attention-grabbing gesture, noise, cutting remark, or threatening shout, you attempt to draw an enemy to you instead of your allies. Even mindless creatures are drawn to your taunts.{/i}
+                  
+                  {b}Range{b} {{distance*5}} feet
+                  
+                  The target becomes your taunted enemy. If they take a hostile action that includes at least one of your allies but doesn't include you, they take a –1 circumstance penalty to their attack rolls and DCs for that action, and they also become off-guard until the start of their next turn.
+                  
+                  Your enemy remains taunted until the start of your next turn, and you can have only one Taunt in effect at a time. Taunting a new enemy ends this effect on any current target.
+                  """
+                    + (extraTraits.Length == 0
+                    ? "\n\nTaunt gains the auditory trait, visual trait, or both, depending on how you draw the target's attention."
+                    : null),
                 tauntTargeting)
             .WithActionCost(1)
             .WithActionId(ModData.ActionIds.Taunt)
             .WithSoundEffect(ModData.SfxNames.Taunt(owner, extraTraits))
+            .With(caThis =>
+            {
+                if (caThis.HasTrait(Trait.UnaffectedByConcealment))
+                    return;
+                caThis.TooltipCreator = (action, target, index) =>
+                {
+                    if (HiddenRules.DetermineConcealmentCheckDC(action, target) is not { } DC)
+                        return "Choose this creature as the target.";
+                    
+                    return CombatActionExecution.BreakdownAttackForTooltip(
+                            CombatAction.CreateSimple(action.Owner, action.Name)
+                                .WithActiveRollSpecification(new ActiveRollSpecification(
+                                    (_, _, _) =>
+                                        new CalculatedNumber(0, "Flat Check", []),
+                                    Checks.FlatDC(DC))),
+                            target)
+                        .TooltipDescription;
+                };
+            })
             .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
             {
-                target.AddQEffect(TauntedTarget(caster, target));
+                target.AddQEffect(TauntedTarget(caster));
             })
             .WithEffectOnChosenTargets(async (caster, targets) =>
             { 
@@ -524,7 +769,7 @@ public static class GuardianClass
                     Creature? chosenCreature = await caster.Battle.AskToChooseACreature(
                         caster,
                         oldTaunts,
-                        ModData.Illustrations.Taunt,
+                        tauntIcon,
                         $"Choose a creature to cease Taunting. (1/{overLimit})",
                         "Remove {Blue}Taunted{/Blue}.",
                         "Pick Anyone");
@@ -546,15 +791,17 @@ public static class GuardianClass
             });
     }
 
-    /// <summary>The "taunted enemy" QEffect.</summary>
-    public static QEffect TauntedTarget(Creature taunter, Creature tauntee)
+    /// <summary>
+    /// The "taunted enemy" QEffect.
+    /// </summary>
+    public static QEffect TauntedTarget(Creature taunter)
     {
         return new QEffect(
             "Taunted",
             $"Hostile actions that don't include {{Blue}}{taunter.Name}{{/Blue}} take a -1 circumstance penalty to any of its attack rolls and DCs, and you become off-guard until the start of your next turn.",
             ExpirationCondition.ExpiresAtStartOfSourcesTurn,
             taunter,
-            ModData.Illustrations.Taunt)
+            ModData.Illustrations.Taunt_1)
         {
             Id = ModData.QEffectIds.TauntTarget,
             Key = "Taunt"+taunter.Name, // Discard duplicates for each source
@@ -584,7 +831,7 @@ public static class GuardianClass
                     return;
                 QEffect offguard = QEffect.FlatFooted("Taunt");
                 offguard.Name = "Off-Guard (Taunt)";
-                offguard.Description = "{i}You ignored {Blue}"+taunter.Name+"{/Blue}'s taunt.{/i}" + offguard.Description;
+                offguard.Description = "{i}You ignored {Blue}"+taunter.Name+"{/Blue}'s taunt.{/i}\n" + offguard.Description;
                 offguard.ExpiresAt = ExpirationCondition.ExpiresAtStartOfYourTurn;
                 offguard.Source = taunter;
                 offguard.Key = ModData.CommonQfKeys.OffGuardDueToTaunt+taunter;
@@ -626,29 +873,68 @@ public static class GuardianClass
     }
 
     /// <summary>
+    /// Creates a precombat (and mid-combat) preparation.
+    /// </summary>
+    /// <param name="featName">The FeatName unique to the toggle.</param>
+    /// <param name="interceptForWhat">A succinct description of what you will or won't react to while this selection is enabled. Precombat preps are framed as "Don't ask to Intercept ", while the combat action toggles use different language.</param>
+    /// <param name="tacticsText">Additional paragraph that appears below the primary description, which explains why you might want to enable this option.</param>
+    /// <param name="preventAction">The PreventTakingAction function that stops you from using Intercept Attack. </param>
+    /// <param name="toggleIcon">The icon for this particular toggle setting. Used for Feat Illustrations and CombatAction CornerIllustrations.</param>
+    /// <returns></returns>
+    public static Feat CreateInterceptAttackToggle(FeatName featName, string interceptForWhat, string tacticsText,
+        Func<CombatAction, DamageEvent, string?> preventAction, Illustration toggleIcon)
+    {
+        string description = "Don't ask to Intercept " + interceptForWhat.ToLower() + "\n\n" + "{b}Tactics{/b} " + tacticsText;
+        Feat toggleFeat = new Feat(
+                featName,
+                null,
+                description,
+                [ModData.Traits.InterceptAttackToggle, ModData.Traits.ModSource],
+                null)
+            .WithIllustration(toggleIcon)
+            .WithTag(preventAction)
+            .WithOnCreature(self =>
+            {
+                if (self.QEffects.FirstOrDefault(qf => qf.Traits.Contains(ModData.Traits.InterceptAttackToggle))
+                    is not { Tag: List<FeatName> activeToggles })
+                    return;
+                activeToggles.Add(featName);
+            });
+        InterceptAttackToggles.Add(toggleFeat.FeatName);
+        return toggleFeat;
+    }
+    
+    /// <summary>
     /// Creates a CombatAction with an action cost of 0 (used as a reaction) for a given damage event. This action should be used with <see cref="GameLoop.FullCast(CombatAction)"/> in order to apply its effects. Because this is a reaction, the target is supplied when creating the action; do not use it with the alternative overload (<see cref="GameLoop.FullCast(CombatAction, ChosenTargets)"/>).
     /// </summary>
-    /// <param name="owner"></param>
-    /// <param name="ally"></param>
-    /// <param name="attacker"></param>
-    /// <param name="dEvent"></param>
-    /// <param name="refundBonusReaction">An additional parameter specifying whether to restore ReactionTime when refunding your reaction.</param>
-    public static CombatAction CreateInterceptAttack(Creature owner, Creature attacker, DamageEvent dEvent, bool refundBonusReaction = false)
+    /// <param name="guardian_1">The guardian taking this reaction.</param>
+    /// <param name="attacker">The creature dealing damage from a damage event.</param>
+    /// <param name="dEvent">The damage event being reacted to.</param>
+    /// <param name="reactionToRestore">The reaction keyword of an extra reaction to restore should the reaction need to abort and refund resources. To be used with <see cref="LibraryOfAnase.RefundReaction(Actions, string)"/>.</param>
+    public static CombatAction CreateInterceptAttack(Creature guardian_1, Creature attacker, DamageEvent dEvent, string? reactionToRestore = null)
     {
         const int interceptRange = 3;
         bool canStride = attacker.HasEffect(ModData.QEffectIds.TauntTarget);
-        int stepSpeed = owner.HasEffect(QEffectId.ElfStep) ? 2 : 1;
+        int stepSpeed = guardian_1.HasEffect(QEffectId.ElfStep) ? 2 : 1;
         
         CombatAction interceptAttack = new CombatAction(
-                owner, 
+                guardian_1, 
                 ModData.Illustrations.InterceptAttack, 
                 "Intercept Attack", 
-                [Trait.Basic, ModData.Traits.Guardian, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName], 
-                "{i}You fling yourself in the way of oncoming harm to protect an ally.{/i}\n\nYou can Step, but you must end your movement adjacent to the triggering ally. You take the damage instead of the triggering ally. Apply your own immunities, weaknesses, and resistances to the damage, not the ally's.\n\n{b}Special{/b} You can extend this ability to an ally within 15 feet of you if the damage comes from your taunted enemy. If this ally is farther than you can Step to reach, you can Stride instead of Stepping; you still must end the movement adjacent to your ally.", 
+                [Trait.Basic, ModData.Traits.ModSource, ModData.Traits.Guardian, Trait.UnaffectedByConcealment, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName], 
+                """
+                {i}You fling yourself in the way of oncoming harm to protect an ally.{/i}
+                
+                {b}Trigger{/b} An ally within 10 feet of you takes physical damage.
+
+                You can Step, but you must end your movement adjacent to the triggering ally. You take the damage instead of the triggering ally. Apply your own immunities, weaknesses, and resistances to the damage, not the ally's.
+
+                {b}Special{/b} You can extend this ability to an ally within 15 feet of you if the damage comes from your taunted enemy. If this ally is farther than you can Step to reach, you can Stride instead of Stepping; you still must end the movement adjacent to your ally.
+                """, 
                 Target.RangedFriend(interceptRange - (canStride ? 0 : 1))
                     .WithAdditionalConditionOnTargetCreature((a,d) =>
                     {
-                        if (attacker == owner.Battle.Pseudocreature)
+                        if (attacker == guardian_1.Battle.Pseudocreature)
                             return Usability.NotUsable("Pseudocreature");
                         if (d != dEvent.TargetCreature)
                             return Usability.NotUsableOnThisCreature("Not the target of Intercept Attack");
@@ -663,71 +949,104 @@ public static class GuardianClass
             .WithActionCost(0)
             .WithActionId(ModData.ActionIds.InterceptAttack)
             .WithTag(dEvent) // Store the damage event
-            .WithEffectOnEachTarget(async (action, self, ally, _) =>
+            .WithEffectOnEachTarget(async (action, guardian_2, ally, _) =>
             {
-                // Pick a tile
-                string question = $"Choose where to Step{(canStride ? " or Stride" : null)} with Intercept Attack or right-click to continue. You must end your movement {"adjacent to the triggering ally".WithColor(self.IsAdjacentTo(ally) ? "Green" : "Red")}.";
-                string button = ("Don\'t step" + (canStride ? " or stride" : null))
-                    .WithColor(self.IsAdjacentTo(ally)
-                        ? "Green"
-                        : "Red");
-                Tile? chosenTile = await self.Battle.AskToChooseATile(
-                    self,
-                    Pathfinding.Floodfill(
-                            self, self.Battle, new PathfindingDescription()
-                            {
-                                Squares = self.Speed,
-                                Style =
-                                {
-                                    MaximumSquares = self.Speed,
-                                    PermitsStep = true
-                                }
-                            })
-                        .Intersect(GetLegalTiles(self, ally, canStride)),
-                    ModData.Illustrations.InterceptAttack,
-                    question, "Move here",
-                    true, true, self,
-                    button);
-                // Step/Stride to that tile
-                if (chosenTile == null)
+                bool canLegallyMove = CombatAction.CreateSimple(guardian_2, "Stride", Trait.Move).WithActionId(ActionId.Stride).WithActionCost(0).CanBeginToUse(guardian_2) || CombatAction.CreateSimple(guardian_2, "Step", Trait.Move, Trait.DoesNotTriggerAnyReactions, Trait.DoesNotProvoke).WithActionId(ActionId.Step).WithActionCost(0).CanBeginToUse(guardian_2);
+                string? refundReason = null;
+                
+                // If able to move,
+                if (canLegallyMove)
                 {
-                    if (!self.IsAdjacentTo(ally))
-                    {
-                        string log = "reaction";
-                        if (refundBonusReaction)
-                        {
-                            self.Actions.ReactionsUsedUpThisRound.Remove(ModData.CommonReactionKeys.ReactionTime);
-                            log = "bonus " + log;
-                        }
-                        else
-                            self.Actions.RefundReaction();
-                        self.Battle.Log(log.Capitalize() + " refunded: no square chosen, and not adjacent to ally.");
-                        return;
-                    }
+                    string warningColor = guardian_2.IsAdjacentTo(ally) ? "Green" : "Red";
+                    string question =
+                        $"Choose where to Step{(canStride ? " or Stride" : null)} with Intercept Attack or right-click to continue. You must end your movement {"adjacent to the triggering ally".WithColor(warningColor)}.";
+                    // Pick a tile,
+                    Tile? chosenTile = await guardian_2.Battle.AskToChooseATile(
+                        guardian_2,
+                        Pathfinding.Floodfill(
+                                guardian_2, guardian_2.Battle, new PathfindingDescription()
+                                {
+                                    Squares = guardian_2.Speed,
+                                    Style =
+                                    {
+                                        MaximumSquares = guardian_2.Speed,
+                                        PermitsStep = true
+                                    }
+                                })
+                            .Intersect(GetLegalTiles(guardian_2, ally, canStride)),
+                        ModData.Illustrations.InterceptAttack,
+                        question,
+                        "Move here",
+                        true,
+                        true,
+                        guardian_2,
+                        ("Don\'t step" + (canStride ? " or stride" : null)).WithColor(warningColor));
+
+                    // Step/Stride to that tile.
+                    if (chosenTile != null)
+                        await guardian_2.StrideAsync(question, allowStep: true, strideTowards: chosenTile);
+                    else // Otherwise mark a reason to refund.
+                        refundReason += "no square chosen";
                 }
-                else
-                    await self.StrideAsync(question, allowStep: true, strideTowards: chosenTile);
-                    
+                else // Otherwise mark a reason to refund.
+                    refundReason += "unable to move";
+                
+                // If not adjacent,
+                if (!guardian_2.IsAdjacentTo(ally))
+                {
+                    // Refund if you have a reason to,
+                    if (refundReason is not null)
+                        RefundReaction(refundReason + ", and not adjacent to ally");
+                    return; // End reaction early; do not take damage.
+                }
+                
+                // Take damage
+                List<KindedDamage> damages = [];
+                foreach (KindedDamage kd in dEvent.KindedDamages)
+                {
+                    KindedDamage newKd = new KindedDamage(
+                        DiceFormula.FromText(
+                            kd.OriginalResolvedDamage.ToString(),
+                            "Original " + kd.DamageKind.HumanizeLowerCase2()),
+                        kd.DamageKind)
+                    {
+                        ApplyCriticalAndHalvingEffects = kd.ApplyCriticalAndHalvingEffects,
+                    };
+                    damages.Add(newKd);
+                }
                 DamageEvent interceptedDamage = new DamageEvent(
                     dEvent.CombatAction,
-                    owner,
+                    guardian_1,
                     dEvent.CheckResult,
-                    [..dEvent.KindedDamages])
+                    damages.ToArray() /*[..dEvent.KindedDamages]*/)
                 {
                     IsSplashDamage = dEvent.IsSplashDamage,
                     //DoubleDamage = dEvent.DoubleDamage, // Doubles twice
                     //HalveDamage = dEvent.HalveDamage, // Halves twice
                     //Bonuses = @event.Bonuses, // Recalculates
                 };
-                self.Overhead(
+                guardian_2.Overhead(
                     "intercept attack",
                     Color.White,
-                    self + " {b}Intercepts{/b} the {b}Attack{/b} against " + ally + ".",
+                    guardian_2 + " {b}Intercepts{/b} the {b}Attack{/b} against " + ally + ".",
                     action.Name +" {icon:Reaction}",
                     action.Description,
                     action.Traits);
                 await CommonSpellEffects.DealDirectDamage(interceptedDamage);
                 dEvent.ReduceBy(dEvent.KindedDamages.Sum(kd => kd.ResolvedDamage), "Intercept attack");
+                
+                return;
+                
+                void RefundReaction(string reason)
+                {
+                    string log = "reaction";
+                    if (reactionToRestore is not null
+                        && guardian_2.Actions.RefundReaction(reactionToRestore))
+                        log = "bonus " + log;
+                    else
+                        guardian_2.Actions.RefundReaction();
+                    guardian_2.Battle.Log(log.Capitalize() + " refunded: " + reason + ".");
+                }
             });
         
         return interceptAttack;
@@ -746,7 +1065,11 @@ public static class GuardianClass
                 (ally_2.Space.TopLeftTile.Y + (ally_2.Space.SizeInSquares - 1)) + guardian.Space.SizeInSquares
             );
             List<Tile> rectangle = guardian.Battle.Map
-                .TilesInRectangle(topLeft.X, topLeft.Y, bottomRight.X, bottomRight.Y)
+                .TilesInRectangle(
+                    Math.Clamp(topLeft.X, 0, guardian.Battle.Map.Width - 1),
+                    Math.Clamp(topLeft.Y, 0, guardian.Battle.Map.Height - 1),
+                    Math.Clamp(bottomRight.X, 0, guardian.Battle.Map.Width - 1),
+                    Math.Clamp(bottomRight.Y, 0, guardian.Battle.Map.Height - 1))
                 .ToList();
             // Don't just accept top-left aligned large spaces,
             // the entire creature must be contained within this distance to be adjacent
@@ -778,7 +1101,7 @@ public static class GuardianClass
             return true;
         }
 
-        int DistanceToAbs(Creature cr, Tile tile)
+        int DistanceToAbs(Creature cr, Tile? tile)
         {
             if (!cr.Space.OccupiesSpace || tile == null)
                 return 10000;

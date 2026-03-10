@@ -16,7 +16,15 @@ public static class GuardianArchetype
         Feat guardianDedication = ArchetypeFeats.CreateMulticlassDedication(
                 ModData.Traits.Guardian,
                 "You've learned the advantages of wearing the sturdiest of armor and keeping your enemies' attention focused on you instead of your allies. You can eventually put yourself in harm's way to protect your friends.",
-                "You become trained in Athletics; if you were already trained in Athletics, you instead become trained in a skill of your choice.\n\nYou become trained in guardian class DC, and you can use the "+ModData.Tooltips.ActionTaunt("Taunt {icon:Action}")+" action.\n\nYou become trained in light armor and medium armor, or trained in heavy armor if you were already trained in both.\n\nYour proficiency in the armor types granted to you by this feat is equal to your best proficiency in any type of armor (but not unarmored defense). If you are expert in unarmored defense and are at least 13th-level, you also become an expert in the armor types granted to you by this feat.")
+                $$"""
+                 You become trained in Athletics; if you were already trained in Athletics, you instead become trained in a skill of your choice.
+
+                 You become trained in guardian class DC, and you can use the {{ModData.Tooltips.ActionTaunt("Taunt {icon:Action}")}} action.
+
+                 You become trained in light armor and medium armor, or trained in heavy armor if you were already trained in both.
+
+                 Your proficiency in the armor types granted to you by this feat is equal to your best proficiency in any type of armor (but not unarmored defense). If you are expert in unarmored defense and are at least 13th-level, you also become an expert in the armor types granted to you by this feat.
+                 """)
             .WithPrerequisite(values => // Don't use the built-in WithDemandsAbility, to avoid non-ORC text.
                     (values.HasFeat(FeatName.Multitalented)
                      && values.Ancestries.Contains(Trait.HalfElf))
@@ -85,7 +93,7 @@ public static class GuardianArchetype
                 ModData.FeatNames.GuardiansIntercept,
                 6,
                 null,
-                "You can use the "+ModData.Tooltips.ActionInterceptAttack("Intercept Attack {icon:Reaction}")+" reaction once per combat.",
+                $"You can use the {ModData.Tooltips.ActionInterceptAttack("Intercept Attack {icon:Reaction}")} reaction once per combat.",
                 [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.Guardian)
             .WithOnSheet(values =>
@@ -113,7 +121,11 @@ public static class GuardianArchetype
                 ModData.FeatNames.ArmoredResistance,
                 8,
                 null,
-                "{b}Requirements{/b} You are wearing medium or heavy armor.\n\nYou gain resistance to physical damage equal to half your character level when you use the Intercept Attack reaction to take damage instead of your ally.",
+                """
+                {b}Requirements{/b} You are wearing medium or heavy armor.
+
+                You gain resistance to physical damage equal to half your character level when you use the Intercept Attack reaction to take damage instead of your ally.
+                """,
                 [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.Guardian)
             .WithPrerequisite(ModData.FeatNames.GuardiansIntercept, "Guardian's Intercept")
