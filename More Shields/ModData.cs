@@ -134,8 +134,9 @@ public static class ModData
     public static class Traits
     {
         /// Name of the mod.
-        public static readonly Trait MoreShields = ModManager.RegisterTrait("MoreShields",
-            new TraitProperties("More Shields", true));
+        public static readonly Trait ModName = ModManager.RegisterModNameTrait(
+            "MoreShields",
+            "More Shields");
         
         /// Hidden technical trait. A <see cref="CombatAction"/> with an ActionCost of 0 is treated as a reaction for the purposes of granting additional reactions.
         public static readonly Trait ReactiveAction = ModManager.RegisterTrait("ReactiveAction",

@@ -161,7 +161,7 @@ public static class CommonShieldRules
                 self,
                 shield.Illustration,
                 $"Raise {shield.BaseHumanName.ToLower()}",
-                [Trait.Basic, Trait.DoNotShowOverheadOfActionName],
+                [Trait.Basic, Trait.DoNotShowOverheadOfActionName, ModData.Traits.ModName],
                 null!,
                 Target.Self((_,ai) => ai.GainBonusToAC(acBonus))
                     .WithAdditionalRestriction(self2 =>

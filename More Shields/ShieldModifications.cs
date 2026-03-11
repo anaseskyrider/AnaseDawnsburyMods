@@ -1,3 +1,4 @@
+using System.Reflection;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Display;
@@ -7,7 +8,7 @@ namespace Dawnsbury.Mods.MoreShields;
 
 public static class ShieldModifications
 {
-    public static List<ItemName> AllShieldPlates = [
+    public static readonly List<ItemName> AllShieldPlates = [
         ModData.ItemNames.SturdyShieldPlatingMinor,
         ModData.ItemNames.SturdyShieldPlatingLesser,
         ModData.ItemNames.SturdyShieldPlatingModerate,
@@ -18,46 +19,51 @@ public static class ShieldModifications
     
     public static void LoadModifications()
     {
-        // TODO: Switch off debug for workshop
-        const bool DEBUG = false;
-        
         // Plating
-        ModData.ItemNames.SturdyShieldPlatingMinor = RegisterNewShieldPlating(
-            "SturdyShieldPlatingMinor" + (DEBUG ? "(DEBUG)" : null),
+        (ModData.ItemNames.SturdyShieldPlatingMinor, var minorFactory) = RegisterNewShieldPlating(
+            "SturdyShieldPlatingMinor",
             "minor",
-            4,
-            75,
-            3); // If OP: +2
-        ModData.ItemNames.SturdyShieldPlatingLesser = RegisterNewShieldPlating(
-            "SturdyShieldPlatingLesser" + (DEBUG ? "(DEBUG)" : null),
+            4, 75, 3); // If OP: +2
+        (ModData.ItemNames.SturdyShieldPlatingLesser, var lesserFactory) = RegisterNewShieldPlating(
+            "SturdyShieldPlatingLesser",
             "lesser",
-            7,
-            300,
-            5); // If OP: +4 or +3
-        ModData.ItemNames.SturdyShieldPlatingModerate = RegisterNewShieldPlating(
-            "SturdyShieldPlatingModerate" + (DEBUG ? "(DEBUG)" : null),
+            7, 300, 5); // If OP: +4 or +3
+        (ModData.ItemNames.SturdyShieldPlatingModerate, var moderateFactory) = RegisterNewShieldPlating(
+            "SturdyShieldPlatingModerate",
             "moderate",
-            10,
-            900,
-            8); // If OP: +6 or +5
-        ModData.ItemNames.SturdyShieldPlatingGreater = RegisterNewShieldPlating(
-            "SturdyShieldPlatingGreater" + (DEBUG ? "(DEBUG)" : null),
+            10, 900, 8); // If OP: +6 or +5
+        (ModData.ItemNames.SturdyShieldPlatingGreater, var greaterFactory) = RegisterNewShieldPlating(
+            "SturdyShieldPlatingGreater",
             "greater",
-            13,
-            2500,
-            10); // If OP: +7 or +6
-        ModData.ItemNames.SturdyShieldPlatingMajor = RegisterNewShieldPlating(
-            "SturdyShieldPlatingMajor" + (DEBUG ? "(DEBUG)" : null),
+            13, 2500, 10); // If OP: +7 or +6
+        (ModData.ItemNames.SturdyShieldPlatingMajor, var majorFactory) = RegisterNewShieldPlating(
+            "SturdyShieldPlatingMajor",
             "major",
-            16,
-            8000,
-            12); // If OP: +8 or +7
-        ModData.ItemNames.SturdyShieldPlatingSupreme = RegisterNewShieldPlating(
-            "SturdyShieldPlatingSupreme" + (DEBUG ? "(DEBUG)" : null),
+            16, 8000, 12); // If OP: +8 or +7
+        (ModData.ItemNames.SturdyShieldPlatingSupreme, var supremeFactory) = RegisterNewShieldPlating(
+            "SturdyShieldPlatingSupreme",
             "supreme",
-            19,
-            32000,
-            15); // If OP: +10 or +9
+            19, 32000, 15); // If OP: +10 or +9
+        
+        Func<ItemName, Item>[] factories = [minorFactory, lesserFactory, moderateFactory, greaterFactory, majorFactory, supremeFactory];
+
+        // Replace plates from other mods
+        // (just benefits local instances of MoreShields mod, not workshop installs due to optional-depts)
+        var itemFactories = typeof(ModManager)
+                .GetProperty("ModdedItemFactories", BindingFlags.NonPublic | BindingFlags.Static)
+                ?.GetMethod
+                ?.Invoke(null, null)
+            as Dictionary<ItemName, Func<ItemName, Item>>;
+        if (itemFactories is not null)
+        {
+            foreach (ItemName plate in AllShieldPlates)
+            {
+                if (!itemFactories.TryGetValue(plate, out var factory))
+                    continue;
+                
+                itemFactories[plate] = factories[AllShieldPlates.IndexOf(plate)];
+            }
+        }
         
         // Augmentations
         ModData.ItemNames.ShieldAugmentationBackswing = RegisterNewShieldAugmentation(
@@ -78,33 +84,32 @@ public static class ShieldModifications
             [Trait.VersatileP, Trait.VersatileS]);
     }
     
-    public static ItemName RegisterNewShieldPlating(string technicalName, string tier, int level, int price, int bonusHardness, params Trait[] traits)
+    public static (ItemName, Func<ItemName,Item>) RegisterNewShieldPlating(string technicalName, string tier, int level, int price, int bonusHardness, params Trait[] traits)
     {
-        return ModManager.RegisterNewItemIntoTheShop(
-            technicalName,
-            iName => new Item(
-                    iName,
-                    ModData.Illustrations.ShieldPlating,
-                    "shield plating ("+tier+")",
-                    level,
-                    price,
-                    [ModData.Traits.MoreShields, Trait.Runestone, ..traits])
-                .WithRuneProperties(new RuneProperties(
-                        tier + " plated",
-                        ModData.RuneKinds.ShieldPlating,
-                        "Magically enchanted plating makes the shield much sturdier.",
-                        $"The enchanted shield's hardness increases by {bonusHardness}. For example, a {tier} plated steel shield has a hardness of {5 + bonusHardness} instead of 5.",
-                        item1 => item1.Hardness += bonusHardness)
-                    .WithCanBeAppliedTo((_, shield) =>
-                    {
-                        if (shield.Name.Contains("sturdy shield"))
-                            return "Shield plating cannot be applied to sturdy shields";
-                        if (!shield.HasTrait(Trait.Shield))
-                            return "Shield plating can only be applied to shields.";
-                        return null;
-                    }))
-                .WithItemGreaterGroup(ModData.ItemGreaterGroups.ShieldModifications)
-                .WithItemGroup("Plating"));
+        Func<ItemName, Item> factory = iName => new Item(
+                iName,
+                ModData.Illustrations.ShieldPlating,
+                "shield plating (" + tier + ")",
+                level,
+                price,
+                [ModData.Traits.ModName, Trait.Runestone, ..traits])
+            .WithRuneProperties(new RuneProperties(
+                    tier + " plated",
+                    ModData.RuneKinds.ShieldPlating,
+                    "Magically enchanted plating makes the shield much sturdier.",
+                    $"The enchanted shield's hardness increases by {bonusHardness}. For example, a {tier} plated steel shield has a hardness of {5 + bonusHardness} instead of 5.",
+                    item1 => item1.Hardness += bonusHardness)
+                .WithCanBeAppliedTo((_, shield) =>
+                {
+                    if (shield.Name.Contains("sturdy shield"))
+                        return "Shield plating cannot be applied to sturdy shields";
+                    if (!shield.HasTrait(Trait.Shield))
+                        return "Shield plating can only be applied to shields.";
+                    return null;
+                }))
+            .WithItemGreaterGroup(ModData.ItemGreaterGroups.ShieldModifications)
+            .WithItemGroup(ModData.Illustrations.ShieldPlating.IllustrationAsIconString + "Plating");
+        return (ModManager.RegisterNewItemIntoTheShop(technicalName, factory), factory);
     }
     
     public static Item CreatePlatedShield(ItemName item, ItemName plate)
@@ -140,7 +145,7 @@ public static class ShieldModifications
                     "shield augmentation ("+variantName+")",
                     0,
                     1,
-                    [ModData.Traits.MoreShields, Trait.Runestone])
+                    [ModData.Traits.ModName, Trait.Runestone])
                 .WithRuneProperties(new RuneProperties(
                         "augmented",
                         ModData.RuneKinds.ShieldAugmentation,
@@ -150,6 +155,6 @@ public static class ShieldModifications
                     .WithCanBeAppliedTo((_, shield) =>
                         shield.HasTrait(Trait.Shield) ? null : "Shield augmentations can only be applied to shields."))
                 .WithItemGreaterGroup(ModData.ItemGreaterGroups.ShieldModifications)
-                .WithItemGroup("Augmentations"));
+                .WithItemGroup(ModData.Illustrations.ShieldAugmentation.IllustrationAsIconString + "Augmentations"));
     }
 }

@@ -1,8 +1,10 @@
+using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Champion;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
@@ -11,10 +13,12 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display;
 using Dawnsbury.Display.Controls.Statblocks;
+using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
@@ -24,9 +28,21 @@ public static class OldShields
 {
     public static void ModifyOldFeats()
     {
+        // Aggressive Block
+        // Patches alter this ability's associated QEffects.
+        Feat aggressiveBlock = AllFeats.GetFeatByFeatName(FeatName.AggressiveBlock);
+        aggressiveBlock.RulesText = aggressiveBlock.RulesText
+            .Replace(
+                "adjacent enemy",
+                "adjacent enemy of your size or smaller")
+            .Replace(
+                "to push",
+                "to automatically Shove");
+        
         // Shield Warden
         // The feat now independently handles defending allies.
         Feat shieldWarden = AllFeats.GetFeatByFeatName(FeatName.ShieldWarden);
+        shieldWarden.Traits.Insert(0, ModData.Traits.ModName);
         shieldWarden.OnCreature = null;
         shieldWarden.WithPermanentQEffect(
             "You can use Shield Block to prevent damage to an adjacent ally.",
@@ -57,7 +73,7 @@ public static class OldShields
         // The feat now independently inserts its own action, and (homebrew) works with a Fortress Shield too. Description is also much more dynamic.
         Feat devotedGuardian = AllFeats.GetFeatByFeatName(Champion.DevotedGuardianFeatName);
         devotedGuardian.RulesText = devotedGuardian.RulesText.Replace("was a tower shield", "has the Cover Shield trait");
-        devotedGuardian.Traits.Insert(0, ModData.Traits.MoreShields);
+        devotedGuardian.Traits.Insert(0, ModData.Traits.ModName);
         devotedGuardian.Traits.Add(ModData.Traits.ShieldActionFeat);
         devotedGuardian.OnCreature = null;
         devotedGuardian.WithPermanentQEffect(
@@ -131,7 +147,7 @@ public static class OldShields
         // Shield Ally
         // The feat now adds a bonus to hardness that the game can broadly detect.
         Feat shieldAlly = AllFeats.GetFeatByFeatName(Champion.ShieldAllyFeatName);
-        shieldAlly.Traits.Insert(0, ModData.Traits.MoreShields);
+        shieldAlly.Traits.Insert(0, ModData.Traits.ModName);
         shieldAlly.OnCreature = null;
         shieldAlly
             .WithPermanentQEffect(
@@ -149,7 +165,7 @@ public static class OldShields
         // The subclass now adds a bonus to hardness that the game can broadly detect.
         // The bonus also increases to 3 at level 15.
         Feat sparklingTarge = AllFeats.GetFeatByFeatName(FeatName.SparklingTarge);
-        sparklingTarge.Traits.Insert(0, ModData.Traits.MoreShields);
+        sparklingTarge.Traits.Insert(0, ModData.Traits.ModName);
         sparklingTarge.OnCreature += (_, self) =>
         {
             self.AddQEffect(CommonShieldRules.BonusToShieldHardness((_, stuff, _, blocker) =>
@@ -167,7 +183,7 @@ public static class OldShields
         Feat? reflexiveShield = AllFeats.All.FirstOrDefault(feat => feat.Name.Contains("Reflexive Shield"));
         if (reflexiveShield is not null)
         {
-            reflexiveShield.Traits.Insert(0, ModData.Traits.MoreShields);
+            reflexiveShield.Traits.Insert(0, ModData.Traits.ModName);
             reflexiveShield.OnCreature = null;
             reflexiveShield.WithPermanentQEffect(
                 "Raise a Shield benefits your Reflex saves. If you have Shield Block, you can block any damage from a Reflex save.",
@@ -225,7 +241,7 @@ public static class OldShields
 
         Feat emergencyTarge = AllFeats.GetFeatByFeatName(FeatName.EmergencyTarge);
         emergencyTarge.FlavorText = "Your targe comes readily in times of danger to avoid blows and spells.";
-        emergencyTarge.Traits.Insert(0, ModData.Traits.MoreShields);
+        emergencyTarge.Traits.Insert(0, ModData.Traits.ModName);
         emergencyTarge.OnCreature = null;
         emergencyTarge.WithPermanentQEffect(
             "You can Raise a Shield or cast {i}shield{/i} when you'd be hit by a melee attack or fail an enemy's spell save.",
@@ -235,7 +251,7 @@ public static class OldShields
                 {
                     bool isSavingThrow;
                     // is attack
-                    if (action.HasAnyTraits(Trait.Strike!, Trait.Spell!)
+                    if (action.HasAnyTraits([Trait.Strike, Trait.Spell])
                         && action.HasTrait(Trait.Melee)
                         && action.ActiveRollSpecification == null)
                     {
@@ -244,7 +260,7 @@ public static class OldShields
                         isSavingThrow = false;
                     }
                     // is saving throw
-                    else if (action.HasAnyTraits(Trait.Spell!, Trait.Magical!)
+                    else if (action.HasAnyTraits([Trait.Spell, Trait.Magical])
                              && action.SavingThrow is not null)
                     {
                         if (breakdown.CheckResult > CheckResult.Failure)
@@ -385,6 +401,98 @@ public static class OldShields
                         };
                 }
             });
+        
+        // Defensive Advance (Defensive Advance, modded)
+        Feat? defensiveAdvance = AllFeats.All.FirstOrDefault(feat => feat.Name.Contains("Defensive Advance"));
+        if (defensiveAdvance is not null)
+        {
+            Illustration defAdvIcon = new ModdedIllustration("RDAssets/Advance.png");
+            defensiveAdvance.Traits.Insert(0, ModData.Traits.ModName);
+            defensiveAdvance.Traits.Add(ModData.Traits.ShieldActionFeat);
+            defensiveAdvance.OnCreature = null;
+            defensiveAdvance.WithPermanentQEffect(
+                null,
+                qfFeat =>
+                {
+                    qfFeat.WithDisplayActionInOffenseSection("Defensive Advance", "Raise a Shield, Stride, then make a melee Strike.", 2);
+                    // Dones as Action*S* to avoid collision with the above ^
+                    qfFeat.ProvideActionsIntoPossibilitySection += (qfThis, section) =>
+                    {
+                        Item? shield = null;
+                        
+                        // If this section is found, then this shield isn't raised
+                        if (section.Name == "Raise shield")
+                        {
+                            var options = section.Filter(actPoss =>
+                                actPoss.CombatAction.ActionId is ActionId.RaiseShield);
+                            if ((options?.Possibilities.FirstOrDefault() as ActionPossibility) is { } raise)
+                                shield = raise.CombatAction.Item;
+                        }
+
+                        if (shield is null)
+                            return [];
+                        
+                        bool hasShieldBlock = qfThis.Owner.HasEffect(QEffectId.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
+                        
+                        return
+                        [
+                            new ActionPossibility(CommonShieldRules
+                                .CreateRaiseShieldCore(qfThis.Owner, shield, hasShieldBlock)
+                                .With(ca =>
+                                {
+                                    // Art path for Defensive Advance mod
+                                    ca.Illustration = defAdvIcon;
+                                    var oldRestriction = (ca.Target as SelfTarget)?.AdditionalRestriction;
+                                    ca.Target = Target.Self().WithAdditionalRestriction(self =>
+                                    {
+                                        // Make sure you're allowed to move
+                                        CombatAction move = CombatAction.CreateSimple(
+                                            self, "[DEFENSIVE ADVANCE, TEST MOVE]", Trait.Move);
+                                        string? moveReason = null;
+                                        foreach (QEffect qf in self.QEffects)
+                                            if ((moveReason = qf.PreventTakingAction?.Invoke(move)) != null)
+                                                break;
+                                        if (moveReason is not null)
+                                            return moveReason;
+
+                                        // Make sure you're allowed to strike
+                                        CombatAction attack = CombatAction.CreateSimple(
+                                            self, "[DEFENSIVE ADVANCE, TEST STRIKE]", Trait.Attack, Trait.Strike);
+                                        string? strikeReason = null;
+                                        foreach (QEffect qf in self.QEffects)
+                                            if ((strikeReason = qf.PreventTakingAction?.Invoke(attack)) != null)
+                                                break;
+                                        if (strikeReason is not null)
+                                            return strikeReason;
+
+                                        return oldRestriction?.Invoke(self);
+                                    });
+                                })
+                                .WithName("Defensive Advance (" + shield.Name.ToLower().Capitalize() + ")")
+                                .WithDescription(
+                                    "You Raise your Shield and Stride. If you end your movement within melee reach of at least one enemy, you can make a melee Strike against that enemy.")
+                                .WithActionCost(2)
+                                .WithActionId(ActionId
+                                    .None) // So that you can't use this when offered to raise a shield
+                                .WithExtraTrait(Trait.Flourish)
+                                .WithEffectOnEachTarget(async (action, caster, _, _) =>
+                                {
+                                    Sfxs.Play(SfxName.Footsteps);
+                                    if (!await caster.StrideAsync(
+                                            "Choose where to Stride with Defensive Advance. You should end your movement within melee reach of an enemy.",
+                                            allowCancel: true))
+                                    {
+                                        action.RevertRequested = true;
+                                        caster.RemoveAllQEffects(qf =>
+                                            qf.Id == QEffectId.RaisingAShield && qf.Tag == shield);
+                                    }
+                                    else
+                                        await CommonCombatActions.StrikeAdjacentCreature(caster, null);
+                                }))
+                        ];
+                    };
+                });
+        }
     }
     
     public static void ModifyOldShields()

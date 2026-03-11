@@ -35,7 +35,7 @@ public static class NewShields
                     ModData.Illustrations.Buckler,
                     "buckler",
                     0, 1,
-                    ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield)
+                    ModData.Traits.ModName, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield)
                 .WithMainTrait(ModData.Traits.Buckler)
                 .WithDescription("This very small shield is a favorite of duelists and quick, lightly armored warriors. It's typically made of steel and strapped to your forearm.", "")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning))
@@ -47,7 +47,7 @@ public static class NewShields
                     ModData.Illustrations.FortressShield,
                     "fortress shield",
                     1, 20,
-                    ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, ModData.Traits.HeavyShield, ModData.Traits.CoverShield, ModData.Traits.Hefty14)
+                    ModData.Traits.ModName, Trait.Shield, Trait.Martial, ModData.Traits.HeavyShield, ModData.Traits.CoverShield, ModData.Traits.Hefty14)
                 .WithMainTrait(ModData.Traits.FortressShield)
                 .WithDescription("Also known as portable walls, these thick and heavy shields are slightly larger than tower shields. Like tower shields, they're typically made from wood reinforced with metal, but many are made from larger amounts of metal or even stone.", "")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning))
@@ -59,7 +59,7 @@ public static class NewShields
                     ModData.Illustrations.MeteorShield,
                     "meteor shield",
                     0, 4,
-                    ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, Trait.Thrown30Feet, ModData.Traits.MediumShield)
+                    ModData.Traits.ModName, Trait.Shield, Trait.Martial, Trait.Thrown30Feet, ModData.Traits.MediumShield)
                 .WithMainTrait(ModData.Traits.MeteorShield)
                 .WithDescription("Meteor shields are specifically designed with throwing in mind. A meteor shield is made from thin steel and has quick-release straps, allowing for easy, long-distance throws.", "")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning)
@@ -74,7 +74,7 @@ public static class NewShields
                     ModData.Illustrations.HeavyRondache,
                     "heavy rondache",
                     1, 5,
-                    ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield)
+                    ModData.Traits.ModName, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield)
                 .WithMainTrait(ModData.Traits.HeavyRondache)
                 .WithDescription("Similar in size to a buckler, this shield is intended to absorb blows instead of deflecting attacks. It features multiple layers of metal and is reinforced with additional wood.", "")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning))
@@ -98,7 +98,7 @@ public static class NewShields
                         ModData.Illustrations.CastersTarge,
                         "caster's targe",
                         level, price,
-                        ModData.Traits.MoreShields, Trait.Shield, Trait.Martial, Trait.NonMetallic,
+                        ModData.Traits.ModName, Trait.Shield, Trait.Martial, Trait.NonMetallic,
                         ac)
                     .WithMainTrait(ModData.Traits.CastersTarge)
                     .WithDescription(

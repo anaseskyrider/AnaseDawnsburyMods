@@ -13,6 +13,7 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.StatBlocks.Monsters.L5;
@@ -201,7 +202,7 @@ public static class ShieldPatches
             // Adds devoted guardian to the target
             if (devotedGuardian)
             {
-                bool isCoverShield = shield.HasAnyTraits(ModData.Traits.CoverShield!, Trait.TowerShield!);
+                bool isCoverShield = shield.HasAnyTraits([ModData.Traits.CoverShield, Trait.TowerShield]);
                 int bonus = isCoverShield ? 2 : 1;
                 target.AddQEffect(new QEffect(
                     "Devoted Guardian",
@@ -353,20 +354,43 @@ public static class ShieldPatches
         }
     }
 
-    // TODO: Delay execution for other actions such as Disarming Block
-    /// <summary>Adjusts Aggressive Block to provide a shove sound effect, a prettier prompt, and combat logging.</summary>
+    /// <summary>
+    /// Aggressive Block now only works if the creature is your size or smaller.
+    /// </summary>
+    [HarmonyPatch(typeof(Doorwarden), nameof(Doorwarden.CreateAggressiveBlock))]
+    internal static class PatchAggressiveBlockPopup
+    {
+        internal static void Postfix(ref QEffect __result)
+        {
+            __result.Description = __result.Description!.Replace(
+                "adjacent enemy",
+                "adjacent enemy of your size or smaller");
+            __result.WhenYouUseShieldBlock = async (qfThis, attacker, target, amount) =>
+            {
+                if (!qfThis.Owner.IsAdjacentTo(attacker)
+                    || attacker.Space.Size > qfThis.Owner.Space.Size)
+                    return;
+                attacker.AddQEffect(Doorwarden.CreateAggressiveBlockTemporaryQEffect(attacker, qfThis.Owner));
+            };
+        }
+    }
+
+    /// <summary>Adjusts Aggressive Block to use a Shove subordinate action, provide a shove sound effect, a prettier prompt, and combat logging.</summary>
     [HarmonyPatch(typeof(Doorwarden), nameof(Doorwarden.CreateAggressiveBlockTemporaryQEffect))]
-    internal static class PatchAggressiveBlock
+    internal static class PatchAggressiveBlockAction
     {
         internal static void Postfix(Creature attacker, Creature defender, ref QEffect __result)
         {
             __result.AfterYouTakeAction = async (qfThis, action) =>
             {
+                if (CommonShieldRules.GetRaisedShields(defender).FirstOrDefault() is not {} shield)
+                    return;
+                
                 // Pretties the reaction prompt
                 if (!await defender.Battle.AskForConfirmation(
                         defender,
                         IllustrationName.SteelShield,
-                        $"{{b}}Aggressive Block{{/b}} {{icon:FreeAction}}\nYou just used Shield Block. Push {{Blue}}{attacker}{{/Blue}} 5 feet away from you? {{i}}(They could become flat-footed if they cannot be moved.){{/i}}", // Pretties the prompt
+                        $"{{b}}Aggressive Block{{/b}} {{icon:FreeAction}}\nYou just used Shield Block. Automatically Shove {{Blue}}{attacker}{{/Blue}} 5 feet away from you? {{i}}(They could become flat-footed if they cannot be moved.){{/i}}", // Pretties the prompt
                         "Push"))
                     return;
                 
@@ -376,14 +400,36 @@ public static class ShieldPatches
                     Color.Black,
                     "{DarkBlue}{b}" + defender + "{/b}{/DarkBlue} uses {b}Aggressive Block{/b} {icon:FreeAction} against {DarkBlue}{b}" + attacker + "{/b}{/DarkBlue}",
                     "Aggressive Block {icon:FreeAction}",
-                    "{i}You push back as you block the attack, knocking your foe away or off balance.{/i}\n\nWhen you use the Shield Block reaction against an attack of an adjacent enemy, you can choose to push that enemy 5 feet. If it can't be pushed away, it's instead flat-footed until the start of your next turn.",
-                    new Traits([..AllFeats.GetFeatByFeatName(FeatName.AggressiveBlock).Traits, ModData.Traits.ReactiveAction]));
+                    """
+                    {i}You push back as you block the attack, knocking your foe away or off balance.{/i}
+
+                    When you use the Shield Block reaction against an attack of an adjacent enemy of your size or smaller, you can choose to automatically Shove that enemy 5 feet. If it can't be pushed away, it's instead flat-footed until the start of your next turn.
+                    """,
+                    new Traits([ModData.Traits.ModName, ..AllFeats.GetFeatByFeatName(FeatName.AggressiveBlock).Traits, ModData.Traits.ReactiveAction]));
                 
                 Tile previousPosition = attacker.Space.TopLeftTile;
                 
                 Sfxs.Play(SfxName.Shove); // Adds shove sound
                 
-                await defender.PushCreature(attacker, 1);
+                /*await defender.PushCreature(attacker, 1);*/
+
+                CombatAction shove = CombatManeuverPossibilities
+                    .CreateShoveAction(defender, shield)
+                    .WithActionCost(0)
+                    .WithActiveRollSpecification(null)
+                    .With(ca =>
+                    {
+                        // Remove free hand requirement
+                        ca.Target = Target.Reach(shield)
+                            .WithAdditionalConditionOnTargetCreature(
+                                new TargetMustNotBeTwoSizesAboveYouCreatureTargetingRequirement());
+                        // Automatic success result
+                        var oldEffect = ca.EffectOnOneTarget;
+                        ca.EffectOnOneTarget = async (shove, caster, target, _) =>
+                            await oldEffect?.Invoke(shove, caster, target, CheckResult.Success)!;
+                    });
+                await defender.Battle.GameLoop.FullCast(shove, ChosenTargets.CreateSingleTarget(attacker));
+                
                 if (ReferenceEquals(previousPosition, attacker.Space.TopLeftTile))
                     attacker.AddQEffect(QEffect.FlatFooted("Aggressive Block")
                         .WithExpirationAtStartOfSourcesTurn(defender, 1));

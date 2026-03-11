@@ -1,9 +1,11 @@
+using System.Reflection;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Campaign.Encounters.Tutorial;
 using Dawnsbury.Campaign.Path;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations;
 using Dawnsbury.Core.CharacterBuilder;
+using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Spellbook;
 using Dawnsbury.Core.CharacterBuilder.Library;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
@@ -17,6 +19,7 @@ using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Modding;
+using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.MoreShields;
 
@@ -24,13 +27,14 @@ namespace Dawnsbury.Mods.MoreShields;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
+/// <item>v1.5: Replaced error-prone params keywords with regular arrays. Added RefundReaction extensions. Added more robust PluralizeIf extension. Added ModManager extensions.</item>
 /// <item>v1.4: Added Item.WithDescription(flavorText, rulesText).</item>
 /// <item>v1.3: Added CombatAction.HasAllTraits, CombatAction.HasAnyTraits, OfferOptions2 with variants for ActionPossibility and Possibility.</item>
 /// <item>v1.2: Added CreateSpellLink(SpellId, Trait, int). Refactored into Extension blocks.</item>
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
-/// <value>v1.1</value>
+/// <value>v1.5</value>
 public static class LibraryOfAnase
 {
     #region Extensions
@@ -49,13 +53,13 @@ public static class LibraryOfAnase
         /// <summary>
         /// Returns whether the CombatAction has all the passed traits.
         /// </summary>
-        public bool HasAllTraits(params Trait[] traits) =>
+        public bool HasAllTraits(Trait[] traits) =>
             caThis.Traits.All(traits.Contains);
 
         /// <summary>
         /// Returns whether the CombatAction has any of the passed traits.
         /// </summary>
-        public bool HasAnyTraits(params Trait[] traits) =>
+        public bool HasAnyTraits(Trait[] traits) =>
             caThis.Traits.Any(traits.Contains);
 
         /// <summary>
@@ -133,13 +137,13 @@ public static class LibraryOfAnase
         /// <summary>
         /// Returns whether the item has all the passed traits.
         /// </summary>
-        public bool HasAllTraits(params Trait[] traits) =>
+        public bool HasAllTraits(Trait[] traits) =>
             item.Traits.All(traits.Contains);
 
         /// <summary>
         /// Returns whether the item has any of the passed traits.
         /// </summary>
-        public bool HasAnyTraits(params Trait[] traits) =>
+        public bool HasAnyTraits(Trait[] traits) =>
             item.Traits.Any(traits.Contains);
 
         /// <summary>
@@ -151,6 +155,45 @@ public static class LibraryOfAnase
                 (string.IsNullOrEmpty(flavorText) ? flavorText : "{i}" + flavorText + "{/i}")
                 + (string.IsNullOrEmpty(rulesText) ? null : "\n\n");
             return item.WithDescription(newFlavor + rulesText);
+        }
+    }
+    
+    extension(Actions actions)
+    {
+        public bool RefundReaction(string question, Trait[] reactionTraits, bool refundAllMatching = false)
+        {
+            if (actions.GetType()
+                    .GetField("creature", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+                    ?.GetValue(actions)
+                is not Creature cr)
+                return false;
+
+            bool refunded = false;
+            foreach (QEffect qf in cr.QEffects)
+            {
+                if (qf.OfferExtraReaction?.Invoke(qf, question, reactionTraits) is not { } keyword)
+                    continue;
+                if (!actions.ReactionsUsedUpThisRound.Contains(keyword))
+                    continue;
+                
+                actions.ReactionsUsedUpThisRound.Remove(keyword);
+                refunded = true;
+                
+                if (!refundAllMatching)
+                    break;
+            }
+
+            return refunded;
+        }
+
+        public bool RefundReaction(string keyword)
+        {
+            if (!actions.ReactionsUsedUpThisRound.Contains(keyword))
+                return false;
+            
+            actions.ReactionsUsedUpThisRound.Remove(keyword);
+            return true;
+
         }
     }
 
@@ -165,6 +208,18 @@ public static class LibraryOfAnase
         {
             color = color.Capitalize();
             return "{"+color+"}" + text + "{/"+color+"}";
+        }
+
+        /// <summary>
+        /// Pluralizes a word if count is greater than 1. Example: <code>"octop".PluralizeIf("us", "odes", numOctopus)</code>This will return the string "octopus" when numOctopus==1, or return "octopodes" otherwise.
+        /// </summary>
+        /// <param name="addSingular">The singular characters to add (if any) to the initial string.</param>
+        /// <param name="addPlural">The plural characters to add to the initial string.</param>
+        /// <param name="count">The quantity to compare to when determining if this word is plural or not.</param>
+        /// <returns>The initial string with addSingular or addPlural added to the end of the string.</returns>
+        public string PluralizeIf(string? addSingular, string addPlural, int count)
+        {
+            return text + (count == 1 ? addSingular : addPlural);
         }
     }
 
@@ -241,10 +296,58 @@ public static class LibraryOfAnase
         return thresholdToUpgrade + num;
     }
 
+    extension(ModManager)
+    {
+        /// <summary>
+        /// Creates a custom "Mod" trait which indicates which mod the traited content comes from. This trait is visible with a basic description that uses your humanized mod name.
+        /// </summary>
+        /// <param name="modTechnicalName">The technicalName of the mod such as "MoreDedications". The final technical name of this trait will be "Mod:MoreDedications".</param>
+        /// <param name="modName">The humanized name of the mod such as "More Dedications".</param>
+        public static Trait RegisterModNameTrait(string modTechnicalName, string modName)
+        {
+            return ModManager.RegisterTrait(
+                "Mod:" + modTechnicalName,
+                new TraitProperties(
+                    "Mod",
+                    true,
+                    "This content comes from or is modified by {b}" + modName + "{/b}.",
+                    false,
+                    Color.LightSteelBlue,
+                    false,
+                    false));
+        }
+        
+        /// <summary>
+        /// As <see cref="ModManager.AddFeat"/>, but it removes the Mod trait and adds your mod's specific trait.
+        /// </summary>
+        /// <param name="newFeat">The feat to register.</param>
+        /// <param name="modName">The mod-source trait to replace the "Mod" trait with.</param>
+        public static void AddFeat(Feat newFeat, Trait modName)
+        {
+            ModManager.AddFeat(newFeat);
+            newFeat.Traits.Remove(Trait.Mod);
+            newFeat.Traits.Insert(0, modName);
+        }
+        
+        /// <summary>
+        /// As <see cref="ModManager.AddFeat"/>, but it registers the given strings as a mod-source trait and replaces the "Mod" trait with the new trait.
+        /// </summary>
+        /// <seealso cref="AddFeat(Feat, Trait)"/>
+        /// <seealso cref="RegisterModNameTrait(string, string)"/>
+        /// <param name="newFeat"></param>
+        /// <param name="modTechnicalName"></param>
+        /// <param name="modName"></param>
+        public static void AddFeat(Feat newFeat, string modTechnicalName, string modName)
+        {
+            Trait modTrait = ModManager.RegisterModNameTrait(modTechnicalName, modName);
+            ModManager.AddFeat(newFeat, modTrait);
+        }
+    }
+
     #endregion
 
     #region Statics
-
+    
     /// <summary>
     /// Alternative overload for <see cref="AllSpells.CreateSpellLink"/> which includes the spell's level.
     /// </summary>
@@ -280,7 +383,6 @@ public static class LibraryOfAnase
             .Create(self)
             .Filter(ap =>
             {
-                
                 ap.CombatAction.ActionCost = 0;
                 if (!filter.Invoke(ap.CombatAction))
                     return false;
