@@ -394,7 +394,7 @@ public static class GuardianClass
 
                 {b}Special{/b} You can extend this ability to an ally within 15 feet of you if the damage comes from your taunted enemy. If this ally is farther than you can Step to reach, you can Stride instead of Stepping; you still must end the movement adjacent to your ally.
                 """,
-                [ModData.Traits.ModSource, ModData.Traits.Guardian],
+                [ModData.Traits.ModSource],
                 null)
             .WithOnSheet(values =>
             {
@@ -556,7 +556,7 @@ public static class GuardianClass
                 ModData.FeatNames.ToughToKill,
                 "The protectiveness of your armor ensures that even if you fall, you take longer to die.",
                 "You gain the Diehard general feat {i}(you should retrain it if you already have it){/i}. Additionally, the first time each day you'd be reduced to dying 3 or higher, you stay at dying 2 instead.",
-                [ModData.Traits.ModSource, ModData.Traits.Guardian],
+                [ModData.Traits.ModSource],
                 null)
             .WithOnSheet(values =>
             {
@@ -620,7 +620,7 @@ public static class GuardianClass
                 "You're always on the lookout for danger and can react to it in an instant.",
                 // Wording altered slightly since multiclasses cannot acquire Ever Ready, nor Reaction Time.
                 "At the start of combat and for each of your turns, you gain an additional reaction that you can use only for reactions from guardian feats or class features (including Shield Block).",
-                [ModData.Traits.ModSource, ModData.Traits.Guardian],
+                [ModData.Traits.ModSource],
                 null)
             .WithPermanentQEffect(
                 "You have an extra reaction you can use for guardian feats and features (including Shield Block).",
@@ -643,7 +643,7 @@ public static class GuardianClass
                 "You are known for your suit of armor more than the person inside.",
                 "While wearing armor, when you attempt a Reflex save, you can add your armor's item bonus to AC instead of your Dexterity modifier if it's higher; if your armor has the bulwark trait, increase this bonus by 1. If you get a success when you do this, you get a critical success instead.",
                 /*"While wearing armor, when you attempt a Reflex save to avoid a damaging effect, such as a fireball, you can add your armor's item bonus to AC instead of your Dexterity modifier; if your armor has the bulwark trait, increase this bonus by 1. If you get a success when you do this, you get a critical success instead."*/
-                [ModData.Traits.ModSource, ModData.Traits.Guardian],
+                [ModData.Traits.ModSource],
                 null)
             .WithPermanentQEffect(
                 "{b}Requires{/b} wearing armor; {b}Effect{/b} You use your armor's AC instead of your Dexterity for Reflex saves (+1 more with bulwark). Additionally, if you succeed on a Reflex save, you critically succeed instead.",
