@@ -581,7 +581,8 @@ public static class GuardianFeats
                         "Taunting Strike",
                         "Make a Strike. Then make a visual Taunt.");
                     // The actual action
-                    qfFeat.ProvideStrikeModifier = item => CreateTauntingStrike(item, false);
+                    qfFeat.ProvideStrikeModifier = item =>
+                        CreateTauntingStrike(item, false);
                     qfFeat.Owner.AddQEffect(new QEffect()
                     {
                         Name = "[TAUNTING STRIKE THROWN VARIANT GRANTER]",
@@ -599,7 +600,9 @@ public static class GuardianFeats
                             .CreateStrike(
                                 qfFeat.Owner,
                                 item,
-                                isThrown ? RangeKind.Ranged : RangeKind.Melee,
+                                isThrown || item.HasTrait(Trait.Ranged)
+                                    ? RangeKind.Ranged
+                                    : RangeKind.Melee,
                                 -1,
                                 isThrown)
                             .WithName("Taunting Strike" + (isThrown ? " (Thrown)" : null))
@@ -620,6 +623,10 @@ public static class GuardianFeats
                             tauntingStrike.StrikeModifiers,
                             additionalAftertext: "Make a visual Taunt against the Strike's target.");
                         (tauntingStrike.Target as CreatureTarget)!
+                            .WithAdditionalConditionOnTargetCreature((a, d) => 
+                                a.DistanceTo(d) > (a.HasFeat(ModData.FeatNames.LongDistanceTaunt) ? 24 : 6)
+                                    ? Usability.CommonReasons.TargetOutOfRange
+                                    : Usability.Usable)
                             .WithAdditionalConditionOnTargetCreature((a, d) =>
                                 d.IsImmuneTo(Trait.Visual)
                                     ? Usability.NotUsableOnThisCreature("Immune to visual")
