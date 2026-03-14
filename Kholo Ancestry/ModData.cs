@@ -146,10 +146,20 @@ public static class ModData
     
     public static class Traits
     {
+        /// <summary>
+        /// "Mod" trait which helps identify the modded source of a given stat block.
+        /// </summary>
+        public static readonly Trait ModName = ModManager.RegisterModNameTrait("KholoAncestry", "Kholo Ancestry");
+        
         /// <summary>The Trait corresponding to the Kholo ancestry.</summary>
         public static readonly Trait Kholo = ModManager.RegisterTrait("Kholo", 
             new TraitProperties("Kholo", true, "Kholos are hyena-headed humanoids who embrace practicality and pragmatism.")
                 { IsAncestryTrait = true });
+        
+        /// <summary>
+        /// Trait from Deployable Familiars. Makes the feat into a deployable familiar feat.
+        /// </summary>
+        public static readonly Trait DeployableFamiliarFeat = ModManager.RegisterTrait("DeployableFamiliarFeat", new TraitProperties("Deployable Familiar Feat", false));
         
         /// <summary>The <see cref="ItemName.Flail"/> uses <see cref="Trait.Flail"/> as both its main trait and its weapon group, resulting in proficiency adjustment problems. This is added secretly to the Flail weapon to distinguish it from other flail-group weapons.</summary>
         public static readonly Trait FlailItself = ModManager.RegisterTrait(IdPrepend+"FlailItself", 

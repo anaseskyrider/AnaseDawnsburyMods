@@ -117,7 +117,7 @@ public static class AncestryFeats
                 1,
                 "Hyenas serve kholo as pets and trackers. Some kholos, such as yourself, draw the attention of smaller hyenas that are vessels for magical spirits.",
                 "You gain a hyena as a {link:ClassFamiliar}combat familiar{/}. It always has the {link:"+ModData.FeatNames.FamiliarScent+"}scent{/} ability prepared, which counts against the number of familiar abilities it has.",
-                [ModData.Traits.Kholo])
+                [ModData.Traits.Kholo, ModData.Traits.DeployableFamiliarFeat])
             .WithIllustration(ModData.Illustrations.HyenaFamiliar)
             .WithEquivalent(values => values.Tags.ContainsKey(Familiars.FAMILIAR_KEY))
             .WithOnSheet(values =>
