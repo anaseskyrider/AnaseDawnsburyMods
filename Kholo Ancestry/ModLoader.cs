@@ -34,14 +34,4 @@ public static class ModLoader
         KholoAncestry.LoadAncestry();
         AncestryFeats.LoadFeats();
     }
-
-    /// <summary>Create a new instance of <see cref="SleepRequest"/> using Reflection.</summary>
-    public static AdvancedRequest NewSleepRequest(int sleepTime, bool clickedThrough = true)
-    {
-        Type? sleepRequest = typeof(AdvancedRequest).Assembly.GetType("Dawnsbury.Core.Coroutines.Requests.SleepRequest");
-        var constructor = sleepRequest?.GetConstructor([typeof(int)]);
-        var sleep = constructor?.Invoke([sleepTime]);
-        sleep?.GetType().GetProperty("CanBeClickedThrough")?.SetMethod?.Invoke(sleep, [clickedThrough]);
-        return (AdvancedRequest)sleep!;
-    }
 }

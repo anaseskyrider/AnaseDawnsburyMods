@@ -808,19 +808,10 @@ public static class AncestryFeats
                     {
                         qfThis2.ExpiresAt = ExpirationCondition.Immediately;
                         Sfxs.Play(SfxName.Unallowed);
-                        /*await self.Battle.Cinematics.ShowQuickBubble(
+                        await self.Battle.Cinematics.ShowQuickBubble(
                             self,
-                            "{b}Sensitive Nose{/b}\nThis foul smell is messing with my nose. I can only detect creatures using my imprecise scent from 15 feet away.",
-                            null);*/
-                        string dialog =
-                            "{b}" + qfThis.Name + "{/b}\nThis foul smell is messing with my" + (isFamiliar ? " familiar's" : null) + " nose. I can only detect creatures using " + (isFamiliar ? "their" : "my") + " imprecise scent from {Red}" + (reducedRange * 5) + " feet away{/Red}.";
-                        self.Battle.Cinematics.TutorialBubble = new TutorialBubble(
-                            self.Illustration,
-                            SubtitleModification.Replace(dialog),
-                            null);
-                        self.Battle.Log("{b}" + self.Name + ":{/b} " + dialog);
-                        await self.Battle.SendRequest(ModLoader.NewSleepRequest(5000));
-                        self.Battle.Cinematics.TutorialBubble = null;
+                            "{b}" + qfThis.Name + "{/b}\nThis foul smell is messing with my" + (isFamiliar ? " familiar's" : null) + " nose. I can only detect creatures using " + (isFamiliar ? "their" : "my") + " imprecise scent from {Red}" + (reducedRange * 5) + " feet away{/Red}.",
+                            5000);
                     },
                 });
             },
