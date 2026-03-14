@@ -1,4 +1,3 @@
-using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Mechanics;
@@ -15,11 +14,6 @@ public static class ModData
     
     public static void LoadData()
     {
-        // Register Mod Options
-        /*ModManager.RegisterBooleanSettingsOption(ModData.BooleanOptions.UnrestrictedTrace,
-            "Runesmith: Less Restrictive Rune Tracing",
-            "Enabling this option removes protections against \"bad decisions\" with tracing certain runes on certain targets.\n\nThe Runesmith is a class on the more advanced end of tactics and creativity. For example, you might want to trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy. Or you might trace Atryl on yourself as a 3rd action so that you can move it with Transpose Etching (just 1 action) on your next turn, because you're a ranged build.\n\nThis option is for those players.",
-            true);*/
         
         ItemNames.SpiritThresher = ModManager.RegisterNewItemIntoTheShop(
             "SpiritThresher",
