@@ -101,7 +101,6 @@ public static class AncestryFeats
                 ModData.FeatNames.FamiliarScent,
                 "Your familiar has enhanced olfactory perception.",
                 "You gain imprecise scent with a range of 15 feet, which means that creatures can't be undetected within the area while you are conscious.")
-            .WithEquivalent(values => values.Tags.ContainsKey(Familiars.FAMILIAR_KEY))
             .WithOnCreature(self =>
             {
                 self.AddQEffect(ImpreciseScent(
