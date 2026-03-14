@@ -46,7 +46,7 @@ public static class KholoAncestry
                 values.GrantFeat(ModData.FeatNames.EnhancedSenses);
                 values.GrantFeat(ModData.FeatNames.Bite);
             });
-        ModManager.AddFeat(kholoAncestry);
+        ModManager.AddFeat(kholoAncestry, ModData.Traits.ModName);
     }
 
     public static void LoadFeatures()
@@ -70,7 +70,7 @@ public static class KholoAncestry
                         return new Bonus(amount, BonusType.Circumstance, "Enhanced senses");
                     };
                 });
-        ModManager.AddFeat(enhancedSenses);
+        ModManager.AddFeat(enhancedSenses, ModData.Traits.ModName);
 
         Feat bite = new Feat(
                 ModData.FeatNames.Bite,
@@ -90,7 +90,7 @@ public static class KholoAncestry
                         DamageKind.Piercing,
                         traits);
                 });
-        ModManager.AddFeat(bite);
+        ModManager.AddFeat(bite, ModData.Traits.ModName);
     }
 
     public static IEnumerable<Feat> CreateHeritages()
@@ -102,7 +102,7 @@ public static class KholoAncestry
                 "You are trained in Deception.\n\n"
                     + ModData.Illustrations.DawnsburySun.IllustrationAsIconString
                     + " {b}Modding{/b} If the {i}Exploration Activities{/i} mod is installed, you also gain its Deceptive Approach skill feat without needing to meet its prerequisites.",
-                [Trait.Mod], null)
+                [ModData.Traits.ModName], null)
             .WithOnSheet(values =>
             {
                 values.TrainInThisOrSubstitute(Skill.Deception);
@@ -114,7 +114,7 @@ public static class KholoAncestry
                 ModData.FeatNames.KholoCave,
                 "Storytellers spin ancient tales claiming that kholo lived in caves and underground before most of your kind ventured into the light. You're a throwback to these ancients, with a broad chest and markings that resemble short black slashes instead of spots. Your eyes are developed to see perfectly in the dark, a valuable advantage to your clan.",
                 "Increase the circumstance bonus from your enhanced senses feature to a +2 instead of a +1. You also gain this bonus to saves against effects with the Light trait.",
-                [Trait.Mod], null)
+                [ModData.Traits.ModName], null)
             .WithPermanentQEffect(
                 "You have a +2 circumstance bonus to saves against light effects.",
                 qfFeat =>
@@ -129,7 +129,7 @@ public static class KholoAncestry
                 ModData.FeatNames.KholoDog,
                 "You're a nimble-bodied kholo with a prehistoric, almost dog-like build, who moves like a quadruped but fights like a biped.",
                 "While you have both hands free, your Speed increases to 30 feet as you run on all fours.",
-                [Trait.Mod], null)
+                [ModData.Traits.ModName], null)
             .WithOnCreature(self =>
                 ++self.BaseSpeed);
         // Great Kholo
@@ -137,7 +137,7 @@ public static class KholoAncestry
                 ModData.FeatNames.KholoGreat,
                 "You're an imposing, powerful kholo, with tawny fur and brown spots on your hide.",
                 "You gain 10 Hit Points from your ancestry instead of 8 and gain a +1 circumstance bonus to Athletics checks to Reposition, Shove, or Trip.",
-                [Trait.Mod], null)
+                [ModData.Traits.ModName], null)
             .WithOnCreature(cr =>
                 cr.MaxHP += 2)
             .WithPermanentQEffect(
@@ -166,7 +166,7 @@ public static class KholoAncestry
                 "You are trained in Diplomacy.\n\n"
                 + ModData.Illustrations.DawnsburySun.IllustrationAsIconString
                 + " {b}Modding{/b} If the {i}Exploration Activities{/i} mod is installed, you also gain its Glad-Hand skill feat without needing to meet its prerequisites.",
-                [Trait.Mod], null)
+                [ModData.Traits.ModName], null)
             .WithOnSheet(values =>
             {
                 values.TrainInThisOrSubstitute(Skill.Diplomacy);
@@ -178,7 +178,7 @@ public static class KholoAncestry
                 ModData.FeatNames.KholoWinter,
                 "You're a hardy kholo covered in thick, tufted fur that makes you able to survive in the harsh winters of the colder territories.",
                 "You gain cold resistance equal to half your level (minimum 1).",
-                [Trait.Mod], null)
+                [ModData.Traits.ModName], null)
             .WithOnCreature(self =>
             {
                 self.AddQEffect(QEffect.DamageResistance(DamageKind.Cold, Math.Max(1, self.Level / 2)));
@@ -188,7 +188,7 @@ public static class KholoAncestry
                 ModData.FeatNames.KholoWitch,
                 "You're a shaggy, dark-furred kholo capable of making some truly uncanny sounds.",
                 "Choose any one occult cantrip. You can cast it at-will as an innate spell. In addition, you gain a +1 circumstance bonus to checks to Create a Diversion, as your voice lends to your distractions.",
-                [Trait.Mod], null)
+                [ModData.Traits.ModName], null)
             .WithOnSheet(values =>
             {
                 values.SetProficiency(Trait.Spell, Proficiency.Trained);

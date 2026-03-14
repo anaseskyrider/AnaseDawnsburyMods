@@ -31,7 +31,7 @@ public static class AncestryFeats
     public static void LoadFeats()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
     }
     
     public static IEnumerable<Feat> CreateFeats()

@@ -25,7 +25,7 @@ public static class ModData
                     "spirit thresher",
                     0,
                     2,
-                    [ModData.Traits.Kholo, Trait.Advanced, Trait.Flail, Trait.TwoHanded, Trait.Sweep, Trait.VersatileS])
+                    [ModData.Traits.ModName, ModData.Traits.Kholo, Trait.Advanced, Trait.Flail, Trait.TwoHanded, Trait.Sweep, Trait.VersatileS])
                 .WithDescription("{i}Bones, some solid and others splintered, are affixed to metal chains at the end of a long stick to form a powerful flail. Many kholo warriors insist the vicious crack the weapon makes as it strikes loosens fragments of the soul like husks struck from grains.{/i}")
                 .WithMainTrait(ModData.Traits.SpiritThresher)
                 .WithWeaponProperties(new WeaponProperties("1d12", DamageKind.Bludgeoning)));
