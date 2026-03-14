@@ -14,6 +14,8 @@ public static class ModData
     
     public static void LoadData()
     {
+        ActionIds.Initialize();
+        QEffectIds.Initialize();
         
         ItemNames.SpiritThresher = ModManager.RegisterNewItemIntoTheShop(
             "SpiritThresher",
@@ -27,19 +29,29 @@ public static class ModData
                 .WithDescription("{i}Bones, some solid and others splintered, are affixed to metal chains at the end of a long stick to form a powerful flail. Many kholo warriors insist the vicious crack the weapon makes as it strikes loosens fragments of the soul like husks struck from grains.{/i}")
                 .WithMainTrait(ModData.Traits.SpiritThresher)
                 .WithWeaponProperties(new WeaponProperties("1d12", DamageKind.Bludgeoning)));
-        
-        ////////////////
-        // Action IDs //
-        ////////////////
-        // Ensures compatibility with other mods registering the same ID, regardless of load order.
-        ActionIds.AidReaction = ModManager.TryParse("AidReaction", out ActionId aidReaction)
-            ? aidReaction
-            : ModManager.RegisterEnumMember<ActionId>("AidReaction");
+    }
+
+    /// <summary>
+    /// Registers the source enum to the game, or returns the original if it's already registered.
+    /// </summary>
+    /// <param name="technicalName">The technicalName string of the enum being registered.</param>
+    /// <typeparam name="T">The enum being registered to.</typeparam>
+    /// <returns>The newly registered enum.</returns>
+    public static T SafelyRegister<T>(string technicalName) where T : struct, Enum
+    {
+        return ModManager.TryParse(technicalName, out T alreadyRegistered)
+            ? alreadyRegistered
+            : ModManager.RegisterEnumMember<T>(technicalName);
     }
 
     public static class ActionIds
     {
         public static ActionId AidReaction;
+        
+        public static void Initialize()
+        {
+            AidReaction = SafelyRegister<ActionId>("AidReaction");
+        }
     }
 
     public static class FeatNames
@@ -107,7 +119,12 @@ public static class ModData
 
     public static class QEffectIds
     {
-        public static readonly QEffectId AbsorbStrengthImmunity = ModManager.RegisterEnumMember<QEffectId>("AbsorbStrengthImmunity");
+        public static QEffectId AbsorbStrengthImmunity;
+        
+        public static void Initialize()
+        {
+            AbsorbStrengthImmunity = SafelyRegister<QEffectId>("AbsorbStrengthImmunity");
+        }
     }
 
     public static class Tooltips
