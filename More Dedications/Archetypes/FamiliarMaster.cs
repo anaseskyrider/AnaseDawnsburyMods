@@ -173,7 +173,7 @@ public static class FamiliarMaster
                                 qfThis.Owner,
                                 new SideBySideIllustration(IllustrationName.Haste, fTag.IllustrationOrDefault),
                                 "Fast Command",
-                                [ModData.Traits.MoreDedications, Trait.Concentrate],
+                                [ModData.Traits.MoreDedications, Trait.Concentrate, Trait.Basic],
                                 """
                                 {i}A spark of strong connection can allow you to command with your familiar with a mere thought.{/i}
 
