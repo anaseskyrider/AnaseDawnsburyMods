@@ -1980,6 +1980,7 @@ public static class GuardianFeats
 
                                 You gain a number of temporary Hit Points equal to half your maximum Hit Points.
                                 """)
+                            .WithActionCost(2)
                             .WithSoundEffect(SfxName.MinorHealing)
                             .WithEffectOnSelf(self =>
                             {
