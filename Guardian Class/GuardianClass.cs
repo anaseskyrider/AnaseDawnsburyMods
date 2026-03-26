@@ -859,7 +859,7 @@ public static class GuardianClass
                 amount = -2;
             else
                 amount = -1;
-            return new Bonus(amount * (invert?-1:1), BonusType.Circumstance, name, invert ? null : true);
+            return new Bonus(amount * (invert?-1:1), BonusType.Circumstance, name, invert ? true : null);
         }
 
         bool ActionTriggersTaunt(CombatAction action, Creature guardian)
