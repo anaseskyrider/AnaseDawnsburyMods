@@ -115,7 +115,8 @@ public static class Ready
                         List<Creature> provokeQueue = (qfThis.Tag as List<Creature>)!;
 
                         foreach (Creature cr in qfThis.Owner.Battle.AllCreatures
-                                     .Where(qfThis.Owner.EnemyOf))
+                                     .Where(qfThis.Owner.EnemyOf)
+                                     .ToList())
                         {
                             if (HasCoverOrShield(qfThis.Owner, cr))
                             {
@@ -356,7 +357,8 @@ public static class Ready
                         List<Creature> provokeQueue = (qfThis.Tag as List<Creature>)!;
 
                         foreach (Creature cr in self.Battle.AllCreatures
-                                     .Where(cr => !cr.FriendOf(self)))
+                                     .Where(cr => !cr.FriendOf(self))
+                                     .ToList())
                         {
                              if (cr.IsFlatfootedToBecause(self, null) == null
                                 && !cr.QEffects.Any(qf =>
@@ -514,7 +516,9 @@ public static class Ready
                         Dictionary<Creature,int> provokeQueue = (qfThis.Tag as Dictionary<Creature,int>)!;
                         
                         // For each enemy currently in my reach,
-                        foreach (Creature cr in self.Battle.AllCreatures.Where(cr => !cr.FriendOf(self)))
+                        foreach (Creature cr in self.Battle.AllCreatures
+                                     .Where(cr => !cr.FriendOf(self))
+                                     .ToList())
                         {
                             if (cr.DistanceToWith10FeetException(self) > reach)
                             {
