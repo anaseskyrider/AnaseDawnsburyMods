@@ -307,7 +307,12 @@ public static class Ready
                             if (!provokingAction.HasTrait(Trait.Move) || provokingAction.HasTrait(Trait.DoesNotProvoke) || provokingAction.ActionId == ActionId.Step || provokingAction.TilesMoved == 0 || !qfThis.Owner.IsAdjacentTo(caster))
                                 return;
 
-                            if (await caster.AskToUseReaction($"{{b}}Ready (Footwork) {{icon:Reaction}}{{/b}}\n{{Blue}}{qfThis.Owner.Name}{{/Blue}} has ended their {{Blue}}{provokingAction.Name}{{/Blue}} action adjacent to you.\nStep or Stride?"))
+                            if (await caster.AskToUseReaction(
+                                    $$"""
+                                            {b}Ready (Footwork) {icon:Reaction}{/b}
+                                            {Blue}{{qfThis.Owner.Name}}{/Blue} has ended their {Blue}{{provokingAction.Name}}{/Blue} action adjacent to you.
+                                            Step or Stride?
+                                            """))
                             {
                                 if (!await caster.StrideAsync("Make a Step or Stride.", allowStep: true, allowCancel: true, allowPass: true))
                                     caster.Actions.RefundReaction();
