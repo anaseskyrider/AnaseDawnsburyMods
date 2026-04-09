@@ -9,11 +9,9 @@ The `GreaterParry()` function creates a `QEffect` that performs the effects of f
 ### Art (Public Domain)
 This library comes with two icons (and two rotated variants). This art is provided by Lobot922 for use as public domain, no credits required.
 
-I recommend using `new ModdedIllustration(<path to your asset folder> + "ParryT7.png")` and `new ModdedIllustration(<path to your asset folder> + "ParryT6.png")` for the second and third arguments of `ParryLogic.Load()`. This will create a SideBySideIllustration using a colorful icon and the weapon's illustration for the action, while the effect on your token will be a high-contrast black-and-white icon unique to parrying, in the same style as the game's raised shield icon.
+I recommend using `new ModdedIllustration(<path to your asset folder> + "ParryT7.png")` and `new ModdedIllustration(<path to your asset folder> + "ParryT6.png")` for the second and third arguments of `ParryLogic.Load()`. This will create a SideBySideIllustration of a colorful icon plus the weapon icon for the action, while the effect on your token will be a high-contrast black-and-white parrying icon in the same style as the game's raised shield icon.
 
 If you prefer not to use any icon art for these actions, they can be null, which will use the weapon illustration for the action and effect icons.
-
-as part of a `SideBySideIllustration` and `ParryT6.png` as the sole `Illustration` for the basic Parry `QEffect` when passing illustrations to `ParryLogic.Load()`.
 
 ## Installation
 1. Add `ParryLogic.cs` to your mod project.
