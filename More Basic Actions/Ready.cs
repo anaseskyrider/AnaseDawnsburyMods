@@ -516,8 +516,8 @@ public static class Ready
                         
                         if (self.PrimaryWeapon == null)
                             return;
-                        
-                        int reach = self.PrimaryWeapon.HasTrait(Trait.Reach) ? 2 : 1;
+
+                        int reach = self.PrimaryWeapon.DetermineReach(self);
                         Dictionary<Creature,int> provokeQueue = (qfThis.Tag as Dictionary<Creature,int>)!;
                         
                         // For each enemy currently in my reach,
