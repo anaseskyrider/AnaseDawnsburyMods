@@ -112,7 +112,7 @@ public static class Reposition
             })
             .WithEffectOnEachTarget(async (action, caster, target, result) =>
             {
-                caster.FictitiousSingleTileMove(caster.Occupies); // Do not await, as it adds unnecessary delays.
+                await caster.FictitiousSingleTileMove(caster.Occupies);
                 switch (result)
                 {
                     case CheckResult.CriticalSuccess:
