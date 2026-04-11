@@ -64,15 +64,15 @@ public static class ModData
     public static class BooleanOptions
     {
         /// <summary>Allow untrained Prepare to Aid actions.</summary>
-        public static string UntrainedAid;
+        public static string UntrainedAid = null!;
         /// <summary>Lower the DC for the Aid reaction.</summary>
-        public static string AidDCIs15;
+        public static string AidDCIs15 = null!;
         /// <summary>Add the Drop Prone action to the action bar.</summary>
-        public static string AllowDropProne;
+        public static string AllowDropProne = null!;
         /// <summary>Makes the Help Up action not treat the target as moving.</summary>
-        public static string HelpUpIsNotMove;
+        public static string HelpUpIsNotMove = null!;
         /// <summary>Move the Aid and Ready actions into submenus.</summary>
-        public static string AidAndReadyInSubmenus;
+        public static string AidAndReadyInSubmenus = null!;
         
         public static void Initialize()
         {
