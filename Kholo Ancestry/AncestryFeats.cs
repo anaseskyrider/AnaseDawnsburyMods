@@ -201,7 +201,8 @@ public static class AncestryFeats
                 ModData.FeatNames.KholoWeaponFamiliarity,
                 1,
                 "You gain greater access to weapons specific to your cultural lineage.",
-                "You have familiarity with " + ModData.Tooltips.KholoWeapon("kholo weapons") + " — for the purpose of proficiency, you use your proficiency with any simple weapon for simple kholo weapons, and you treat any of these that are martial weapons as simple weapons and any that are advanced weapons as martial weapons.\n\nAt 5th level, whenever you get a critical hit with one of these weapons, you get its {tooltip:criteffect}critical specialization effect{/}.",
+                "You have familiarity with " + ModData.Tooltips.KholoWeapon("kholo weapons") +
+                " — for the purpose of proficiency, you use your proficiency with any simple weapon for simple kholo weapons, and you treat any of these that are martial weapons as simple weapons and any that are advanced weapons as martial weapons.\n\nAt 5th level, whenever you get a critical hit with one of these weapons, you get its {tooltip:criteffect}critical specialization effect{/}.",
                 [ModData.Traits.Kholo])
             .WithOnSheet(values =>
             {
@@ -211,6 +212,7 @@ public static class AncestryFeats
                     values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
                         [Trait.Simple, weapon]);
                 }
+
                 // Martial -> Simple
                 values.Proficiencies.AddProficiencyAdjustment(
                     traits => traits.Any(KholoAncestry.KholoWeapons.Contains) && traits.Contains(Trait.Martial),
@@ -221,10 +223,18 @@ public static class AncestryFeats
                     Trait.Martial);
             })
             .WithPermanentQEffect(
-                "As long as you're at least expert in the " + ModData.Tooltips.KholoWeapon("kholo weapons") + " you're using, that weapon triggers {tooltip:criteffect}critical specialization effects{/}.",
+                $"You have familiarity with {ModData.Tooltips.KholoWeapon("kholo weapons")}",
                 qfFeat =>
-                    qfFeat.YouHaveCriticalSpecialization = (qfThis, item,_,_) =>
-                        qfThis.Owner.Level >= 5 && item.Traits.Any(KholoAncestry.KholoWeapons.Contains));
+                {
+                    if (qfFeat.Owner.Level < 5)
+                    {
+                        qfFeat.Description += ".";
+                        return;
+                    }
+                    qfFeat.Description += " {Blue}and they trigger {tooltip:criteffect}critical specialization effects{/}{/Blue}.";
+                    qfFeat.YouHaveCriticalSpecialization = (_, item, _, _) =>
+                        item.Traits.Any(KholoAncestry.KholoWeapons.Contains);
+                });
         
         // Pack Hunter
         // TODO: Ensure that a Gunslinger who uses Fake Out to aid the Pack Hunter gets a bonus.
