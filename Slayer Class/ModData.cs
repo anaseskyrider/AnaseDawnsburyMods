@@ -5,6 +5,7 @@ using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
@@ -35,10 +36,8 @@ public static class ModData
         ActionIds.Initialize();
         BooleanOptions.Initialize();
         ItemGreaterGroups.Initialize();
-        PossibilitySectionIds.Initialize();
         QEffectIds.Initialize();
         RuneKinds.Initialize();
-        SubmenuIds.Initialize();
     }
 
     /// <summary>
@@ -54,14 +53,13 @@ public static class ModData
             : ModManager.RegisterEnumMember<T>(technicalName);
     }
 
-    // TODO: Unused
     public static class ActionIds
     {
-        //public static ActionId CraneFlutter = null!;
+        public static ActionId ArmoredShelter;
         
         public static void Initialize()
         {
-            //CraneFlutter = SafelyRegister<ActionId>("CraneFlutter");
+            ArmoredShelter = SafelyRegister<ActionId>("ArmoredShelter");
         }
     }
 
@@ -94,18 +92,6 @@ public static class ModData
         {
             ModManager.RegisterBooleanSettingsOption(technicalName, caption, longDescription, defaultValue);
             return technicalName;
-        }
-    }
-
-    // TODO: Unused
-    public static class CommonQfKeys
-    {
-        /// <summary>This key includes the name of the Guardian who inflicted it -- search using this name + Creature.Name. Searching for the source of this effect also ensures that the creature is off-guard due to ignoring YOUR Taunt.</summary>
-        //public static readonly string OffGuardDueToTaunt = "TauntOffGuard";
- 
-        public static string PersistentDamageKey(DamageKind kind)
-        {
-            return "PersistentDamage:" + kind.ToStringOrTechnical();
         }
     }
  
@@ -152,14 +138,14 @@ public static class ModData
         
         #region Class Features
         
-        public static readonly FeatName OnTheHunt = ModManager.RegisterFeatName(IdPrepend+"OnTheHunt", "On the Hunt");
+        public static readonly FeatName OnTheHunt = ModManager.RegisterFeatName(IdPrepend+"OnTheHunt", "On the Hunt {icon:Reaction}");
         public static readonly FeatName MonsterLore = ModManager.RegisterFeatName(IdPrepend+"MonsterLore", "Monster Lore");
         public static readonly FeatName SlayersArsenal = ModManager.RegisterFeatName(IdPrepend+"SlayersArsenal", "Slayer's Arsenal");
         public static readonly FeatName SlayersQuarry = ModManager.RegisterFeatName(IdPrepend+"SlayersQuarry", "Slayer's Quarry");
         /// <summary>
         /// The Mark Quarry sub-feature of Slayer's Quarry
         /// </summary>
-        public static readonly FeatName MarkQuarry = ModManager.RegisterFeatName(IdPrepend+"MarkQuarry", "Mark Quarry");
+        public static readonly FeatName MarkQuarry = ModManager.RegisterFeatName(IdPrepend+"MarkQuarry", "Mark Quarry {icon:FreeAction}");
         /// <summary>
         /// The Claim Trophy sub-feature of Slayer's Quarry
         /// </summary>
@@ -174,29 +160,49 @@ public static class ModData
         #endregion
     }
  
-    // TODO: Unused
     public static class Illustrations
     {
         public const string ModFolder = "SlayerClassAssets/";
         
         public static readonly Illustration DdSun = new ModdedIllustration(ModFolder+"PatreonSunTransparent.png");
 
-        public static readonly Illustration BloodseekingBlade = IllustrationName.Greataxe;
+        #region Hunting Tools
+
+        public static readonly Illustration BloodseekingBlade = new ModdedIllustration(ModFolder + "dripping-blade.png");
+        public static readonly Illustration ChymistsVials = new ModdedIllustration(ModFolder + "test-tube-rack.png");
+        public static readonly Illustration ConsecratedPanoply = new ModdedIllustration(ModFolder + "gothic-cross.png");
+        public static readonly Illustration HuntingSpike = new ModdedIllustration(ModFolder + "bone-knife.png");
+        public static readonly Illustration WardedMail = new ModdedIllustration(ModFolder + "heart-armor.png");
+
+        #endregion
+
+        #region Trophies
+
         public static readonly Illustration TrophyCase = IllustrationName.BagOfHolding1;
         public static readonly Illustration Trophy = IllustrationName.Trophy;
+
+        #endregion
+
+        #region Class Features
+
         public static readonly Illustration OnTheHunt = IllustrationName.HuntPrey;
         public static readonly Illustration MarkQuarry = IllustrationName.HuntPrey;
+
+        #endregion
+        
+        #region Class Feats
+        
+        #endregion
     }
 
-    // TODO: Unused
     public static class ItemGreaterGroups
     {
         public static void Initialize()
         {
-            //PlatedShields = SafelyRegister<ItemGreaterGroup>("Plated shields");
+            ClassItems = SafelyRegister<ItemGreaterGroup>("Class Items");
         }
         
-        //public static ItemGreaterGroup PlatedShields = null!;
+        public static ItemGreaterGroup ClassItems;
     }
 
     // TODO: Unused
@@ -205,30 +211,15 @@ public static class ModData
         //public const string RunicTattoo = "RunicTattoo";
     }
 
-    // TODO: Unused
-    public static class PossibilityGroups
-    {
-        //public const string DrawingRunes = "Draw runes";
-    }
-
-    // TODO: Unused
-    public static class PossibilitySectionIds
-    {
-        //public static PossibilitySectionId RuneSinger;
-        
-        public static void Initialize()
-        {
-            //RuneSinger = SafelyRegister<PossibilitySectionId>("RuneSinger");
-        }
-    }
-
     public static class QEffectIds
     {
         public static QEffectId MarkedQuarry;
+        public static QEffectId ArmoredShelter;
         
         public static void Initialize()
         {
             MarkedQuarry = SafelyRegister<QEffectId>("MarkedQuarry");
+            ArmoredShelter = SafelyRegister<QEffectId>("ArmoredShelter");
         }
     }
 
@@ -248,34 +239,96 @@ public static class ModData
         public const SfxName OnTheHunt = SfxName.Throw;
     }
 
-    // TODO: Unused
-    public static class SubmenuIds
-    {
-        //public static SubmenuId TraceRune = null!;
-        
-        public static void Initialize()
-        {
-            //TraceRune = SafelyRegister<SubmenuId>("TraceRune");
-        }
-    }
-
     public static class Tooltips
     {
+        public static readonly Func<string, string> Trophy = RegisterTooltipInserter(
+            IdPrepend + "Trophy",
+            """
+            {b}Trophy{/b}
+            {i}Slayer mechanic{/i}
+            Trophies are items that are used to Reinforce your Arsenal. You do so by clicking-and-dragging the trophy onto a hunting tool, adding additional benefits to the item.
+            
+            You gain a trophy when you slay your quarry, and it has the following properties:
+            • {b}Traits{/b} It has all your quarry's traits, but not rarity or size.
+            • {b}Damage Types{/b} It has any damage types that your quarry could deal with its Strikes or non-spellcasting abilities, or it had immunity to.
+            • {b}Traditions{/b} It's associated with your quarry's tradition trait and that of any spells it could cast. Its tradition is occult if it had neither.
+            """);
+        
+        public static readonly Func<string, string> HuntingTool = RegisterTooltipInserter(
+            IdPrepend + "HuntingTool",
+            $$"""
+            {b}Hunting Tool{/b}
+            {i}Slayer mechanic{/i}
+            Hunting tools are special adjustments designated to a single item you possess, empowering that item with additional features. You can do so by right-clicking an appropriate item in your inventory, such as a weapon for your bloodseeking blade, or armor for your warded mail, to designate that item as one of your hunting tools.
+            
+            A hunting tool can also be Reinforced by attaching a trophy to them, granting additional benefits based on the trophy's properties as described by that tool's Reinforced benefits.
+            
+            For items without an equivalent in {{ModData.Illustrations.DdSun.IllustrationAsIconString}} Dawnsbury Days, a unique item is provided for you so that you can attach trophies to them.
+            """);
+        
+        public static readonly Func<string, string> ChymistPronunciation = RegisterTooltipInserter(
+            IdPrepend + "ChymistPronunciation",
+            """
+            {b}Chymist{/b}
+            {i}Etymology{/i}
+            Archaic spelling of "chemist". Pronounced {i}KEM-ist{i}, sometimes {i}KIM-ist{/i}.
+            """);
+        
         public static readonly Func<string, string> ReinforcedBenefit = RegisterTooltipInserter(
             IdPrepend+"Reinforced",
-            "You gain this benefit when your hunting tool is reinforced with a trophy.");
+            """
+            {b}Reinforced{/b}
+            {i}Slayer mechanic{/i}
+            You gain this benefit when your hunting tool is reinforced with a trophy.
+            """);
         
         public static readonly Func<string, string> SpecializedArsenal = RegisterTooltipInserter(
             IdPrepend+"SpecializedArsenal",
-            "You gain the specialized arsenal benefit of your signature tool.");
+            """
+            {b}Specialized Arsenal{/b}
+            {i}Level 7 Slayer feature{/i}
+            You gain the specialized arsenal benefit of your signature tool.
+            """);
+        
+        public static readonly Func<string, string> PersistentFocus = RegisterTooltipInserter(
+            IdPrepend+"PersistentFocus",
+            """
+            {b}Persistent Focus{/b}
+            {i}Level 9 Slayer feature{/i}
+            Your proficiency rank for Will saves increases to master; when you roll a success on a Will save, you get a critical success instead.
+            """);
         
         public static readonly Func<string, string> ExpandedArsenal = RegisterTooltipInserter(
             IdPrepend+"ExpandedArsenal",
-            "Choose a second signature tool. You gain its normal benefits, but not its specialized arsenal benefit.");
+            """
+            {b}Expanded Arsenal{/b}
+            {i}Level 11 Slayer feature{/i}
+            Choose a second signature tool. You gain its normal benefits, but not its specialized arsenal benefit.
+            """);
+        
+        public static readonly Func<string, string> NaturalResilience = RegisterTooltipInserter(
+            IdPrepend+"NaturalResilience",
+            """
+            {b}Natural Resilience{/b}
+            {i}Level 11 Slayer feature{/i}
+            Your proficiency rank for Fortitude saves increases to master; when you roll a success on a Fortitude save, you get a critical success instead.
+            """);
+        
+        public static readonly Func<string, string> GreaterPersistentFocus = RegisterTooltipInserter(
+            IdPrepend+"GreaterPersistentFocus",
+            """
+            {b}Greater Persistent Focus{/b}
+            {i}Level 15 Slayer feature{/i}
+            You become legendary in Will saves; when you roll a critical failure on a Will save, you get a failure instead instead; and when you roll a natural failure on a Will save against a damaging effect, you take half damage only.
+            """);
         
         public static readonly Func<string, string> GreaterSpecializedArsenal = RegisterTooltipInserter(
             IdPrepend+"GreaterSpecializedArsenal",
-            "You gain the specialized arsenal benefit of your second signature tool.");
+            """
+            {b}Greater Specialized Arsenal{/b}
+            {i}Level 15 Slayer feature{/i}
+            You gain the specialized arsenal benefit of your second signature tool.
+            """);
         
         public static readonly Func<string, string> CommonWeaponSpec = RegisterTooltipInserter(
             IdPrepend + "Common.WeaponSpecialization",
@@ -310,13 +363,9 @@ public static class ModData
     {
         public static readonly Trait ModName = ModManager.RegisterModNameTrait("SlayerClass", "Slayer Class");
          
-        /*public static readonly Trait Rare = ModManager.RegisterTrait("Rare",
-            new TraitProperties("Rare", true) { BackgroundColor = Color.Navy, WhiteForeground = true });*/
-         
         #region Class
         
-        public static readonly Trait Slayer = ModManager.RegisterTrait("Slayer", 
-            new TraitProperties("Slayer", true) { IsClassTrait = true });
+        public static readonly Trait Slayer = ModManager.RegisterTrait("Slayer", new TraitProperties("Slayer", true) { IsClassTrait = true });
          
         #endregion
     
@@ -344,8 +393,21 @@ public static class ModData
                 """));
 
         public static readonly Trait HuntingTool = ModManager.RegisterTrait(
-            "HuntingTool",
-            new TraitProperties("Hunting Tool", false));
+            "HuntingTool", new TraitProperties("Hunting Tool", false));
+
+        #endregion
+
+        #region Technicals
+
+        /// <summary>
+        /// If a <see cref="QEffectIds.MarkedQuarry"/> <see cref="QEffect"/> has this trait, then it will not generate a trophy on death.
+        /// </summary>
+        public static readonly Trait DoNotClaimTrophy = ModManager.RegisterTrait("DoNotClaimTrophy", new TraitProperties("DoNotClaimTrophy", false));
+        
+        /// <summary>
+        /// This trait is for the feats which represent your choice of a rune for your bloodseeking blade's specialized arsenal feature.
+        /// </summary>
+        public static readonly Trait BloodseekingBladePropertyRune = ModManager.RegisterTrait("DoNotClaimTrophy", new TraitProperties("DoNotClaimTrophy", false));
 
         #endregion
     }

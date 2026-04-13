@@ -27,6 +27,7 @@ namespace Dawnsbury.Mods.SlayerClass;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
+/// <item>v1.6: Added Trait extensions: IsTraditionTrait(), TraditionTraitToColor(). Added Feat.ToLink(caption). Added Item.With().</item>
 /// <item>v1.5: Replaced error-prone params keywords with regular arrays. Added RefundReaction extensions. Added more robust PluralizeIf extension. Added ModManager extensions.</item>
 /// <item>v1.4: Added Item.WithDescription(flavorText, rulesText).</item>
 /// <item>v1.3: Added CombatAction.HasAllTraits, CombatAction.HasAnyTraits, OfferOptions2 with variants for ActionPossibility and Possibility.</item>
@@ -34,7 +35,7 @@ namespace Dawnsbury.Mods.SlayerClass;
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
-/// <value>v1.5</value>
+/// <value>v1.6</value>
 public static class LibraryOfAnase
 {
     #region Extensions
@@ -135,6 +136,15 @@ public static class LibraryOfAnase
     extension(Item item)
     {
         /// <summary>
+        /// Runs any modifications to the Item in one code block, similar to Zone.With().
+        /// </summary>
+        public Item With(Action<Item> changes)
+        {
+            changes.Invoke(item);
+            return item;
+        }
+        
+        /// <summary>
         /// Returns whether the item has all the passed traits.
         /// </summary>
         public bool HasAllTraits(Trait[] traits) =>
@@ -194,6 +204,37 @@ public static class LibraryOfAnase
             actions.ReactionsUsedUpThisRound.Remove(keyword);
             return true;
 
+        }
+    }
+
+    extension(Trait trait)
+    {
+        public bool IsTraditionTrait() =>
+            trait is Trait.Arcane or Trait.Divine or Trait.Occult or Trait.Primal;
+        
+        public string TraditionTraitToColor()
+        {
+            switch (trait)
+            {
+                case Trait.Arcane:
+                    return "DeepSkyBlue"; // Force damage color
+                case Trait.Divine:
+                    return "Goldenrod"; // Positive damage color
+                case Trait.Occult:
+                    return "Fuchsia"; // Mental damage color // "DarkOrchid" // "DarkViolet"
+                case Trait.Primal:
+                    return "Green";
+                default:
+                    return "Black";
+            }
+        }
+    }
+
+    extension(Feat feat)
+    {
+        public string ToLink(string caption)
+        {
+            return "{link:" + feat.ToTechnicalName() + "}" + caption + "{/}";
         }
     }
 

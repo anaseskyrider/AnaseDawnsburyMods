@@ -1,6 +1,5 @@
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.Creatures;
-using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Display.Illustrations;
@@ -132,6 +131,9 @@ public class HuntingTool
             });
     }
 
+    /// <summary>
+    /// Returns whether this <see cref="Item"/> is designated as this hunting tool instance.
+    /// </summary>
     public bool IsMyTool(Item item)
     {
         return item.ItemModifications.Any(mod =>
@@ -140,14 +142,30 @@ public class HuntingTool
             && tagString == this.Id.ToStringOrTechnical());
     }
 
+    /// <summary>
+    /// Designate an item as this hunting tool instance. Removes all other designations, if any.
+    /// </summary>
     public Item DesignateAsTool(Item item)
     {
         if (this.IsMyTool(item))
             return item;
         else
-            return item.WithModification(ItemModification.Create("huntingToolDesignation_" + this.Id.ToStringOrTechnical()));
+        {
+            // Remove other tool designations from this item
+            // An item can only be one Hunting Tool at a time
+            foreach (ItemModification mod in item.ItemModifications
+                         .Where(mod =>
+                             mod.Kind == HuntingTools.ToolDesignation)
+                         .ToList())
+                item.WithoutModification(mod);
+            return item.WithModification(
+                ItemModification.Create("huntingToolDesignation_" + this.Id.ToStringOrTechnical()));
+        }
     }
 
+    /// <summary>
+    /// Undesignate an item as this hunting tool instance.
+    /// </summary>
     public Item UndesignateAsTool(Item item)
     {
         foreach (ItemModification mod in item.ItemModifications.ToList())
@@ -161,19 +179,6 @@ public class HuntingTool
         }
         
         return item;
-    }
-
-    public bool IsReinforced(Item item)
-    {
-        return this.IsMyTool(item)
-               && item.ActiveRunes.Any(r => r.HasTrait(ModData.Traits.Trophy));
-    }
-
-    public Item? GetTrophy(Item item)
-    {
-        return !this.IsMyTool(item)
-            ? null
-            : item.ActiveRunes.FirstOrDefault(r => r.HasTrait(ModData.Traits.Trophy));
     }
 
     public HuntingTool(

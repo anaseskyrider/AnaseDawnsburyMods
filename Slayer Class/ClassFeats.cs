@@ -8,9 +8,7 @@ public static class ClassFeats
     public static void Load()
     {
         foreach (Feat ft in CreateFeats())
-        {
             ModManager.AddFeat(ft, ModData.Traits.ModName);
-        }
     }
 
     public static IEnumerable<Feat> CreateFeats()

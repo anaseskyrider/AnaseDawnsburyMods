@@ -7,8 +7,8 @@ public static class ModLoader
     public static void LoadMod()
     {
         ModData.LoadData();
-        Trophy.Load();
-        CoreClass.Load();
+        Trophies.Load();
+        Core.Load();
         ClassFeats.Load();
         HuntingTools.Load();
     }
