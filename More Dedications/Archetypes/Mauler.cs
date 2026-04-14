@@ -19,7 +19,7 @@ public static class Mauler
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
     }
 
     public static IEnumerable<Feat> CreateFeats()
@@ -28,7 +28,13 @@ public static class Mauler
         Feat maulerDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.MaulerArchetype,
                 "You shove your way through legions of foes, knock enemies on all sides to the ground, and deal massive blows to anyone or anything that comes near.",
-                "You become trained in all simple and martial melee weapons that require two hands to wield or that have the two-hand trait.\n\nWhenever you become expert, master, or legendary in any weapon, you also gain that proficiency rank in these mauler weapons.\n\nAs long as you're at least expert in a mauler weapon, that weapon triggers {tooltip:criteffect}critical specialization effects{/}.")
+                """
+                You become trained in all simple and martial melee weapons that require two hands to wield or that have the two-hand trait.
+
+                Whenever you become expert, master, or legendary in any weapon, you also gain that proficiency rank in these mauler weapons.
+
+                As long as you're at least expert in a mauler weapon, that weapon triggers {tooltip:criteffect}critical specialization effects{/}.
+                """)
             .WithOnSheet(values =>
             {
                 // Become trained in all melee 2hs.
@@ -70,7 +76,7 @@ public static class Mauler
                         IsMaulerWeapon(weapon) && qfThis.Owner.Proficiencies.Get(weapon.Traits) >= Proficiency.Expert;
                 })
             .WithDemandsAbility14(Ability.Strength);
-        maulerDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
+        ModData.FeatNames.MaulerDedication = maulerDedication.FeatName;
         yield return maulerDedication;
         
         // Add Knockdown to Mauler
@@ -86,12 +92,18 @@ public static class Mauler
                 ModData.FeatNames.ClearTheWay,
                 6,
                 "You put your body behind your massive weapon and swing, shoving enemies to clear a wide path.",
-                "{b}Requirements{/b} You're wielding a melee weapon with the Shove trait in two hands.\n\nYou attempt to Shove up to five creatures adjacent to you, rolling a separate Athletics check for each target. Then Stride up to half your Speed.\n\nThis movement doesn't trigger reactions from any of the creatures you successfully Shoved.",
-                [ModData.Traits.MoreDedications])
+                """
+                {b}Requirements{/b} You're wielding a melee weapon with the Shove trait in two hands.
+
+                You attempt to Shove up to five creatures adjacent to you, rolling a separate Athletics check for each target. Then Stride up to half your Speed.
+
+                This movement doesn't trigger reactions from any of the creatures you successfully Shoved.
+                """,
+                [])
             .WithActionCost(2)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MaulerArchetype)
             .WithPermanentQEffect(
-                "Attempt to Shove up to 5 adjacent creatures, then Stride without provoking reactions.",
+                null,
                 qfFeat =>
                 {
                     qfFeat.ProvideMainAction = qfThis =>
@@ -106,11 +118,16 @@ public static class Mauler
                                 qfFeat.Owner,
                                 new SideBySideIllustration(primaryItem.Illustration, IllustrationName.Shove),
                                 "Clear the Way",
-                                [Trait.Basic, Trait.IsHostile, Trait.AlwaysHits, Trait.Attack, Trait.AttackDoesNotIncreaseMultipleAttackPenalty],
-                                "Attempt to Shove up to five creatures adjacent to you, rolling a separate Athletics check for each target.",
+                                [ModData.Traits.ModName, Trait.Basic, Trait.IsHostile, Trait.AlwaysHits, Trait.Attack, Trait.AttackDoesNotIncreaseMultipleAttackPenalty],
+                                """
+                                {i}You put your body behind your massive weapon and swing, shoving enemies to clear a wide path.{/i}
+                                
+                                Attempt to Shove up to five creatures adjacent to you, rolling a separate Athletics check for each target. Then Stride up to half your Speed. This movement doesn't trigger reactions from any of the creatures you successfully Shoved.
+                                """,
                                 Target.MultipleCreatureTargets(Target.Touch(), Target.Touch(), Target.Touch(), Target.Touch(), Target.Touch())
                                     .WithMinimumTargets(1)
                                     .WithMustBeDistinct())
+                            .WithShortDescription("Attempt to Shove up to 5 adjacent creatures, then Stride without provoking reactions.")
                             .WithActionCost(2)
                             .WithEffectOnChosenTargets(async (attacker, targets) =>
                             {
@@ -156,8 +173,12 @@ public static class Mauler
                 ModData.FeatNames.ShovingSweep,
                 8,
                 "You swing your weapon at a fleeing foe, rebuffing them back.",
-                "{b}Requirements{/b} You're wielding a melee weapon in two hands.\n\nWhen a creature within your reach leaves a square during a move action it's using, you can spend a {icon:Reaction} reaction to attempt to Shove the triggering creature, ignoring the requirement that you have a hand free. {i}({Red}NYI:{/Red} The creature continues its movement after the Shove.){/i}",
-                [ModData.Traits.MoreDedications])
+                """
+                {b}Requirements{/b} You're wielding a melee weapon in two hands.
+
+                When a creature within your reach leaves a square during a move action it's using, you can spend a {icon:Reaction} reaction to attempt to Shove the triggering creature, ignoring the requirement that you have a hand free. {i}({Red}NYI:{/Red} The creature continues its movement after the Shove.){/i}
+                """,
+                [])
             .WithActionCost(-2)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MaulerArchetype)
             .WithPermanentQEffect(

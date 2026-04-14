@@ -22,7 +22,7 @@ public static class BlessedOne
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
     }
 
     public static IEnumerable<Feat> CreateFeats()
@@ -45,7 +45,7 @@ public static class BlessedOne
                         Ability.Charisma,
                         ChampionFocusSpells.LayOnHands);
             });
-        blessedOneDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
+        ModData.FeatNames.BlessedOneDedication = blessedOneDedication.FeatName;
         yield return blessedOneDedication;
         
         // Blessed Sacrifice
@@ -55,12 +55,19 @@ public static class BlessedOne
             (spellId, spellcaster, spellLevel, inCombat, spellInformation) =>
             {
                 int reduction = 3 * spellLevel;
-                string description = $"{{b}}Trigger{{/b}} An ally within 30 feet takes damage.\n\nReduce the damage the triggering ally would take by {S.HeightenedVariable(reduction, 3)}. You redirect this damage to yourself, but your immunities, weaknesses, resistances and so on do not apply.\n\nYou aren't subject to any conditions or other effects of whatever damaged your ally (such as poison from a venomous bite). Your ally is still subject to those effects even if you redirect all of the triggering damage to yourself.";
+                string description =
+                    $$"""
+                      {b}Trigger{/b} An ally within 30 feet takes damage.
+
+                      Reduce the damage the triggering ally would take by {{S.HeightenedVariable(reduction, 3)}}. You redirect this damage to yourself, but your immunities, weaknesses, resistances and so on do not apply.
+
+                      You aren't subject to any conditions or other effects of whatever damaged your ally (such as poison from a venomous bite). Your ally is still subject to those effects even if you redirect all of the triggering damage to yourself.
+                      """;
                 
                 return Spells.CreateModern(
                     ModData.Illustrations.ProtectorsSacrifice,
                     "Protector's Sacrifice",
-                    [ModData.Traits.MoreDedications, Trait.Uncommon, Trait.Cleric, Trait.Focus, Trait.SomaticOnly],
+                    [ModData.Traits.ModName, Trait.Uncommon, Trait.Cleric, Trait.Focus, Trait.SomaticOnly],
                     "You protect your ally by suffering in their stead.",
                     description/*
                         + S.HeightenText(spellLevel, 1, inCombat, "{b}Heightened (+1){/b} The damage you redirect increases by 3.")*/,
@@ -104,7 +111,11 @@ public static class BlessedOne
                                     qfTech.YouAreDealtDamage = async (qfTech2, attacker, dStuff, defender) =>
                                     {
                                         if (!await cleric.AskToUseReaction(
-                                                $"{{b}}Protector's Sacrifice {{icon:Reaction}}{{/b}}\n{ally} is about to take {dStuff.Amount} damage. Redirect {{b}}{reduction}{{/b}} of that damage to yourself?\n{{Red}}Focus Points: {cleric.Spellcasting?.FocusPoints ?? 0}{{/Red}}",
+                                                $$"""
+                                                  {b}Protector's Sacrifice {icon:Reaction}{/b}
+                                                  {{ally}} is about to take {{dStuff.Amount}} damage. Redirect {b}{{reduction}}{/b} of that damage to yourself?
+                                                  {Red}Focus Points: {{cleric.Spellcasting?.FocusPoints ?? 0}}{/Red}
+                                                  """,
                                                 ModData.Illustrations.ProtectorsSacrifice))
                                             return null;
                                         
@@ -129,7 +140,7 @@ public static class BlessedOne
                 4,
                 null,
                 $"You gain the {AllSpells.CreateSpellLink(ModData.SpellIds.ProtectorsSacrifice, Trait.Champion)} domain spell as a devotion spell. Increase the number of Focus Points in your focus pool by 1.",
-                [ModData.Traits.MoreDedications])
+                [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.BlessedOneArchetype)
             .WithOnSheet(values =>
             {

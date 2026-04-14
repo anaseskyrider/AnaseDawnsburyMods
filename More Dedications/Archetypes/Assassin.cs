@@ -1,5 +1,7 @@
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
 using Dawnsbury.Core.CombatActions;
@@ -15,6 +17,7 @@ using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Display.Illustrations;
+using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
@@ -25,7 +28,7 @@ public static class Assassin
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
     }
 
     public static IEnumerable<Feat> CreateFeats()
@@ -57,7 +60,7 @@ public static class Assassin
                     qfFeat.ProvideMainAction = qfThis =>
                         new ActionPossibility(CreateMarkForDeathAction(qfThis.Owner));
                 });
-        assassinDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
+        ModData.FeatNames.AssassinDedication = assassinDedication.FeatName;
         yield return assassinDedication;
 
         // Expert Backstabber
@@ -66,7 +69,7 @@ public static class Assassin
                 4,
                 null,
                 "Double the amount of damage dealt by the backstabber weapon trait.",
-                [ModData.Traits.MoreDedications])
+                [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.AssassinArchetype)
             .WithPermanentQEffectAndSameRulesText(qfFeat =>
             {
@@ -76,7 +79,6 @@ public static class Assassin
         // Poison Resistance
         Feat poisonResistance = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.PoisonResistanceDruid, ModData.Traits.AssassinArchetype, 4);
-        poisonResistance.Traits.Insert(0, ModData.Traits.MoreDedications);
         poisonResistance.FlavorText = "Your body has become fortified against toxins.";
         ModData.FeatNames.PoisonResistance = poisonResistance.FeatName;
         yield return poisonResistance;
@@ -87,7 +89,7 @@ public static class Assassin
                 4,
                 "You act before foes can react.",
                 "On the first round of combat, creatures that haven't acted yet are flat-footed to you.",
-                [ModData.Traits.MoreDedications])
+                [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.AssassinArchetype)
             .WithEquivalent(values =>
                 values.Class?.ClassTrait is Trait.Rogue
@@ -198,8 +200,6 @@ public static class Assassin
         // Sneak Attacker
         Feat sneakAttacker = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.SneakAttacker, ModData.Traits.AssassinArchetype, 4);
-        sneakAttacker.Traits.Insert(0, ModData.Traits.MoreDedications);
-        sneakAttacker.FlavorText = "Your body has become fortified against toxins.";
         yield return sneakAttacker;
         
         // Improved Poison Weapon

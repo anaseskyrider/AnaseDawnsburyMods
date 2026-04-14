@@ -32,7 +32,7 @@ public static class Marshal
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
     }
 
     public static IEnumerable<Feat> CreateFeats()
@@ -88,7 +88,7 @@ public static class Marshal
             .WithPrerequisite(values =>
                 values.HasFeat(FeatName.Diplomacy) || values.HasFeat(FeatName.Intimidation),
                 "Must be trained in Diplomacy or Intimidation");
-        marshalDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
+        ModData.FeatNames.MarshalDedication = marshalDedication.FeatName;
         yield return marshalDedication;
         
         // TODO: Devrin's Cunning Stance?
@@ -104,7 +104,7 @@ public static class Marshal
                     "As critical success, but your aura's size doesn't increase.",
                     "You fail to enter the stance.",
                     "You fail to enter the stance and can't take this action again for the rest of the encounter."),
-                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Open, Trait.Stance])
+                [Trait.Open, Trait.Stance])
             .WithActionCost(1)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
             .WithPermanentQEffect(
@@ -120,14 +120,16 @@ public static class Marshal
                                 qfThis.Owner,
                                 ModData.Illustrations.DreadMarshalStance,
                                 "Dread Marshal Stance",
-                                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
-                                "{i}Putting on a grim face for the battle ahead, you encourage your allies to strike fear into their foes with vicious attacks.{/i}\n\n"
-                                + $"Attempt a {ModData.Tooltips.LeveledDC("DC " + Checks.LevelBasedDC(qfThis.Owner.Level))} Intimidation check." +
-                                S.FourDegreesOfSuccess(
-                                    "Your marshal's aura increases to a 20-foot emanation, and it grants you and allies a status bonus to damage rolls equal to the number of weapon damage dice of the unarmed attack or weapon you are wielding that has the most weapon damage dice. When you or an ally in the aura critically hits an enemy with a Strike, that enemy is frightened 1.",
-                                    "As critical success, but your aura's size doesn't increase.",
-                                    "You fail to enter the stance.",
-                                    "You fail to enter the stance and can't take this action again for the rest of the encounter."),
+                                [ModData.Traits.ModName, Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
+                                $$"""
+                                  {i}Putting on a grim face for the battle ahead, you encourage your allies to strike fear into their foes with vicious attacks.{/i}
+
+                                  Attempt a {{ModData.Tooltips.LeveledDC("DC " + Checks.LevelBasedDC(qfThis.Owner.Level))}} Intimidation check.{{S.FourDegreesOfSuccess(
+                                      "Your marshal's aura increases to a 20-foot emanation, and it grants you and allies a status bonus to damage rolls equal to the number of weapon damage dice of the unarmed attack or weapon you are wielding that has the most weapon damage dice. When you or an ally in the aura critically hits an enemy with a Strike, that enemy is frightened 1.",
+                                      "As critical success, but your aura's size doesn't increase.",
+                                      "You fail to enter the stance.",
+                                      "You fail to enter the stance and can't take this action again for the rest of the encounter.")}}
+                                  """,
                                 Target.Self())
                             .WithActionCost(1)
                             .WithActiveRollSpecification(
@@ -213,7 +215,7 @@ public static class Marshal
                     "As critical success, but your aura's size doesn't increase.",
                     "You fail to enter the stance.",
                     "You fail to enter the stance and can't take this action again for the rest of the encounter."),
-                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Open, Trait.Stance])
+                [Trait.Open, Trait.Stance])
             .WithActionCost(1)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
             .WithPermanentQEffect(
@@ -229,14 +231,16 @@ public static class Marshal
                                 qfThis.Owner,
                                 ModData.Illustrations.InspiringMarshalStance,
                                 "Inspiring Marshal Stance",
-                                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
-                                "{i}You become a brilliant example of dedication and poise in battle, encouraging your allies to follow suit.{/i}\n\n"
-                                + $"Attempt a {ModData.Tooltips.LeveledDC("DC " + Checks.LevelBasedDC(qfThis.Owner.Level))} Diplomacy check." +
-                                S.FourDegreesOfSuccess(
-                                    "Your marshal's aura increases to a 20-foot emanation and grants you and allies a +1 status bonus to attack rolls and saves against mental effects.",
-                                    "As critical success, but your aura's size doesn't increase.",
-                                    "You fail to enter the stance.",
-                                    "You fail to enter the stance and can't take this action again for the rest of the encounter."),
+                                [ModData.Traits.ModName, Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
+                                $$"""
+                                  {i}You become a brilliant example of dedication and poise in battle, encouraging your allies to follow suit.{/i}
+
+                                  Attempt a {{ModData.Tooltips.LeveledDC("DC " + Checks.LevelBasedDC(qfThis.Owner.Level))}} Diplomacy check.{{S.FourDegreesOfSuccess(
+                                      "Your marshal's aura increases to a 20-foot emanation and grants you and allies a +1 status bonus to attack rolls and saves against mental effects.",
+                                      "As critical success, but your aura's size doesn't increase.",
+                                      "You fail to enter the stance.",
+                                      "You fail to enter the stance and can't take this action again for the rest of the encounter.")}}
+                                  """,
                                 Target.Self())
                             .WithActionCost(1)
                             .WithActiveRollSpecification(
@@ -313,7 +317,7 @@ public static class Marshal
                 4,
                 "You encourage an ally to toughen up, giving them a fighting chance.",
                 "Choose one ally within your marshal's aura. The ally gains temporary Hit Points equal to your Charisma modifier, as well as a +2 circumstance bonus to Fortitude saves which lasts until the start of your next turn."/*"The ally gains temporary Hit Points equal to your Charisma modifier and a +2 circumstance bonus to Fortitude saves. Both benefits last until the start of your next turn."*/, // PETR: Temp HP rework?
-                [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Emotion, Trait.Mental])
+                [Trait.Auditory, Trait.Emotion, Trait.Mental])
             .WithActionCost(1)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
             .WithPermanentQEffect(
@@ -326,9 +330,12 @@ public static class Marshal
                                 qfThis.Owner,
                                 ModData.Illustrations.SteelYourself,
                                 "Steel Yourself",
-                                [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Emotion, Trait.Mental, Trait.Basic],
-                                "{i}You encourage an ally to toughen up, giving them a fighting chance.{/i}\n\n" +
-                                $"Choose one ally within your marshal's aura. The ally gains {{b}}+{qfThis.Owner.Abilities.Charisma}{{/b}} temporary Hit Points, as well as a +2 circumstance bonus to Fortitude saves which lasts until the start of your next turn.",
+                                [ModData.Traits.ModName, Trait.Auditory, Trait.Emotion, Trait.Mental, Trait.Basic],
+                                $$"""
+                                  {i}You encourage an ally to toughen up, giving them a fighting chance.{/i}
+
+                                  Choose one ally within your marshal's aura. The ally gains {b}+{{qfThis.Owner.Abilities.Charisma}}{/b} temporary Hit Points, as well as a +2 circumstance bonus to Fortitude saves which lasts until the start of your next turn.
+                                  """,
                                 Target.RangedFriend(GetMarshalAuraRange(qfThis.Owner))
                                     .WithAdditionalConditionOnTargetCreature(IsInMarshalAura))
                             .WithActionCost(1)
@@ -359,12 +366,13 @@ public static class Marshal
         // Can this even be implemented?
         
         // Rallying Charge
+        // Difference from tabletop: No expiration on temp HP.
         yield return new TrueFeat(
                 ModData.FeatNames.RallyingCharge,
                 6,
                 "Your fearless charge into battle reinvigorates your allies to carry on the fight.",
                 "You Stride up to your Speed and make a melee Strike. If your Strike hits and damages an enemy, each ally within 60 feet"+/*" who saw you hit"+*/" gains temporary Hit Points equal to your Charisma modifier."/*+" These temporary Hit Points last until the start of your next turn."*/,
-                [ModData.Traits.MoreDedications, Trait.Open, Trait.Visual])
+                [Trait.Open, Trait.Visual])
             .WithActionCost(2)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
             .WithPermanentQEffect(
@@ -377,8 +385,14 @@ public static class Marshal
                                 qfThis.Owner,
                                 ModData.Illustrations.RallyingCharge,
                                 "Rallying Charge",
-                                [ModData.Traits.MoreDedications, Trait.Open, Trait.Visual, Trait.Basic],
-                                "{/i}Your fearless charge into battle reinvigorates your allies to carry on the fight.{/i}\n\nYou Stride up to your Speed and make a melee Strike. If your Strike hits and damages an enemy, each ally within 60 feet"/*+" who saw you hit"*/+$" gains {{b}}+{qfThis.Owner.Abilities.Charisma}{{/b}} temporary Hit Points."/*+" These temporary Hit Points last until the start of your next turn."*/,
+                                [ModData.Traits.ModName, Trait.Open, Trait.Visual, Trait.Basic],
+                                // TODO: Line of sight requirement
+                                // "If your Strike hits and damages an enemy, each ally within 60 feet who saw you hit gains {b}+{qfThis.Owner.Abilities.Charisma}{/b} temporary Hit Points."
+                                $$"""
+                                  {/i}Your fearless charge into battle reinvigorates your allies to carry on the fight.{/i}
+
+                                  You Stride up to your Speed and make a melee Strike. If your Strike hits and damages an enemy, each ally within 60 feet gains {b}+{{qfThis.Owner.Abilities.Charisma}}{/b} temporary Hit Points.
+                                  """,
                                 Target.Self())
                             .WithActionCost(2)
                             .WithSoundEffect(SfxName.Footsteps)
@@ -435,7 +449,7 @@ public static class Marshal
                 8,
                 "You excel at watching your allies' backs and helping them watch yours.",
                 "You gain the following benefits: You cannot be flat-footed due to flanking while none of your adjacent allies are flanked.\n\nYour adjacent allies gain the following benefits: You cannot be flat-footed due to flanking while the marshal with this feat isn't flanked.",
-                [ModData.Traits.MoreDedications])
+                [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
             .WithPermanentQEffect(
                 "You and your adjacent allies can't be flanked unless both you and another adjacent ally are flanked.",
@@ -488,7 +502,7 @@ public static class Marshal
                 8,
                 "With a resounding cry, you rally your ally to the offensive.",
                 "Choose one ally within your marshal's aura who has a reaction available. If you spend {icon:Action} 1 action, that ally can use their {icon:Reaction} reaction to immediately Stride. If you spend {icon:TwoActions} 2 actions, that ally can use their {icon:Reaction} reaction to immediately Strike.",
-                [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Flourish])
+                [Trait.Auditory, Trait.Flourish])
             .WithActionCost(-3)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
             .WithPermanentQEffect(
@@ -501,7 +515,7 @@ public static class Marshal
                                 qfThis.Owner,
                                 ModData.Illustrations.ToBattle,
                                 "To Battle!",
-                                [ModData.Traits.MoreDedications, Trait.Auditory, Trait.Flourish, Trait.Basic],
+                                [ModData.Traits.ModName, Trait.Auditory, Trait.Flourish, Trait.Basic],
                                 "{i}With a resounding cry, you rally your ally to the offensive.{/i}\n\nChoose one ally within your marshal's aura who has a reaction available. If you spend 1 action, that ally can use their reaction to immediately Stride. If you spend 2 actions, that ally can use their reaction to immediately Strike.",
                                 Target.DependsOnActionsSpent(
                                     BasicTargeting()

@@ -23,7 +23,7 @@ public static class Archer
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
     }
 
     public static IEnumerable<Feat> CreateFeats()
@@ -38,7 +38,7 @@ public static class Archer
                 6,
                 "Through constant practice and the crucible of experience, you increase your skill with advanced bows.",
                 "You gain proficiency with all advanced bows as if they were martial weapons in the bow weapon group.",
-                [ModData.Traits.MoreDedications])
+                [])
             .WithAvailableAsArchetypeFeat(Trait.Archer)
             .WithOnSheet(values =>
             {
@@ -70,7 +70,7 @@ public static class Archer
                 6,
                 "You are a dynamo with the crossbow.",
                 "You gain a +2 circumstance bonus to damage with crossbows. If the crossbow is a simple weapon, also increase the damage die size for your attacks made with that crossbow by one step. As normal, this damage die increase can't be combined with other abilities that alter the weapon damage die (such as the ranger feat Crossbow Ace).",
-                [ModData.Traits.MoreDedications])
+                [])
             .WithAvailableAsArchetypeFeat(Trait.Archer)
             .WithPermanentQEffect(
                 "+2 circumstance bonus to Crossbow damage, increment Simple Crossbow die.",
@@ -100,23 +100,31 @@ public static class Archer
                 ModData.FeatNames.FighterPartingShot,
                 4,
                 "You jump back and fire a quick shot that catches your opponent off guard.",
-                "{b}Requirements{/b} You are wielding a loaded ranged weapon or a ranged weapon without reload 1 or reload 2.\n\nYou Step and then make a ranged Strike with the required weapon. Your target is flat-footed against the attack.",
-                [ModData.Traits.MoreDedications, Trait.Fighter])
+                """
+                {b}Requirements{/b} You are wielding a loaded ranged weapon or a ranged weapon without reload 1 or reload 2.
+
+                You Step and then make a ranged Strike with the required weapon. Your target is flat-footed against the attack.
+                """,
+                [Trait.Fighter])
             .WithActionCost(2)
             .WithPermanentQEffect(
                 "You jump back and fire a quick shot that catches your opponent off guard.",
                 qfFeat =>
                 {
+                    // TODO: Refactor clunky strike modifier for modernity.
                     qfFeat.ProvideStrikeModifier = item =>
                     {
-                        if (!item.HasTrait(Trait.Ranged) || ((item.HasTrait(Trait.Reload1) || item.HasTrait(Trait.Reload2)) && item.EphemeralItemProperties.NeedsReload))
+                        if (!item.HasTrait(Trait.Ranged)
+                            || ((item.HasTrait(Trait.Reload1)
+                                 || item.HasTrait(Trait.Reload2))
+                                && item.EphemeralItemProperties.NeedsReload))
                             return null;
                         CombatAction basicStrike = qfFeat.Owner.CreateStrike(item).WithActionCost(0);
                         CombatAction partingShot = new CombatAction(
                                 qfFeat.Owner,
                                 new SideBySideIllustration(IllustrationName.Walk, item.Illustration),
                                 "Parting Shot",
-                                [ModData.Traits.MoreDedications, Trait.Fighter, Trait.Basic],
+                                [ModData.Traits.ModName, Trait.Fighter, Trait.Basic],
                                 StrikeRules.CreateBasicStrikeDescription3(basicStrike.StrikeModifiers, additionalAttackRollText: "You Step before you Strike. Your target is flat-footed against the attack."),
                                 Target.Self())
                             .WithActionCost(2)
@@ -225,7 +233,7 @@ public static class Archer
                 8,
                 "You slow down, focus, and take a careful shot.",
                 "Make a ranged Strike with a weapon in the bow weapon group. You gain a +2 circumstance bonus to the attack roll and ignore the target's concealed condition. If the target is hidden, reduce the flat check from being hidden from 11 to 5.",
-                [Trait.Concentrate, ModData.Traits.MoreDedications])
+                [Trait.Concentrate])
             .WithActionCost(2)
             .WithAvailableAsArchetypeFeat(Trait.Archer)
             .WithPermanentQEffect(
@@ -253,7 +261,11 @@ public static class Archer
                             .WithName(actionName)
                             .WithDescription(StrikeRules.CreateBasicStrikeDescription2(
                                 newMods,
-                                "You gain a +2 circumstance bonus to the attack roll, ignore the target's concealed condition, and reduce flat checks due to hidden to 5.\n\n(NOTE: Accuracy preview against hidden creatures doesn't use a lower DC.)"))
+                                """
+                                You gain a +2 circumstance bonus to the attack roll, ignore the target's concealed condition, and reduce flat checks due to hidden to 5.
+
+                                (NOTE: Accuracy preview against hidden creatures doesn't use a lower DC.)
+                                """))
                             .WithActionCost(2)
                             // Apply BlindFight before strike is made.
                             .WithPrologueEffectOnChosenTargetsBeforeRolls(async (_, self, _) =>
@@ -262,6 +274,7 @@ public static class Archer
                             });
                         strike.Illustration = new SideBySideIllustration(
                             strike.Illustration, IllustrationName.TargetSheet);
+                        strike.Traits = new Traits([ModData.Traits.ModName, ..strike.Traits], strike);
                         
                         return strike;
                     };

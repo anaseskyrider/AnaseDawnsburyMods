@@ -21,7 +21,7 @@ public static class Scout
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
     }
 
     public static IEnumerable<Feat> CreateFeats()
@@ -33,7 +33,7 @@ public static class Scout
                 4,
                 "You visually or audibly warn your allies of danger.",
                 "Your allies (but not you) gain a +1 circumstance bonus to their initiative rolls.",
-                [ModData.Traits.MoreDedications, Trait.Ranger, Trait.Rogue])
+                [Trait.Ranger, Trait.Rogue])
             .WithPermanentQEffect(
                 "Your allies gain a +1 circumstance bonus to their initiative rolls.",
                 qfFeat =>
@@ -72,7 +72,7 @@ public static class Scout
             {
                 qfFeat.Id = ModData.QEffectIds.GreaterScoutActivity; // Silchas checks for this to increase it to a +2.
             });
-        scoutDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
+        ModData.FeatNames.ScoutDedication = scoutDedication.FeatName;
         yield return scoutDedication;
         
         // Lv4: Scout's Charge
@@ -81,7 +81,7 @@ public static class Scout
                 4,
                 "You meander around unpredictably, and then ambush your opponents without warning.",
                 "Choose one enemy. Stride, Feint against that opponent, and then make a Strike against it. For your Feint, you can attempt a Stealth check instead of the Deception check that's usually required, using the terrain around you to surprise your foe.",
-                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Flourish])
+                [Trait.Flourish])
             .WithActionCost(2)
             .WithAvailableAsArchetypeFeat(ModData.Traits.ScoutArchetype)
             .WithPermanentQEffect(
@@ -94,8 +94,12 @@ public static class Scout
                                 qfThis.Owner,
                                 new SideBySideIllustration(IllustrationName.FleetStep, IllustrationName.Feint),
                                 "Scout's Charge",
-                                [ModData.Traits.MoreDedications, Trait.Basic, Trait.Archetype, Trait.Flourish],
-                                "{i}You meander around unpredictably, and then ambush your opponents without warning.{/i}\n\nChoose one enemy. Stride, Feint against that opponent, and then make a Strike against it. For your Feint, you can attempt a Stealth check instead of the Deception check that's usually required, using the terrain around you to surprise your foe.",
+                                [ModData.Traits.ModName, Trait.Basic, Trait.Archetype, Trait.Flourish],
+                                """
+                                {i}You meander around unpredictably, and then ambush your opponents without warning.{/i}
+
+                                Choose one enemy. Stride, Feint against that opponent, and then make a Strike against it. For your Feint, you can attempt a Stealth check instead of the Deception check that's usually required, using the terrain around you to surprise your foe.
+                                """,
                                 Target.Self())
                             .WithActionCost(2)
                             .WithEffectOnSelf(async (thisAction, self) =>
@@ -134,7 +138,7 @@ public static class Scout
                 6,
                 "You're able to quickly disappear and then move about without drawing the attention of your enemies.",
                 "You Hide, then Sneak twice.",
-                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Flourish])
+                [Trait.Flourish])
             .WithActionCost(2)
             .WithAvailableAsArchetypeFeat(ModData.Traits.ScoutArchetype)
             .WithPermanentQEffect(
@@ -147,8 +151,12 @@ public static class Scout
                                 qfThis.Owner,
                                 new SideBySideIllustration(IllustrationName.Hide, IllustrationName.Sneak64),
                                 "Fleeting Shadow",
-                                [ModData.Traits.MoreDedications, Trait.Basic, Trait.Archetype, Trait.Flourish, Trait.DoesNotBreakStealth],
-                                "{i}You're able to quickly disappear and then move about without drawing the attention of your enemies.{/i}\n\nYou Hide, then Sneak twice.",
+                                [ModData.Traits.ModName, Trait.Basic, Trait.Archetype, Trait.Flourish, Trait.DoesNotBreakStealth],
+                                """
+                                {i}You're able to quickly disappear and then move about without drawing the attention of your enemies.{/i}
+
+                                You Hide, then Sneak twice.
+                                """,
                                 Target.Self()
                                     .WithAdditionalRestriction(self =>
                                     {
@@ -192,7 +200,7 @@ public static class Scout
                 6,
                 "You move faster, allowing you to scout ahead and report back without slowing your allies.",
                 "You gain a +10-foot status bonus to your Speed.",
-                [ModData.Traits.MoreDedications, Trait.Archetype])
+                [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.ScoutArchetype)
             .WithPermanentQEffect(
                 "Gain a +10-foot status bonus to your Speed.",

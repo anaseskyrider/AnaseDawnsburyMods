@@ -23,7 +23,7 @@ public static class FamiliarMaster
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
     }
 
     public static IEnumerable<Feat> CreateFeats()
@@ -39,7 +39,7 @@ public static class FamiliarMaster
                     ? FeatName.DawnsburyEnhancedFamiliar
                     : FeatName.ClassFamiliar);
             });
-        familiarMasterDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
+        ModData.FeatNames.FamiliarMasterDedication = familiarMasterDedication.FeatName;
         yield return familiarMasterDedication;
         
         // Lv4: Add Enhanced Familiar to Familiar Master
@@ -58,7 +58,7 @@ public static class FamiliarMaster
                 
                 {b}Special{/b} This ability counts as a familiar action.
                 """,
-                [ModData.Traits.MoreDedications, Trait.Homebrew, Trait.Concentrate, Trait.Force, Trait.Magical])
+                [Trait.Homebrew, Trait.Concentrate, Trait.Force, Trait.Magical])
             .WithActionCost(2)
             .WithAvailableAsArchetypeFeat(ModData.Traits.FamiliarMasterArchetype)
             .WithOnCreature((sheet, cr) =>
@@ -149,7 +149,7 @@ public static class FamiliarMaster
 
                 The next familiar action you take this turn costs 1 fewer action.
                 """,
-                [ModData.Traits.MoreDedications, Trait.Homebrew, Trait.Concentrate])
+                [Trait.Homebrew, Trait.Concentrate])
             .WithAvailableAsArchetypeFeat(ModData.Traits.FamiliarMasterArchetype)
             .WithActionCost(0)
             .WithPermanentQEffect(
@@ -173,7 +173,7 @@ public static class FamiliarMaster
                                 qfThis.Owner,
                                 new SideBySideIllustration(IllustrationName.Haste, fTag.IllustrationOrDefault),
                                 "Fast Command",
-                                [ModData.Traits.MoreDedications, Trait.Concentrate, Trait.Basic],
+                                [ModData.Traits.ModName, Trait.Concentrate, Trait.Basic],
                                 """
                                 {i}A spark of strong connection can allow you to command with your familiar with a mere thought.{/i}
 
@@ -273,7 +273,7 @@ public static class FamiliarMaster
                 8,
                 "Your familiar's supernatural spirit has outgrown its corporeal body.",
                 "You can change your familiar's abilities as a precombat preparation.",
-                [ModData.Traits.MoreDedications, Trait.Rebalanced])
+                [Trait.Rebalanced])
             .WithAvailableAsArchetypeFeat(ModData.Traits.FamiliarMasterArchetype)
             .WithOnSheet(values =>
             {
@@ -294,7 +294,7 @@ public static class FamiliarMaster
                 10,
                 "Your familiar is imbued with even more magic than other familiars.",
                 "You can select two additional familiar abilities each day. This is cumulative with {link:DawnsburyEnhancedFamiliar}Enhanced Familiar{/}.",
-                [ModData.Traits.MoreDedications])
+                [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.FamiliarMasterArchetype)
             .WithPrerequisite(FeatName.DawnsburyEnhancedFamiliar, "Enhanced Familiar")
             .WithOnSheet(values =>

@@ -25,6 +25,7 @@ using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
+using Dawnsbury.Core.StatBlocks;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
@@ -41,9 +42,9 @@ public static class MartialArtist
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
         foreach (Feat ft in CreateBonusFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
     }
 
     public static IEnumerable<Feat> CreateFeats()
@@ -52,7 +53,11 @@ public static class MartialArtist
         Feat martialArtistDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.MartialArtistArchetype,
                 "You seek neither mysticism nor enlightenment, and you don't view this training as some greater path to wisdom. Yours is the way of the fist striking flesh, the hand turning aside the blade, and the devastating kick taking your enemy down.",
-                "You have trained to use your fists as deadly weapons. The damage die for your fist unarmed attacks becomes 1d6 instead of 1d4; and all of your unarmed attacks lose the nonlethal trait.\n\nWhenever you gain a class feature that grants you expert or greater proficiency in certain weapons, you also gain that proficiency rank in all unarmed attacks.")
+                """
+                You have trained to use your fists as deadly weapons. The damage die for your fist unarmed attacks becomes 1d6 instead of 1d4; and all of your unarmed attacks lose the nonlethal trait.
+
+                Whenever you gain a class feature that grants you expert or greater proficiency in certain weapons, you also gain that proficiency rank in all unarmed attacks.
+                """)
             .WithOnCreature(self =>
             {
                 self.WithUnarmedStrike(Item.ImprovedFist());
@@ -61,7 +66,7 @@ public static class MartialArtist
                     Id = QEffectId.PowerfulFist
                 });
             });
-        martialArtistDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
+        ModData.FeatNames.MartialArtistDedication = martialArtistDedication.FeatName;
         yield return martialArtistDedication;
         
         // Powder Punch Stance
@@ -69,13 +74,14 @@ public static class MartialArtist
                 ModData.FeatNames.PowderPunchStance,
                 2,
                 "You infuse your handwraps with black powder.",
-                "On your first melee Strike each round with an unarmed attack"+/*", knuckle duster, or black powder knuckle duster"+*/", you deal an additional 1 fire damage. If you critically succeed at an attempt to Shove while in this stance, the target is pushed back an additional 5 feet.",
-                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Stance])
+                /*"On your first melee Strike each round with an unarmed attack, knuckle duster, or black powder knuckle duster,"*/
+                "On your first melee Strike each round with an unarmed attack, you deal an additional 1 fire damage. If you critically succeed at an attempt to Shove while in this stance, the target is pushed back an additional 5 feet.",
+                [Trait.Stance])
             .WithAvailableAsArchetypeFeat(ModData.Traits.MartialArtistArchetype)
             .WithActionCost(1)
             .WithIllustration(ModData.Illustrations.PowderPunchStance)
             .WithPermanentQEffect(
-                "Your first melee Strike deals +1 fire damage, and critical Shoves push 5 more feet.",
+                null,
                 qfFeat =>
                 {
                     qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
@@ -87,12 +93,17 @@ public static class MartialArtist
                                 qfThis.Owner,
                                 ModData.Illustrations.PowderPunchStance,
                                 "Powder Punch Stance",
-                                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Stance],
-                                "{i}You infuse your handwraps with black powder.{/i}\n\n"+"On your first melee Strike each round with an unarmed attack"+/*", knuckle duster, or black powder knuckle duster"+*/", you deal an additional 1 fire damage. If you critically succeed at an attempt to Shove while in this stance, the target is pushed back an additional 5 feet.",
+                                [ModData.Traits.ModName, Trait.Archetype, Trait.Stance],
+                                /*"On your first melee Strike each round with an unarmed attack, knuckle duster, or black powder knuckle duster,"*/
+                                """
+                                {i}You infuse your handwraps with black powder.{/i}
+
+                                On your first melee Strike each round with an unarmed attack, you deal an additional 1 fire damage. If you critically succeed at an attempt to Shove while in this stance, the target is pushed back an additional 5 feet.
+                                """,
                                 Target.Self()
                                     .WithAdditionalRestriction(self =>
                                         self.HasEffect(ModData.QEffectIds.PowderPunchStance) ? "You're already in this stance." : null))
-                            .WithShortDescription("Enter a stance where " + "Your first melee Strike deals +1 fire damage, and critical Shoves push 5 more feet.".Uncapitalize())
+                            .WithShortDescription("Enter a stance where " + "Your first melee Strike each round deals +1 fire damage, and critical Shoves push 5 more feet.".Uncapitalize())
                             .WithActionCost(1)
                             .WithEffectOnSelf(async self =>
                             {
@@ -104,7 +115,7 @@ public static class MartialArtist
                                     ModData.QEffectIds.PowderPunchStance);
                                 ppStance.AddExtraStrikeDamage = (action, defender) =>
                                 {
-                                    if (!action.HasTrait(Trait.Unarmed) || qfFeat.UsedThisTurn == true)
+                                    if (!action.HasTrait(Trait.Unarmed) || qfFeat.UsedThisTurn)
                                         return null;
 
                                     qfFeat.UsedThisTurn = true;
@@ -232,7 +243,6 @@ public static class MartialArtist
             },
             false)
             .WithPrerequisite(FeatName.Deception, "Trained in Deception");
-        stumblingStance.Traits.Insert(0, ModData.Traits.MoreDedications);
         yield return stumblingStance;
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.StumblingStance, ModData.Traits.MartialArtistArchetype, 4);
@@ -276,7 +286,6 @@ public static class MartialArtist
                 };
             },
             true);
-        tigerStance.Traits.Insert(0, ModData.Traits.MoreDedications);
         yield return tigerStance;
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.TigerStance, ModData.Traits.MartialArtistArchetype, 4);
@@ -286,8 +295,14 @@ public static class MartialArtist
                 ModData.FeatNames.FollowUpStrike,
                 6,
                 "You have trained to use all parts of your body as a weapon, and when you miss with an attack, you can usually continue the attack with a different body part and still deal damage.",
-                "{b}Requirements{/b} Your last action was a missed Strike with a melee unarmed attack.\n\nMake another Strike with a melee unarmed attack, using the same multiple attack penalty step as for the missed Strike, if any.\n\n" + new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString + " {b}Limitation{/b} Pre-roll breakdown is an estimate. The final roll is accurate.",
-                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Flourish])
+                $$"""
+                  {b}Requirements{/b} Your last action was a missed Strike with a melee unarmed attack.
+
+                  Make another Strike with a melee unarmed attack, using the same multiple attack penalty step as for the missed Strike, if any.
+
+                  {{new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString}} {b}Limitation{/b} Pre-roll breakdown is an estimate. The final roll is accurate.
+                  """,
+                [Trait.Flourish])
             .WithActionCost(1)
             .WithAvailableAsArchetypeFeat(ModData.Traits.MartialArtistArchetype)
             .WithPermanentQEffect(
@@ -311,13 +326,13 @@ public static class MartialArtist
 
                         // Combat Action
                         CombatAction followUpStrike = qfFeat.Owner.CreateStrike(item, qfFeat.Owner.Actions.AttackedThisManyTimesThisTurn-1);
-                        followUpStrike.Name = "Follow-Up Strike";
+                        followUpStrike.WithFullRename("Follow-Up Strike");
                         followUpStrike.Illustration = new SideBySideIllustration(item.Illustration, IllustrationName.ExactingStrike);
                         followUpStrike.Description = StrikeRules.CreateBasicStrikeDescription4(
                             followUpStrike.StrikeModifiers,
                             additionalAttackRollText: "This uses the same multiple attack penalty step as your last Strike.");
                         (followUpStrike.Target as CreatureTarget)!.WithAdditionalConditionOnTargetCreature(
-                            (attacker, defender) =>
+                            (_, _) =>
                             {
                                 if (action is { CheckResult: < CheckResult.Success }
                                     && actionItem != null
@@ -337,8 +352,16 @@ public static class MartialArtist
                 ModData.FeatNames.ThunderClap,
                 6,
                 "You slam your hands together to unleash a deafening blast.",
-                "{b}Requirements{/b} You are in Powder Punch Stance\n\nCreatures in a 15-foot cone take 3d6 sonic damage, with a basic Fortitude save against your class DC. Creatures that critically fail their save are also deafened for the rest of combat.\n\nYou can't use this ability again for 1d4 rounds as your hands recover from the thunderous vibrations.\n\nAt 8th level, and every 2 levels thereafter, the damage from Thunder Clap increases by 1d6.",
-                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Sonic])
+                """
+                {b}Requirements{/b} You are in Powder Punch Stance
+
+                Creatures in a 15-foot cone take 3d6 sonic damage, with a basic Fortitude save against your class DC. Creatures that critically fail their save are also deafened for the rest of combat.
+
+                You can't use this ability again for 1d4 rounds as your hands recover from the thunderous vibrations.
+
+                At 8th level, and every 2 levels thereafter, the damage from Thunder Clap increases by 1d6.
+                """,
+                [Trait.Sonic])
             .WithAvailableAsArchetypeFeat(ModData.Traits.MartialArtistArchetype)
             .WithActionCost(2)
             .WithPermanentQEffect(
@@ -361,19 +384,26 @@ public static class MartialArtist
                                 qfThis.Owner,
                                 clapIcon,
                                 clapActionName,
-                                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Sonic],
-                                "{i}You slam your hands together to unleash a deafening blast.{/i}\n\nCreatures in a 15-foot cone take "+S.HeightenedVariable(numDice, 3)+"d6"+" sonic damage, with a basic Fortitude save against your class DC. Creatures that critically fail their save are also deafened for the rest of combat.\n\nYou can't use this ability again for 1d4 rounds as your hands recover from the thunderous vibrations.",
+                                [ModData.Traits.ModName, Trait.Archetype, Trait.Sonic],
+                                $$"""
+                                  {i}You slam your hands together to unleash a deafening blast.{/i}
+
+                                  Creatures in a 15-foot cone take {{S.HeightenedVariable(numDice, 3)}}d6 sonic damage, with a basic Fortitude save against your class DC. Creatures that critically fail their save are also deafened for the rest of combat.
+
+                                  You can't use this ability again for 1d4 rounds as your hands recover from the thunderous vibrations.
+                                  """,
                                 Target.FifteenFootCone())
-                            .WithSavingThrow(new SavingThrow(Defense.Fortitude, qfThis.Owner.ClassDC()))
+                            .WithShortDescription("Deal basic sonic damage in a 15-foot cone.")
                             .WithProjectileCone(VfxStyle.BasicProjectileCone(clapIcon))
                             .WithSoundEffect(SfxName.ElectricBlast)
+                            .WithSavingThrow(new SavingThrow(Defense.Fortitude, qfThis.Owner.ClassDC()))
                             .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
                             {
                                 await CommonSpellEffects.DealBasicDamage(thisAction, caster, target, result, $"{numDice}d6", DamageKind.Sonic);
                                 if (result == CheckResult.CriticalFailure)
                                     target.AddQEffect(QEffect.Deafened());
                             })
-                            .WithEffectOnChosenTargets(async (attacker, defender) =>
+                            .WithEffectOnChosenTargets(async (attacker, _) =>
                                 attacker.AddQEffect(QEffect.Recharging(clapActionName)));
 
                         return new ActionPossibility(clapAction);
@@ -478,47 +508,63 @@ public static class MartialArtist
             .WithAvailableAsArchetypeFeat(ModData.Traits.MartialArtistArchetype);
         
         // Stumbling Feint
-        // PETR: If levels reach 12+, account for dedication FoB. For now, class-check is sufficient.
         yield return new TrueFeat(
                 ModData.FeatNames.StumblingFeint,
                 6,
                 "You lash out confusingly with what seems to be a weak move but instead allows you to unleash a dangerous flurry of blows upon your unsuspecting foe.",
-                "{b}Requirements{/b} You are in Stumbling Stance.\n\nWhen you use Flurry of Blows, you can attempt a check to Feint as a free action just before the first Strike. On a success, instead of making the target flat-footed against your next attack, they become flat-footed against both attacks from the Flurry of Blows.",
-                [ModData.Traits.MoreDedications, Trait.Monk])
+                """
+                {b}Requirements{/b} You are in Stumbling Stance.
+
+                When you use Flurry of Blows, you can attempt a check to Feint as a free action just before the first Strike. On a success, instead of making the target flat-footed against your next attack, they become flat-footed against both attacks from the Flurry of Blows.
+                """,
+                [Trait.Monk])
             .WithPermanentQEffect(
-                "Feint just before you use Flurry of Blows. The target is flat-footed to both blows.",
+                null,
                 qfFeat =>
                 {
                     qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
                     {
-                        if (section.PossibilitySectionId != PossibilitySectionId.MainActions)
-                            return null;
-
-                        if (qfThis.Owner.FindQEffect(ModData.QEffectIds.StumblingStance) == null)
+                        // Makes it possible to list this action in the offense section
+                        // without showing it on the action bar until you're in the correct stance.
+                        PossibilitySectionId requiredSection = qfThis.Owner.HasEffect(ModData.QEffectIds.StumblingStance)
+                            ? PossibilitySectionId.MainActions
+                            : PossibilitySectionId.InvisibleActions;
+                        if (section.PossibilitySectionId != requiredSection)
                             return null;
                         
                         CombatAction stumblingFeintAction = new CombatAction(
                                 qfThis.Owner,
                                 new SideBySideIllustration(
-                                    IllustrationName.Feint, IllustrationName.FlurryOfBlows),
+                                    IllustrationName.Feint,
+                                    IllustrationName.FlurryOfBlows),
                                 "Stumbling Feint",
-                                [ModData.Traits.MoreDedications, Trait.Monk, Trait.Flourish],
-                                "{i}You lash out confusingly with what seems to be a weak move but instead allows you to unleash a dangerous flurry of blows upon your unsuspecting foe.{/i}\n\n{b}Requirements{/b} You are in Stumbling Stance.\n\nWhen you use Flurry of Blows, you can attempt a check to Feint as a free action just before the first Strike. On a success, instead of making the target flat-footed against your next attack, they become flat-footed against both attacks from the Flurry of Blows.",
+                                [ModData.Traits.ModName, Trait.Monk, Trait.Flourish],
+                                """
+                                {i}You lash out confusingly with what seems to be a weak move but instead allows you to unleash a dangerous flurry of blows upon your unsuspecting foe.{/i}
+
+                                {b}Requirements{/b} You are in Stumbling Stance.
+
+                                When you use Flurry of Blows, you can attempt a check to Feint as a free action just before the first Strike. On a success, instead of making the target flat-footed against your next attack, they become flat-footed against both attacks from the Flurry of Blows.
+                                """,
                                 Target.AdjacentCreature()//Target.Reach(qfThis.Owner.UnarmedStrike)
-                                    .WithAdditionalConditionOnTargetCreature((attacker, defender) => attacker.HasEffect(ModData.QEffectIds.StumblingStance) ? Usability.Usable : Usability.NotUsable("requires stumbling stance"))
+                                    .WithAdditionalConditionOnTargetCreature((a, _) =>
+                                        a.HasEffect(ModData.QEffectIds.StumblingStance)
+                                            ? Usability.Usable
+                                            : Usability.NotUsable("requires stumbling stance"))
                                     .WithAdditionalConditionOnTargetCreature(new EnemyCreatureTargetingRequirement())
-                                    .WithAdditionalConditionOnTargetCreature((attacker, defender) => defender.IsImmuneTo(Trait.Mental)
+                                    .WithAdditionalConditionOnTargetCreature((_, d) => d.IsImmuneTo(Trait.Mental)
                                         ? Usability.NotUsableOnThisCreature("immune to mental")
                                         : Usability.Usable)
-                                    .WithAdditionalConditionOnTargetCreature((self, defender) =>
+                                    .WithAdditionalConditionOnTargetCreature((a, _) =>
                                     {
-                                        var foundWeapon = self.MeleeWeapons.Any(weapon =>
+                                        bool foundWeapon = a.MeleeWeapons.Any(weapon =>
                                             weapon.HasTrait(Trait.Unarmed) &&
-                                            CommonRulesConditions.CouldMakeStrike(self, weapon));
+                                            CommonRulesConditions.CouldMakeStrike(a, weapon));
                                         return foundWeapon ? Usability.Usable : Usability.NotUsable("There is no nearby enemy or you can't make attacks."); 
                                     }))
                             .WithActionCost(1)
                             //.WithActionId(ActionId.Feint)
+                            .WithShortDescription("While in Stumbling Stance: Feint, then Flurry of Blows (they're flat-footed to both blows on a success).")
                             .WithEffectOnEachTarget(async (_, caster, target, _) =>
                             {
                                 // Feint
@@ -542,7 +588,7 @@ public static class MartialArtist
                                 
                                 // Flurry of Blows
                                 Possibilities foBs = Possibilities.Create(caster)
-                                    .Filter( ap =>
+                                    .Filter(ap =>
                                     {
                                         if (ap.CombatAction.ActionId != ActionId.FlurryOfBlows)
                                             return false;
@@ -577,8 +623,12 @@ public static class MartialArtist
                 ModData.FeatNames.TigerSlash,
                 6,
                 "You make a fierce swipe with both hands.",
-                "{b}Requirements{/b} You are in Tiger Stance.\n\nMake a tiger claw Strike. It deals two extra weapon damage dice"/*+" (three extra dice if you’re 14th level or higher)"*/+", and you can push the target 5 feet away as if you had successfully Shoved them. If the attack is a critical success and deals damage, add your Strength modifier to the persistent bleed damage from your tiger claw.",
-                [ModData.Traits.MoreDedications, Trait.Monk])
+                """
+                {b}Requirements{/b} You are in Tiger Stance.
+
+                Make a tiger claw Strike. It deals two extra weapon damage dice (three dice at level 14+), and you can push the target 5 feet away as if you had successfully Shoved them. If the attack is a critical success and deals damage, add your Strength modifier to the persistent bleed damage from your tiger claw.
+                """,
+                [Trait.Monk])
             .WithActionCost(2)
             .WithPermanentQEffect(
                 "While in Tiger Stance, you can make a tiger claw strike that deals additional damage, automatically deals a successful Shove on a hit, and adds your Strength modifier to the persistent bleed damage from a critical hit.",
@@ -609,7 +659,7 @@ public static class MartialArtist
                                             attacker,
                                             IllustrationName.None,
                                             "Shove (5 feet)",
-                                            [Trait.Basic, Trait.Attack, Trait.AttackDoesNotTargetAC, Trait.AttackDoesNotIncreaseMultipleAttackPenalty],
+                                            [Trait.Attack, Trait.AttackDoesNotTargetAC, Trait.AttackDoesNotIncreaseMultipleAttackPenalty, Trait.Basic],
                                             "The target is pushed 5 feet as if successfully Shoved.",
                                             Target.Reach(item))
                                         .WithActionCost(0)
@@ -649,8 +699,10 @@ public static class MartialArtist
                             .WithActionCost(2)
                             .WithExtraTrait(Trait.Basic)
                             .WithTag(ModData.ActionIds.TigerSlash); // Tiger Claw checks this tag for bonus bleed.
-                        strike.Illustration =
-                            new SideBySideIllustration(strike.Illustration, IllustrationName.BloodVendetta);
+                        strike.Illustration = new SideBySideIllustration(
+                            strike.Illustration,
+                            IllustrationName.BloodVendetta);
+                        strike.Traits = new Traits([ModData.Traits.ModName, ..strike.Traits], strike);
 
                         return strike;
                     };
@@ -725,7 +777,6 @@ public static class MartialArtist
                 };
             },
             true);
-        stokedFlameStance.Traits.Insert(0, ModData.Traits.MoreDedications);
         yield return stokedFlameStance;
         
         // Inner Fire
@@ -734,7 +785,7 @@ public static class MartialArtist
                 6,
                 null,
                 "While you're in Stoked Flame Stance, you have cold and fire resistance equal to half your level, and any creature that hits you with an unarmed attack, tries to Grab or Grapple you, or otherwise touches you takes fire damage equal to your Wisdom modifier (minimum 1). A creature can take this damage no more than once per turn.",
-                [ModData.Traits.MoreDedications, Trait.Monk])
+                [Trait.Monk])
             .WithPermanentQEffect(
                 "While in Stoked Flame Stance, you have cold and fire resistance, and creatures which touch you take fire damage.",
                 qfFeat =>
@@ -788,7 +839,7 @@ public static class MartialArtist
                 CombatAction wildWindsSpell = Spells.CreateModern(
                         icon,
                         name,
-                        [ModData.Traits.MoreDedications, Trait.Air, Trait.Evocation, Trait.Focus, Trait.Manipulate, Trait.Monk, Trait.Stance, Trait.SomaticOnly],
+                        [ModData.Traits.ModName, Trait.Air, Trait.Evocation, Trait.Focus, Trait.Manipulate, Trait.Monk, Trait.Stance, Trait.SomaticOnly],
                         "You take on the stance of the flowing winds, sending out waves of energy at a distance.",
                         "{b}Duration{/b} until you leave the stance\n\nEnter a stance.\n\n" + passiveBonus + "\n\n" + describedAttack + "\n\nWind crash Strikes ignore concealment and all cover.",
                         Target.Self()
@@ -886,7 +937,6 @@ public static class MartialArtist
             ModData.SpellIds.WildWindsStance,
             ModData.Illustrations.WildWindsStance,
             true);
-        wildWindsInitiate.Traits.Insert(0, ModData.Traits.MoreDedications);
         yield return wildWindsInitiate;
 
         // Jellyfish Stance
@@ -908,7 +958,6 @@ public static class MartialArtist
                 qfStance.BonusToSkillChecks = (skill, action, target) =>
                     action.ActionId is ActionId.Escape ? new Bonus(2, BonusType.Circumstance, "Jellyfish stance") : null;
             });
-        jellyfishStance.Traits.Insert(0, ModData.Traits.MoreDedications);
         yield return jellyfishStance;
 
         // Tangled Forest Stance
@@ -995,7 +1044,6 @@ public static class MartialArtist
                     });
             },
             true);
-        tangledStance.Traits.Insert(0, ModData.Traits.MoreDedications);
         yield return tangledStance;
         
         // Clinging Shadows Stance
@@ -1014,7 +1062,7 @@ public static class MartialArtist
                 CombatAction clingingShadowsSpell = Spells.CreateModern(
                         icon,
                         name,
-                        [ModData.Traits.MoreDedications, Trait.Evocation, Trait.Focus, Trait.Manipulate, Trait.Monk, ModData.Traits.Shadow, Trait.Stance, Trait.SomaticOnly],
+                        [ModData.Traits.ModName, Trait.Evocation, Trait.Focus, Trait.Manipulate, Trait.Monk, ModData.Traits.Shadow, Trait.Stance, Trait.SomaticOnly],
                         "You adopt the stance of clinging shadows, shrouding your limbs in sticky smoke made of ki.",
                         "{b}Duration{/b} until you leave the stance\n\nEnter a stance.\n\n" + passiveBonus + "\n\n" + describedAttack + ".",
                         Target.Self()
@@ -1067,7 +1115,6 @@ public static class MartialArtist
             ModData.SpellIds.ClingingShadowsStance,
             ModData.Illustrations.ClingingShadowsStance,
             true);
-        clingingShadowsInitiate.Traits.Insert(0, ModData.Traits.MoreDedications);
         yield return clingingShadowsInitiate;
     }
     
@@ -1109,7 +1156,7 @@ public static class MartialArtist
                         qfSelf.Owner,
                         icon,
                         displayName, //featName.HumanizeTitleCase2(),
-                        [Trait.Monk, Trait.Stance],
+                        [ModData.Traits.ModName, Trait.Monk, Trait.Stance],
                         description,
                         Target.Self()
                             .WithAdditionalRestriction(self =>

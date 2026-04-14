@@ -28,7 +28,7 @@ public static class Bastion
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
         
         ModManager.RegisterActionOnEachActionPossibility(ca =>
         {
@@ -59,7 +59,7 @@ public static class Bastion
             {
                 values.GrantFeat(FeatName.ReactiveShield);
             });
-        bastionDedication.Traits.Insert(0, ModData.Traits.MoreDedications);
+        ModData.FeatNames.BastionDedication = bastionDedication.FeatName;
         yield return bastionDedication;
 
         // Add Agile Shield Grip to Bastion
@@ -72,8 +72,14 @@ public static class Bastion
                 ModData.FeatNames.DisarmingBlock,
                 4,
                 null,
-                "{b}Trigger{/b} You Shield Block a melee Strike made with a held weapon.\n\nYou attempt to Disarm the creature whose attack you blocked of the weapon they attacked you with. You can do so even if you don't have a hand free.\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " {b}NYI{/b} This does not target a specific item to Disarm.",
-                [ModData.Traits.MoreDedications])
+                $$"""
+                  {b}Trigger{/b} You Shield Block a melee Strike made with a held weapon.
+
+                  You attempt to Disarm the creature whose attack you blocked of the weapon they attacked you with. You can do so even if you don't have a hand free.
+
+                  {{ModData.Illustrations.DawnsburySun.IllustrationAsIconString}} {b}NYI{/b} This does not target a specific item to Disarm.
+                  """,
+                [])
             .WithActionCost(0)
             .WithAvailableAsArchetypeFeat(ModData.Traits.BastionArchetype)
             .WithPrerequisite(
@@ -107,8 +113,12 @@ public static class Bastion
                                 defender,
                                 new SideBySideIllustration(action.Illustration, IllustrationName.Disarm),
                                 "Disarming Block",
-                                [ModData.Traits.MoreDedications, Trait.Archetype],
-                                "{b}Trigger{/b} You Shield Block a melee Strike made with a held weapon.\n\nYou attempt to Disarm the creature whose attack you blocked of the weapon they attacked you with. You can do so even if you don't have a hand free.",
+                                [ModData.Traits.ModName, Trait.Archetype],
+                                """
+                                {b}Trigger{/b} You Shield Block a melee Strike made with a held weapon.
+
+                                You attempt to Disarm the creature whose attack you blocked of the weapon they attacked you with. You can do so even if you don't have a hand free.
+                                """,
                                 Target.Self())
                             .WithActionCost(0)
                             .WithEffectOnEachTarget(async (action2, self, _, _) =>
@@ -222,8 +232,12 @@ public static class Bastion
                 ModData.FeatNames.NimbleShieldHand,
                 6,
                 "You are so used to wielding a shield that you can use another item and switch back to it effortlessly.",
-                "You can Draw or Pick Up a shield, or Replace an item with a shield, as a {icon:FreeAction} free action.\n\nThis benefit doesn't apply to tower shields, which are still too cumbersome.",
-                [ModData.Traits.MoreDedications])
+                """
+                You can Draw or Pick Up a shield, or Replace an item with a shield, as a {icon:FreeAction} free action.
+
+                This benefit doesn't apply to tower shields, which are still too cumbersome.
+                """,
+                [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.BastionArchetype)
             .WithPermanentQEffect(
                 "You can Draw, Pick Up, or Replace a shield as a {icon:FreeAction} free action. Except for tower shields.",
@@ -239,12 +253,12 @@ public static class Bastion
                 4,
                 "When your shield is up, your enemies' blows can't touch you.",
                 "When you have your shield raised, you can Stride to move half your Speed without triggering reactions that are triggered by your movement.",
-                [ModData.Traits.MoreDedications, Trait.Fighter])
+                [Trait.Fighter])
             .WithPermanentQEffect(
                 "While your shield is raised, Striding half your speed doesn't provoke reactions.",
                 qfFeat =>
                 {
-                    qfFeat.StateCheck = async qfThis =>
+                    qfFeat.StateCheck = qfThis =>
                     {
                         if (qfThis.Owner.FindQEffect(QEffectId.RaisingAShield) != null)
                         {
@@ -261,7 +275,7 @@ public static class Bastion
                 6,
                 "You can use your shield to fend off the worst of area effects and other damage.",
                 "When you Raise your Shield, you gain your shield's circumstance bonus to Reflex saves. If you have the Shield Block reaction, damage you take as a result of a Reflex save can trigger that reaction, even if the damage isn't physical damage.",
-                [ModData.Traits.MoreDedications, Trait.Fighter])
+                [Trait.Fighter])
             .WithPermanentQEffect(
                 "Raise a Shield benefits your Reflex saves. If you have Shield Block, you can block any damage from a Reflex save.",
                 qfFeat =>

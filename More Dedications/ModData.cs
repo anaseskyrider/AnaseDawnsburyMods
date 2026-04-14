@@ -78,26 +78,36 @@ public static class ModData
         // However, later feats will usually have stock-like strings, as most modders tend not to overlap on feats, as cross-mod compatibility has become easier, as the base game now handles shared feat strings by ignoring the mod.
         
         #region Mauler
+
+        public static FeatName MaulerDedication;
         public static readonly FeatName ClearTheWay = ModManager.RegisterFeatName(IdPrepend+"Archetype.Mauler.ClearTheWay", "Clear the Way");
         public static readonly FeatName ShovingSweep = ModManager.RegisterFeatName(IdPrepend+"Archetype.Mauler.ShovingSweep", "Shoving Sweep");
+        
         #endregion
         
         #region Archer
+        
         public static readonly FeatName AdvancedBowTraining = ModManager.RegisterFeatName(IdPrepend+"Archetype.Archer.AdvancedBowTraining", "Advanced Bow Training");
         public static readonly FeatName CrossbowTerror = ModManager.RegisterFeatName(IdPrepend+"Archetype.Archer.CrossbowTerror", "Crossbow Terror");
         public static readonly FeatName FighterPartingShot = ModManager.RegisterFeatName(IdPrepend+"Class.Fighter.PartingShot", "Parting Shot");
         public static readonly FeatName RangerRunningReload = ModManager.RegisterFeatName(IdPrepend+"Class.Ranger.RunningReload", "Running Reload");
         public static readonly FeatName ArchersAim = ModManager.RegisterFeatName(IdPrepend+"Archetype.Archer.ArchersAim", "Archer's Aim");
+        
         #endregion
         
         #region Bastion
+
+        public static FeatName BastionDedication;
         public static readonly FeatName DisarmingBlock = ModManager.RegisterFeatName(IdPrepend+"Archetype.Bastion.DisarmingBlock", "Disarming Block");
         public static readonly FeatName NimbleShieldHand = ModManager.RegisterFeatName(IdPrepend+"Archetype.Bastion.NimbleShieldHand", "Nimble Shield Hand");
         public static readonly FeatName FighterShieldedStride = ModManager.RegisterFeatName(IdPrepend+"Class.Fighter.ShieldedStride", "Shielded Stride");
         public static readonly FeatName FighterReflexiveShield = ModManager.RegisterFeatName(IdPrepend+"Class.Fighter.ReflexiveShield", "Reflexive Shield");
+        
         #endregion
         
         #region Martial Artist
+        
+        public static FeatName MartialArtistDedication;
         public static readonly FeatName PowderPunchStance = ModManager.RegisterFeatName(IdPrepend+"Archetype.MartialArtist.PowderPunchStance", "Powder Punch Stance");
         public static readonly FeatName StumblingStance = ModManager.RegisterFeatName("StumblingStance", "Stumbling Stance");
         public static readonly FeatName TigerStance = ModManager.RegisterFeatName("TigerStance", "Tiger Stance");
@@ -106,40 +116,54 @@ public static class ModData
         public static readonly FeatName GrievousBlow = ModManager.RegisterFeatName("GrievousBlow", "Grievous Blow");
         public static readonly FeatName StumblingFeint = ModManager.RegisterFeatName("StumblingFeint", "Stumbling Feint");
         public static readonly FeatName TigerSlash = ModManager.RegisterFeatName("TigerSlash", "Tiger Slash");
+        
         #endregion
         
         #region Marshal
+
+        public static FeatName MarshalDedication;
         public static readonly FeatName DreadMarshalStance = ModManager.RegisterFeatName(IdPrepend+"Archetype.Marshal.DreadMarshalStance", "Dread Marshal Stance");
         public static readonly FeatName InspiringMarshalStance = ModManager.RegisterFeatName(IdPrepend+"Archetype.Marshal.InspiringMarshalStance", "Inspiring Marshal Stance");
         public static readonly FeatName SteelYourself = ModManager.RegisterFeatName(IdPrepend+"Archetype.Marshal.SteelYourself", "Steel Yourself!");
         public static readonly FeatName RallyingCharge = ModManager.RegisterFeatName(IdPrepend+"Archetype.Marshal.RallyingCharge", "Rallying Charge");
         public static readonly FeatName BackToBack = ModManager.RegisterFeatName(IdPrepend+"Archetype.Marshal.BackToBack", "Back to Back");
         public static readonly FeatName ToBattle = ModManager.RegisterFeatName(IdPrepend+"Archetype.Marshal.ToBattle", "To Battle!");
+        
         #endregion
         
         #region Blessed One
+
+        public static FeatName BlessedOneDedication;
         public static readonly FeatName BlessedSacrifice = ModManager.RegisterFeatName(IdPrepend+"Archetype.BlessedOne.BlessedSacrifice", "Blessed Sacrifice");
+        
         #endregion
         
         #region Scout
+
+        public static FeatName ScoutDedication;
         public static readonly FeatName ScoutsWarning = ModManager.RegisterFeatName("ScoutsWarning", "Scout's Warning");
         public static readonly FeatName ScoutsCharge = ModManager.RegisterFeatName(IdPrepend+"Archetype.Scout.ScoutsCharge", "Scout's Charge");
         public static readonly FeatName TerrainScout = ModManager.RegisterFeatName(IdPrepend+"Archetype.Scout.TerrainScout", "Terrain Scout");
         public static readonly FeatName FleetingShadow = ModManager.RegisterFeatName(IdPrepend+"Archetype.Scout.FleetingShadow", "Fleeting Shadow");
         public static readonly FeatName ScoutsSpeed = ModManager.RegisterFeatName(IdPrepend+"Archetype.Scout.ScoutsSpeed", "Scout's Speed");
         public static readonly FeatName ScoutsPounce = ModManager.RegisterFeatName(IdPrepend+"Archetype.Scout.ScoutsPounce", "Scout's Pounce");
+        
         #endregion
         
         #region Assassin
+
+        public static FeatName AssassinDedication;
         public static readonly FeatName ExpertBackstabber = ModManager.RegisterFeatName(IdPrepend+"Archetype.Assassin.ExpertBackstabber", "Expert Backstabber");
         public static FeatName PoisonResistance; // Set later
         public static readonly FeatName SurpriseAttack = ModManager.RegisterFeatName(IdPrepend+"Archetype.Assassin.SurpriseAttack", "Surprise Attack");
         public static readonly FeatName PoisonWeapon = ModManager.RegisterFeatName("PoisonWeapon", "Poison Weapon");
         public static readonly FeatName ImprovedPoisonWeapon = ModManager.RegisterFeatName("ImprovedPoisonWeapon", "Improved Poison Weapon");
+        
         #endregion
 
         #region Dual Weapon Warrior
-        
+
+        public static FeatName DualWeaponWarriorDedication;
         public static readonly FeatName DualThrower = ModManager.RegisterFeatName(IdPrepend+"Archetype.DualWeaponWarrior.DualThrower", "Dual Thrower");
         public static readonly FeatName FlensingSlice = ModManager.RegisterFeatName(IdPrepend+"Archetype.DualWeaponWarrior.FlensingSlice", "Flensing Slice");
 
@@ -154,12 +178,19 @@ public static class ModData
         #endregion
         
         #region Familiar Master
-        
+
+        public static FeatName FamiliarMasterDedication;
         public static readonly FeatName OverloadFamiliar = ModManager.RegisterFeatName(IdPrepend+"Archetype.FamiliarMaster.OverloadFamiliar", "Overload Familiar");
         public static readonly FeatName FastCommand = ModManager.RegisterFeatName(IdPrepend+"Archetype.FamiliarMaster.FastCommand", "Fast Command");
         public static readonly FeatName MutableFamiliar = ModManager.RegisterFeatName(IdPrepend+"Archetype.FamiliarMaster.MutableFamiliar", "Mutable Familiar");
         public static readonly FeatName IncredibleFamiliar = ModManager.RegisterFeatName(IdPrepend+"Archetype.FamiliarMaster.IncredibleFamiliar", "Incredible Familiar");
         
+        #endregion
+
+        #region Wrestler
+
+        public static readonly FeatName ElbowBreaker = ModManager.RegisterFeatName(IdPrepend+"Archetype.Wrestler.ElbowBreaker", "Elbow Breaker");
+
         #endregion
         
         #region Bonus Stances
@@ -283,7 +314,7 @@ public static class ModData
     public static class Tooltips
     {
         public static readonly Func<string, string> LeveledDC = RegisterTooltipInserter(
-            IdPrepend+"LevelBasedDC",
+            IdPrepend + "LevelBasedDC",
             "{b}Level-based DCs{/b}\nWhen a DC is based on your level, it uses one of the following values:\n{b}Level 1:{/b} 15\n{b}Level 2:{/b} 16\n{b}Level 3:{/b} 18\n{b}Level 4:{/b} 19\n{b}Level 5:{/b} 20\n{b}Level 6:{/b} 22\n{b}Level 7:{/b} 23\n{b}Level 8:{/b} 24\n{b}Level 9:{/b} 26");
         
         /// <summary>
@@ -301,7 +332,10 @@ public static class ModData
     
     public static class Traits
     {
-        public static readonly Trait MoreDedications = ModManager.RegisterTrait("MoreDedications", new TraitProperties("More Dedications", true));
+        /// <summary>
+        /// A trait which acts as a mod-source identifier for More Dedications.
+        /// </summary>
+        public static readonly Trait ModName = ModManager.RegisterModNameTrait("MoreDedications", "More Dedications");
             
         // Archetype Traits
         public static readonly Trait MaulerArchetype = ModManager.RegisterTrait(IdPrepend+"Mauler", new TraitProperties("Mauler", true));

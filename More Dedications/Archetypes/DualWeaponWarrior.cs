@@ -24,7 +24,7 @@ public static class DualWeaponWarrior
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
     }
     
     public static IEnumerable<Feat> CreateFeats()
@@ -38,13 +38,20 @@ public static class DualWeaponWarrior
                     CombatAction.CreateSimple(
                             cr,
                             "Double Slice",
-                            [Trait.Fighter])
+                            Trait.Fighter)
                         .WithDescription(
                             "You lash out at your foe with both weapons.",
-                            "Make two Strikes against the same target, one with each of your two melee weapons, each using your current multiple attack penalty.\n\nIf the second Strike is made with a non-agile weapon it takes a –2 penalty. Combine the damage for the purposes of weakness and resistance. This counts as two attacks when calculating your multiple attack penalty.")
-                        .WithActionCost(2))
+                            """
+                            Make two Strikes against the same target, one with each of your two melee weapons, each using your current multiple attack penalty.
+
+                            If the second Strike is made with a non-agile weapon it takes a –2 penalty. Combine the damage for the purposes of weakness and resistance. This counts as two attacks when calculating your multiple attack penalty.
+                            """)
+                        .WithActionCost(2)
+                        .With(ca => ca.Illustration = new SideBySideIllustration(
+                            IllustrationName.Dagger,
+                            IllustrationName.Dagger)))
             .WithOnSheet(sheet => sheet.GrantFeat(FeatName.DoubleSlice));
-        dwwArchetype.Traits.Insert(0, ModData.Traits.MoreDedications);
+        ModData.FeatNames.DualWeaponWarriorDedication = dwwArchetype.FeatName;
         yield return dwwArchetype;
         
         // Dual Thrower
@@ -53,7 +60,7 @@ public static class DualWeaponWarrior
                 4,
                 "You know how to throw two weapons as easily as strike with them.",
                 "Whenever a dual-weapon warrior feat allows you to make a melee Strike, you can instead make a ranged Strike with a thrown weapon or a one-handed ranged weapon you are wielding. Any effects from these feats that apply to one-handed melee weapons or melee Strikes also apply to one-handed ranged weapons and ranged Strikes.",
-                [ModData.Traits.MoreDedications])
+                [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.DualWeaponWarriorArchetype)
             .WithPermanentQEffect(
                 "You can use double slice and other Dual-Weapon Warrior actions with ranged weapons.",
@@ -86,7 +93,7 @@ public static class DualWeaponWarrior
                                     IllustrationName.Throw,
                                     IllustrationName.Throw),
                                 "Double Slice (throw)",
-                                [Trait.Basic, Trait.AlwaysHits, Trait.IsHostile, ModData.Traits.MoreDedications, Trait.Archetype, Trait.Fighter],
+                                [Trait.Basic, Trait.AlwaysHits, Trait.IsHostile, ModData.Traits.ModName, Trait.Archetype, Trait.Fighter],
                                 null!,
                                 (strike1 as CreatureTarget)!
                                 .WithAdditionalConditionOnTargetCreature((a, d) =>
@@ -164,8 +171,14 @@ public static class DualWeaponWarrior
                 ModData.FeatNames.FlensingSlice,
                 8,
                 "When you hit with both attacks with Double Slice, you flense the target, making it bleed and creating a weak spot.", 
-                "{b}Requirements{/b} Your last action was a Double Slice, and both attacks hit the target.\n\nThe target takes 1d8 persistent bleed damage per weapon damage die of whichever of the weapons you used that has the most weapon damage dice (maximum 4d8 for a major striking weapon).\n\nThe target also becomes flat-footed and reduces its physical damage resistances (if any) by 5 until the start of your next turn.",
-                [ModData.Traits.MoreDedications])
+                """
+                {b}Requirements{/b} Your last action was a Double Slice, and both attacks hit the target.
+
+                The target takes 1d8 persistent bleed damage per weapon damage die of whichever of the weapons you used that has the most weapon damage dice (maximum 4d8 for a major striking weapon).
+
+                The target also becomes flat-footed and reduces its physical damage resistances (if any) by 5 until the start of your next turn.
+                """,
+                [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.DualWeaponWarriorArchetype)
             .WithActionCost(1)
             .WithPermanentQEffect(
@@ -210,12 +223,19 @@ public static class DualWeaponWarrior
                             ?.WeaponProperties
                             ?.DamageDieCount ?? 1;
 
+                        // TODO: S.HeightenedVarBlahBlahBLah
                         CombatAction flense = new CombatAction(
                                 qfThis.Owner,
                                 ModData.Illustrations.FlensingSlice,
                                 "Flensing Slice",
-                                [Trait.Basic, ModData.Traits.MoreDedications, Trait.Archetype],
-                                $"{{b}}Requirements{{/b}} Your last action was a Double Slice, and both attacks hit the target.\n\nThe target takes {dice}d8 persistent bleed damage. \n\nThe target also becomes flat-footed and reduces its physical damage resistances (if any) by 5 until the start of your next turn.",
+                                [Trait.Basic, ModData.Traits.ModName, Trait.Archetype],
+                                $$"""
+                                  {b}Requirements{/b} Your last action was a Double Slice, and both attacks hit the target.
+
+                                  The target takes {{dice}}d8 persistent bleed damage. 
+
+                                  The target also becomes flat-footed and reduces its physical damage resistances (if any) by 5 until the start of your next turn.
+                                  """,
                                 Target.Self())
                             .WithActionCost(1)
                             .WithSoundEffect(SfxName.Boneshaker)

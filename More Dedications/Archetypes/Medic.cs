@@ -20,7 +20,7 @@ public static class Medic
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
     }
 
     public static IEnumerable<Feat> CreateFeats()
@@ -31,7 +31,6 @@ public static class Medic
             .WithEquivalent(values => values.HasFeat(FeatName.TreatCondition));
         // Normal list order: 0:Healing, 1:Manipulate, 2:Archetype
         treatCondition.Traits.Insert(2, Trait.Skill);
-        treatCondition.Traits.Insert(0, ModData.Traits.MoreDedications);
         treatCondition.RulesText += "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}More Dedications{/b} This is a skill feat variant of Treat Condition which can be taken as a general feat or skill feat (requires the {i}Skill Feats for Everyone{/i} mod).";
         ModData.FeatNames.TreatConditionSkillVariant = treatCondition.FeatName;
         yield return treatCondition;
@@ -46,7 +45,7 @@ public static class Medic
                 {icon:Action} Battle Medicine or Treat Poison.
                 {icon:TwoActions} Stabilize, Staunch Bleeding, or Treat Condition {i}(if you have it){/i}.
                 """,
-                [ModData.Traits.MoreDedications, Trait.Flourish])
+                [Trait.Flourish])
             .WithAvailableAsArchetypeFeat(Trait.Medic)
             .WithActionCost(Constants.ACTION_COST_VARIABLE_ACTION_COST_ONE_OR_TWO)
             .WithPermanentQEffect(
@@ -192,7 +191,6 @@ public static class Medic
             .WithEquivalent(values => values.HasFeat(FeatName.HolisticCare));
         // Normal list order: 0:Archetype
         holisticCare.Traits.Add(Trait.Skill);
-        holisticCare.Traits.Insert(0, ModData.Traits.MoreDedications);
         holisticCare.RulesText += "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}More Dedications{/b} This is a skill feat variant of Holistic Care which can be taken as a general feat or skill feat (requires the {i}Skill Feats for Everyone{/i} mod).";
         ModData.FeatNames.HolisticCareSkillVariant = holisticCare.FeatName;
         yield return holisticCare;
