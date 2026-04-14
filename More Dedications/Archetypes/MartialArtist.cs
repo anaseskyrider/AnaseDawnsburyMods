@@ -418,12 +418,48 @@ public static class MartialArtist
                 ModData.FeatNames.GrievousBlow,
                 8,
                 "You know how to deliver focused, powerful blows that bypass your enemies' resistances.",
-                "Make an unarmed melee Strike. This counts as two attacks when calculating your multiple attack penalty. If this Strike hits, you deal two extra weapon damage dice."+/*" If you are at least 18th level, increase this to three extra weapon damage dice."+*/"\n\nThis attack also ignores an amount of resistance to physical damage, or to a specific physical damage type, equal to your level.",
-                [ModData.Traits.MoreDedications, Trait.Archetype, Trait.Flourish])
+                """
+                Make an unarmed melee Strike. This counts as two attacks when calculating your multiple attack penalty. If this Strike hits, you deal two extra weapon damage dice (three dice at level 18+).
+
+                This attack also ignores an amount of resistance to its physical damage equal to your level.
+                """,
+                [Trait.Archetype, Trait.Flourish])
             .WithActionCost(2)
-            .WithPermanentQEffect("Make an unarmed melee Strike that deals extra damage and partially ignores resistances.",
+            .WithPermanentQEffect("Make an unarmed melee Strike that deals extra damage and partially-ignores resistances.",
                 qfFeat =>
                 {
+                    // Bypassing resistances doesn't have access to the calculated damage event.
+                    // As a result, it's not possible to only apply once to the greatest resistance.
+                    // This implementation only ever bypasses at most the amount you can bypass for
+                    // a single action that's getting resisted.
+                    
+                    // Use the value to track the amount resisted so far
+                    qfFeat.HideValue = true;
+                    qfFeat.IgnoreAmountOfResistanceAgainstYourActions = (qfThis, action, dk, defender, resist) =>
+                    {
+                        if (action.ActionId != ModData.ActionIds.GrievousBlow
+                            || !dk.IsPhysical())
+                            return 0;
+
+                        // The amount I want to bypass
+                        int bypass = qfThis.Owner.Level;
+                        
+                        // The Tag stores the action being processed so that it doesn't over-apply
+                        if (qfThis.Tag is not CombatAction { } taggedAction
+                            || taggedAction != action)
+                        {
+                            qfThis.Tag = action; // Start resisting this action
+                            qfThis.Value = 0; // None resisted so far
+                        }
+                        else
+                            // Reduced by the amount bypassed so far
+                            bypass = Math.Max(bypass - qfThis.Value, 0);
+                        
+                        // Increment the total resisted, capped to the most that was resisted this time
+                        qfThis.Value += Math.Min(bypass, resist);
+                        
+                        return bypass;
+                    };
                     qfFeat.ProvideStrikeModifier = item =>
                     {
                         if (!item.HasTrait(Trait.Unarmed) || !item.HasTrait(Trait.Melee))
@@ -431,76 +467,28 @@ public static class MartialArtist
                         
                         StrikeModifiers strikeMods = new StrikeModifiers()
                         {
-                            AdditionalWeaponDamageDice = 2,
-                            OnEachTarget = async (attacker, defender, result) =>
+                            AdditionalWeaponDamageDice = qfFeat.Owner.Level >= 18 ? 3 : 2,
+                            OnEachTarget = async (attacker, _, _) =>
                             {
                                 ++attacker.Actions.AttackedThisManyTimesThisTurn;
                             },
                         };
 
-                        CombatAction strike = qfFeat.Owner.CreateStrike(item, strikeModifiers: strikeMods)
-                            .WithName("Grievous Blow")
+                        CombatAction strike = qfFeat.Owner.CreateStrike(item, -1, strikeMods)
                             .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
                                 strikeMods,
                                 weaponDieIncreased: true,
                                 additionalAttackRollText: $"This attack ignores an amount of resistance to physical damage, or to a specific physical damage type, equal to {{b}}{qfFeat.Owner.Level}{{/b}}.",
                                 additionalAftertext: "Your multiple attack penalty increases twice instead of just once."))
                             .WithActionCost(2)
-                            .WithExtraTrait(Trait.Basic)
                             .WithExtraTrait(Trait.Archetype)
                             .WithExtraTrait(Trait.Flourish)
-                            .WithPrologueEffectOnChosenTargetsBeforeRolls(async (action, caster, targets) =>
-                            {
-                                targets.ChosenCreature?.AddQEffect(new QEffect(ExpirationCondition.Ephemeral)
-                                {
-                                    YouAreDealtDamageEvent = async (qfThis, dEvent) => 
-                                    {
-                                        // Make sure the event is actually associated with this action.
-                                        if (dEvent.CombatAction != action || dEvent.CombatAction.Item is not {} item2)
-                                            return;
-                                        
-                                        // Look at only the physical damage that this action does.
-                                        var relevantDamages = item2.DetermineDamageKinds()
-                                            .Where(kind => kind.IsPhysical());
-
-                                        // Get the applied resistances associated with this action.
-                                        var relevantResistances = qfThis.Owner.WeaknessAndResistance
-                                            .DamageKindsWithAppliedResistance
-                                            .Where(kvp => relevantDamages.Contains(kvp.Key))
-                                            .ToList()
-                                            .OrderByDescending(kvp => kvp.Value);
-
-                                        // Gets whether it has physical resistance
-                                        bool resistsPhysical = qfThis.Owner.WeaknessAndResistance.Resistances.Any(res =>
-                                            res is SpecialResistance phys && phys.Name.Contains("physical",
-                                                StringComparison.CurrentCultureIgnoreCase));
-
-                                        // Increase the damage dealt, up to the caster level.
-                                        foreach (var applied in relevantResistances)
-                                        {
-                                            string kind = applied.Key.HumanizeLowerCase2();
-                                            BypassDamage(
-                                                dEvent,
-                                                resistsPhysical ? $"physical ({kind})" : kind,
-                                                Math.Min(applied.Value, caster.Level));
-
-                                            // Apply only once if there isn't a Physical resist
-                                            if (!resistsPhysical)
-                                                break;
-                                        }
-                                    },
-                                });
-
-                                void BypassDamage(DamageEvent dEvent, string kind, int amount)
-                                {
-                                    dEvent.ReduceBy(
-                                        -amount,
-                                        $"Bypass {amount} {kind} resistance (grievous blow)");
-                                    dEvent.DamageEventDescription.Replace("--", "+");
-                                }
-                            });
+                            .WithExtraTrait(Trait.Basic)
+                            .WithActionId(ModData.ActionIds.GrievousBlow);
+                        strike.WithFullRename("Grievous Blow");
                         strike.Illustration =
                             new SideBySideIllustration(strike.Illustration, IllustrationName.StarHit);
+                        strike.Traits = new Traits([ModData.Traits.ModName, ..strike.Traits], strike);
 
                         return strike;
                     };

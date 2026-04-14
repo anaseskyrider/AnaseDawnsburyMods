@@ -51,10 +51,12 @@ public static class ModData
     public static class ActionIds
     {
         public static ActionId TigerSlash;
+        public static ActionId GrievousBlow;
         
         public static void Initialize()
         {
             TigerSlash = SafelyRegister<ActionId>("TigerSlash");
+            TigerSlash = SafelyRegister<ActionId>("GrievousBlow");
         }
     }
 
