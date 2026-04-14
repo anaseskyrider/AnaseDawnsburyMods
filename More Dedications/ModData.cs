@@ -318,6 +318,16 @@ public static class ModData
         public static readonly Func<string, string> LeveledDC = RegisterTooltipInserter(
             IdPrepend + "LevelBasedDC",
             "{b}Level-based DCs{/b}\nWhen a DC is based on your level, it uses one of the following values:\n{b}Level 1:{/b} 15\n{b}Level 2:{/b} 16\n{b}Level 3:{/b} 18\n{b}Level 4:{/b} 19\n{b}Level 5:{/b} 20\n{b}Level 6:{/b} 22\n{b}Level 7:{/b} 23\n{b}Level 8:{/b} 24\n{b}Level 9:{/b} 26");
+
+        public static readonly Func<string, string> InjuryPoison = RegisterTooltipInserter(
+            IdPrepend + "InjuryPoison",
+            """
+            {b}Injury Poison{/b}
+            {i}(Common item mechanic){/i}
+            An injury poison is applied to a weapon that deals piercing or slashing damage, exposing the target of an attack to the poison on a hit.
+            
+            On a critical miss, the poison wears off and is wasted.
+            """);
         
         /// <summary>
         /// Registers a tooltip, then returns a function that can be used to insert the tooltip with any arbitrary text.
