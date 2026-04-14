@@ -598,8 +598,10 @@ public static class MartialArtist
                     };
                 })
             .WithPrerequisite(
-                FeatName.Monk,
-                "Flurry of Blows")
+                values =>
+                    values.HasFeat(FeatName.Monk)
+                    || values.AllFeats.Any(ft => ft.FeatName.ToStringOrTechnical() == "FlurryOfBlows"),
+                "You must have the Flurry of Blows feature.")
             .WithPrerequisite(
                 ModData.FeatNames.StumblingStance,
                 "Stumbling Stance");
