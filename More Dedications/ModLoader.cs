@@ -15,6 +15,7 @@ public static class ModLoader
         ////////////////////////
         Archer.LoadArchetype();
         Medic.LoadArchetype();
+        Wrestler.LoadArchetype();
         // TODO: Update Sentinel to add the resting-armor feat.
         
         ////////////////////
