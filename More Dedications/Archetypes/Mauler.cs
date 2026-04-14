@@ -229,9 +229,12 @@ public static class Mauler
             .WithPrerequisite(
                 values => values.GetProficiency(Trait.Athletics) >= Proficiency.Expert,
                 "You must be expert in Athletics.");
+
+        // Add Improved Knockdown to Mauler
+        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.ImprovedKnockdown, ModData.Traits.MaulerArchetype, 12);
         
         /* Higher Level Feats
-         * @12 (really: 10) Improved Knockdown
          * @14 (really: 12) Brutal Finish
          * @14 Hammer Quake
          * @14 Unbalancing Sweep
