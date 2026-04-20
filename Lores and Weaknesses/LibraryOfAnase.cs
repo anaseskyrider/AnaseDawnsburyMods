@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Reflection;
-using System.Threading.Tasks;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Campaign.Encounters.Tutorial;
 using Dawnsbury.Campaign.Path;
@@ -9,18 +6,24 @@ using Dawnsbury.Core;
 using Dawnsbury.Core.Animations;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Spellbook;
 using Dawnsbury.Core.CharacterBuilder.Library;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Coroutines;
 using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
+using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
@@ -30,7 +33,7 @@ namespace Dawnsbury.Mods.LoresAndWeaknesses;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
-/// <item>v1.6: Added Trait extensions: IsTraditionTrait(), TraditionTraitToColor(). Added Feat.ToLink(caption). Added Item.With().</item>
+/// <item>v1.6: Added Trait extensions: IsTraditionTrait(), TraditionTraitToColor(). Added Feat.ToLink(caption). Added Item.With(). Converted various overloads into instance and static extension blocks. Added more flexible CommonCombatActions.StrikeCreature overload. Added CombatAction.CreatePass and a parameter to OfferOptions2 that uses it. Added FilterAnyPossibility2 functions to allow seeing SubmenuPossibilities.</item>
 /// <item>v1.5: Replaced error-prone params keywords with regular arrays. Added RefundReaction extensions. Added more robust PluralizeIf extension. Added ModManager extensions.</item>
 /// <item>v1.4: Added Item.WithDescription(flavorText, rulesText).</item>
 /// <item>v1.3: Added CombatAction.HasAllTraits, CombatAction.HasAnyTraits, OfferOptions2 with variants for ActionPossibility and Possibility.</item>
@@ -45,6 +48,25 @@ public static class LibraryOfAnase
 
     extension(CombatAction caThis)
     {
+        /// <summary>
+        /// Creates an action that represents passing an action, such as during an OfferReaction routine.
+        /// </summary>
+        public static CombatAction CreatePass(Creature owner, Action<CombatAction,Creature>? effectOnSelf)
+        {
+            return new CombatAction(
+                    owner,
+                    IllustrationName.EndTurn,
+                    "Pass",
+                    [Trait.Basic, Trait.UsableEvenWhenUnconsciousOrParalyzed, Trait.DoesNotPreventDelay],
+                    "Do nothing.",
+                    Target.Self())
+                .WithActionCost(0)
+                .WithEffectOnSelf(async (action, self) =>
+                {
+                    effectOnSelf?.Invoke(action, self);
+                });
+        }
+        
         /// <summary>
         /// Runs any modifications to the CombatAction in one code block, similar to Zone.With().
         /// </summary>
@@ -241,105 +263,6 @@ public static class LibraryOfAnase
         }
     }
 
-    extension(string text)
-    {
-        /// <summary>
-        /// Adds color tags to the given string.
-        /// </summary>
-        /// <param name="color">The color, formatted as "Green", to be added to the string.</param>
-        /// <returns></returns>
-        public string WithColor(string color)
-        {
-            color = color.Capitalize();
-            return "{"+color+"}" + text + "{/"+color+"}";
-        }
-
-        /// <summary>
-        /// Pluralizes a word if count is greater than 1. Example: <code>"octop".PluralizeIf("us", "odes", numOctopus)</code>This will return the string "octopus" when numOctopus==1, or return "octopodes" otherwise.
-        /// </summary>
-        /// <param name="addSingular">The singular characters to add (if any) to the initial string.</param>
-        /// <param name="addPlural">The plural characters to add to the initial string.</param>
-        /// <param name="count">The quantity to compare to when determining if this word is plural or not.</param>
-        /// <returns>The initial string with addSingular or addPlural added to the end of the string.</returns>
-        public string PluralizeIf(string? addSingular, string addPlural, int count)
-        {
-            return text + (count == 1 ? addSingular : addPlural);
-        }
-    }
-
-    extension(int number)
-    {
-        /// <summary>
-        /// Adds color tags to the given integer.
-        /// </summary>
-        /// <param name="color">The color, formatted as "Green", to be added to the string.</param>
-        /// <returns></returns>
-        public string WithColor(string color)
-        {
-            color = color.Capitalize();
-            return "{"+color+"}" + number + "{/"+color+"}";
-        }
-    }
-    
-    /// <summary>
-    /// Functions as <see cref="Cinematics.ShowQuickBubble"/> but with a timed duration parameter. Useful for quick bubbles that need to display for a short duration without a voice line.
-    /// </summary>
-    public static async Task ShowQuickBubble(this Cinematics cinema, Creature speaker, string text, int milliseconds = 5000)
-    {
-        cinema.TutorialBubble = new TutorialBubble(
-            speaker.Illustration,
-            SubtitleModification.Replace(text),
-            null);
-        speaker.Battle.Log("{b}"+speaker.Name+":{/b} "+text);
-        await speaker.Battle.SendRequest(new SleepRequest(milliseconds)
-        {
-            CanBeClickedThrough = true
-        });
-        cinema.TutorialBubble = null;
-    }
-    
-    
-    public static int DetermineCircumstanceBonusThresholdNeededToUpgrade(this CheckBreakdownResult resultBreakdown)
-    {
-        CheckBreakdown breakdown = resultBreakdown.CheckBreakdown;
-        int rollTotal = breakdown.TotalCheckBonus + resultBreakdown.D20Roll;
-        CheckResult result = CheckResult.CriticalSuccess;
-        int thresholdToUpgrade = 1000;
-        // Is not crit
-        if (rollTotal < breakdown.TotalDC + 10)
-        {
-            result = CheckResult.Success;
-            thresholdToUpgrade = (breakdown.TotalDC + 10) - rollTotal;
-        }
-        // Is failure
-        if (rollTotal < breakdown.TotalDC)
-        {
-            result = CheckResult.Failure;
-            thresholdToUpgrade = (breakdown.TotalDC) - rollTotal;
-        }
-        // Is fumble
-        if (rollTotal <= breakdown.TotalDC - 10)
-        {
-            result = CheckResult.CriticalFailure;
-            thresholdToUpgrade = (breakdown.TotalDC - 9) - rollTotal;
-        }
-        // Is nat-1
-        if (resultBreakdown.D20Roll == 1)
-        {
-            if (result == CheckResult.CriticalFailure)
-                thresholdToUpgrade += 10;
-        }
-        if (resultBreakdown.CheckBreakdown.DefenseBonuses == null
-            || resultBreakdown.CheckBreakdown.DefenseBonuses.Count == 0)
-            return thresholdToUpgrade;
-        int num = resultBreakdown.CheckBreakdown.DefenseBonuses.Max(sb =>
-            sb is not { BonusType: BonusType.Circumstance }
-            || sb.Amount <= 0
-                ? 0
-                : sb.Amount);
-        return thresholdToUpgrade + num;
-    }
-
     extension(ModManager)
     {
         /// <summary>
@@ -388,21 +311,329 @@ public static class LibraryOfAnase
         }
     }
 
+    extension(CommonCombatActions)
+    {
+        /// <summary>
+        /// Functions as <see cref="CommonCombatActions.StrikeCreature(Creature, Func{Creature,bool}?, bool, string?, bool)"/> except you can overwrite the topbar's icon and question, and modify each Strike as it's being generated.
+        /// </summary>
+        public static async Task<bool> StrikeCreature(
+            Creature self,
+            Func<Creature, bool>? isValidTarget,
+            Action<CombatAction>? adjustStrike,
+            Illustration? topBarIcon,
+            string? topBarText,
+            bool allowCancel,
+            string? allowPass,
+            bool meleeOnly)
+        {
+            List<Option> possibilities = CommonCombatActions.GetStrikePossibilities(self, meleeOnly, isValidTarget, adjustStrike);
+            if (allowCancel)
+                possibilities.Add(new CancelOption(true));
+            else if (allowPass != null)
+                possibilities.Add(new PassViaButtonOption(allowPass));
+            if (possibilities.Count <= 0)
+                return false;
+            if (possibilities.Count == 1)
+            {
+                await possibilities[0].Action();
+                return possibilities[0] is not CancelOption && possibilities[0] is not PassViaButtonOption;
+            }
+            RequestResult result = await self.Battle.SendRequest(new AdvancedRequest(
+                self,
+                $"{topBarText ?? "Choose a creature to Strike"}{(allowCancel ? " or right-click to cancel." : "")}.",
+                possibilities)
+            {
+                TopBarText = topBarText ?? "Choose a creature to Strike.",
+                TopBarIcon = topBarIcon ?? IllustrationName.Fist
+            });
+            await result.ChosenOption.Action();
+            return result.ChosenOption is not CancelOption && result.ChosenOption is not PassViaButtonOption;
+        }
+        
+        /// <summary>
+        /// Functions as <see cref="CommonCombatActions.GetStrikePossibilities(Creature, bool, Func{Creature,bool}?)"/> except you can modify each Strike as it's being generated.
+        /// </summary>
+        public static List<Option> GetStrikePossibilities(
+            Creature self,
+            bool meleeOnly,
+            Func<Creature, bool>? isValidTarget,
+            Action<CombatAction>? adjustStrike)
+        {
+            List<Option> options = [];
+            foreach (Item obj in meleeOnly ? self.MeleeWeapons : self.Weapons)
+            {
+                CombatAction strike = self.CreateStrike(obj)
+                    .WithActionCost(0);
+                adjustStrike?.Invoke(strike);
+                if (isValidTarget != null)
+                    ((CreatureTarget) strike.Target).CreatureTargetingRequirements.Add(new LegacyCreatureTargetingRequirement((a, d) =>
+                        !isValidTarget(d)
+                            ? Usability.NotUsableOnThisCreature("excluded")
+                            : Usability.Usable));
+                GameLoop.AddDirectUsageOnCreatureOptions(strike, options);
+            }
+            return options;
+        }
+    }
+
+    extension(AllSpells)
+    {
+        /// <summary>
+        /// Alternative overload for <see cref="AllSpells.CreateSpellLink"/> which includes the spell's level.
+        /// </summary>
+        public static string CreateSpellLink(SpellId spell, Trait classOfOrigin, int spellLevel)
+        {
+            Spell template = AllSpells.CreateModernSpellTemplate(spell, classOfOrigin, spellLevel);
+            string str = template.CombatActionSpell.SpellInformation != null
+                ? ":" + template.CombatActionSpell.SpellInformation.ClassOfOrigin.ToStringOrTechnical() + ":" + spellLevel
+                : "";
+            return $"{{i}}{{link:{template.SpellId.ToStringOrTechnical()}{str}}}{template.Name.ToLower()}{{/link}}{{/i}}";
+        }
+    }
+
+    extension(GameLoop gl)
+    {
+        /// <summary>
+        /// Consolidates code commonly seen when using <see cref="GameLoop.OfferOptions(Creature, List{Option}, bool)"/>, with extra handling for when OfferOptions is used off-turn.
+        /// </summary>
+        public async Task OfferOptions2(Creature self, Func<ActionPossibility, bool> filter, bool canPass = false)
+        {
+            Possibilities poss = Possibilities
+                .Create(self)
+                .Filter(ap =>
+                {
+                    ap.CombatAction.ActionCost = 0;
+                    if (!filter.Invoke(ap.CombatAction))
+                        return false;
+                    ap.RecalculateUsability();
+                    return true;
+                });
+            poss.CannotPass = canPass;
+            if (canPass)
+                poss.Sections.Add(new PossibilitySection("Pass")
+                {
+                    Possibilities = [new ActionPossibility(CombatAction.CreatePass(self, null))]
+                });
+            
+            Creature? active = self.Battle.ActiveCreature;
+            self.Battle.ActiveCreature = self;
+            self.Possibilities = poss;
+            
+            List<Option> actions = await gl.CreateActions(
+                self,
+                poss,
+                null);
+            self.Battle.GameLoopCallback.AfterActiveCreaturePossibilitiesRegenerated();
+            await gl.OfferOptions(self, actions, true);
+            
+            self.Battle.ActiveCreature = active;
+        }
+
+        /// <summary>
+        /// Consolidates code commonly seen when using <see cref="GameLoop.OfferOptions(Creature, List{Option}, bool)"/>, with extra handling for when OfferOptions is used off-turn.
+        /// </summary>
+        public async Task OfferOptions2(Creature self, Func<Possibility, bool> filter, bool canPass = false)
+        {
+            Possibilities poss = Possibilities
+                .Create(self)
+                .FilterAnyPossibility2(poss =>
+                {
+                    if (!filter.Invoke(poss))
+                        return false;
+                    return true;
+                });
+            poss.CannotPass = canPass;
+            if (canPass)
+                poss.Sections.Add(new PossibilitySection("Pass")
+                {
+                    Possibilities = [new ActionPossibility(CombatAction.CreatePass(self, null))]
+                });
+            
+            Creature? active = self.Battle.ActiveCreature;
+            self.Battle.ActiveCreature = self;
+            self.Possibilities = poss;
+            
+            List<Option> actions = await gl.CreateActions(
+                self,
+                poss,
+                null);
+            self.Battle.GameLoopCallback.AfterActiveCreaturePossibilitiesRegenerated();
+            await gl.OfferOptions(self, actions, true);
+            
+            self.Battle.ActiveCreature = active;
+        }
+    }
+
+    extension(Possibilities poss)
+    {
+        public Possibilities FilterAnyPossibility2(Func<Possibility, bool> keepOnlyWhat)
+        {
+            // Constructor is private. Use expensive work-around for an empty list.
+            //Possibilities filtered = new Possibilities();
+            Possibilities filtered = poss.FilterAnyPossibility(_ => false);
+            foreach (var section in poss.Sections)
+            {
+                var filtered2 = section.FilterAnyPossibility2(keepOnlyWhat);
+                if (filtered2 != null) filtered.Sections.Add(filtered2);
+            }
+
+            return filtered;
+        }
+    }
+
+    extension(PossibilitySection sect)
+    {
+        /// <summary>
+        /// Works as <see cref="PossibilitySection.FilterAnyPossibility"/> except the condition is also ran on the submenu, allowing it to be returned even if any possibilities it contains are empty.
+        /// </summary>
+        public PossibilitySection? FilterAnyPossibility2(Func<Possibility, bool> keepOnlyWhat)
+        {
+            PossibilitySection filtered = new PossibilitySection(sect.Name);
+            foreach (var possibility in sect.Possibilities)
+            {
+                if (possibility is SubmenuPossibility submenuPossibility)
+                {
+                    var filtered2 = submenuPossibility.FilterAnyPossibility2(keepOnlyWhat);
+                    if (filtered2 != null)
+                        filtered.Possibilities.Add(filtered2);
+                }
+                else if (keepOnlyWhat(possibility))
+                    filtered.Possibilities.Add(possibility);
+            }
+
+            return filtered.Possibilities.Any() ? filtered : null;
+        }
+    }
+
+    extension(SubmenuPossibility subPoss)
+    {
+        /// <summary>
+        /// Works as <see cref="SubmenuPossibility.FilterAnyPossibility"/> except the condition is also ran on the submenu, allowing it to be returned even if any possibilities it contains are empty.
+        /// </summary>
+        public SubmenuPossibility? FilterAnyPossibility2(Func<Possibility, bool> keepOnlyWhat)
+        {
+            var filtered = new SubmenuPossibility(subPoss.Illustration, subPoss.Caption, subPoss.PossibilitySize);
+            bool keepWholeMenu = keepOnlyWhat(subPoss);
+            foreach (var subsection in subPoss.Subsections)
+            {
+                var filtered2 = subsection.FilterAnyPossibility2(keepWholeMenu ? _ => true : keepOnlyWhat);
+                if (filtered2 != null)
+                    filtered.Subsections.Add(filtered2);
+            }
+
+            if (filtered.Subsections.Count != 0)
+                return filtered;
+            return null;
+        }
+    }
+    
+    extension(Cinematics cinema)
+    {
+        /// <summary>
+        /// Functions as <see cref="Cinematics.ShowQuickBubble"/> but with a timed duration parameter. Useful for quick bubbles that need to display for a short duration without a voice line.
+        /// </summary>
+        public async Task ShowQuickBubble(Creature speaker, string text, int milliseconds = 5000)
+        {
+            cinema.TutorialBubble = new TutorialBubble(
+                speaker.Illustration,
+                SubtitleModification.Replace(text),
+                null);
+            speaker.Battle.Log("{b}"+speaker.Name+":{/b} "+text);
+            await speaker.Battle.SendRequest(new SleepRequest(milliseconds)
+            {
+                CanBeClickedThrough = true
+            });
+            cinema.TutorialBubble = null;
+        }
+    }
+    
+    extension(CheckBreakdownResult resultBreakdown)
+    {
+        public int DetermineCircumstanceBonusThresholdNeededToUpgrade()
+        {
+            CheckBreakdown breakdown = resultBreakdown.CheckBreakdown;
+            int rollTotal = breakdown.TotalCheckBonus + resultBreakdown.D20Roll;
+            CheckResult result = CheckResult.CriticalSuccess;
+            int thresholdToUpgrade = 1000;
+            // Is not crit
+            if (rollTotal < breakdown.TotalDC + 10)
+            {
+                result = CheckResult.Success;
+                thresholdToUpgrade = (breakdown.TotalDC + 10) - rollTotal;
+            }
+            // Is failure
+            if (rollTotal < breakdown.TotalDC)
+            {
+                result = CheckResult.Failure;
+                thresholdToUpgrade = (breakdown.TotalDC) - rollTotal;
+            }
+            // Is fumble
+            if (rollTotal <= breakdown.TotalDC - 10)
+            {
+                result = CheckResult.CriticalFailure;
+                thresholdToUpgrade = (breakdown.TotalDC - 9) - rollTotal;
+            }
+            // Is nat-1
+            if (resultBreakdown.D20Roll == 1)
+            {
+                if (result == CheckResult.CriticalFailure)
+                    thresholdToUpgrade += 10;
+            }
+            if (resultBreakdown.CheckBreakdown.DefenseBonuses == null
+                || resultBreakdown.CheckBreakdown.DefenseBonuses.Count == 0)
+                return thresholdToUpgrade;
+            int num = resultBreakdown.CheckBreakdown.DefenseBonuses.Max(sb =>
+                sb is not { BonusType: BonusType.Circumstance }
+                || sb.Amount <= 0
+                    ? 0
+                    : sb.Amount);
+            return thresholdToUpgrade + num;
+        }
+    }
+
+    extension(string text)
+    {
+        /// <summary>
+        /// Adds color tags to the given string.
+        /// </summary>
+        /// <param name="color">The color, formatted as "Green", to be added to the string.</param>
+        /// <returns></returns>
+        public string WithColor(string color)
+        {
+            color = color.Capitalize();
+            return "{"+color+"}" + text + "{/"+color+"}";
+        }
+
+        /// <summary>
+        /// Pluralizes a word if count is greater than 1. Example: <code>"octop".PluralizeIf("us", "odes", numOctopus)</code>This will return the string "octopus" when numOctopus==1, or return "octopodes" otherwise.
+        /// </summary>
+        /// <param name="addSingular">The singular characters to add (if any) to the initial string.</param>
+        /// <param name="addPlural">The plural characters to add to the initial string.</param>
+        /// <param name="count">The quantity to compare to when determining if this word is plural or not.</param>
+        /// <returns>The initial string with addSingular or addPlural added to the end of the string.</returns>
+        public string PluralizeIf(string? addSingular, string addPlural, int count)
+        {
+            return text + (count == 1 ? addSingular : addPlural);
+        }
+    }
+
+    extension(int number)
+    {
+        /// <summary>
+        /// Adds color tags to the given integer.
+        /// </summary>
+        /// <param name="color">The color, formatted as "Green", to be added to the string.</param>
+        /// <returns></returns>
+        public string WithColor(string color)
+        {
+            color = color.Capitalize();
+            return "{"+color+"}" + number + "{/"+color+"}";
+        }
+    }
+
     #endregion
 
     #region Statics
-    
-    /// <summary>
-    /// Alternative overload for <see cref="AllSpells.CreateSpellLink"/> which includes the spell's level.
-    /// </summary>
-    public static string CreateSpellLink(SpellId spell, Trait classOfOrigin, int spellLevel)
-    {
-        Spell template = AllSpells.CreateModernSpellTemplate(spell, classOfOrigin, spellLevel);
-        string str = template.CombatActionSpell.SpellInformation != null
-            ? ":" + template.CombatActionSpell.SpellInformation.ClassOfOrigin.ToStringOrTechnical() + ":" + spellLevel
-            : "";
-        return $"{{i}}{{link:{template.SpellId.ToStringOrTechnical()}{str}}}{template.Name.ToLower()}{{/link}}{{/i}}";
-    }
 
     /// <summary>
     /// If a character sheet is available at the execution time of this function, it will return a character sheet of a party member either during campaign play or in free encounter play.
@@ -416,64 +647,6 @@ public static class LibraryOfAnase
         else if (CharacterLibrary.Instance is { } library)
             hero = library.SelectedRandomEncounterParty[index];
         return hero;
-    }
-
-    /// <summary>
-    /// Consolidates code commonly seen when using <see cref="GameLoop.OfferOptions"/>, with extra handling for when OfferOptions is used off-turn.
-    /// </summary>
-    public static async Task OfferOptions2(Creature self, Func<ActionPossibility, bool> filter)
-    {
-        Possibilities poss =  Possibilities
-            .Create(self)
-            .Filter(ap =>
-            {
-                ap.CombatAction.ActionCost = 0;
-                if (!filter.Invoke(ap.CombatAction))
-                    return false;
-                ap.RecalculateUsability();
-                return true;
-            });
-        
-        Creature? active = self.Battle.ActiveCreature;
-        self.Battle.ActiveCreature = self;
-        self.Possibilities = poss;
-        
-        List<Option> actions = await self.Battle.GameLoop.CreateActions(
-            self,
-            poss,
-            null);
-        self.Battle.GameLoopCallback.AfterActiveCreaturePossibilitiesRegenerated();
-        await self.Battle.GameLoop.OfferOptions(self, actions, true);
-        
-        self.Battle.ActiveCreature = active;
-    }
-
-    /// <summary>
-    /// Consolidates code commonly seen when using <see cref="GameLoop.OfferOptions"/>, with extra handling for when OfferOptions is used off-turn.
-    /// </summary>
-    public static async Task OfferOptions2(Creature self, Func<Possibility, bool> filter)
-    {
-        Possibilities poss =  Possibilities
-            .Create(self)
-            .FilterAnyPossibility(poss =>
-            {
-                if (!filter.Invoke(poss))
-                    return false;
-                return true;
-            });
-        
-        Creature? active = self.Battle.ActiveCreature;
-        self.Battle.ActiveCreature = self;
-        self.Possibilities = poss;
-        
-        List<Option> actions = await self.Battle.GameLoop.CreateActions(
-            self,
-            poss,
-            null);
-        self.Battle.GameLoopCallback.AfterActiveCreaturePossibilitiesRegenerated();
-        await self.Battle.GameLoop.OfferOptions(self, actions, true);
-        
-        self.Battle.ActiveCreature = active;
     }
 
     #endregion

@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
@@ -154,11 +157,13 @@ public static class RecallWeakness
         // Replace DawnniExpanded's Recall Weakness
         ModManager.RegisterActionOnEachCreature(cr =>
         {
-            if (cr.PersistentCharacterSheet != null)
-            {
-                cr.RemoveAllQEffects(qf => qf.Name == "Recall Weakness Granter");
-                cr.WithFeat(FNRecallWeakness);
-            }
+            // TODO: Creatures can RW: Check for HasFeat, replace with QFIDs instead
+            if (cr.PersistentCharacterSheet == null
+                || cr.HasTrait(Trait.Mindless))
+                return;
+            
+            cr.RemoveAllQEffects(qf => qf.Name == "Recall Weakness Granter");
+            cr.WithFeat(FNRecallWeakness);
         });
     }
 
@@ -257,8 +262,6 @@ public static class RecallWeakness
         const string shortDesc = "Increase the range of {b}Recall Weakness{/b} {icon:Action} to 60 feet.";
         Action<QEffect> permQ = qfFeat =>
         {
-            // TODO: Test Adjust description.
-
             if (qfFeat.Owner.PersistentCharacterSheet?.Calculated is not { } values)
                 return;
             Proficiency perception = values.GetProficiency(Trait.Perception);

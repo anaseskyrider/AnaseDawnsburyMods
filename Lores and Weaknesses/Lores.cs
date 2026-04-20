@@ -1,13 +1,18 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Mechanics;
+using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Display;
 using Dawnsbury.Modding;
@@ -45,13 +50,68 @@ public static class Lores
             $"""
             You have studied battlefields, tactics, and strategy.
 
-            You can use this skill to {AllFeats.GetFeatByFeatName(RecallWeakness.FNRecallWeakness).ToLink("Recall Weakness")} on martial creatures (wields martial weapons; or has a Reactive Strike or Shield Block feature).
+            You can use this skill to {RecallWeakness.GetActionLink()} on martial creatures (wields martial weapons; or has a Reactive Strike or Shield Block feature).
             """,
             (_, target) =>
                 target.ItemsHeldAtTheBeginningOfTheEncounter.Any(item =>
                     item.HasAnyTraits([Trait.Advanced, Trait.Martial]))
                 || target.HasEffect(QEffectId.ShieldBlock)
                 || target.HasEffect(QEffectId.AttackOfOpportunity));
+        
+        Lores.RegisterNewLore(
+            "Undead Lore",
+            $"""
+             You have studied the nature of undead and the dark energies that animate their flesh and bind their souls to the material plane.
+
+             You can use this skill to {RecallWeakness.GetActionLink()} on undead creatures.
+             """,
+            (_, target) =>
+                target.HasTrait(Trait.Undead));
+        
+        Lores.RegisterNewLore(
+            "Elemental Lore",
+            $"""
+             You have studied creatures from the elemental planes.
+
+             You can use this skill to {RecallWeakness.GetActionLink()} on elemental creatures.
+             """,
+            (_, target) =>
+                target.HasTrait(Trait.Elemental));
+        
+        Lores.RegisterNewLore(
+            "Starborn Lore",
+            $"""
+            You have studied the starborn — the seven commanders of the demonic armada that has waged war on us for seven years. You read through every report that's come out of the Western Reaches and you learned everything there is to know — from their origins in the distant worlds they've scoured clean, through the strategy and tactics they employ on the battlefield, to their innate weaknesses which could be their downfall.
+
+            You can use this skill to {RecallWeakness.GetActionLink()} on starborn creatures.
+            """,
+            (_, target) =>
+                target.HasTrait(Trait.Starborn),
+            true);
+        
+        // Add bonuses to the Outwit Ranger-subclass.
+        Feat outwit = AllFeats.GetFeatByFeatName(FeatName.HuntersEdgeOutwit)
+            .WithOnCreature(cr =>
+            {
+                cr.AddQEffect(new QEffect()
+                {
+                    Name = "[LORES AND WEAKNESSES: OUTWIT ADJUSTMENT]",
+                    BonusToSkillChecks = (skill, action, target) => 
+                        Ranger.HasPrey(action.Owner, action.Owner, target)
+                        && action.ActionId == RecallWeakness.RWActionId
+                            ? new Bonus(2, BonusType.Circumstance, "Hunter's Edge: Outwit")
+                            : null,
+                    YouAcquireQEffect = (qfThis, qfAcquired) =>
+                    {
+                        if (qfAcquired.Name == "Hunter\'s Edge: Outwit"
+                            && qfAcquired.Description == "You have +2 to Deception, Intimidation and Stealth against your prey, and a +1 to AC against your prey.")
+                            qfAcquired.Description = qfAcquired.Description?.Replace("Stealth", $"Stealth; as well as {RecallWeakness.GetActionLink()};");
+                        return qfAcquired;
+                    }
+                });
+            });
+        outwit.RulesText = outwit.RulesText.Replace("Stealth checks", $"Stealth checks; as well as {RecallWeakness.GetActionLink()} checks;");
+        outwit.Traits.Insert(0, ModData.Traits.ModName);
 
         // Update the skill-training feats.
         LoadOrder.WhenFeatsBecomeLoaded += () =>
@@ -106,8 +166,9 @@ public static class Lores
     internal static IEnumerable<Feat> CreateFeats()
     {
         // Additional Lore
-        Feat addLore = new Feat(
+        Feat addLore = new TrueFeat(
                 RecallWeakness.FNAdditionalLore,
+                1,
                 "Your knowledge has expanded to encompass a new field.",
                 """
                 Choose a Lore skill. You become trained in it. At 3rd, 7th, and 15th levels, you automatically increase your proficiency with that skill as appropriate for a character of that level.
@@ -272,7 +333,7 @@ public static class Lores
                               DisplayOffset + prof.ToStringOrTechnical() + " in " + name),
                           newLore.Skill,
                           newLore.Trait,
-                          Proficiency.Expert,
+                          prof,
                           previous))
                 .WithIllustration(IllustrationName.NarratorBook);
             
