@@ -21,12 +21,14 @@ public static class KholoAncestry
     
     public static void LoadAncestry()
     {
-        if (ModManager.TryParse("Khopesh", out Trait khopesh))
-            KholoWeapons.Add(khopesh);
-        if (ModManager.TryParse("Mambele", out Trait mambele))
-            KholoWeapons.Add(mambele);
-        if (ModManager.TryParse("WarFlail", out Trait warFlail))
-            KholoWeapons.Add(warFlail);
+        LoadOrder.AtEndOfLoadingSequence += () => {
+            if (ModManager.TryParse("Khopesh", out Trait khopesh))
+                KholoWeapons.Add(khopesh);
+            if (ModManager.TryParse("Mambele", out Trait mambele))
+                KholoWeapons.Add(mambele);
+            if (ModManager.TryParse("WarFlail", out Trait warFlail))
+                KholoWeapons.Add(warFlail);
+        };
         
         LoadFeatures();
         
