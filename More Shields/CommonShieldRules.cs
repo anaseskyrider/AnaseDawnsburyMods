@@ -228,7 +228,21 @@ public static class CommonShieldRules
         DamageStuff dStuff,
         Creature blocker)
     {
+        return await OfferAndMakeShieldBlock(attacker, defender, dStuff, blocker, null);
+    }
+
+    public static async Task<DamageModification?> OfferAndMakeShieldBlock(
+        Creature attacker,
+        Creature defender,
+        DamageStuff dStuff,
+        Creature blocker,
+        Func<Item,bool>? shieldFilter)
+    {
         List<Item> raisedShields = GetRaisedShields(blocker);
+        if (shieldFilter is not null)
+            raisedShields = raisedShields
+                .Where(shieldFilter.Invoke)
+                .ToList();
 
         // Do nothing if no shield options are found
         if (raisedShields.Count == 0)
