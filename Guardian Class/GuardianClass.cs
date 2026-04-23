@@ -69,139 +69,98 @@ public static class GuardianClass
                 {b}5. Guardian feat.{/b}
                 """,
                 null)
-            .WithClassFeatures(cf =>
-            {
-                cf.AddFeature(3, ModData.Tooltips.FeatureToughToKill("tough to kill"));
-                cf.AddFeature(5, "Expert in defenses", "medium, heavy");
-                cf.AddFeature(5, "Expert in weapons", "unarmed, simple, martial");
-                cf.AddFeature(7, WellKnownClassFeature.ExpertInPerception);
-                cf.AddFeature(7, ModData.Tooltips.FeatureReactionTime("reaction time"));
-                cf.AddFeature(7, WellKnownClassFeature.ExpertInReflex);
-                cf.AddFeature(9, ModData.Tooltips.FeatureBattleHardened("battle hardened"));
-                cf.AddFeature(9, WellKnownClassFeature.ExpertInClassDC);
-                cf.AddFeature(11, "Master in defenses", "medium, heavy");
-                cf.AddFeature(11, "Expert in other defenses", "unarmored, light");
-                cf.AddFeature(11, ModData.Tooltips.CommonWeaponSpec("weapon specialization"));
-                cf.AddFeature(13, "Master in weapons", "unarmed, simple, martial");
-                cf.AddFeature(15, "Legendary in defenses", "medium, heavy");
-                cf.AddFeature(17, ModData.Tooltips.CommonGreaterWeaponSpec("greater weapon specialization"));
-                cf.AddFeature(17, ModData.Tooltips.FeatureUnyieldingResolve("unyielding resolve"));
-                cf.AddFeature(19, ModData.Tooltips.FeatureGuardianMastery("guardian mastery"));
-            })
+            .WithEffectiveClassFeatures(cf => cf
+                .AddFeature(3, new ClassFeature(ModData.Tooltips.FeatureToughToKill("Tough to Kill"))
+                    .WithOnSheet(values => values.GrantFeat(ModData.FeatNames.ToughToKill)))
+                .AddFeature(5, new ClassFeature(
+                        "Expert in defenses",
+                        "medium, heavy")
+                    .WithOnSheet(values =>
+                    {
+                        foreach (Trait trait in (Trait[])[Trait.MediumArmor, Trait.HeavyArmor])
+                            values.SetProficiency(trait, Proficiency.Expert);
+                    }))
+                .AddFeature(5, new ClassFeature(
+                        "Expert in weapons",
+                        "unarmed, simple, martial")
+                    .WithOnSheet(values =>
+                    {
+                        foreach (Trait trait in (Trait[])[Trait.Simple, Trait.Martial, Trait.Unarmed])
+                            values.SetProficiency(trait, Proficiency.Expert);
+                    }))
+                .AddFeature(7, WellKnownClassFeature.ExpertInPerception)
+                .AddFeature(7, new ClassFeature(ModData.Tooltips.FeatureReactionTime("Reaction Time"))
+                    .WithOnSheet(values => values.GrantFeat(ModData.FeatNames.ReactionTime)))
+                .AddFeature(7, WellKnownClassFeature.ExpertInReflex)
+                .AddFeature(9, new ClassFeature(ModData.Tooltips.FeatureBattleHardened("Battle Hardened"))
+                    .WithOnSheet(values =>
+                        values.SetProficiency(Trait.Fortitude, Proficiency.Master))
+                    .WithOnCreature((sheet, creature) =>
+                        CommonCharacterFeatures.AddEvasion(sheet, creature, "Battle Hardened", Defense.Fortitude)))
+                .AddFeature(9, WellKnownClassFeature.ExpertInClassDC)
+                .AddFeature(11, new ClassFeature(
+                        "Master in defenses",
+                        "medium, heavy")
+                    .WithOnSheet(values =>
+                    {
+                        foreach (Trait trait in (Trait[])[Trait.MediumArmor, Trait.HeavyArmor])
+                            values.SetProficiency(trait, Proficiency.Master);
+                    }))
+                .AddFeature(11, new ClassFeature(
+                        "Expert in other defenses",
+                        "unarmored, light")
+                    .WithOnSheet(values =>
+                    {
+                        foreach (Trait trait in (Trait[])[Trait.UnarmoredDefense, Trait.Light])
+                            values.SetProficiency(trait, Proficiency.Expert);
+                    }))
+                .AddFeature(11, new ClassFeature(ModData.Tooltips.CommonWeaponSpec("Weapon Specialization"))
+                    .WithOnCreature((values, creature) =>
+                        creature.AddQEffect(QEffect.WeaponSpecialization(values.Tags.ContainsKey("GREATER_WEAPON_SPECIALIZATION")))))
+                .AddFeature(13, new ClassFeature(
+                        "Master in weapons",
+                        "unarmed, simple, martial")
+                    .WithOnSheet(values =>
+                    {
+                        foreach (Trait trait in (Trait[])[Trait.Simple, Trait.Martial, Trait.Unarmed])
+                            values.SetProficiency(trait, Proficiency.Master);
+                    }))
+                .AddFeature(15, new ClassFeature(
+                        "Legendary in defenses",
+                        "medium, heavy")
+                    .WithOnSheet(values =>
+                    {
+                        foreach (Trait trait in (Trait[])[Trait.MediumArmor, Trait.HeavyArmor])
+                            values.SetProficiency(trait, Proficiency.Legendary);
+                    }))
+                .AddFeature(15, new ClassFeature(
+                        "Master in other defenses",
+                        "unarmored, light")
+                    .WithOnSheet(values =>
+                    {
+                        foreach (Trait trait in (Trait[])[Trait.UnarmoredDefense, Trait.Light])
+                            values.SetProficiency(trait, Proficiency.Master);
+                    }))
+                .AddFeature(17, new ClassFeature(ModData.Tooltips.CommonGreaterWeaponSpec("Greater Weapon Specialization"))
+                    .WithOnSheet(values => values.Tags["GREATER_WEAPON_SPECIALIZATION"] = true))
+                .AddFeature(17, new ClassFeature(ModData.Tooltips.FeatureUnyieldingResolve("Unyielding Resolve"))
+                    .WithOnSheet(values =>
+                        values.SetProficiency(Trait.Will, Proficiency.Master))
+                    .WithOnCreature((sheet, creature) =>
+                        CommonCharacterFeatures.AddEvasion(sheet, creature, "Unyielding Resolve", Defense.Will)))
+                .AddFeature(19, new ClassFeature(ModData.Tooltips.FeatureGuardianMastery("Guardian Mastery"))
+                    .WithOnSheet(values =>
+                    {
+                        values.SetProficiency(ModData.Traits.Guardian, Proficiency.Master);
+                        values.GrantFeat(ModData.FeatNames.GuardianMastery);
+                    })))
             .WithOnSheet(values =>
             {
-                #region Level 1 Features
-                values.AddSelectionOption(new SingleFeatSelectionOption(
-                    "GuardianFeat1",
-                    "Guardian feat",
-                    1,
-                    ft =>
-                        ft.HasTrait(ModData.Traits.Guardian)));
+                values.AddClassFeatOption("GuardianFeat1", ModData.Traits.Guardian, 1);
                 values.GrantFeat(FeatName.ShieldBlock);
                 values.GrantFeat(ModData.FeatNames.GuardiansArmor);
                 values.GrantFeat(ModData.FeatNames.Taunt);
                 values.GrantFeat(ModData.FeatNames.InterceptAttack);
-                #endregion
-
-                #region Higher Level Features
-                values.AddAtLevel(3, values2 =>
-                {
-                    values2.GrantFeat(ModData.FeatNames.ToughToKill);
-                });
-                // I found a cool way to do this but I'm not going to risk refactors. Code kept in comments for future projects.
-                /*// Level 5
-                foreach (Trait trait in (Trait[])[Trait.MediumArmor, Trait.HeavyArmor, Trait.Simple, Trait.Martial, Trait.Unarmed])
-                    values.IncreaseProficiency(5, trait, Proficiency.Expert);*/
-                values.AddAtLevel(5, values2 =>
-                {
-                    values2.SetProficiency(Trait.MediumArmor, Proficiency.Expert);
-                    values2.SetProficiency(Trait.HeavyArmor, Proficiency.Expert);
-                    values2.SetProficiency(Trait.Simple, Proficiency.Expert);
-                    values2.SetProficiency(Trait.Martial, Proficiency.Expert);
-                    values2.SetProficiency(Trait.Unarmed, Proficiency.Expert);
-                });
-                values.AddAtLevel(7, values2 =>
-                {
-                    values2.SetProficiency(Trait.Reflex, Proficiency.Expert);
-                    values2.SetProficiency(Trait.Perception, Proficiency.Expert);
-                    values2.GrantFeat(ModData.FeatNames.ReactionTime);
-                });
-                values.AddAtLevel(9, values2 =>
-                {
-                    values2.SetProficiency(Trait.Fortitude, Proficiency.Master);
-                    values2.SetProficiency(ModData.Traits.Guardian, Proficiency.Expert);
-                });
-                #endregion
-
-                #region Post Game Content
-                values.AddAtLevel(11, values2 =>
-                {
-                    values2.SetProficiency(Trait.UnarmoredDefense, Proficiency.Expert);
-                    values2.SetProficiency(Trait.LightArmor, Proficiency.Expert);
-                    values2.SetProficiency(Trait.MediumArmor, Proficiency.Master);
-                    values2.SetProficiency(Trait.HeavyArmor, Proficiency.Master);
-                });
-                values.AddAtLevel(13, values2 =>
-                {
-                    values2.SetProficiency(Trait.Unarmed, Proficiency.Master);
-                    values2.SetProficiency(Trait.Simple, Proficiency.Master);
-                    values2.SetProficiency(Trait.Martial, Proficiency.Master);
-                });
-                values.AddAtLevel(15, values2 =>
-                {
-                    values2.SetProficiency(Trait.UnarmoredDefense, Proficiency.Master);
-                    values2.SetProficiency(Trait.LightArmor, Proficiency.Master);
-                    values2.SetProficiency(Trait.MediumArmor, Proficiency.Legendary);
-                    values2.SetProficiency(Trait.HeavyArmor, Proficiency.Legendary);
-                });
-                values.AddAtLevel(17, values2 =>
-                {
-                    values2.SetProficiency(Trait.Will, Proficiency.Master);
-                });
-                values.AddAtLevel(19, values2 =>
-                {
-                    values2.SetProficiency(ModData.Traits.Guardian, Proficiency.Master);
-                    values2.GrantFeat(ModData.FeatNames.GuardianMastery);
-                });
-                #endregion
-            })
-            .WithOnCreature(cr =>
-            {
-                #region Higher Level Features
-                if (cr.Level >= 9)
-                {
-                    cr.AddQEffect(new QEffect(
-                        "Battle Hardened",
-                        "When you roll a success on a Fortitude save, you get a critical success instead.")
-                    {
-                        AdjustSavingThrowCheckResult = (effect, defense, action, checkResult) =>
-                            defense != Defense.Fortitude || checkResult != CheckResult.Success
-                                ? checkResult
-                                : CheckResult.CriticalSuccess
-                    });
-                    // See WithOnSheet for the Master proficiency increase.
-                }
-                #endregion
-                
-                #region Post Game Content
-                if (cr.Level >= 11)
-                {
-                    cr.AddQEffect(QEffect.WeaponSpecialization(cr.Level >= 17));
-                }
-                if (cr.Level >= 17)
-                {
-                    cr.AddQEffect(new QEffect(
-                        "Unyielding Resolve",
-                        "When you roll a success on a Will save, you get a critical success instead.")
-                    {
-                        AdjustSavingThrowCheckResult = (effect, defense, action, checkResult) =>
-                            defense != Defense.Will || checkResult != CheckResult.Success
-                                ? checkResult
-                                : CheckResult.CriticalSuccess
-                    });
-                    // See WithOnSheet for the Master proficiency increase.
-                }
-                #endregion
             });
         classFeat.RulesText = classFeat.RulesText
             .Replace("Key ability", "Key attribute");
