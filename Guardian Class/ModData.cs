@@ -220,7 +220,6 @@ public static class ModData
         
         public static readonly FeatName GroupTaunt = ModManager.RegisterFeatName(IdPrepend + "GroupTaunt", "Group Taunt");
         public static readonly FeatName JuggernautCharge = ModManager.RegisterFeatName(IdPrepend + "JuggernautCharge", "Juggernaut Charge");
-        public static readonly FeatName MightyBulwark = ModManager.RegisterFeatName(IdPrepend + "MightyBulwark", "Mighty Bulwark");
         public static readonly FeatName RepositioningBlock = ModManager.RegisterFeatName(IdPrepend + "RepositioningBlock", "Repositioning Block");
         public static readonly FeatName ShieldFromArrows = ModManager.RegisterFeatName(IdPrepend + "ShieldFromArrows", "Shield from Arrows");
         public static readonly FeatName ShieldWallop = ModManager.RegisterFeatName(IdPrepend + "ShieldWallop", "Shield Wallop");
