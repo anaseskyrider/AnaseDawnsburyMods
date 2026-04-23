@@ -299,11 +299,13 @@ public static class RecallWeakness
             dawnniGlance.WithPermanentQEffect(shortDesc, permQ);
         }
         else
+            #pragma warning disable CS0618 // Type or member is obsolete
             yield return new TrueFeat(
                     FeatName.CustomFeat, // Backwards compatible with DawnniExpanded
                     2,
                     glanceFlavor, glanceRules, glanceTraits)
                 .WithCustomName(SlightestGlanceWeaknessId) // Backwards compatible with DawnniExpanded
+            #pragma warning restore CS0618 // Type or member is obsolete
                 .WithPrerequisite(
                     values => values.GetProficiency(Trait.Perception) >= Proficiency.Expert,
                     "You must be an expert in Perception")
