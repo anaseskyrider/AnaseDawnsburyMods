@@ -262,9 +262,11 @@ public static class Lores
         if (!newLore.IsHidden)
         {
             Feat additionalSubFeat = new Feat(
-                    ModManager.RegisterFeatName(
-                        ModData.IdPrepend + "AdditionalLore." + newLore.Name,
-                        DisplayOffset + newLore.Name),
+                    ModManager.TryParse(ModData.IdPrepend + "AdditionalLore." + newLore.Name, out FeatName addLore)
+                        ? addLore
+                        : ModManager.RegisterFeatName(
+                            ModData.IdPrepend + "AdditionalLore." + newLore.Name,
+                            DisplayOffset + newLore.Name),
                     "", "", [], null)
                 .WithIllustration(IllustrationName.NarratorBook)
                 .WithOnSheet(values =>
@@ -302,6 +304,10 @@ public static class Lores
                 return newLore.Trained.RulesText +
                        $"\n\n{{icon:YellowWarning}} You are already {loreProf.HumanizeLowerCase2()} in this lore. You can still take this feat and gain automatic increases.";
             });
+            
+            // Enforce DisplayOffset behavior even if the FeatName was already registered
+            additionalSubFeat.CustomName = DisplayOffset + newLore.Name;
+            
             ModManager.AddFeat(additionalSubFeat, ModData.Traits.ModName);
             AllFeats.GetFeatByFeatName(RecallWeakness.FNAdditionalLore)
                 .Subfeats
@@ -317,19 +323,28 @@ public static class Lores
             Feat skillFeat = (prof == Proficiency.Trained
                     ? AllFeats.All.FirstOrDefault(ft => ft is SkillSelectionFeat ssf && ssf.Skill == newLore.Skill) ??
                       new SkillSelectionFeat(
-                          ModManager.RegisterFeatName(name, DisplayOffset + name),
+                          ModManager.TryParse(name, out FeatName ssFN)
+                            ? ssFN
+                            : ModManager.RegisterFeatName(name, DisplayOffset + name),
                           newLore.Skill,
                           newLore.Trait)
                     : AllFeats.All.FirstOrDefault(ft => ft is SkillIncreaseFeat sif && sif.Skill == newLore.Skill && sif.TargetProficiency == prof) ??
                       new SkillIncreaseFeat(
-                          ModManager.RegisterFeatName(
-                              prof.ToStringOrTechnical() + name,
-                              DisplayOffset + prof.ToStringOrTechnical() + " in " + name),
+                          ModManager.TryParse(prof.ToStringOrTechnical() + name, out FeatName siFN)
+                            ? siFN
+                            : ModManager.RegisterFeatName(
+                                  prof.ToStringOrTechnical() + name,
+                                  DisplayOffset + prof.ToStringOrTechnical() + " in " + name),
                           newLore.Skill,
                           newLore.Trait,
                           prof,
                           previous))
                 .WithIllustration(IllustrationName.NarratorBook);
+            
+            // Enforce DisplayOffset behavior even if the FeatName was already registered
+            skillFeat.CustomName = skillFeat is SkillSelectionFeat
+                ? DisplayOffset + name
+                : DisplayOffset + prof.ToStringOrTechnical() + " in " + name;
             
             skillFeat.Traits.Add(ModData.Traits.Lore);
             skillFeat.Traits.Sort((t1, t2) => t1.ToStringOrTechnical().CompareTo(t2.ToStringOrTechnical()));
