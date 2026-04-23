@@ -436,9 +436,7 @@ public static class RecallWeakness
                 " You can't attempt to Recall Weakness on that creature after attempting a check at DC+10.",
                 " {Blue}You can attempt this check any number of times.{/Blue}");
         
-        CreatureTarget crTar = RecallWeaknessTarget(
-            range,
-            hasGlance && perception >= Proficiency.Legendary);
+        CreatureTarget crTar = RecallWeaknessTarget(range, hasGlance && perception >= Proficiency.Legendary);
         
         if (hasGlance)
         {
@@ -463,96 +461,103 @@ public static class RecallWeakness
             .WithActionCost(1)
             .WithActionId(RWActionId)
             .WithSoundEffect(SFXRecallWeakness)
-            .WithActiveRollSpecification(new ActiveRollSpecification(
-                (action, attacker, target) =>
-                {
-                    if (target is null)
-                        return new CalculatedNumber(0, "NO TARGET FOUND", []);
-                    
-                    List<TaggedCalculatedNumberProducer> bestSkills = [];
-                    
-                    // Go through skills
-                    foreach ((Skill skill, List<Trait> traits) in CreatureSkills)
+            .WithActiveRollSpecification(
+                new ActiveRollSpecification(
+                    new TaggedCalculatedNumberProducer((tcnp, action, attacker, target) =>
                     {
-                        if (target.Traits.ContainsOneOf(traits))
-                            bestSkills.Add(TaggedChecks.SkillCheck(skill));
-                        else
-                            // Handle traits that aren't in the game currently 
-                            switch (skill)
-                            {
-                                case Skill.Occultism:
-                                    if (target.Traits.Any(to => to.ToStringOrTechnical()
-                                            is "Astral" or "Dream" or "Ethereal" or "Time"))
-                                    bestSkills.Add(TaggedChecks.SkillCheck(Skill.Occultism));
-                                    break;
-                                case Skill.Religion:
-                                    if (target.Traits.Any(to => to.ToStringOrTechnical()
-                                            is "Shade"))
-                                        bestSkills.Add(TaggedChecks.SkillCheck(Skill.Religion));
-                                    break;
-                                default:
-                                    continue;
-                            }
-                    }
+                        if (target is null)
+                            return new CalculatedNumber(0, "NO TARGET FOUND", []);
 
-                    // Go through lores
-                    foreach (Lore lore in Lores.AllLores)
+                        List<TaggedCalculatedNumberProducer> bestSkills = [];
+
+                        // Go through skills
+                        foreach ((Skill skill, List<Trait> traits) in CreatureSkills)
+                        {
+                            if (target.Traits.ContainsOneOf(traits))
+                                bestSkills.Add(TaggedChecks.SkillCheck(skill));
+                            else
+                                // Handle traits that aren't in the game currently 
+                                switch (skill)
+                                {
+                                    case Skill.Occultism:
+                                        if (target.Traits.Any(to => to.ToStringOrTechnical()
+                                                is "Astral" or "Dream" or "Ethereal" or "Time"))
+                                            bestSkills.Add(TaggedChecks.SkillCheck(Skill.Occultism));
+                                        break;
+                                    case Skill.Religion:
+                                        if (target.Traits.Any(to => to.ToStringOrTechnical()
+                                                is "Shade"))
+                                            bestSkills.Add(TaggedChecks.SkillCheck(Skill.Religion));
+                                        break;
+                                    default:
+                                        continue;
+                                }
+                        }
+
+                        // Go through lores
+                        foreach (Lore lore in Lores.AllLores)
+                        {
+                            if (lore.ValidRecallTarget is null
+                                // RULING: You must at least be adding your level, such as from
+                                // Untrained Improvisation, to be able to use a lore.
+                                // Hidden lores you didn't properly acquire are filtered out,
+                                // so Improv feats can't give you like Thaum's lore.
+                                || (attacker.Proficiencies.Get(lore.Trait) is var prof
+                                    && (prof == Proficiency.Untrained ||
+                                        (prof == Proficiency.UntrainedWithLevel && lore.IsHidden))))
+                                continue;
+                            // Find the first function in each lore that applies,
+                            // breaking the loop through each function on the first true return.
+                            foreach (Func<Creature, Creature, bool> func in lore.ValidRecallTarget
+                                         .GetInvocationList()
+                                         .Select(del => del as Func<Creature, Creature, bool>)
+                                         .WhereNotNull()
+                                         .ToList())
+                                if (func.Invoke(attacker, target))
+                                {
+                                    int bonus = lore.IsSpecific ? 5 : 2;
+                                    string src = lore.IsSpecific ? "Specific lore" : "Unspecific lore";
+                                    bestSkills.Add(TaggedChecks.SkillCheck(lore.Skill)
+                                        .WithExtraBonus((_, _, _) =>
+                                            new Bonus(bonus, BonusType.Untyped, src, true)));
+                                    break;
+                                }
+                        }
+
+                        // Add Society as a fallback skill
+                        if (bestSkills.Count == 0)
+                            bestSkills.Add(TaggedChecks.SkillCheck(Skill.Society));
+
+                        TaggedCalculatedNumberProducer bestSkill = TaggedChecks.BestRoll([..bestSkills]);
+
+                        tcnp.InvolvedSkill = bestSkill.InvolvedSkill;
+                        tcnp.IsPerception =  bestSkill.IsPerception;
+
+                        return bestSkill.CalculatedNumberProducer.Invoke(action, attacker, target);
+                    }),
+                    new TaggedCalculatedNumberProducer((tcnp, _, attacker, target) =>
                     {
-                        if (lore.ValidRecallTarget is null
-                            // RULING: You must at least be adding your level, such as from
-                            // Untrained Improvisation, to be able to use a lore.
-                            // Hidden lores you didn't properly acquire are filtered out,
-                            // so Improv feats can't give you like Thaum's lore.
-                            || (attacker.Proficiencies.Get(lore.Trait) is var prof
-                                && (prof == Proficiency.Untrained ||
-                                    (prof == Proficiency.UntrainedWithLevel && lore.IsHidden))))
-                            continue;
-                        // Find the first function in each lore that applies,
-                        // breaking the loop through each function on the first true return.
-                        foreach (Func<Creature, Creature, bool> func in lore.ValidRecallTarget
-                                     .GetInvocationList()
-                                     .Select(del => del as Func<Creature,Creature,bool>)
-                                     .WhereNotNull()
-                                     .ToList())
-                            if (func.Invoke(attacker, target))
-                            {
-                                int bonus = lore.IsSpecific ? 5 : 2;
-                                string src = lore.IsSpecific ? "Specific lore" : "Unspecific lore"; 
-                                bestSkills.Add(TaggedChecks.SkillCheck(lore.Skill)
-                                    .WithExtraBonus((_, _, _) =>
-                                        new Bonus(bonus, BonusType.Untyped, src, true)));
-                                break;
-                            }
-                    }
-                    
-                    // Add Society as a fallback skill
-                    if (bestSkills.Count == 0)
-                        bestSkills.Add(TaggedChecks.SkillCheck(Skill.Society));
+                        List<Bonus?> bonuses =
+                        [
+                            target?.QEffects.FirstOrDefault(qf =>
+                                    qf.Id == RecallWeaknessAttempts
+                                    && qf.Source == attacker)
+                                ?.Value is { } attempts
+                                ? new Bonus(
+                                    AttemptsToDC(attempts),
+                                    BonusType.Untyped,
+                                    (attempts + 1).Ordinalize2() + " attempt",
+                                    true)
+                                : null
+                        ];
 
-                    TaggedCalculatedNumberProducer bestSkill = TaggedChecks.BestRoll([..bestSkills]);
-                    
-                    return bestSkill.CalculatedNumberProducer.Invoke(action, attacker, target);
-                },
-                (_, attacker, target) =>
-                {
-                    List<Bonus?> bonuses = [
-                        target?.QEffects.FirstOrDefault(qf =>
-                                qf.Id == RecallWeaknessAttempts
-                                && qf.Source == attacker)
-                            ?.Value is { } attempts
-                            ? new Bonus(
-                                AttemptsToDC(attempts),
-                                BonusType.Untyped,
-                                (attempts+1).Ordinalize2() + " attempt",
-                                true)
-                            : null
-                    ];
-                    
-                    return new CalculatedNumber(
-                        Checks.LevelBasedDC(target!.Level),
-                        "Level " + target.Level + " DC",
-                        bonuses);
-                }))
+                        return new CalculatedNumber(
+                            Checks.LevelBasedDC(target!.Level),
+                            "Level " + target.Level + " DC",
+                            bonuses);
+                    })
+                )
+            )
             .WithEffectOnEachTarget(async (action, caster, target, result) =>
             {
                 // Increase the DC for future RWs from the caster
