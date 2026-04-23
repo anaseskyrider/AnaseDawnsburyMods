@@ -258,12 +258,6 @@ public static class Lores
         newLore.Master = AddSkillFeat(Proficiency.Master, newLore.Expert.FeatName);
         newLore.Legendary = AddSkillFeat(Proficiency.Legendary, newLore.Master.FeatName);
         
-        // Unused. Previous attempt to create a skill feat that puts lores into a collapsible category.
-        /*AllFeats.GetFeatByFeatName(ModData.FeatNames.TrainedLoreCategory).Subfeats!.Add(trained);
-        AllFeats.GetFeatByFeatName(ModData.FeatNames.ExpertLoreCategory).Subfeats!.Add(expert);
-        AllFeats.GetFeatByFeatName(ModData.FeatNames.MasterLoreCategory).Subfeats!.Add(master);
-        AllFeats.GetFeatByFeatName(ModData.FeatNames.LegendaryLoreCategory).Subfeats!.Add(legendary);*/
-        
         // Add to Additional Lore
         if (!newLore.IsHidden)
         {
