@@ -82,12 +82,12 @@ public static class GuardianArchetype
                 });
             });
         ModData.FeatNames.GuardianDedication = guardianDedication.FeatName;
-        ModManager.AddFeat(guardianDedication);
+        ModManager.AddFeat(guardianDedication, ModData.Traits.ModName);
         
         foreach (Feat feat in ArchetypeFeats.CreateBasicAndAdvancedMulticlassFeatGrantingArchetypeFeats(ModData.Traits.Guardian, "Defender"))
-            ModManager.AddFeat(feat);
+            ModManager.AddFeat(feat, ModData.Traits.ModName);
         
-        ModManager.AddFeat(MulticlassArchetypeFeats.CreateResiliencyFeat(ModData.Traits.Guardian, 10));
+        ModManager.AddFeat(MulticlassArchetypeFeats.CreateResiliencyFeat(ModData.Traits.Guardian, 10), ModData.Traits.ModName);
 
         Feat guardiansIntercept = new TrueFeat(
                 ModData.FeatNames.GuardiansIntercept,
@@ -115,7 +115,7 @@ public static class GuardianArchetype
                             });
                     };
                 });
-        ModManager.AddFeat(guardiansIntercept);
+        ModManager.AddFeat(guardiansIntercept, ModData.Traits.ModName);
 
         Feat armoredResistance = new TrueFeat(
                 ModData.FeatNames.ArmoredResistance,
@@ -159,7 +159,7 @@ public static class GuardianArchetype
                         });
                     };
                 });
-        ModManager.AddFeat(armoredResistance);
+        ModManager.AddFeat(armoredResistance, ModData.Traits.ModName);
 
         Feat ironcladFortitude = new TrueFeat(
                 ModData.FeatNames.IroncladFortitude,
@@ -186,6 +186,6 @@ public static class GuardianArchetype
             {
                 values.SetProficiency(Trait.Fortitude, Proficiency.Master);
             });
-        ModManager.AddFeat(ironcladFortitude);
+        ModManager.AddFeat(ironcladFortitude, ModData.Traits.ModName);
     }
 }

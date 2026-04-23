@@ -1,5 +1,6 @@
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
+using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.AbilityScores;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.Feats.Features;
@@ -39,8 +40,8 @@ public static class GuardianClass
     public static void LoadClass()
     {
         foreach (Feat feat in CreateFeatures())
-            ModManager.AddFeat(feat);
-        ModManager.AddFeat(CreateClassFeat());
+            ModManager.AddFeat(feat, ModData.Traits.ModName);
+        ModManager.AddFeat(CreateClassFeat(), ModData.Traits.ModName);
     }
 
     /// <summary>Creates the Guardian class feat.</summary>
@@ -204,7 +205,6 @@ public static class GuardianClass
             });
         classFeat.RulesText = classFeat.RulesText
             .Replace("Key ability", "Key attribute");
-        classFeat.Traits.Insert(0, ModData.Traits.ModSource);
         return classFeat;
     }
     
@@ -216,7 +216,7 @@ public static class GuardianClass
                 ModData.FeatNames.GuardiansArmor,
                 "Even when you are struck, your armor protects you from some harm.",
                 $"While wearing medium or heavy armor, you gain resistance to {ModData.Tooltips.CommonDamageTypesRemastered("physical")} damage equal to 1 + half your level.\n\nIn addition, you can rest normally while wearing medium and heavy armor.",
-                [ModData.Traits.ModSource],
+                [],
                 null)
             .WithPermanentQEffect(
                 $"While wearing medium or heavy armor, you resist an amount of {ModData.Tooltips.CommonDamageTypesRemastered("physical")} damage equal to 1 + half your level. You can also rest normally in all armor",
@@ -271,7 +271,7 @@ public static class GuardianClass
 
                 Taunt gains the auditory trait, visual trait, or both, depending on how you draw the target's attention.
                 """,
-                [ModData.Traits.ModSource, Trait.Concentrate],
+                [Trait.Concentrate],
                 null)
             .WithPermanentQEffect("Designate an enemy within 30 feet. Hostile actions which don't include you take penalties and make them off-guard.",
                 qfFeat =>
@@ -394,7 +394,7 @@ public static class GuardianClass
 
                 {b}Special{/b} You can extend this ability to an ally within 15 feet of you if the damage comes from your taunted enemy. If this ally is farther than you can Step to reach, you can Stride instead of Stepping; you still must end the movement adjacent to your ally.
                 """,
-                [ModData.Traits.ModSource],
+                [],
                 null)
             .WithOnSheet(values =>
             {
@@ -556,7 +556,7 @@ public static class GuardianClass
                 ModData.FeatNames.ToughToKill,
                 "The protectiveness of your armor ensures that even if you fall, you take longer to die.",
                 "You gain the Diehard general feat {i}(you should retrain it if you already have it){/i}. Additionally, the first time each day you'd be reduced to dying 3 or higher, you stay at dying 2 instead.",
-                [ModData.Traits.ModSource],
+                [],
                 null)
             .WithOnSheet(values =>
             {
@@ -620,7 +620,7 @@ public static class GuardianClass
                 "You're always on the lookout for danger and can react to it in an instant.",
                 // Wording altered slightly since multiclasses cannot acquire Ever Ready, nor Reaction Time.
                 "At the start of combat and for each of your turns, you gain an additional reaction that you can use only for reactions from guardian feats or class features (including Shield Block).",
-                [ModData.Traits.ModSource],
+                [],
                 null)
             .WithPermanentQEffect(
                 "You have an extra reaction you can use for guardian feats and features (including Shield Block).",
@@ -643,7 +643,7 @@ public static class GuardianClass
                 "You are known for your suit of armor more than the person inside.",
                 "While wearing armor, when you attempt a Reflex save, you can add your armor's item bonus to AC instead of your Dexterity modifier if it's higher; if your armor has the bulwark trait, increase this bonus by 1. If you get a success when you do this, you get a critical success instead.",
                 /*"While wearing armor, when you attempt a Reflex save to avoid a damaging effect, such as a fireball, you can add your armor's item bonus to AC instead of your Dexterity modifier; if your armor has the bulwark trait, increase this bonus by 1. If you get a success when you do this, you get a critical success instead."*/
-                [ModData.Traits.ModSource],
+                [],
                 null)
             .WithPermanentQEffect(
                 "{b}Requires{/b} wearing armor; {b}Effect{/b} You use your armor's AC instead of your Dexterity for Reflex saves (+1 more with bulwark). Additionally, if you succeed on a Reflex save, you critically succeed instead.",
@@ -704,7 +704,7 @@ public static class GuardianClass
                 owner,
                 tauntIcon,
                 "Taunt",
-                [Trait.Basic, ModData.Traits.ModSource, ModData.Traits.Guardian, Trait.Concentrate, Trait.DoNotShowOverheadOfActionName, ..extraTraits],
+                [Trait.Basic, ModData.Traits.ModName, ModData.Traits.Guardian, Trait.Concentrate, Trait.DoNotShowOverheadOfActionName, ..extraTraits],
                 $$"""
                   {i}With an attention-grabbing gesture, noise, cutting remark, or threatening shout, you attempt to draw an enemy to you instead of your allies. Even mindless creatures are drawn to your taunts.{/i}
                   
@@ -889,7 +889,7 @@ public static class GuardianClass
                 featName,
                 null,
                 description,
-                [ModData.Traits.InterceptAttackToggle, ModData.Traits.ModSource],
+                [ModData.Traits.InterceptAttackToggle],
                 null)
             .WithIllustration(toggleIcon)
             .WithTag(preventAction)
@@ -921,7 +921,7 @@ public static class GuardianClass
                 guardian_1, 
                 ModData.Illustrations.InterceptAttack, 
                 "Intercept Attack", 
-                [Trait.Basic, ModData.Traits.ModSource, ModData.Traits.Guardian, Trait.UnaffectedByConcealment, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName], 
+                [Trait.Basic, ModData.Traits.ModName, ModData.Traits.Guardian, Trait.UnaffectedByConcealment, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName], 
                 """
                 {i}You fling yourself in the way of oncoming harm to protect an ally.{/i}
                 

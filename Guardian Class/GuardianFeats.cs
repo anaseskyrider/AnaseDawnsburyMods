@@ -7,6 +7,7 @@ using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Kineticist;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
@@ -39,25 +40,9 @@ public static class GuardianFeats
 {
     public static void LoadFeats()
     {
-        // Add existing feats to Guardian
-        FeatName[] accessibleFeats = [
-            FeatName.ReactiveShield, // Lv 1
-            FeatName.AggressiveBlock, // Lv 2
-        ];
-        foreach (FeatName ft in accessibleFeats)
-            (AllFeats.GetFeatByFeatName(ft) as TrueFeat)!
-                .WithAllowsForAdditionalClassTrait(ModData.Traits.Guardian);
-        // Defensive Advance mod, Lv 1
-        if (ModManager.TryParse("Defensive Advance", out FeatName defAdv))
-            (AllFeats.GetFeatByFeatName(defAdv) as TrueFeat)!
-                .WithAllowsForAdditionalClassTrait(ModData.Traits.Guardian);
-        // Reflexive Shield, More Dedications, Lv 6
-        if (ModManager.TryParse("MoreDedications.Class.Fighter.ReflexiveShield", out FeatName refShield))
-            (AllFeats.GetFeatByFeatName(refShield) as TrueFeat)!
-                .WithAllowsForAdditionalClassTrait(ModData.Traits.Guardian);
         // Create Guardian feats
         foreach (Feat feat in CreateFeats())
-            ModManager.AddFeat(feat);
+            ModManager.AddFeat(feat, ModData.Traits.ModName);
     }
     
     public static IEnumerable<Feat> CreateFeats()
@@ -109,7 +94,7 @@ public static class GuardianFeats
                 .WithPrerequisite(values => // Can't select yourself
                     LibraryOfAnase.GetCharacterSheetFromPartyMember(index) != values.Sheet,
                     "Can't select yourself");
-            ModManager.AddFeat(chargeChoice);
+            yield return chargeChoice;
         }
         yield return new TrueFeat(
                 ModData.FeatNames.Bodyguard,
@@ -120,7 +105,7 @@ public static class GuardianFeats
 
                 {b}Precombat preparations:{/b} You can choose which ally is your charge at any time outside combat.
                 """,
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithOnSheet(values =>
             {
                 values.AddSelectionOption(new SingleFeatSelectionOption(
@@ -143,7 +128,7 @@ public static class GuardianFeats
 
                 Similarly, you're treated as one size larger for the purposes of creatures targeting you with those same actions, as well as with Swallow Whole.
                 """,
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithPermanentQEffect(
                 "{Green}While in heavy armor{/Green}, you're one size larger for the purposes of combat maneuvers.",
                 qfFeat =>
@@ -212,7 +197,7 @@ public static class GuardianFeats
             1,
             "You can draw the wrath of your foes even at a great distance.",
             "When you use Taunt, you can choose a target within 120 feet.",
-            [ModData.Traits.ModSource, ModData.Traits.Guardian]);
+            [ModData.Traits.Guardian]);
         
         // Punishing Shove
         yield return new TrueFeat(
@@ -220,7 +205,7 @@ public static class GuardianFeats
                 1,
                 "When you push a foe away, you put the entire force of your armored form into it.",
                 "When you successfully Shove a creature, that creature takes an amount of bludgeoning damage equal to your Strength modifier (or double that amount on a critical success). This damage increases by 2 when you become an expert in Athletics, 6 when you become a master, and 12 when you become legendary.",
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithPermanentQEffect(
                 "Your Shoves also deal bludgeoning damage.",
                 qfFeat =>
@@ -256,7 +241,7 @@ public static class GuardianFeats
                 1,
                 "You know how to use shields offensively far better than most.",
                 "Increase the weapon damage die of any shield attack by one step.",
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithPermanentQEffect("Increase the damage die of shield attacks.", qfFeat =>
             {
                 qfFeat.IncreaseItemDamageDie = (qfThis, item) =>
@@ -284,7 +269,7 @@ public static class GuardianFeats
                     "The target is off-guard against the next melee attack you attempt against it before the end of your current turn.",
                     null,
                     "You are off-guard against melee attacks the target attempts against you until the end of your next turn."),
-                [ModData.Traits.ModSource, Trait.Flourish, ModData.Traits.Guardian])
+                [Trait.Flourish, ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPermanentQEffect(
                 null,
@@ -352,7 +337,7 @@ public static class GuardianFeats
 
                                 applyTo?.AddQEffect(checkEffect);
                             });
-                        sCheck.Traits = new Traits([ModData.Traits.ModSource, ..sCheck.Traits.ToList()], sCheck);
+                        sCheck.Traits = new Traits([ModData.Traits.ModName, ..sCheck.Traits.ToList()], sCheck);
                         sCheck.Description = StrikeRules.CreateBasicStrikeDescription4(
                             sCheck.StrikeModifiers,
                             additionalCriticalSuccessText: "The target is off-guard to your melee attacks until the end of your next turn",
@@ -384,7 +369,7 @@ public static class GuardianFeats
                 2,
                 "You make it difficult for enemies to move past you.",
                 "While you are in this stance, squares in a 5-foot emanation are difficult terrain for your enemies.",
-                [ModData.Traits.ModSource, Trait.Aura, ModData.Traits.Guardian, Trait.Stance])
+                [Trait.Aura, ModData.Traits.Guardian, Trait.Stance])
             .WithActionCost(1)
             .WithPermanentQEffect(
                 qfFeat =>
@@ -395,7 +380,7 @@ public static class GuardianFeats
                                     qfThis.Owner,
                                     ModData.Illustrations.HamperingStance,
                                     "Hampering Stance",
-                                    [ModData.Traits.ModSource, Trait.Aura, ModData.Traits.Guardian, Trait.Stance],
+                                    [ModData.Traits.ModName, Trait.Aura, ModData.Traits.Guardian, Trait.Stance],
                                     "",
                                     Target.Self()
                                         .WithAdditionalRestriction(self =>
@@ -439,7 +424,7 @@ public static class GuardianFeats
                 2,
                 "You know how to clear a line of fire for your allies.",
                 "Allies within 10 feet of you ignore lesser cover.",
-                [ModData.Traits.ModSource, ModData.Traits.Guardian, Trait.Rebalanced])
+                [ModData.Traits.Guardian, Trait.Rebalanced])
             .WithPermanentQEffectAndSameRulesText(qfFeat =>
             {
                 qfFeat.AddGrantingOfTechnical(
@@ -493,7 +478,7 @@ public static class GuardianFeats
                 "You know how to use the haft of larger weapons to block your enemies' attacks.",
                 "Two-handed weapons you wield gain the parry trait. If the weapon already has the parry trait, you increase the circumstance bonus to AC it provides to +2."
                     + "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " {b}Modding{/b} This benefits more with mods which add parry weapons.",
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithOnCreature(self =>
             {
                 self.AddQEffect(ParryLogic.GreaterParry(
@@ -517,7 +502,7 @@ public static class GuardianFeats
                 2,
                 "By banging loudly on your shield, you get the attention of even the most stubborn of foes.",
                 "Raise a Shield, and then Taunt a creature. Your Taunt gains the auditory trait.",
-                [ModData.Traits.ModSource, Trait.Flourish, ModData.Traits.Guardian, MoreShields.ModData.Traits.ShieldActionFeat])
+                [Trait.Flourish, ModData.Traits.Guardian, MoreShields.ModData.Traits.ShieldActionFeat])
             .WithActionCost(1)
             .WithPermanentQEffect(
                 "Raise a Shield and make an auditory Taunt.",
@@ -545,7 +530,7 @@ public static class GuardianFeats
                                 qfFeat.Owner,
                                 new SideBySideIllustration(shield.Illustration, ModData.Illustrations.Taunt_1),
                                 "Shielding Taunt",
-                                [ModData.Traits.ModSource, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment, Trait.Flourish, ModData.Traits.Guardian],
+                                [ModData.Traits.ModName, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment, Trait.Flourish, ModData.Traits.Guardian],
                                 "{i}By banging loudly on your shield, you get the attention of even the most stubborn of foes.{/i}\n\nRaise a Shield, and then Taunt a creature. Your Taunt gains the auditory trait.",
                                 aTaunt.Target)
                             .WithActionCost(1)
@@ -571,7 +556,7 @@ public static class GuardianFeats
                 2,
                 "The force of your blow causes your enemy to focus their attention on you.",
                 "Make a Strike. Regardless of whether the Strike hits, you Taunt the target. Your Taunt gains the visual trait.",
-                [ModData.Traits.ModSource, Trait.Flourish, ModData.Traits.Guardian])
+                [Trait.Flourish, ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPermanentQEffect(
                 null,
@@ -618,7 +603,7 @@ public static class GuardianFeats
                         tauntingStrike.Illustration = new SideBySideIllustration(
                             item.Illustration,
                             ModData.Illustrations.Taunt_1);
-                        tauntingStrike.Traits = new Traits([ModData.Traits.ModSource, ..tauntingStrike.Traits.ToList()], tauntingStrike);
+                        tauntingStrike.Traits = new Traits([ModData.Traits.ModName, ..tauntingStrike.Traits.ToList()], tauntingStrike);
                         tauntingStrike.Description = StrikeRules.CreateBasicStrikeDescription4(
                             tauntingStrike.StrikeModifiers,
                             additionalAftertext: "Make a visual Taunt against the Strike's target.");
@@ -645,7 +630,7 @@ public static class GuardianFeats
                 4,
                 "The armor you wear protects you and shelters your allies against explosions and other large-scale assaults.",
                 "While you're wearing medium or heavy armor, allies adjacent to you gain a +1 circumstance bonus to Reflex saves against area effects. If you're a master in the armor, the bonus is +2 instead.",
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithPermanentQEffect(
                 "Adjacent allies get a bonus to Reflex saves against area effects.",
                 qfFeat =>
@@ -679,7 +664,7 @@ public static class GuardianFeats
 
                 You gain a number of temporary Hit Points equal to your level, and you reduce your frightened condition value by 1.
                 """,
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPermanentQEffect(
                 "{Green}Once per encounter{/Green}, gain temp HP equal to your level, and reduce your frightened by 1.",
@@ -694,7 +679,7 @@ public static class GuardianFeats
                                 qfThis.Owner,
                                 ModData.Illustrations.ArmoredCourage,
                                 "Armored Courage",
-                                [Trait.Basic, ModData.Traits.ModSource, ModData.Traits.Guardian],
+                                [Trait.Basic, ModData.Traits.ModName, ModData.Traits.Guardian],
                                 "{i}You take comfort in the safety of your armor.{/i}\n\n{b}Requirements{/b} You are wearing medium or heavy armor.\n{b}Frequency{/b} once per encounter\n\nYou gain {Blue}"+qfThis.Owner.Level+"{/Blue} temporary Hit Points. Reduce your frightened condition value by 1.",
                                 Target.Self()
                                     .WithAdditionalRestriction(cr =>
@@ -722,7 +707,7 @@ public static class GuardianFeats
                 4,
                 "Though other guardians understand how to anticipate the flow of martial combat, you predict blasts of magical lightning, blazing trap runes, and more.",
                 "You can use "+ModData.Tooltips.ActionInterceptAttack("Intercept Attack {icon:Reaction}")+" when an ally would take acid, cold, electricity, fire, or sonic damage, not only when they would take physical damage.",
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithPrerequisite(
                 ModData.CommonRequirements.HasInterceptAttack,
                 "You must have the guardian's Intercept Attack feature.");
@@ -741,7 +726,7 @@ public static class GuardianFeats
                     "The target takes a –10-foot circumstance penalty to its Speed for the rest of its triggering movement. This penalty might cause the triggering creature's movement to end immediately based on its affected Speed.",
                     "As success, but the target instead takes a –5-foot circumstance penalty to its Speed.",
                     "The target is unaffected."),
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithActionCost(-2)
             .WithPrerequisite(ModData.FeatNames.HamperingStance, "Hampering Stance")
             .WithOnCreature(self =>
@@ -923,7 +908,7 @@ public static class GuardianFeats
                             .WithExtraTrait(Trait.Basic)
                             .WithExtraTrait(Trait.Flourish)
                             .WithExtraTrait(ModData.Traits.Guardian);
-                        proudNail.Traits = new Traits([ModData.Traits.ModSource, ..proudNail.Traits.ToList()],
+                        proudNail.Traits = new Traits([ModData.Traits.ModName, ..proudNail.Traits.ToList()],
                             proudNail);
                         proudNail.Illustration = new SideBySideIllustration(
                             proudNail.Illustration, IllustrationName.StarHit);
@@ -945,7 +930,7 @@ public static class GuardianFeats
 
                 Raise your Shield, then Stride up to half your Speed. This movement triggers enemies' reactions as normal. Each enemy who reacted to your movement is unable to react to your allies' movement until the start of your next turn (even if they've since regained their reaction).
                 """,
-                [ModData.Traits.ModSource, ModData.Traits.Guardian, MoreShields.ModData.Traits.ShieldActionFeat])
+                [ModData.Traits.Guardian, MoreShields.ModData.Traits.ShieldActionFeat])
             .WithActionCost(1)
             .WithPermanentQEffect(
                 "Raise a Shield, Stride half your speed, and deny reactions to your allies' movement until the start of your next turn.",
@@ -966,7 +951,7 @@ public static class GuardianFeats
                                     shield?.Illustration ?? IllustrationName.SteelShield,
                                     IllustrationName.FleetStep),
                                 "Shielded Attrition",
-                                [Trait.Basic, ModData.Traits.ModSource, ModData.Traits.Guardian],
+                                [Trait.Basic, ModData.Traits.ModName, ModData.Traits.Guardian],
                                 null!,
                                 Target.Self()
                                     // In strict hypothesis, this restriction should never get called
@@ -1065,7 +1050,7 @@ public static class GuardianFeats
 
                 After Intercepting the Attack, attempt to Disarm the weapon used for that attack. You don't need to have a hand free, and you gain an item bonus to the Athletics check equal to the value of your armor's potency rune.
                 """,
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithActionCost(0)
             .WithPrerequisite(
                 values => values.HasFeat(ModData.FeatNames.InterceptAttack),
@@ -1133,7 +1118,7 @@ public static class GuardianFeats
                 6,
                 "You slowly advance on the battlefield, taking utmost caution.",
                 "You Raise a Shield and Step twice.",
-                [ModData.Traits.ModSource, ModData.Traits.Guardian, MoreShields.ModData.Traits.ShieldActionFeat])
+                [ModData.Traits.Guardian, MoreShields.ModData.Traits.ShieldActionFeat])
             .WithActionCost(1)
             .WithPermanentQEffect(
                 "Raise a Shield and Step twice.",
@@ -1157,7 +1142,7 @@ public static class GuardianFeats
                                 qfFeat.Owner,
                                 new SideBySideIllustration(shield.Illustration, IllustrationName.FleetStep),
                                 "Guarded Advance",
-                                [Trait.Basic, Trait.DoNotShowOverheadOfActionName, ModData.Traits.ModSource, ModData.Traits.Guardian],
+                                [Trait.Basic, Trait.DoNotShowOverheadOfActionName, ModData.Traits.ModName, ModData.Traits.Guardian],
                                 "{i}You slowly advance on the battlefield, taking utmost caution.{/i}\n\nYou Raise a Shield and Step twice.",
                                 Target.Self()
                                     .WithAdditionalRestriction(cr =>
@@ -1211,7 +1196,7 @@ public static class GuardianFeats
 
                 This effect lasts until the beginning of your next turn, until you move, or until you use that weapon or unarmed attack to make another attack, whichever comes first.
                 """,
-                [ModData.Traits.ModSource, Trait.Flourish, ModData.Traits.Guardian])
+                [Trait.Flourish, ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPrerequisite(ModData.FeatNames.HamperingStance, "Hampering Stance")
             .WithPermanentQEffect(
@@ -1307,7 +1292,7 @@ public static class GuardianFeats
                                 };
                                 caster.AddQEffect(lockDownRequirements);
                             });
-                        lockDown.Traits = new Traits([ModData.Traits.ModSource, ..lockDown.Traits.ToList()], lockDown);
+                        lockDown.Traits = new Traits([ModData.Traits.ModName, ..lockDown.Traits.ToList()], lockDown);
                         lockDown.Illustration = new SideBySideIllustration(
                             item.Illustration, ModData.Illustrations.LockDown);
                         ((CreatureTarget)lockDown.Target).WithAdditionalConditionOnTargetCreature((a, d) =>
@@ -1331,7 +1316,7 @@ public static class GuardianFeats
 
                 Make a melee Strike against the triggering creature. If your attack is a critical hit and the trigger was a manipulate action, you disrupt that action. This Strike doesn't count toward your multiple attack penalty, and your multiple attack penalty doesn't apply to this Strike.
                 """,
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithActionCost(Constants.ACTION_COST_REACTION)
             .WithOnCreature(self =>
             {
@@ -1347,7 +1332,7 @@ public static class GuardianFeats
                 6,
                 "When an ally is in danger, you can hustle to reach them and punish the foe threatening them.",
                 "Stride up to your Speed. You must end this movement adjacent to an ally who is within an enemy's reach. Then, you push your ally up to 5 feet (as normal for forced movement, this movement doesn't trigger reactions) and make a melee Strike against an enemy within your reach. If your ally was in that enemy's reach and your push moved them out of it, you gain a +2 circumstance bonus to your attack roll.",
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithActionCost(2)
             .WithPermanentQEffect(
                 null,
@@ -1364,7 +1349,7 @@ public static class GuardianFeats
                                 qfFeat.Owner,
                                 new SideBySideIllustration(IllustrationName.QuickenTime, IllustrationName.KineticRam),
                                 "Retaliating Rescue",
-                                [Trait.Basic, ModData.Traits.ModSource, ModData.Traits.Guardian],
+                                [Trait.Basic, ModData.Traits.ModName, ModData.Traits.Guardian],
                                 """
                                 {i}When an ally is in danger, you can hustle to reach them and punish the foe threatening them.{/i}
 
@@ -1508,7 +1493,7 @@ public static class GuardianFeats
                         "The creature is stunned 1.",
                         "The creature is stunned 2.",
                         "The creature is stunned 3."),
-                [ModData.Traits.ModSource, Trait.Flourish, ModData.Traits.Guardian])
+                [Trait.Flourish, ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPermanentQEffect(
                 null,
@@ -1564,7 +1549,7 @@ public static class GuardianFeats
                                         break;
                                 }
                             });
-                        ringTheirBell.Traits = new Traits([ModData.Traits.ModSource, ..ringTheirBell.Traits.ToList()], ringTheirBell);
+                        ringTheirBell.Traits = new Traits([ModData.Traits.ModName, ..ringTheirBell.Traits.ToList()], ringTheirBell);
                         ringTheirBell.Illustration = new SideBySideIllustration(
                             ringTheirBell.Illustration, IllustrationName.Stunned);
                         ((CreatureTarget)ringTheirBell.Target) // Strikes always make CreatureTargets
@@ -1587,7 +1572,7 @@ public static class GuardianFeats
                     "The creature is off-guard until the end of your turn.",
                     "The creature is knocked prone.",
                     "The creature is knocked prone and takes 1d6 bludgeoning damage from the fall."),
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithActionCost(2)
             .WithPermanentQEffect(
                 "Force creatures within 5 feet to make a Reflex save to avoid becoming off-guard or falling prone.",
@@ -1599,7 +1584,7 @@ public static class GuardianFeats
                                 qfThis.Owner,
                                 ModData.Illustrations.StompGround,
                                 "Stomp Ground",
-                                [Trait.Basic, ModData.Traits.ModSource, ModData.Traits.Guardian],
+                                [Trait.Basic, ModData.Traits.ModName, ModData.Traits.Guardian],
                                 "{i}You bring your booted foot down on the ground with enough force to rattle your foes.{/i}\n\nEach creature in a 5-foot emanation must attempt a Reflex saving throw against your class DC."+S.FourDegreesOfSuccess(
                                     "The creature is unaffected.",
                                     "The creature is off-guard until the end of your turn.",
@@ -1652,7 +1637,7 @@ public static class GuardianFeats
             8,
             "Your taunts draw the attention of multiple enemies at once.",
             "When you use Taunt, you can choose up to three targets within range, and you can have up to three taunted enemies at a time. Each time you Taunt, you can choose which enemies remain taunted and which the effect ends for. You must remain at or below this limit.",
-            [ModData.Traits.ModSource, ModData.Traits.Guardian]);
+            [ModData.Traits.Guardian]);
         
         // Juggernaut Charge
         yield return new TrueFeat(
@@ -1666,7 +1651,7 @@ public static class GuardianFeats
 
                 If your Strike hit and dealt damage, that enemy is pulled with you and follows the same path as your second Stride.
                 """,
-                [ModData.Traits.ModSource, Trait.Flourish, ModData.Traits.Guardian])
+                [Trait.Flourish, ModData.Traits.Guardian])
             .WithActionCost(2)
             .WithPermanentQEffect(
                 null,
@@ -1682,7 +1667,7 @@ public static class GuardianFeats
                                 qfThis.Owner,
                                 new SideBySideIllustration(IllustrationName.FleetStep, IllustrationName.Grapple),
                                 "Juggernaut Charge",
-                                [Trait.Basic, ModData.Traits.ModSource, Trait.Flourish, ModData.Traits.Guardian],
+                                [Trait.Basic, ModData.Traits.ModName, Trait.Flourish, ModData.Traits.Guardian],
                                 """
                                 {i}As you move forward in a rush, you put the weight of your armor behind an attack that can drag a foe with you.{/i}
 
@@ -1835,7 +1820,7 @@ public static class GuardianFeats
                 8,
                 "Thanks to the incredible connection you have forged with your armor, you can use it to shrug off an extensive array of dangers.",
                 "Your bonus from the bulwark armor trait increases by 1.",
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithPermanentQEffect(
                 "Increase your armor's bulwark bonus by 1.",
                 qfFeat =>
@@ -1874,7 +1859,7 @@ public static class GuardianFeats
 
                 If your shield is a tower shield, fortress shield, or another shield that grants a higher circumstance bonus to AC when you Take Cover behind it, the creature is instead stupefied 2 if you hit and deal damage to it (stupefied 3 on a critical hit).
                 """,
-                [ModData.Traits.ModSource, Trait.Flourish, ModData.Traits.Guardian])
+                [Trait.Flourish, ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPermanentQEffect(
                 null,
@@ -1911,7 +1896,7 @@ public static class GuardianFeats
                                         QEffect.Stupefied(action.CheckResult == CheckResult.CriticalSuccess ? baseValue+1 : baseValue)
                                             .WithExpirationAtStartOfSourcesTurn(caster, 1));
                             });
-                        wallop.Traits = new Traits([ModData.Traits.ModSource, ..wallop.Traits.ToList()], wallop);
+                        wallop.Traits = new Traits([ModData.Traits.ModName, ..wallop.Traits.ToList()], wallop);
                         wallop.Illustration = new SideBySideIllustration(
                             item.Illustration,
                             IllustrationName.BrainDrain);
@@ -1945,7 +1930,7 @@ public static class GuardianFeats
                 
                 You gain a number of temporary Hit Points equal to half your maximum Hit Points.
                 """,
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithActionCost(2)
             .WithPermanentQEffect(
                 "{Green}(1/day){/Green} If you're at 1/2 max HP or less, gain that much temp HP.",
@@ -1965,7 +1950,7 @@ public static class GuardianFeats
                                 qfThis.Owner,
                                 ModData.Illustrations.ToughCookie,
                                 "Tough Cookie",
-                                [ModData.Traits.ModSource, ModData.Traits.Guardian],
+                                [ModData.Traits.ModName, ModData.Traits.Guardian],
                                 null!,
                                 Target.Self()
                                     .WithAdditionalRestriction(self =>
@@ -2014,7 +1999,7 @@ public static class GuardianFeats
                 
                 After Intercepting the Attack, make your own Strike against the triggering enemy. If your Strike hits, you Taint the target; this Taunt gains the visual trait.
                 """,
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithActionCost(0)
             .WithPrerequisite(
                 values => values.HasFeat(ModData.FeatNames.InterceptAttack),
@@ -2113,7 +2098,7 @@ public static class GuardianFeats
                 
                 Instead of being knocked out, you're reduced to 1 Hit Point. You increase your wounded value by 1 and gain a number of temporary Hit Points equal to your level.
                 """,
-                [ModData.Traits.ModSource, ModData.Traits.Guardian])
+                [ModData.Traits.Guardian])
             .WithActionCost(-2)
             .WithPermanentQEffect(
                 "{Green}Once per encounter{/Green} when an enemy reduces you to 0 HP, you can remain at 1 HP, gain 1 wounded, and gain temp HP equal to your level.",

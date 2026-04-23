@@ -383,7 +383,7 @@ public static class ModData
     
     public static class Traits
     {
-        public static readonly Trait ModSource = ModManager.RegisterModNameTrait("GuardianClass", "Guardian Class");
+        public static readonly Trait ModName = ModManager.RegisterModNameTrait("GuardianClass", "Guardian Class");
         
         /// <summary>Guardian class trait.</summary>
         public static readonly Trait Guardian = ModManager.RegisterTrait("Guardian", 
