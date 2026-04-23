@@ -116,6 +116,11 @@ public static class GuardianFeats
                     .WithIsOptional());
             });
         
+        // Defensive Advance mod, Lv 1
+        if (ModManager.TryParse("Defensive Advance", out FeatName defAdv))
+            (AllFeats.GetFeatByFeatName(defAdv) as TrueFeat)!
+                .WithAllowsForAdditionalClassTrait(ModData.Traits.Guardian);
+        
         // Larger than Life
         yield return new TrueFeat(
                 ModData.FeatNames.LargerThanLife,
@@ -234,6 +239,10 @@ public static class GuardianFeats
                         }
                     };
                 });
+        
+        // Reactive Shield
+        (AllFeats.GetFeatByFeatName(FeatName.ReactiveShield) as TrueFeat)!
+            .WithAllowsForAdditionalClassTrait(ModData.Traits.Guardian);
         
         // Shield Warfare
         yield return new TrueFeat(
@@ -354,6 +363,10 @@ public static class GuardianFeats
         #endregion
         
         #region Level 2
+        
+        // Aggressive Block
+        (AllFeats.GetFeatByFeatName(FeatName.AggressiveBlock) as TrueFeat)!
+            .WithAllowsForAdditionalClassTrait(ModData.Traits.Guardian);
         
         // Covering Stance
         //// Might not be possible without asterisks.
@@ -1325,6 +1338,11 @@ public static class GuardianFeats
                 self.AddQEffect(reactiveStrike);
             })
             .WithEquivalent(values => values.AllFeats.Any(ft => ft.BaseName is "Attack of Opportunity" or "Reactive Strike" or "Opportunist"));
+        
+        // Reflexive Shield, More Dedications, Lv 6
+        if (ModManager.TryParse("MoreDedications.Class.Fighter.ReflexiveShield", out FeatName refShield))
+            (AllFeats.GetFeatByFeatName(refShield) as TrueFeat)!
+                .WithAllowsForAdditionalClassTrait(ModData.Traits.Guardian);
         
         // Retaliating Rescue
         yield return new TrueFeat(
