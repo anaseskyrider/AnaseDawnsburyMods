@@ -8,31 +8,20 @@
     <PlatformTarget>x64</PlatformTarget>
     <NoWarn>1998;NETSDK1206;NU1901;NU1902;NU1903;NU1904</NoWarn>
     <WarningsAsErrors>0618</WarningsAsErrors>
-    <DevelopersDawnsburyInstall>Z:\Steam Library\steamapps\common\Dawnsbury Days</DevelopersDawnsburyInstall>
     <WorkshopExport>[Workshop Files]\[Exports]</WorkshopExport>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Reference Include="Common">
-      <HintPath>Z:\Steam Library\steamapps\common\Dawnsbury Days\Data\Common.dll</HintPath>
-    </Reference>
-    <Reference Include="Dawnsbury Days">
-      <HintPath>Z:\Steam Library\steamapps\common\Dawnsbury Days\Data\Dawnsbury Days.dll</HintPath>
-    </Reference>
-    <Reference Include="MonoGame.Framework">
-      <HintPath>Z:\Steam Library\steamapps\common\Dawnsbury Days\Data\MonoGame.Framework.dll</HintPath>
-    </Reference>
-    <Reference Include="Dawnsbury.Mods.MoreShields">
-      <HintPath>Z:\Steam Library\steamapps\workshop\content\2693730\3538575665\CustomModsV3\Dawnsbury.Mods.MoreShields.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+  
+  <!--A Directory.Build.props file provides references to DawnsburyInstall-->
+  <!--As well as to Dawnsbury.Mods.MoreShields.dll-->
+  
   <Target Name="CopyToGameModsFolder" AfterTargets="Build">
     <ItemGroup>
       <Assets Include="GuardianClassAssets\**\*.*"/>
     </ItemGroup>
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods"/>
-    <Copy SourceFiles="@(Assets)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods\GuardianClassAssets\%(RecursiveDir)"/>
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DawnsburyInstall)\CustomMods"/>
+    <Copy SourceFiles="@(Assets)" DestinationFolder="$(DawnsburyInstall)\CustomMods\GuardianClassAssets\%(RecursiveDir)"/>
   </Target>
+  
   <Target Name="CopyToWorkshopUploadable" AfterTargets="Build">
     <ItemGroup>
       <Assets Include="GuardianClassAssets\**\*.*"/>
@@ -42,4 +31,5 @@
     <Copy SourceFiles="optional-dependencies.txt" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
     <Copy SourceFiles="@(Assets)" DestinationFolder="$(WorkshopExport)\CustomModsV3\GuardianClassAssets\%(RecursiveDir)"/>
   </Target>
+  
 </Project>
