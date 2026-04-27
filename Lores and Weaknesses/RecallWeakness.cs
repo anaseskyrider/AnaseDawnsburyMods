@@ -87,11 +87,11 @@ public static class RecallWeakness
         
         This effect lasts until the end of your next turn, and the DC for your Recall Weakness increases on that creature each time (+2/+5/+10). You can't attempt to Recall Weakness on that creature after attempting a check at DC+10.
         
-        {b}Arcana{/b} Constructs, Beasts, Dragons, Elementals.
+        {b}Arcana{/b} Constructs, Beasts, Dragons, Elementals, Shadows.
         {b}Crafting{/b} Constructs, Objects.
         {b}Nature{/b} Animals, Beasts, Elementals, Fey, Fungi, Leshies, Plants.
-        {b}Occultism{/b} Aberrations, Oozes, Spirits.
-        {b}Religion{/b} Celestials, Fiends, Monitors, Undead.
+        {b}Occultism{/b} Aberrations, Astrals, Dreams, Ethereals, Oozes, Shadows, Spirits.
+        {b}Religion{/b} Celestials, Kami, Fiends, Monitors, Shades, Undead.
         {b}Society{/b} Humanoids.
         {b}Lore{/b} As described by any lore. Lores have a +2 bonus to Recall Weakness, or +5 if it's a specific lore. 
         """;
@@ -108,7 +108,7 @@ public static class RecallWeakness
     {
         {
             Skill.Arcana,
-            [Trait.Arcane, Trait.Arcana, Trait.Beast, Trait.Construct, Trait.Dragon, Trait.Elemental]
+            [Trait.Arcane, Trait.Arcana, Trait.Beast, Trait.Construct, Trait.Dragon, Trait.Elemental, Trait.Shadow]
         },
         {
             Skill.Crafting,
@@ -120,20 +120,22 @@ public static class RecallWeakness
         },
         {
             Skill.Occultism,
-            [Trait.Aberration, Trait.Occult, Trait.Occultism, Trait.Ooze, Trait.Spirit]
+            [Trait.Aberration, Trait.Occult, Trait.Occultism, Trait.Ooze, Trait.Shadow, Trait.Spirit]
+            // "Astral", "Dream", "Ethereal", "Time", "Void"
         },
         {
             Skill.Religion,
             [Trait.Celestial, Trait.Divine, Trait.Fiend, Trait.Monitor, Trait.Religion, Trait.Undead,
                 // Redundant extra subtypes, just in case.
                 Trait.Demon, Trait.Devil, Trait.Starborn]
+            // "Shade", "Kami", "Void"
         },
         {
             Skill.Society,
             [Trait.Humanoid,
                 // Include sub-types, even if you might accidentally include an Undead Goblin,
                 // simply because creatures like the Goblin Drake Rider (Dragon, Goblin) exist.
-                Trait.Goblin, Trait.Human, Trait.Kobold, Trait.Merfolk, Trait.Orc]
+                Trait.Giant, Trait.Goblin, Trait.Human, Trait.Kobold, Trait.Merfolk, Trait.Orc]
         }
     };
     
@@ -470,57 +472,24 @@ public static class RecallWeakness
                         List<TaggedCalculatedNumberProducer> bestSkills = [];
 
                         // Go through skills
-                        foreach ((Skill skill, List<Trait> traits) in CreatureSkills)
+                        foreach ((Skill skill, _) in CreatureSkills)
                         {
-                            if (target.Traits.ContainsOneOf(traits))
+                            if (SkillCanRecallOnTarget(attacker, skill, target))
                                 bestSkills.Add(TaggedChecks.SkillCheck(skill));
-                            else
-                                // Handle traits that aren't in the game currently 
-                                switch (skill)
-                                {
-                                    case Skill.Occultism:
-                                        if (target.Traits.Any(to => to.ToStringOrTechnical()
-                                                is "Astral" or "Dream" or "Ethereal" or "Time"))
-                                            bestSkills.Add(TaggedChecks.SkillCheck(Skill.Occultism));
-                                        break;
-                                    case Skill.Religion:
-                                        if (target.Traits.Any(to => to.ToStringOrTechnical()
-                                                is "Shade"))
-                                            bestSkills.Add(TaggedChecks.SkillCheck(Skill.Religion));
-                                        break;
-                                    default:
-                                        continue;
-                                }
                         }
 
                         // Go through lores
                         foreach (Lore lore in Lores.AllLores)
                         {
-                            if (lore.ValidRecallTarget is null
-                                // RULING: You must at least be adding your level, such as from
-                                // Untrained Improvisation, to be able to use a lore.
-                                // Hidden lores you didn't properly acquire are filtered out,
-                                // so Improv feats can't give you like Thaum's lore.
-                                || (attacker.Proficiencies.Get(lore.Trait) is var prof
-                                    && (prof == Proficiency.Untrained ||
-                                        (prof == Proficiency.UntrainedWithLevel && lore.IsHidden))))
-                                continue;
-                            // Find the first function in each lore that applies,
-                            // breaking the loop through each function on the first true return.
-                            foreach (Func<Creature, Creature, bool> func in lore.ValidRecallTarget
-                                         .GetInvocationList()
-                                         .Select(del => del as Func<Creature, Creature, bool>)
-                                         .WhereNotNull()
-                                         .ToList())
-                                if (func.Invoke(attacker, target))
-                                {
-                                    int bonus = lore.IsSpecific ? 5 : 2;
-                                    string src = lore.IsSpecific ? "Specific lore" : "Unspecific lore";
-                                    bestSkills.Add(TaggedChecks.SkillCheck(lore.Skill)
-                                        .WithExtraBonus((_, _, _) =>
-                                            new Bonus(bonus, BonusType.Untyped, src, true)));
-                                    break;
-                                }
+                            if (SkillCanRecallOnTarget(attacker, lore.Skill, target))
+                            {
+                                int bonus = lore.IsSpecific ? 5 : 2;
+                                string src = lore.IsSpecific ? "Specific lore" : "Unspecific lore";
+                                bestSkills.Add(TaggedChecks.SkillCheck(lore.Skill)
+                                    .WithExtraBonus((_, _, _) =>
+                                        new Bonus(bonus, BonusType.Untyped, src, true)));
+                                break;
+                            }
                         }
 
                         // Add Society as a fallback skill
@@ -661,5 +630,61 @@ public static class RecallWeakness
             crTar.CreatureTargetingRequirements.Add(new UnblockedLineOfEffectCreatureTargetingRequirement());
 
         return crTar;
+    }
+
+    public static bool SkillCanRecallOnTarget(Creature recaller, Skill skill, Creature target)
+    {
+        // Is a normal skill
+        if (CreatureSkills.TryGetValue(skill, out List<Trait>? traits))
+        {
+            // Handle traits that aren't in the game currently 
+            switch (skill)
+            {
+                case Skill.Occultism:
+                    if (target.Traits.Any(to => to.ToStringOrTechnical()
+                            is "Astral" or "Dream" or "Ethereal" or "Time" or "Void")
+                        || (target.HasTrait(Trait.Illusion) && target.HasTrait(Trait.Mental)))
+                        return true;
+                    goto default;
+                case Skill.Religion:
+                    if (target.Traits.Any(to => to.ToStringOrTechnical()
+                            is "Shade" or "Kami" or "Void"))
+                        return true;
+                    goto default;
+                case Skill.Society:
+                    if (target.HasTrait(Trait.Illusion) && target.HasTrait(Trait.Mental))
+                        return true;
+                    goto default;
+                default:
+                    return target.Traits.ContainsOneOf(traits);
+            }
+        }
+        
+        // Is a lore skill
+        if (Lores.AllLores.FirstOrDefault(lore2 => lore2.Skill == skill) is {} lore)
+        {
+            if (lore.ValidRecallTarget is null
+                // RULING: You must at least be adding your level, such as from
+                // Untrained Improvisation, to be able to use a lore.
+                // Hidden lores you didn't properly acquire are filtered out,
+                // so Improv feats can't give you like Thaum's lore.
+                || (recaller.Proficiencies.Get(lore.Trait) is var prof
+                    && (prof == Proficiency.Untrained ||
+                        (prof == Proficiency.UntrainedWithLevel && lore.IsHidden))))
+                return false;
+            // Find the first function in this lore that applies,
+            // breaking the loop through each function on the first true return.
+            foreach (Func<Creature, Creature, bool> func in lore.ValidRecallTarget
+                         .GetInvocationList()
+                         .Select(del => del as Func<Creature, Creature, bool>)
+                         .WhereNotNull()
+                         .ToList())
+                if (func.Invoke(recaller, target))
+                {
+                    return true;
+                }
+        }
+        
+        return false;
     }
 }
