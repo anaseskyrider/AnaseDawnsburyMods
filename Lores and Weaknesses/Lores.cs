@@ -200,6 +200,8 @@ public static class Lores
 
     #endregion
 
+    #region User Functions
+
     /// <summary>
     /// Grants the Additional Lore feat for this particular lore. <see cref="Lore.IsHidden"/> must be false, as Additional Lore only allows for public lores.
     /// </summary>
@@ -287,6 +289,7 @@ public static class Lores
                             DisplayOffset + newLore.Name),
                     "", "", [], null)
                 .WithIllustration(IllustrationName.NarratorBook)
+                .WithTag(newLore)
                 .WithOnSheet(values =>
                 {
                     values.GrantFeat(newLore.Trained.FeatName);
@@ -342,15 +345,15 @@ public static class Lores
                     ? AllFeats.All.FirstOrDefault(ft => ft is SkillSelectionFeat ssf && ssf.Skill == newLore.Skill) ??
                       new SkillSelectionFeat(
                           ModManager.TryParse(name, out FeatName ssFN)
-                            ? ssFN
-                            : ModManager.RegisterFeatName(name, DisplayOffset + name),
+                              ? ssFN
+                              : ModManager.RegisterFeatName(name, DisplayOffset + name),
                           newLore.Skill,
                           newLore.Trait)
                     : AllFeats.All.FirstOrDefault(ft => ft is SkillIncreaseFeat sif && sif.Skill == newLore.Skill && sif.TargetProficiency == prof) ??
                       new SkillIncreaseFeat(
                           ModManager.TryParse(prof.ToStringOrTechnical() + name, out FeatName siFN)
-                            ? siFN
-                            : ModManager.RegisterFeatName(
+                              ? siFN
+                              : ModManager.RegisterFeatName(
                                   prof.ToStringOrTechnical() + name,
                                   DisplayOffset + prof.ToStringOrTechnical() + " in " + name),
                           newLore.Skill,
@@ -392,6 +395,8 @@ public static class Lores
     {
         return AllLores.FirstOrDefault(lore => lore.Name == name || lore.Skill == loreSkill);
     }
+
+    #endregion
 }
 
 /// <summary>
