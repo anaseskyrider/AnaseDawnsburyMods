@@ -258,8 +258,6 @@ public static class RecallWeakness
                     };
                 });
 
-        // TODO: Automatic Knowledge
-
         // Slightest Glance Weakness
         const string glanceFlavor = "You can more easily observe and convey your foe's weaknesses.";
         const string glanceRules = "Increase the range of {b}Recall Weakness{/b} {icon:Action} to 60 feet. If you are a master in Perception, increase the range to 120 feet. If you are legendary in Perception, you don't need line of sight to your target (they must not be undetected to you).";
