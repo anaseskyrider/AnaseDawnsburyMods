@@ -41,9 +41,29 @@ public static class OptionalDependencies
                 [/*To be filled later*/])
             .WithActionCost(0)
             .WithPermanentQEffect(
-                "Once per round, Recall a Weakness using Assurance.",
+                "Once per round, Recall a Weakness using Assurance",
                 qfFeat =>
                 {
+                    // Only apply this feat once.
+                    if (qfFeat.Owner.HasEffect(RecallWeakness.AutomaticKnowledge))
+                    {
+                        qfFeat.Innate = false;
+                        qfFeat.Description = null;
+                        return;
+                    }
+                    
+                    // Consolidate all Automatic Knowledges into one place
+                    if (qfFeat.Owner.PersistentCharacterSheet?.Calculated.AllFeats is { } myFeats)
+                    {
+                        qfFeat.Description +=
+                            " with "
+                            + S.ConstructOrList(
+                                myFeats
+                                    .Where(ft => ft.Name.Contains("Assurance") && ft.Tag is Skill)
+                                    .Select(ft => ((Skill)ft.Tag!).ToStringOrTechnical().WithColor("Blue")));
+                    }
+                    qfFeat.Description += ".";
+                    
                     qfFeat.Id = RecallWeakness.AutomaticKnowledge;
                     qfFeat.Value = 0; // Number of automatic knowledge feats
                     qfFeat.HideValue = true;
