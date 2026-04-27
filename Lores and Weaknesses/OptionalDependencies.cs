@@ -59,7 +59,7 @@ public static class OptionalDependencies
                             " with "
                             + S.ConstructOrList(
                                 myFeats
-                                    .Where(ft => ft.Name.Contains("Assurance") && ft.Tag is Skill)
+                                    .Where(ft => ft.FeatName.ToStringOrTechnical().Contains("Assurance") && ft.Tag is Skill)
                                     .Select(ft => ((Skill)ft.Tag!).ToStringOrTechnical().WithColor("Blue")));
                     }
                     qfFeat.Description += ".";
@@ -170,7 +170,7 @@ public static class OptionalDependencies
                 "You must be an expert in " + skill.ToStringOrTechnical() + ".")
             .WithPrerequisite(
                 values => values.AllFeats.Any(ft =>
-                    ft.Name.Contains("Assurance")
+                    ft.FeatName.ToStringOrTechnical().Contains("Assurance")
                     && ft.Tag is Skill sTag
                     && sTag == skill),
                 "You must have Assurance with " + skill.ToStringOrTechnical() + ".")
