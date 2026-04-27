@@ -42,6 +42,9 @@ public static class RecallWeakness
     /// </summary>
     public static QEffectId CombatAssessmentBonus;
 
+    /// <summary> The effect which represents having any Automatic Knowledge feat. </summary>
+    public static QEffectId AutomaticKnowledge;
+
     /// <summary>
     /// The Recall Weakness action. Uses the same ID as DawnniExpanded.
     /// </summary>
@@ -144,6 +147,7 @@ public static class RecallWeakness
         RecallWeaknessEffect = ModData.SafelyRegister<QEffectId>("RecallWeaknessEffect");
         RecallWeaknessAttempts = ModData.SafelyRegister<QEffectId>("IncreasedRecallWeaknessDC");
         CombatAssessmentBonus = ModData.SafelyRegister<QEffectId>("CombatAssessmentBonus");
+        AutomaticKnowledge = ModData.SafelyRegister<QEffectId>("AutomaticKnowledge");
         RWActionId = ModData.SafelyRegister<ActionId>("RecallWeaknessActionID"); // Backwards compatible ID
         CombatAssessment = ModData.SafelyRegister<ActionId>("Combat Assessment"); // Backwards compatible ID
         FNAdditionalLore = ModData.SafelyRegister<FeatName>(ModData.IdPrepend + "AdditionalLore", "Additional Lore");
