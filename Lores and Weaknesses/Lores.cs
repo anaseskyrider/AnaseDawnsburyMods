@@ -38,6 +38,8 @@ public static class Lores
     /// </summary>
     public const string DisplayOffset = "𝒵";
 
+    #region Loading Procedures
+
     internal static void Load()
     {
         foreach (Feat ft in CreateFeats())
@@ -72,13 +74,13 @@ public static class Lores
     internal static void RegisterLores()
     {
         // Warfare Lore
-        Lores.RegisterNewLore(
+        RegisterNewLore(
             "Warfare Lore",
             $"""
-            You have studied battlefields, tactics, and strategy.
+             You have studied battlefields, tactics, and strategy.
 
-            You can use this skill to {RecallWeakness.GetActionLink()} on martial creatures (wields martial weapons; or has a Reactive Strike or Shield Block feature).
-            """,
+             You can use this skill to {RecallWeakness.GetActionLink()} on martial creatures (wields martial weapons; or has a Reactive Strike or Shield Block feature).
+             """,
             (_, target) =>
                 target.ItemsHeldAtTheBeginningOfTheEncounter.Any(item =>
                     item.HasAnyTraits([Trait.Advanced, Trait.Martial]))
@@ -86,7 +88,7 @@ public static class Lores
                 || target.HasEffect(QEffectId.AttackOfOpportunity));
         
         // Undead Lore
-        Lores.RegisterNewLore(
+        RegisterNewLore(
             "Undead Lore",
             $"""
              You have studied the nature of undead and the dark energies that animate their flesh and bind their souls to the material plane.
@@ -97,7 +99,7 @@ public static class Lores
                 target.HasTrait(Trait.Undead));
         
         // Elemental Lore
-        Lores.RegisterNewLore(
+        RegisterNewLore(
             "Elemental Lore",
             $"""
              You have studied creatures from the elemental planes.
@@ -108,13 +110,13 @@ public static class Lores
                 target.HasTrait(Trait.Elemental));
         
         // Starborn Lore
-        Lores.RegisterNewLore(
+        RegisterNewLore(
             "Starborn Lore",
             $"""
-            You have studied the starborn — the seven commanders of the demonic armada that has waged war on us for seven years. You read through every report that's come out of the Western Reaches and you learned everything there is to know — from their origins in the distant worlds they've scoured clean, through the strategy and tactics they employ on the battlefield, to their innate weaknesses which could be their downfall.
+             You have studied the starborn — the seven commanders of the demonic armada that has waged war on us for seven years. You read through every report that's come out of the Western Reaches and you learned everything there is to know — from their origins in the distant worlds they've scoured clean, through the strategy and tactics they employ on the battlefield, to their innate weaknesses which could be their downfall.
 
-            You can use this skill to {RecallWeakness.GetActionLink()} on starborn creatures.
-            """,
+             You can use this skill to {RecallWeakness.GetActionLink()} on starborn creatures.
+             """,
             (_, target) =>
                 target.HasTrait(Trait.Starborn),
             true);
@@ -195,6 +197,8 @@ public static class Lores
             }
         };
     }
+
+    #endregion
 
     /// <summary>
     /// Grants the Additional Lore feat for this particular lore. <see cref="Lore.IsHidden"/> must be false, as Additional Lore only allows for public lores.
