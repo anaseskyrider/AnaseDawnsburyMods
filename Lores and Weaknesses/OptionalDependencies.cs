@@ -131,7 +131,7 @@ public static class OptionalDependencies
                     subFeat =>
                     {
                         subFeat.ZOrder = 5;
-                        subFeat.CustomName = Lores.DisplayOffset + "Assurance - {icon:NarratorBook} " + lore.Name;
+                        subFeat.CustomName = Lores.DisplayOffset + "{icon:NarratorBook} " + lore.Name;
                     });
                 
                 // Automatic Knowledge
