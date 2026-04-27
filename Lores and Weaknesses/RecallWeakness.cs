@@ -656,7 +656,8 @@ public static class RecallWeakness
                         return true;
                     goto default;
                 case Skill.Society:
-                    if (target.HasTrait(Trait.Illusion) && target.HasTrait(Trait.Mental))
+                    if (!target.Traits.Any()
+                        || (target.HasTrait(Trait.Illusion) && target.HasTrait(Trait.Mental)))
                         return true;
                     goto default;
                 default:
