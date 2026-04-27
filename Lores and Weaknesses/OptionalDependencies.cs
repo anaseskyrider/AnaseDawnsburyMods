@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Creatures.Parts;
@@ -11,6 +13,7 @@ using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
+using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.LoresAndWeaknesses;
@@ -100,34 +103,48 @@ public static class OptionalDependencies
                 ModManager.AddFeat(subKnow, ModData.Traits.ModName);
             }
             
-            foreach (Lore lore in Lores.AllLores)
+            foreach (Lore lore in Lores.AllLores.OrderBy(lore => lore.Skill.ToStringOrTechnical()))
             {
                 // Assurance
                 Feat assurance = New_Skill_Feats_and_Items.ModLoader.RegisterNewAssurance(
                     lore.Skill,
-                    subFeat => subFeat.WithZOrder(5));
-                //assurance.WithIllustration(IllustrationName.NarratorBook);
-                assurance.CustomName = "Assurance - {icon:NarratorBook} " + lore.Name;
+                    subFeat =>
+                    {
+                        subFeat.ZOrder = 5;
+                        subFeat.CustomName = Lores.DisplayOffset + "Assurance - {icon:NarratorBook} " + lore.Name;
+                    });
                 
                 // Automatic Knowledge
-                Feat subKnow = CreateAutomaticKnowledgeSubfeat(lore.Skill)
-                    .WithZOrder(1);
+                Feat subKnow = CreateAutomaticKnowledgeSubfeat(lore.Skill, true);
                 autoKnow.Subfeats!.Add(subKnow);
                 ModManager.AddFeat(subKnow, ModData.Traits.ModName);
             }
+            
+            /*New_Skill_Feats_and_Items.SkillFeats.Assurance?.Subfeats = New_Skill_Feats_and_Items.SkillFeats.Assurance!
+                .Subfeats!
+                .OrderBy(ft => ft.ZOrder)
+                .ThenBy(ft => ((Skill)ft.Tag!).ToStringOrTechnical())
+                .ToList();*/
         };
     }
 
-    public static Feat CreateAutomaticKnowledgeSubfeat(Skill skill)
+    /// <summary>
+    /// Creates an Automatic Knowledge feat with a given skill.
+    /// </summary>
+    /// <param name="skill">The skill being used to Recall Weakness. The action it generates relies on <see cref="CreateAutomaticKnowledgeAction"/> and <see cref="RecallWeakness.SkillCanRecallOnTarget"/> for usability and functionality.</param>
+    /// <param name="isLore">If the skill is a lore, add a unicode character to sort it to the bottom.</param>
+    /// <returns></returns>
+    public static Feat CreateAutomaticKnowledgeSubfeat(Skill skill, bool? isLore = false)
     {
         Feat autoKnow = new Feat(
                 ModManager.RegisterFeatName(
                     ModData.IdPrepend + "AutomaticKnowledge." + skill.ToStringOrTechnical(),
-                    skill.ToStringOrTechnical()),
+                    (isLore is true ? (Lores.DisplayOffset + "{icon:NarratorBook} ") : null) + skill.ToStringOrTechnical()),
                 "You know basic facts off the top of your head.",
                 "You can use " + skill.ToStringOrTechnical() + " with Automatic Knowledge {icon:FreeAction}.",
                 [], null)
             .WithTag(skill)
+            .WithZOrder(isLore is true ? 1 : 0)
             .WithPrerequisite(
                 values => values.GetProficiency(Skills.SkillToTrait(skill)) >= Proficiency.Expert,
                 "You must be an expert in " + skill.ToStringOrTechnical() + ".")
