@@ -55,24 +55,18 @@ public static class RecallWeakness
     /// <summary>
     /// The Additional Lore feat from Player Core. Lores are automatically added to this feat's subfeats when registered using this mod.
     /// </summary>
-    public static readonly FeatName FNAdditionalLore = ModManager.RegisterFeatName(
-        ModData.IdPrepend + "AdditionalLore",
-        "Additional Lore");
+    public static FeatName FNAdditionalLore;
 
     /// <summary>
     /// The feat that is granted to all characters to give them Recall Weakness. Also contains a detailed description. Used for tooltips to Recall Weakness actions (see: <see cref="GetActionLink"/>).
     /// </summary>
-    public static readonly FeatName FNRecallWeakness = ModManager.RegisterFeatName(
-        ModData.IdPrepend + "RecallWeakness",
-        "Recall Weakness {icon:Action}");
+    public static FeatName FNRecallWeakness;
 
-    public static readonly FeatName FNDubiousKnowledge = ModManager.RegisterFeatName(
-        ModData.IdPrepend + "DubiousKnowledge",
-        "Dubious Knowledge");
+    public static FeatName FNDubiousKnowledge;
 
-    public static readonly FeatName FNCombatAssessment = ModManager.RegisterFeatName(
-        "CombatAssessment",
-        "Combat Assessment");
+    public static FeatName FNCombatAssessment;
+
+    public static FeatName FNAutomaticKnowledge;
 
     public const SfxName SFXRecallWeakness = SfxName.OpenPage;
 
@@ -150,6 +144,11 @@ public static class RecallWeakness
         CombatAssessmentBonus = ModData.SafelyRegister<QEffectId>("CombatAssessmentBonus");
         RWActionId = ModData.SafelyRegister<ActionId>("RecallWeaknessActionID"); // Backwards compatible ID
         CombatAssessment = ModData.SafelyRegister<ActionId>("Combat Assessment"); // Backwards compatible ID
+        FNAdditionalLore = ModData.SafelyRegister<FeatName>(ModData.IdPrepend + "AdditionalLore", "Additional Lore");
+        FNRecallWeakness = ModData.SafelyRegister<FeatName>(ModData.IdPrepend + "RecallWeakness", "Recall Weakness {icon:Action}");
+        FNDubiousKnowledge = ModData.SafelyRegister<FeatName>(ModData.IdPrepend + "DubiousKnowledge", "Dubious Knowledge");
+        FNCombatAssessment = ModData.SafelyRegister<FeatName>("CombatAssessment", "Combat Assessment");
+        FNAutomaticKnowledge = ModData.SafelyRegister<FeatName>(ModData.IdPrepend + "AutomaticKnowledge", "Automatic Knowledge");
         
         foreach (Feat ft in CreateFeats())
             ModManager.AddFeat(ft, ModData.Traits.ModName);
