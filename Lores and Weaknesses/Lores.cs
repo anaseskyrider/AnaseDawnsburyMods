@@ -29,12 +29,10 @@ public static class Lores
     /// All Lore skills that have been registered.
     /// </summary>
     public static readonly List<Lore> AllLores = [];
-    
     /// <summary>
     /// All Lore skills that have been registered and that are public (<see cref="Lore.IsHidden"/> is false).
     /// </summary>
     public static IReadOnlyList<Lore> AllPublicLores => AllLores.Where(lore => !lore.IsHidden).ToList();
-
     /// <summary>
     /// An invisible unicode symbol that's added to the beginning of the humanized name of feats in order to push them to the bottom of the list.
     /// </summary>
@@ -44,7 +42,36 @@ public static class Lores
     {
         foreach (Feat ft in CreateFeats())
             ModManager.AddFeat(ft, ModData.Traits.ModName);
+        RegisterLores();
+        AdjustFeatsAndFeatures();
         
+        // Optional Dependency: New Skill Feats and Items
+        if (ModManager.TryParse("Assurance", out FeatName _))
+            OptionalDependencies.LoadAssuranceLores();
+    }
+
+    internal static IEnumerable<Feat> CreateFeats()
+    {
+        // Additional Lore
+        Feat addLore = new TrueFeat(
+                RecallWeakness.FNAdditionalLore,
+                1,
+                "Your knowledge has expanded to encompass a new field.",
+                """
+                Choose a Lore skill. You become trained in it. At 3rd, 7th, and 15th levels, you automatically increase your proficiency with that skill as appropriate for a character of that level.
+
+                {b}Special{/b} You can select this feat more than once, choosing a different Lore skill each time.
+                """,
+                [Trait.General, Trait.Skill],
+                [/*Lore feats are added automatically every time a lore is registered*/])
+            .WithIllustration(IllustrationName.SepiaFeat);
+        addLore.CanSelectMultipleTimes = true;
+        yield return addLore;
+    }
+
+    internal static void RegisterLores()
+    {
+        // Warfare Lore
         Lores.RegisterNewLore(
             "Warfare Lore",
             $"""
@@ -58,6 +85,7 @@ public static class Lores
                 || target.HasEffect(QEffectId.ShieldBlock)
                 || target.HasEffect(QEffectId.AttackOfOpportunity));
         
+        // Undead Lore
         Lores.RegisterNewLore(
             "Undead Lore",
             $"""
@@ -68,6 +96,7 @@ public static class Lores
             (_, target) =>
                 target.HasTrait(Trait.Undead));
         
+        // Elemental Lore
         Lores.RegisterNewLore(
             "Elemental Lore",
             $"""
@@ -78,6 +107,7 @@ public static class Lores
             (_, target) =>
                 target.HasTrait(Trait.Elemental));
         
+        // Starborn Lore
         Lores.RegisterNewLore(
             "Starborn Lore",
             $"""
@@ -88,7 +118,10 @@ public static class Lores
             (_, target) =>
                 target.HasTrait(Trait.Starborn),
             true);
-        
+    }
+
+    internal static void AdjustFeatsAndFeatures()
+    {
         // Add bonuses to the Outwit Ranger-subclass.
         Feat outwit = AllFeats.GetFeatByFeatName(FeatName.HuntersEdgeOutwit)
             .WithOnCreature(cr =>
@@ -161,25 +194,6 @@ public static class Lores
                         .ToLink("Battle Medicine"));
             }
         };
-    }
-
-    internal static IEnumerable<Feat> CreateFeats()
-    {
-        // Additional Lore
-        Feat addLore = new TrueFeat(
-                RecallWeakness.FNAdditionalLore,
-                1,
-                "Your knowledge has expanded to encompass a new field.",
-                """
-                Choose a Lore skill. You become trained in it. At 3rd, 7th, and 15th levels, you automatically increase your proficiency with that skill as appropriate for a character of that level.
-
-                {b}Special{/b} You can select this feat more than once, choosing a different Lore skill each time.
-                """,
-                [Trait.General, Trait.Skill],
-                [/*Lore feats are added automatically every time a lore is registered*/])
-            .WithIllustration(IllustrationName.SepiaFeat);
-        addLore.CanSelectMultipleTimes = true;
-        yield return addLore;
     }
 
     /// <summary>
