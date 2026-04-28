@@ -435,7 +435,11 @@ public static class Slayer
         // Class //
         Feat slayerClass = new ClassSelectionFeat(
                 ModData.FeatNames.SlayerClass,
-                "The world is full of dangerous and mighty beings, but slayers know that no threat is unbeatable. You could be a trapper in pursuit of rarer game, a brave defender of the weak, or a dogged pursuer of a hated nemesis; whatever your reasons, few are more skilled than you at hunting singular and deadly foes.\n\nEquipped with an arsenal of specialized tools, the spoils of your previous hunts, and your indomitable spirit, you’re always more prepared for each new quarry than the last.",
+                """
+                The world is full of dangerous and mighty beings, but slayers know that no threat is unbeatable. You could be a trapper in pursuit of rarer game, a brave defender of the weak, or a dogged pursuer of a hated nemesis; whatever your reasons, few are more skilled than you at hunting singular and deadly foes.
+
+                Equipped with an arsenal of specialized tools, the spoils of your previous hunts, and your indomitable spirit, you’re always more prepared for each new quarry than the last.
+                """,
                 ModData.Traits.Slayer,
                 new LimitedAbilityBoost(Ability.Strength, Ability.Dexterity),
                 10,
