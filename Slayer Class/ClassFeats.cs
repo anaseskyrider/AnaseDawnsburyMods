@@ -329,7 +329,6 @@ public static class ClassFeats
         // Apply Spirit Oil
 
         // Blood for Blood
-        // DOC: Simplified and buffed to always be equal to your level.
         yield return new TrueFeat(
                 ModData.FeatNames.BloodForBlood,
                 4,
