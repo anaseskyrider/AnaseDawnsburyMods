@@ -30,10 +30,10 @@
     <Reference Include="New_Skill_Feats_and_Items">
       <HintPath>$(WorkshopInstalls)\3518902782\CustomMods\New Skill Feats and Items.dll</HintPath>
     </Reference>
-    <Reference Include="Dawnsbury.Mods.LoresAndWeaknesses.dll">
+    <Reference Include="Dawnsbury.Mods.LoresAndWeaknesses.dll"> <!--3710730920-->
       <HintPath>..\Lores and Weaknesses\[Workshop Files]\[Export]\CustomModsV3\Dawnsbury.Mods.LoresAndWeaknesses.dll</HintPath>
     </Reference>
-    <Reference Include="Dawnsbury.Mods.MoreShields.dll">
+    <Reference Include="Dawnsbury.Mods.MoreShields.dll"> <!--3538575665-->
       <HintPath>..\More Shields\[Workshop Files]\[Export]\CustomModsV3\Dawnsbury.Mods.MoreShields.dll</HintPath>
     </Reference>
   </ItemGroup>
