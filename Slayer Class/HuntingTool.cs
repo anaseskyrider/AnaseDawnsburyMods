@@ -55,7 +55,7 @@ public class HuntingTool
     /// <summary>
     /// Generates a feat from a signature tool with a source-like description format.
     /// </summary>
-    /// <seealso cref="ToToolFeat"/>
+    /// <seealso cref="WithBasicToolFeatFunctionality"/>
     /// <param name="toolFlavor">The tool's general flavor.</param>
     /// <param name="toolRules">The tool's general rules, such as what items you can designate it to.</param>
     /// <param name="initialRules">The initial benefits. Must begin with the name of the benefit in bold, such as "{b}Bloody Fuller{/b} If your quarry...".</param>
@@ -71,57 +71,52 @@ public class HuntingTool
         string slayingRules,
         string specializedRules)
     {
-        return this.ToToolFeat(
+        return WithBasicToolFeatFunctionality(new Feat(
+            this.FeatName,
             toolFlavor,
             $$"""
               {{toolRules.TrimEnd('.')}}.
-              
+
               {b}Initial Benefit—{/b}{{initialRules.TrimEnd('.')}}; {{ModData.Tooltips.ReinforcedBenefit("Reinforced")}} {{reinforcedRules.TrimEnd('.')}}.
-              
+
               {b}Slaying Technique—{/b}{{slayingRules.TrimEnd('.')}}.
-              
+
               {b}Specialized Arsenal (7th){/b} {{specializedRules.TrimEnd('.')}}.
-              """);
+              """, [], null));
     }
 
     /// <summary>
-    /// Generates a class feat appropriate for secondary tools.
+    /// Generates a class <see cref="TrueFeat"/> appropriate for secondary tools.
     /// </summary>
-    /// <seealso cref="ToToolFeat"/>
+    /// <seealso cref="WithBasicToolFeatFunctionality"/>
+    /// <param name="level">The feat's level.</param>
     /// <param name="flavorText">See: <see cref="Feat.FlavorText"/>.</param>
     /// <param name="rulesText">See: <see cref="Feat.RulesText"/>.</param>
     /// <param name="traits">See: <see cref="Feat.Traits"/>. Always includes the Slayer trait.</param>
     /// <returns></returns>
-    public Feat ToSecondaryToolFeat(string flavorText, string rulesText, List<Trait> traits)
+    public TrueFeat ToSecondaryToolFeat(int level, string? flavorText, string rulesText, List<Trait> traits)
     {
-        Feat secondaryFeat = ToToolFeat(flavorText, rulesText);
-        
         if (!traits.Contains(ModData.Traits.Slayer))
+        {
             traits.Add(ModData.Traits.Slayer);
+            traits = traits
+                .OrderBy(trait => trait.ToStringOrTechnical())
+                .ToList();
+        }
         
-        traits = traits
-            .OrderBy(trait => trait.ToStringOrTechnical())
-            .ToList();
-        
-        secondaryFeat.Traits.AddRange(traits);
+        TrueFeat secondaryFeat = (TrueFeat)WithBasicToolFeatFunctionality(
+            new TrueFeat(this.FeatName, level, flavorText, rulesText, traits.ToArray()));
         
         return secondaryFeat;
     }
 
     /// <summary>
-    /// Generates a feat from any kind of hunting tool. The functionality of the tool must be created from subsequent WithOnSheet, WithPermanentQEffect, and/or WithOnCreature behavior.
+    /// Adds basic hunting tool feat functionality to a feat. The functionality of the tool must be created from subsequent WithOnSheet, WithPermanentQEffect, and/or WithOnCreature behavior.
     /// </summary>
-    /// <param name="flavorText">See: <see cref="Feat.FlavorText"/>.</param>
-    /// <param name="rulesText">See: <see cref="Feat.RulesText"/>.</param>
-    /// <returns></returns>
-    private Feat ToToolFeat(string flavorText, string rulesText)
+    private Feat WithBasicToolFeatFunctionality(Feat toolFeat)
     {
-        return new Feat(
-                this.FeatName,
-                flavorText,
-                rulesText,
-                [ModData.Traits.HuntingTool],
-                null)
+        toolFeat.Traits.Add(ModData.Traits.HuntingTool);
+        return toolFeat
             .WithIllustration(this.Icon)
             .WithTag(this)
             .WithOnSheet(values =>
@@ -181,6 +176,15 @@ public class HuntingTool
         return item;
     }
 
+    /// <summary>
+    /// Constructs a new hunting tool. This isn't stored anywhere unless you turn it into a feat with one of the other methods.
+    /// </summary>
+    /// <param name="name">The name of the tool, such as "Bloodseeking Blade".</param>
+    /// <param name="id">The tool's unique enumerated ID.</param>
+    /// <param name="kind">Whether this is a signature tool or a secondary tool.</param>
+    /// <param name="icon">The Illustration that represents this tool, seen in feats and tool selections and in some abilities that use the tool.</param>
+    /// <param name="shortDescription">The summarized, multi-line description of this tool as it appears on a creature stat block.</param>
+    /// <param name="legalItem">legalityDescription: The minimally-worded description of what items can be designated as this tool, such as in the sentence, "Designate this BLANK as your TOOL_NAME". The second parameter of this tuple is the function which enforces this validation.</param>
     public HuntingTool(
         string name,
         HuntingTools.ToolId id,

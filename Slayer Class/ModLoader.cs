@@ -8,7 +8,7 @@ public static class ModLoader
     {
         ModData.LoadData();
         Trophies.Load();
-        Core.Load();
+        Slayer.Load();
         ClassFeats.Load();
         HuntingTools.Load();
     }

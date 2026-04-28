@@ -7,7 +7,6 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Display.Illustrations;
-using Dawnsbury.IO;
 using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.SlayerClass;
@@ -34,7 +33,6 @@ public static class ModData
     public static void LoadData()
     {
         ActionIds.Initialize();
-        BooleanOptions.Initialize();
         ItemGreaterGroups.Initialize();
         QEffectIds.Initialize();
         RuneKinds.Initialize();
@@ -44,88 +42,30 @@ public static class ModData
     /// Registers the source enum to the game, or returns the original if it's already registered.
     /// </summary>
     /// <param name="technicalName">The technicalName string of the enum being registered.</param>
+    /// <param name="displayName">The human readable name of the enum, if the type supports a humanized name.</param>
     /// <typeparam name="T">The enum being registered to.</typeparam>
     /// <returns>The newly registered enum.</returns>
-    public static T SafelyRegister<T>(string technicalName) where T : struct, Enum
+    public static T SafelyRegister<T>(string technicalName, string? displayName = null) where T : struct, Enum
     {
-        return ModManager.TryParse(technicalName, out T alreadyRegistered)
+        return (T)(ModManager.TryParse(technicalName, out T alreadyRegistered)
             ? alreadyRegistered
-            : ModManager.RegisterEnumMember<T>(technicalName);
+            : typeof(T) == typeof(FeatName)
+                ? (Enum)ModManager.RegisterFeatName(technicalName, displayName)
+                : ModManager.RegisterEnumMember<T>(technicalName));
     }
 
     public static class ActionIds
     {
+        public static ActionId OnTheHunt;
+        public static ActionId MarkQuarry;
         public static ActionId ArmoredShelter;
         
         public static void Initialize()
         {
+            OnTheHunt = SafelyRegister<ActionId>("OnTheHunt");
+            MarkQuarry = SafelyRegister<ActionId>("MarkQuarry");
             ArmoredShelter = SafelyRegister<ActionId>("ArmoredShelter");
         }
-    }
-
-    // TODO: Unused
-    /// <summary>
-    /// Keeps the options registered with <see cref="ModManager.RegisterBooleanSettingsOption"/>. To read the registered options, use <see cref="PlayerProfile.Instance.IsBooleanOptionEnabled(string)"/>.
-    /// </summary>
-    public static class BooleanOptions
-    {
-        //public static string UnrestrictedTrace = null!;
-        
-        public static void Initialize()
-        {
-            /*UnrestrictedTrace = RegisterBooleanOption(
-                IdPrepend+"UnrestrictedTrace",
-                "Runesmith: Less Restrictive Rune Tracing",
-                "Enabling this option removes protections against \"bad decisions\" ith tracing certain runes on certain targets.\n\nThe Runesmith is a class on the more advanced end of tactics and creativity. For example, you might want to trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy. Or you might trace Atryl on yourself as a 3rd action so that you can move it with Transpose Etching (just 1 action) on your next turn, because you're a ranged build.\n\nThis option is for those players.",
-                 true);*/
-        }
-        
-        /// <summary>
-        /// Functions as <see cref="ModManager.RegisterBooleanSettingsOption"/>, but also returns the technicalName.
-        /// </summary>
-        /// <returns>(string) The technical name for the option.</returns>
-        public static string RegisterBooleanOption(
-            string technicalName,
-            string caption,
-            string longDescription,
-            bool defaultValue)
-        {
-            ModManager.RegisterBooleanSettingsOption(technicalName, caption, longDescription, defaultValue);
-            return technicalName;
-        }
-    }
- 
-    // TODO: Unused
-    public static class CommonReactionKeys
-    {
-        //public const string ReactionTime = "ReactionTime";
-    }
- 
-    // TODO: Unused
-    public static class CommonRequirements
-    {
-        /*public static CreatureTargetingRequirement WearingMediumOrHeavyArmor()
-        {
-            return new LegacyCreatureTargetingRequirement((a,_) =>
-                (a.BaseArmor?.HasTrait(Trait.MediumArmor) ?? false) || (a.BaseArmor?.HasTrait(Trait.HeavyArmor) ?? false)
-                    ? Usability.Usable
-                    : Usability.NotUsable("must be wearing medium or heavy armor"));
-        }*/
-        
-        /*public static string? WhyCannotEnterRage(Creature self)
-        {
-            if (self.HasEffect(QEffectId.Fatigued))
-                return "You can't rage while fatigued.";
-            if (self.HasEffect(QEffectId.Rage))
-                return "You're already raging.";
-            return !self.HasEffect(QEffectId.HasRagedThisEncounter) || self.HasEffect(QEffectId.SecondWind) ? null : "You already raged this encounter.";
-        }*/
-    }
-
-    // TODO: Unused
-    public static class FeatGroups
-    {
-        //public static readonly FeatGroup FamiliarAbilities = new FeatGroup("Familiar Abilities", 0);
     }
 
     public static class FeatNames
@@ -141,7 +81,6 @@ public static class ModData
         public static readonly FeatName OnTheHunt = ModManager.RegisterFeatName(IdPrepend+"OnTheHunt", "On the Hunt {icon:Reaction}");
         public static readonly FeatName MonsterLore = ModManager.RegisterFeatName(IdPrepend+"MonsterLore", "Monster Lore");
         public static readonly FeatName SlayersArsenal = ModManager.RegisterFeatName(IdPrepend+"SlayersArsenal", "Slayer's Arsenal");
-        public static readonly FeatName SlayersQuarry = ModManager.RegisterFeatName(IdPrepend+"SlayersQuarry", "Slayer's Quarry");
         /// <summary>
         /// The Mark Quarry sub-feature of Slayer's Quarry
         /// </summary>
@@ -154,8 +93,107 @@ public static class ModData
         #endregion
         
         #region Class Feats
-        
-        
+
+        #region 1st-Level
+
+        public static readonly FeatName Bloodscent = ModManager.RegisterFeatName(IdPrepend+"Bloodscent", "Bloodscent");
+        public static readonly FeatName CrossbowSlayer = ModManager.RegisterFeatName(IdPrepend+"Crossbow Slayer", "CrossbowSlayer");
+        public static readonly FeatName DrinkAdaptationSerums = ModManager.RegisterFeatName(IdPrepend+"DrinkAdaptationSerums", "Drink Adaptation Serums");
+        public static readonly FeatName RepellingShield = ModManager.RegisterFeatName(IdPrepend+"RepellingShield", "Repelling Shield");
+        public static readonly FeatName SpikedSurcoat = ModManager.RegisterFeatName(IdPrepend+"SpikedSurcoat", "Spiked Surcoat");
+        public static readonly FeatName SuddenPounce = ModManager.RegisterFeatName(IdPrepend+"SuddenPounce", "Sudden Pounce");
+        public static readonly FeatName PairedBloodseeker = ModManager.RegisterFeatName(IdPrepend+"PairedBloodseeker", "Paired Bloodseeker");
+        public static readonly FeatName PeculiarWeaponry = ModManager.RegisterFeatName(IdPrepend+"PeculiarWeaponry", "Peculiar Weaponry");
+
+        #endregion
+
+        #region 2nd-Level
+
+        public static readonly FeatName InstantEnmity = ModManager.RegisterFeatName(IdPrepend+"InstantEnmity", "Instant Enmity");
+        public static readonly FeatName PackSlayer = ModManager.RegisterFeatName(IdPrepend+"PackSlayer", "Pack Slayer");
+        public static readonly FeatName PersonalizedGear = ModManager.RegisterFeatName(IdPrepend+"PersonalizedGear", "Personalized Gear");
+        public static readonly FeatName SaltStone = ModManager.RegisterFeatName(IdPrepend+"SaltStone", "Salt Stone");
+        public static readonly FeatName ShiftingHunt = ModManager.RegisterFeatName(IdPrepend+"ShiftingHunt", "Shifting Hunt");
+        public static readonly FeatName SlayersTricks = ModManager.RegisterFeatName(IdPrepend+"SlayersTricks", "Slayer's Tricks");
+
+        #endregion
+
+        #region 4th-Level
+
+        public static readonly FeatName ApplySpiritOil = ModManager.RegisterFeatName(IdPrepend+"ApplySpiritOil", "Apply Spirit Oil");
+        public static readonly FeatName BloodForBlood = ModManager.RegisterFeatName(IdPrepend+"BloodForBlood", "Blood for Blood");
+        public static readonly FeatName BloodRush = ModManager.RegisterFeatName(IdPrepend+"BloodRush", "Blood Rush");
+        public static readonly FeatName Cureall = ModManager.RegisterFeatName(IdPrepend+"Cureall", "Cure-all");
+        public static readonly FeatName ExpansivePanoply = ModManager.RegisterFeatName(IdPrepend+"ExpansivePanoply", "Expansive Panoply");
+
+        #endregion
+
+        #region 6th-Level
+
+        public static readonly FeatName FinalFlourish = ModManager.RegisterFeatName(IdPrepend+"FinalFlourish", "Final Flourish");
+        public static readonly FeatName RelentlessCounterstrike = ModManager.RegisterFeatName(IdPrepend+"RelentlessCounterstrike", "Relentless Counterstrike");
+        public static readonly FeatName ShiftingCombination = ModManager.RegisterFeatName(IdPrepend+"ShiftingCombination", "Shifting Combination");
+        public static readonly FeatName SpellSlates = ModManager.RegisterFeatName(IdPrepend+"SpellSlates", "Spell Slates");
+        public static readonly FeatName WallOfWill = ModManager.RegisterFeatName(IdPrepend+"WallOfWill", "Wall of Will");
+
+        #endregion
+
+        #region 8th-Level
+
+        public static readonly FeatName ArmoredFortress = ModManager.RegisterFeatName(IdPrepend+"ArmoredFortress", "Armored Fortress");
+        public static readonly FeatName CatalyzingFlask = ModManager.RegisterFeatName(IdPrepend+"CatalyzingFlask", "Catalyzing Flask");
+        public static readonly FeatName DefensiveHunt = ModManager.RegisterFeatName(IdPrepend+"DefensiveHunt", "Defensive Hunt");
+        public static readonly FeatName FieldForgedTools = ModManager.RegisterFeatName(IdPrepend+"FieldForgedTools", "Field-forged Tools");
+
+        #endregion
+
+        #region 10th-Level
+
+        public static readonly FeatName EagerHunter = ModManager.RegisterFeatName(IdPrepend+"EagerHunter", "Eager Hunter");
+        public static readonly FeatName EndlessEnmity = ModManager.RegisterFeatName(IdPrepend+"EndlessEnmity", "Endless Enmity");
+        public static readonly FeatName EverVigilant = ModManager.RegisterFeatName(IdPrepend+"EverVigilant", "Ever Vigilant");
+        public static readonly FeatName ShareInsight = ModManager.RegisterFeatName(IdPrepend+"ShareInsight", "Share Insight");
+
+        #endregion
+
+        #region 12th-Level
+
+        public static readonly FeatName DoubleQuarry = ModManager.RegisterFeatName(IdPrepend+"DoubleQuarry", "Double Quarry");
+        public static readonly FeatName ExpandedSpellSlates = ModManager.RegisterFeatName(IdPrepend+"ExpandedSpellSlates", "Expanded Spell Slates");
+        public static readonly FeatName GougingStrike = ModManager.RegisterFeatName(IdPrepend+"GougingStrike", "Gouging Strike");
+        public static readonly FeatName SpectralLenses = ModManager.RegisterFeatName(IdPrepend+"SpectralLenses", "Spectral Lenses");
+
+        #endregion
+
+        #region 14th-Level
+
+        public static readonly FeatName ArmBloodburstPhial = ModManager.RegisterFeatName(IdPrepend+"ArmBloodburstPhial", "Arm Bloodburst Phial");
+        public static readonly FeatName OpenWound = ModManager.RegisterFeatName(IdPrepend+"OpenWound", "Open Wound");
+
+        #endregion
+
+        #region 16th-Level
+
+        public static readonly FeatName ImpenetrableShelter = ModManager.RegisterFeatName(IdPrepend+"ImpenetrableShelter", "Impenetrable Shelter");
+        public static readonly FeatName InfernoVial = ModManager.RegisterFeatName(IdPrepend+"InfernoVial", "Inferno Vial");
+        public static readonly FeatName UnerringEdge = ModManager.RegisterFeatName(IdPrepend+"UnerringEdge", "Unerring Edge");
+        public static readonly FeatName ViciousSpike = ModManager.RegisterFeatName(IdPrepend+"ViciousSpike", "Vicious Spike");
+
+        #endregion
+
+        #region 18th-Level
+
+        public static readonly FeatName Obliterate = ModManager.RegisterFeatName(IdPrepend+"Obliterate", "Obliterate");
+        public static readonly FeatName TerrifyingBloodlust = ModManager.RegisterFeatName(IdPrepend+"TerrifyingBloodlust", "Terrifying Bloodlust");
+
+        #endregion
+
+        #region 20th-Level
+
+        public static readonly FeatName EternalHunt = ModManager.RegisterFeatName(IdPrepend+"EternalHunt", "Eternal Hunt");
+        public static readonly FeatName UnboundHunt = ModManager.RegisterFeatName(IdPrepend+"UnboundHunt", "Unbound Hunt");
+
+        #endregion
         
         #endregion
     }
@@ -164,7 +202,7 @@ public static class ModData
     {
         public const string ModFolder = "SlayerClassAssets/";
         
-        public static readonly Illustration DdSun = new ModdedIllustration(ModFolder+"PatreonSunTransparent.png");
+        public static readonly Illustration DdSun = new ModdedIllustration(ModFolder + "PatreonSunTransparent.png");
 
         #region Hunting Tools
 
@@ -173,6 +211,8 @@ public static class ModData
         public static readonly Illustration ConsecratedPanoply = new ModdedIllustration(ModFolder + "gothic-cross.png");
         public static readonly Illustration HuntingSpike = new ModdedIllustration(ModFolder + "bone-knife.png");
         public static readonly Illustration WardedMail = new ModdedIllustration(ModFolder + "heart-armor.png");
+
+        public static readonly Illustration RepellingShield = IllustrationName.ShieldSpell;
 
         #endregion
 
@@ -191,7 +231,9 @@ public static class ModData
         #endregion
         
         #region Class Feats
-        
+
+        public static readonly Illustration InstantEnmity = IllustrationName.Rage;
+
         #endregion
     }
 
@@ -205,10 +247,9 @@ public static class ModData
         public static ItemGreaterGroup ClassItems;
     }
 
-    // TODO: Unused
     public static class PersistentActions
     {
-        //public const string RunicTattoo = "RunicTattoo";
+        public const string InstantEnmity = "InstantEnmity";
     }
 
     public static class QEffectIds
@@ -280,6 +321,14 @@ public static class ModData
             {b}Reinforced{/b}
             {i}Slayer mechanic{/i}
             You gain this benefit when your hunting tool is reinforced with a trophy.
+            """);
+
+        public static readonly Func<string, string> TipOfTheTongue = RegisterTooltipInserter(
+            IdPrepend+"TipOfTheTongue",
+            """
+            {b}Tip of the Tongue{/b}
+            {i}Level 5 Slayer feature{/i}
+            Your encyclopedic knowledge of monsters allows you to quickly recall basic information. You gain the Assurance and Automatic Knowledge skill feats for Monster Lore.
             """);
         
         public static readonly Func<string, string> SpecializedArsenal = RegisterTooltipInserter(

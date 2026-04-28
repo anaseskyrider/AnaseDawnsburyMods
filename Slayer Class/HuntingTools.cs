@@ -23,6 +23,7 @@ using Dawnsbury.Display.Controls;
 using Dawnsbury.Display.Controls.Statblocks;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
+using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.SlayerClass;
 
@@ -33,11 +34,11 @@ public static class HuntingTools
     /// <summary>
     /// Character sheet tag key which contains the list of tools known.
     /// </summary>
-    public const string ToolsKnownKey = "HUNTING_TOOLS_KNOWN";
+    public const string TOOLS_KNOWN_KEY = "HUNTING_TOOLS_KNOWN";
     /// <summary>
     /// Character sheet tag key to find the chosen ItemName runestone from your 7th-level bloodseeking blade specialized arsenal feature.
     /// </summary>
-    public const string BloodseekingBladeRunestoneKey = "BLOODSEEKING_BLADE_SPECIALIZED_ARSENAL_RUNESTONE";
+    public const string BLOODSEEKING_BLADE_RUNESTONE_KEY = "BLOODSEEKING_BLADE_SPECIALIZED_ARSENAL_RUNESTONE";
 
     #region ToolId
 
@@ -109,7 +110,7 @@ public static class HuntingTools
 
     public static List<HuntingTool>? GetTools(CalculatedCharacterSheetValues values)
     {
-        return values.Tags.TryGetValue(ToolsKnownKey, out var tools)
+        return values.Tags.TryGetValue(TOOLS_KNOWN_KEY, out var tools)
             ? tools as List<HuntingTool>
             : null;
     }
@@ -142,7 +143,7 @@ public static class HuntingTools
             && tools.All(innerTool => innerTool.Id != tool.Id))
             tools.Add(tool);
         else
-            values.Tags.Add(ToolsKnownKey, new List<HuntingTool>([tool]));
+            values.Tags.Add(TOOLS_KNOWN_KEY, new List<HuntingTool>([tool]));
     }
 
     public static bool IsATool(Item item)
@@ -293,7 +294,7 @@ public static class HuntingTools
                 .WithIllustration(itemTemplate.Illustration)
                 .WithLevel(itemTemplate.Level)
                 .WithOnSheet(values =>
-                    values.Tags[BloodseekingBladeRunestoneKey] = rune);
+                    values.Tags[BLOODSEEKING_BLADE_RUNESTONE_KEY] = rune);
         }
         
         // Bloodseeking Blade
@@ -324,7 +325,7 @@ public static class HuntingTools
                              {b}Honed Strike {icon:TwoActions}{/b} [concentrate, relentless] Strike using this tool with a +2 circumstance bonus and ignore the Concealed condition.
                              """
                            + (isSpecialized
-                               ? $"\n{{b}}Specialized{{/b}} This tool has {{tooltip:criteffect}}critical specialization effects{{/}}, and gains the effects of a {(self.PersistentCharacterSheet?.Calculated.GetTagOrNull<ItemName>(BloodseekingBladeRunestoneKey) is {} rune ? ("{i}" + Items.GetItemTemplate(rune).RuneProperties!.Prefix + "{/i} property rune").WithColor("Blue") : "property rune you choose when you Reinforce your Arsenal")}."
+                               ? $"\n{{b}}Specialized{{/b}} This tool has {{tooltip:criteffect}}critical specialization effects{{/}}, and gains the effects of a {(self.PersistentCharacterSheet?.Calculated.GetTagOrNull<ItemName>(BLOODSEEKING_BLADE_RUNESTONE_KEY) is {} rune ? ("{i}" + Items.GetItemTemplate(rune).RuneProperties!.Prefix + "{/i} property rune").WithColor("Blue") : "property rune you choose when you Reinforce your Arsenal")}."
                                : null);
                 },
                 (
@@ -360,24 +361,88 @@ public static class HuntingTools
                 {
                     // Debugging identifier
                     Name = "[HUNTING TOOL: BLOODSEEKING BLADE]",
-                    // PETR: Initial benefit is currently located at CoreClass.MarkQuarry().
-                    // Reinforced benefit
-                    AddExtraKindedDamageOnStrike = (action, target) =>
+                    
+                    // Initial Benefit:
+                    // Bypassing resistances doesn't have access to the calculated damage event.
+                    // As a result, it's not possible to only apply once to the greatest resistance.
+                    // This implementation only ever bypasses at most the amount you can bypass for
+                    // a single action that's getting resisted.
+                    
+                    // Use the value to track the amount resisted so far
+                    HideValue = true,
+                    IgnoreAmountOfResistanceAgainstYourActions = (qfBlade, action, dk, defender, resist) =>
                     {
-                        if (action.Item is null)
-                            return null;
-                        // Only apply to your first Strike.
-                        if (action.Owner.Actions.ActionHistoryThisTurn.Any(act =>
-                                act.HasTrait(Trait.Strike)))
-                            return null;
-                        if (GetTool(action.Owner, ToolId.BloodseekingBlade)
+                        // Damage dealt by Strikes with my bloodseeking blade
+                        if (!action.HasTrait(Trait.Strike)
+                            || action.Item is null
+                            || !Slayer.IsMyQuarry(qfBlade.Owner, defender)
+                            || HuntingTools.GetTool(qfBlade.Owner, ToolId.BloodseekingBlade)
                                 is not { } blade
-                            || !blade.IsMyTool(action.Item)
-                            || Trophies.GetTrophy(action.Item) is not { } trophy
-                            || Trophies.GetChosenDamageKind(trophy) is not { } chosenKind)
-                            return null;
+                            || !blade.IsMyTool(action.Item))
+                            return 0;
+                        
+                        // Must be physical if you don't have the specialized benefit
+                        if (!blade.AccessSpecialized && !dk.IsPhysical())
+                            return 0;
+
+                        // The amount I want to bypass
+                        int bypass = 1 + action.Item.WeaponProperties!.DamageDieCount;
+                        
+                        // The Tag stores the action being processed so that it doesn't over-apply
+                        if (qfBlade.Tag is not CombatAction { } taggedAction
+                            || taggedAction != action)
+                        {
+                            qfBlade.Tag = action; // Start resisting this action
+                            qfBlade.Value = 0; // None resisted so far
+                        }
+                        else
+                            // Reduced by the amount bypassed so far
+                            bypass = Math.Max(bypass - qfBlade.Value, 0);
+                        
+                        // Increment the total resisted, capped to the most that was resisted this time
+                        qfBlade.Value += Math.Min(bypass, resist);
+                        
+                        return bypass;
+                    },
+                    // Reinforced benefit
+                    StartOfYourPrimaryTurn = async (qfBlade, me) =>
+                    {
+                        if (HuntingTools.GetTool(qfBlade.Owner, ToolId.BloodseekingBlade)
+                            is not { } blade)
+                            return;
                         int numDice = self.Level >= 19 ? 3 : self.Level >= 11 ? 2 : 1;
-                        return new KindedDamage(DiceFormula.FromText(numDice + "d6", "Bloody fuller—Reinforced trophy"), chosenKind);
+                        me.AddQEffect(new QEffect(
+                            "Reinforced Fuller",
+                            $"The first Strike with your bloodseeking blade deals an extra {numDice + "d6"} damage.",
+                            ExpirationCondition.ExpiresAtStartOfYourTurn,
+                            me,
+                            ModData.Illustrations.BloodseekingBlade)
+                        {
+                            AddExtraKindedDamageOnStrike = (action, target) =>
+                            {
+                                if (action.Item is null
+                                    || !blade.IsMyTool(action.Item))
+                                    return null;
+                                if (Trophies.GetTrophy(action.Item) is not { } trophy)
+                                {
+                                    action.Owner.Overhead("*no trophy*", Color.Red, "Trophy not found on your bloodseeking blade.");
+                                    return null;
+                                }
+                                if (Trophies.GetChosenDamageKind(trophy) is not { } chosenKind)
+                                {
+                                    action.Owner.Overhead("*no trophy*", Color.Red, "No reinforced damage found on your bloodseeking blade's trophy.");
+                                    return null;
+                                }
+                                return new KindedDamage(DiceFormula.FromText(numDice + "d6", "Bloody fuller—Reinforced trophy"), chosenKind);
+                            },
+                            AfterYouTakeAction = async (qfFuller, action) =>
+                            {
+                                if (action.HasTrait(Trait.Strike)
+                                    && action.Item is not null
+                                    && blade.IsMyTool(action.Item))
+                                    qfFuller.ExpiresAt = ExpirationCondition.Immediately;
+                            } 
+                        });
                     },
                     // Slaying technique
                     ProvideStrikeModifier = item =>
@@ -414,7 +479,7 @@ public static class HuntingTools
                     StartOfCombat = async qfThis =>
                     {
                         if (!(qfThis.Owner.PersistentCharacterSheet?.Calculated.Tags.TryGetValue(
-                                BloodseekingBladeRunestoneKey, out object? tryRune) ?? false)
+                                BLOODSEEKING_BLADE_RUNESTONE_KEY, out object? tryRune) ?? false)
                             || tryRune is not ItemName iRune)
                             return;
                         
@@ -553,7 +618,8 @@ public static class HuntingTools
                         if (mail.AccessSpecialized)
                         {
                             // Resist All to quarry
-                            ResistanceToAllQuarry.Add(qfThis.Owner.WeaknessAndResistance, ibAmount);
+                            qfThis.Owner.WeaknessAndResistance.AddSpecialResistance(
+                                new ResistanceToAllQuarry(ibAmount, qfThis.Owner));
 
                             #region Armor Specialization
 
@@ -585,12 +651,13 @@ public static class HuntingTools
                             #endregion
                         }
                         else
-                            SpecialResistanceQuarry.Add(
-                                qfThis.Owner.WeaknessAndResistance,
-                                "physical",
-                                (_, kind) => kind.IsPhysical(),
-                                ibAmount,
-                                null);
+                            qfThis.Owner.WeaknessAndResistance.AddSpecialResistance(
+                                new SpecialResistanceQuarry(
+                                    "physical",
+                                    (_, kind) => kind.IsPhysical(),
+                                    ibAmount,
+                                    null,
+                                    qfThis.Owner));
                         
                         // Reinforced 
                         if (Trophies.GetTrophy(armor) is { } trophy

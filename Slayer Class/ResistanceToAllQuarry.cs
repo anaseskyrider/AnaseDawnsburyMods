@@ -1,7 +1,6 @@
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Creatures.Parts;
-using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 
 namespace Dawnsbury.Mods.SlayerClass;
@@ -15,22 +14,11 @@ public class ResistanceToAllQuarry(int value, Creature self) : ResistanceToAll(v
     
     public override bool Matches(CombatAction? action, DamageKind damageKind)
     {
-        return action?.Owner is not null && Core.IsMyQuarry(this.Self, action.Owner);
+        return action?.Owner is not null && Slayer.IsMyQuarry(this.Self, action.Owner);
     }
 
     public override string ToString()
     {
         return $"all {this.Value.ToString()} (only your quarry)";
-    }
-
-    public static void Add(WeaknessAndResistance weakRes, int amount)
-    {
-        weakRes.Resistances.Add(new ResistanceToAllQuarry(DestructiveAuraModification(amount, weakRes.Self), weakRes.Self));
-    }
-
-    public static int DestructiveAuraModification(int value, Creature self)
-    {
-        QEffect? qeffect = self.FindQEffect(QEffectId.YourResistancesAreReducedBy2);
-        return qeffect != null ? Math.Max(value - qeffect.Value, 0) : value;
     }
 }
