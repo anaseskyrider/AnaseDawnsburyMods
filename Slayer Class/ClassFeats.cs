@@ -701,7 +701,31 @@ public static class ClassFeats
 
         #region 14th-Level
 
-
+        // Open Wound
+        yield return new TrueFeat(
+                ModData.FeatNames.OpenWound,
+                14,
+                "Your weapons can always find your prey's wounds, guiding your hands.",
+                "Creatures that are taking persistent bleed damage are off-guard to you.",
+                [ModData.Traits.Slayer])
+            .WithPermanentQEffect(
+                "Creatures who are persistently bleeding are off-guard to you.",
+                qfFeat =>
+                {
+                    qfFeat.AddGrantingOfTechnical(
+                        cr =>
+                            cr.EnemyOf(qfFeat.Owner)
+                            && cr.QEffects.Any(qf =>
+                                qf.Id is QEffectId.PersistentDamage
+                                && qf.GetPersistentDamageKind() is DamageKind.Bleed),
+                        qfTech =>
+                        {
+                            qfTech.IsFlatFootedTo = (_, attacker, _) =>
+                                attacker == qfFeat.Owner
+                                    ? "Open wound"
+                                    : null;
+                        });
+                });
 
         #endregion
 
