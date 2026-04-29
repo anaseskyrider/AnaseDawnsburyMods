@@ -384,8 +384,10 @@ public static class Slayer
                 var inventories = new Dictionary<int, Inventory>(/*values.Sheet.InventoriesByLevel*/)
                 {
                     { 0, values.Sheet.CampaignInventory },
-                    { 1, values.Sheet.InventoriesByLevel[1] }
+                    /*{ 1, values.Sheet.InventoriesByLevel[1] }*/
                 };
+                if (values.Sheet.InventoriesByLevel.TryGetValue(1, out Inventory? value))
+                    inventories.Add(1, value);
                 foreach (var (level, inv) in inventories)
                 {
                     // If you don't have a trophy case, add one
