@@ -6,9 +6,6 @@
 # Personal Project Folders
 \[Workshop Files\]/
 
-# .csproj (let users adjust file paths without disrupting the repo)
-MoreBasicActions.csproj
-
 # User-specific files
 *.rsuser
 *.suo
@@ -405,3 +402,6 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Other
+/Directory.Build.props

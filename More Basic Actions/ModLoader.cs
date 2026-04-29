@@ -1,9 +1,8 @@
-﻿using Dawnsbury.Core.CombatActions;
-using Dawnsbury.Modding;
+﻿using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.MoreBasicActions;
 
-public class MoreBasicActions
+public static class ModLoader
 {
     [DawnsburyDaysModMainMethod]
     public static void LoadMod()

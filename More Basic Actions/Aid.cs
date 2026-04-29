@@ -25,7 +25,7 @@ namespace Dawnsbury.Mods.MoreBasicActions;
 // TODO: Stacking DC penalties for repeat Aid.
 
 /// <summary>
-/// Contains all the logic for the Aid basic action. Any modder looking to make a feature that's compatible with Aiding should look for the <see cref="ModData.ActionIds.PrepareToAid"/> and <see cref="ModData.ActionIds.AidReaction"/> action IDs. By using <see cref="ModManager.TryParse(string technicalName, out T enumValue)"/>, it will be compatible regardless of load order. See <see cref="MoreBasicActions.LoadMod()"/> for usable code.
+/// Contains all the logic for the Aid basic action. Any modder looking to make a feature that's compatible with Aiding should look for the <see cref="ModData.ActionIds.PrepareToAid"/> and <see cref="ModData.ActionIds.AidReaction"/> action IDs. By using <see cref="ModManager.TryParse(string technicalName, out T enumValue)"/>, it will be compatible regardless of load order. See <see cref="ModLoader.LoadMod()"/> for usable code.
 /// </summary>
 public static class Aid
 {
