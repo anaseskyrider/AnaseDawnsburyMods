@@ -82,6 +82,7 @@ public static class Lores
              You can use this skill to {RecallWeakness.GetActionLink()} on martial creatures (wields martial weapons; or has a Reactive Strike or Shield Block feature).
              """,
             (_, target) =>
+                // TODO: Does not work. ORC RANGER to test.
                 target.ItemsHeldAtTheBeginningOfTheEncounter.Any(item =>
                     item.HasAnyTraits([Trait.Advanced, Trait.Martial]))
                 || target.HasEffect(QEffectId.ShieldBlock)
