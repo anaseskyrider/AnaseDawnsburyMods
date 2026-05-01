@@ -32,6 +32,9 @@ public static class Ready
         // Add Prepare to Aid to every creature.
         ModManager.RegisterActionOnEachCreature(cr =>
         {
+            if (cr.HasTrait(Trait.Mindless))
+                return;
+            
             QEffect readyLoader = new QEffect()
             {
                 Name = "Ready Loader",

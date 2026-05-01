@@ -14,11 +14,13 @@ using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
+using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display;
 using Dawnsbury.Display.Text;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
+using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.MoreBasicActions;
 
@@ -44,6 +46,9 @@ public static class Aid
         // Add Prepare to Aid to every creature.
         ModManager.RegisterActionOnEachCreature(cr =>
         {
+            if (cr.HasTrait(Trait.Mindless))
+                return;
+            
             QEffect aidLoader = new QEffect()
             {
                 Name = "AidLoader",
