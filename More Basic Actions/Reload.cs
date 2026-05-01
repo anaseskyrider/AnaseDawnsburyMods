@@ -33,7 +33,7 @@ public static class Reload
                         "{b}" + qfThis.Owner.Name + "{/b} adds a hand to their weapon as part of reloading.",
                         "Add hand",
                         "\"Switching your grip to free a hand and then to place your hands in the grip necessary to wield the weapon are both included in the actions you spend to reload a weapon.\"",
-                        new Traits([ModData.Traits.MoreBasicActions]));
+                        new Traits([ModData.Traits.ModName]));
                 }
             });
         });

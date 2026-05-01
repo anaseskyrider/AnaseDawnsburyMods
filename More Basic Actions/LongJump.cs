@@ -63,7 +63,7 @@ public static class LongJump
                 1,
                 null,
                 "High Jump costs a single action instead of 2, and no longer performs an initial Stride.",
-                [ModData.Traits.MoreBasicActions, Trait.General, Trait.Skill])
+                [ModData.Traits.ModName, Trait.General, Trait.Skill])
             .WithPrerequisite(
                 values => values.HasFeat(FeatName.Athletics),
                 "You must be trained in Athletics.");
@@ -74,7 +74,7 @@ public static class LongJump
                 7,
                 "Mass and muscle are meaningless when you leap; only grace and balance matter.",
                 "You can use Acrobatics instead of Athletics to Long Jump if it's better.",
-                [ModData.Traits.MoreBasicActions, Trait.Archetype, Trait.Skill])
+                [ModData.Traits.ModName, Trait.Archetype, Trait.Skill])
             .WithAvailableAsArchetypeFeat(Trait.Acrobat)
             .WithRulesBlockForCombatAction(cr => CreateLongJump(cr, false))
             .WithPrerequisite(
@@ -91,7 +91,7 @@ public static class LongJump
                 owner,
                 ModData.Illustrations.LongJump,
                 "Long Jump",
-                [ModData.Traits.MoreBasicActions, Trait.Basic, Trait.Move, Trait.DoesNotProvoke],
+                [ModData.Traits.ModName, Trait.Basic, Trait.Move, Trait.DoesNotProvoke],
                 null!,
                 hasQuickJump
                     ? Target.Self() // Skips the Stride part

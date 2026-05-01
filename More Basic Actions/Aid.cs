@@ -78,7 +78,7 @@ public static class Aid
                             cr,
                             ModData.Illustrations.Aid,
                             "Prepare to Aid",
-                            [ModData.Traits.MoreBasicActions],
+                            [ModData.Traits.ModName],
                             BasicPrepareToAidDescription+"\n\n"+BasicAidReactionDescription,
                             Target.AdjacentCreature()),
                     };
@@ -95,7 +95,7 @@ public static class Aid
                 1,
                 "The short human life span lends perspective and has taught you from a young age to set aside differences and work with others to achieve greatness.",
                 "You gain a +4 circumstance bonus on checks to Aid {icon:Reaction}.",
-                [ModData.Traits.MoreBasicActions, Trait.Human])
+                [Trait.Human])
             .WithPermanentQEffect(
                 "You have a permanent +4 circumstance bonus on checks to Aid {icon:Reaction}.",
                 qfFeat =>
@@ -108,7 +108,7 @@ public static class Aid
                         return null;
                     };
                 });
-        ModManager.AddFeat(cooperativeNature);
+        ModManager.AddFeat(cooperativeNature, ModData.Traits.ModName);
     }
 
     public static List<Possibility> CreatePrepareToAidSkills(Creature owner)
