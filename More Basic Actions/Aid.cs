@@ -31,10 +31,14 @@ namespace Dawnsbury.Mods.MoreBasicActions;
 /// </summary>
 public static class Aid
 {
-    public static readonly string BasicPrepareToAidDescription = "{i}You prepare to help your ally with a task outside your turn.{/i}\n\nChoose an adjacent ally or enemy. When that ally makes a skill check or attack roll while adjacent to you, or that enemy is targeted by an attack roll while adjacent to you, you can use the aid {icon:Reaction} reaction for that check as the trigger.";
+    public static readonly string BasicPrepareToAidDescription = "{i}You prepare to help your ally with a task outside your turn.{/i}\n\nChoose an ally or enemy and a skill or attack rolls. When that ally makes the chosen check while within your reach, or that enemy is targeted by the chosen check while within your reach, you can use the aid {icon:Reaction} reaction for that check as the trigger.";
     
     public static string BasicAidReactionDescription =>
-        "{b}Aid{b} {icon:Reaction}\n{b}Trigger{/b} An ally is about to attempt a check, and you prepared to aid that ally's check.\n{b}Effect{/b} Attempt the same check you prepared to aid with a DC of " +
+        """
+        {b}Aid{b} {icon:Reaction}
+        {b}Trigger{/b} An ally is about to attempt a check, and you prepared to aid that ally's check.
+        {b}Effect{/b} Attempt the same check you prepared to aid with a DC of 
+        """ +
         AidDC() + "." + S.FourDegreesOfSuccess(
             "You grant your ally a +2 circumstance bonus to the triggering check. The bonus increases to +3 if you're a master with the check, or +4 if you're legendary.",
             "You grant your ally a +1 circumstance bonus to the triggering check.",
@@ -119,16 +123,17 @@ public static class Aid
     public static List<Possibility> CreatePrepareToAidSkills(Creature owner)
     {
         List<Possibility> possibilities = [];
+        
         foreach (Skill skill in Skills.AllSkills)
         {
-            if (!PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.UntrainedAid) && owner.Proficiencies.Get(Skills.SkillToTrait(skill)) == Proficiency.Untrained)
+            if (!PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.UntrainedAid)
+                && owner.Proficiencies.Get(Skills.SkillToTrait(skill)) == Proficiency.Untrained)
                 continue;
-            ActionPossibility? skillAid = CreatePrepareToAidPossibility(owner, skill);
-            if (skillAid != null)
+            ActionPossibility skillAid = new ActionPossibility(CreatePrepareToAidSkill(owner, skill))
             {
-                skillAid.Caption = skill.ToString();
-                possibilities.Add(skillAid);
-            }
+                Caption = skill.ToStringOrTechnical()
+            };
+            possibilities.Add(skillAid);
         }
         return possibilities;
     }
@@ -136,58 +141,41 @@ public static class Aid
     public static List<Possibility> CreatePrepareToAidAttacks(Creature owner)
     {
         List<Possibility> possibilities = [];
-        ActionPossibility? attackAid = CreatePrepareToAidPossibility(owner);
-        if (attackAid != null)
+        
+        CombatAction prepare = CreatePrepareToAidAttack(owner);
+        
+        ActionPossibility attackAid = new ActionPossibility(prepare)
         {
-            attackAid.Caption = "Attack roll";
-            possibilities.Add(attackAid);
-        }
+            Caption = "Attack roll"
+        };
+        possibilities.Add(attackAid);
+        
         return possibilities;
     }
-    
-    public static ActionPossibility? CreatePrepareToAidPossibility(Creature owner, Skill? skill = null)
-    {
-        CombatAction? prepareToAidAction = CreatePrepareToAidAction(owner, skill);
-        if (prepareToAidAction == null)
-            return null;
-        ActionPossibility possibility = new ActionPossibility(prepareToAidAction, PossibilitySize.Full);
-        return possibility;
 
-    }
-    
-    /// <summary>
-    /// Creates a "Prepare to Aid" CombatAction. If no skill is given, the check being aided is an Attack roll, and the owner's Strike possibility with the highest proficiency rank is used to aid it.
-    /// </summary>
-    /// <param name="owner">The creature preparing to aid.</param>
-    /// <param name="skill">(nullable) The skill to aid, and to roll to attempt to aid.</param>
-    /// <returns></returns>
-    public static CombatAction? CreatePrepareToAidAction(Creature owner, Skill? skill = null)
+    public static CombatAction CreatePrepareToAidSkill(Creature owner, Skill skill)
     {
-        // Initialize vars
-        string checkName;
-        Proficiency rank;
-        CombatAction? mostProficientAttack = null;
-        CombatAction prepareToAidAction = new CombatAction(
-                owner,
-                IllustrationName.Action,
-                "INCOMPLETE TEXT",
-                [ModData.Traits.MoreBasicActions, Trait.DoNotShowOverheadOfActionName, Trait.DoNotShowInContextMenu, Trait.Basic],
-                "INCOMPLETE TEXT",
-                skill != null ? Target.AdjacentFriend() : Target.AdjacentCreature())
-            .WithActionCost(1)
-            .WithActionId(ModData.ActionIds.PrepareToAid)
-            .WithSoundEffect(SfxName.OpenPage);
+        Proficiency rank = owner.Proficiencies.Get(Skills.SkillToTrait(skill));
         
-        // Skill or attack check
-        if (skill != null)
-        {
-            checkName = skill.HumanizeTitleCase2();
-            rank = owner.Proficiencies.Get(Skills.SkillToTrait((Skill)skill));
-            prepareToAidAction = prepareToAidAction
-                .WithTag(skill);
-        }
-        else if (owner.Possibilities != null &&
-                 owner.Possibilities
+        CombatAction prepare = CreatePrepareToAid(
+                owner,
+                skill.ToStringOrTechnical(),
+                new ActiveRollSpecification(
+                    TaggedChecks.SkillCheck(skill),
+                    Checks.FlatDC(AidDC())),
+                rank,
+                [],
+                ca => ca.ActiveRollSpecification?.TaggedDetermineBonus.InvolvedSkill == skill);
+
+        return prepare;
+    }
+
+    public static CombatAction CreatePrepareToAidAttack(Creature owner)
+    {
+        Proficiency rank = Proficiency.Untrained;
+        CombatAction? mostProficientAttack = null;
+        
+        if (owner.Possibilities?
                      .Filter(ap => ap.CombatAction.HasTrait(Trait.Strike))
                      .CreateActions(false) is { Count: > 0 } strikeList)
         {
@@ -200,236 +188,239 @@ public static class Aid
                 .Select(ica => ica.Action)
                 .ToList();
             mostProficientAttack = mostProficientAttacks.FirstOrDefault();
-            if (mostProficientAttack != null && mostProficientAttack.Item != null)
-            {
+            if (mostProficientAttack?.Item != null)
                 rank = highestAnyProficiency;
-                checkName = "Attack";
-                prepareToAidAction = prepareToAidAction
-                    .WithTag(mostProficientAttack);
-            }
-            else
-                return null;
         }
-        else
-            return null;
-        
-        // Fill out the rest
-        prepareToAidAction.Name = $"Prepare to Aid ({checkName})";
-        prepareToAidAction.Description = CreatePrepareToAidDescription(rank, checkName);
-        prepareToAidAction = prepareToAidAction
-            .WithTargetingTooltip((thisAction, target, index) =>
-            {
-                CombatAction checkBreakdownAction = CreateAidReaction(thisAction.Owner, thisAction.Tag!, CombatAction.CreateSimple(target, ""));
-                CheckBreakdown breakdown = CombatActionExecution.BreakdownAttackForTooltip(checkBreakdownAction, target);
-                string tooltip = breakdown.TooltipDescription;
-                return tooltip;
-            })
-            .WithPrologueEffectOnChosenTargetsBeforeRolls(async (thisAction, aider, targets) =>
-            {
-                if (targets.ChosenCreature is not { } aidee)
-                    return;
 
-                bool isEnemy = !aider.FriendOf(aidee);
-
-                QEffect preparedToAid = CreatePrepareToAidQEffect(aider, aidee, isEnemy, thisAction.Tag!);
-                QEffect canBeAided = CreateAidQEffect(preparedToAid, isEnemy, thisAction.Tag!);
-                
-                aider.AddQEffect(preparedToAid);
-                aidee.AddQEffect(canBeAided);
-            });
+        List<Trait> bonusTraits = [];
+        if (mostProficientAttack is not null)
+        {
+            foreach (Trait trait in (List<Trait>)[Trait.Melee, Trait.Ranged, Trait.Finesse, Trait.DoNotAddStrengthToAttack, Trait.Brutal])
+                if (mostProficientAttack.HasTrait(trait))
+                    bonusTraits.Add(trait);
+        }
+            
+        CombatAction prepare = CreatePrepareToAid(
+                owner,
+                "Attack",
+                new ActiveRollSpecification(
+                    Checks.Attack(mostProficientAttack?.Item ?? new Item(IllustrationName.None, "Unarmed", [Trait.Unarmed]), 0),
+                    Checks.FlatDC(AidDC())),
+                rank,
+                bonusTraits,
+                ca => // Must be an attack roll without an involved skill
+                    ca.HasTrait(Trait.Attack)
+                    && ca.ActiveRollSpecification?.TaggedDetermineBonus.InvolvedSkill is null)
+            .WithExtraTrait(Trait.ReactiveAttack);
         
-        return prepareToAidAction;
+        return prepare;
     }
 
-    public static QEffect CreatePrepareToAidQEffect(Creature aider, Creature aidee, bool isEnemy, object check)
+    public static CombatAction CreatePrepareToAid(Creature owner, string? subtitle, ActiveRollSpecification rollSpec, Proficiency rank, List<Trait> bonusTraits, Func<CombatAction,bool> isAidableAction)
     {
-        string checkName = check is Skill aidSkill ? aidSkill.HumanizeTitleCase2()+" check" : "Attack roll";
+        return new CombatAction(
+            owner,
+            IllustrationName.Action,
+            "Prepare to Aid" + (subtitle is not null ? " (" + subtitle + ")" : ""),
+            [ModData.Traits.ModName, Trait.DoNotShowOverheadOfActionName, Trait.DoNotShowInContextMenu, Trait.Basic],
+            CreatePrepareToAidDescription(rank, subtitle),
+            Target.RangedCreature(99)
+                .WithAdditionalConditionOnTargetCreature((a,d) =>
+                    a == d ? Usability.NotUsableOnThisCreature("self") : Usability.Usable))
+        .WithActionCost(1)
+        .WithActionId(ModData.ActionIds.PrepareToAid)
+        .WithSoundEffect(SfxName.OpenPage)
+        .WithTargetingTooltip((action, target, _) =>
+        {
+            CombatAction aidReaction = CreateAidReaction(action.Owner, rollSpec, rank, bonusTraits, CombatAction.CreateSimple(action.Owner, ""));
+            CheckBreakdown breakdown = CombatActionExecution.BreakdownAttackForTooltip(aidReaction, target);
+            return breakdown.TooltipDescription;
+        })
+        .WithEffectOnEachTarget(async (action, aider, aidee, _) =>
+        {
+            bool isEnemy = aider.EnemyOf(aidee);
+
+            string checkName = rollSpec.TaggedDetermineBonus.InvolvedSkill is { } skill
+                ? skill.ToStringOrTechnical() + " check"
+                : "Attack roll";
             
-        QEffect preparedEffect = new QEffect(
-            "Prepared to Aid",
-            $"If you're adjacent to {{Blue}}{aidee.Name}{{/Blue}} when they " + (isEnemy ? "are attacked," : $"make {AorAn(checkName)} {{Blue}}{checkName}{{/Blue}},") + " you can aid {icon:Reaction} their check.",
-            ExpirationCondition.ExpiresAtStartOfYourTurn,
+            QEffect canBeAided = AidEffect(
+                aider, rollSpec, rank, bonusTraits,
+                isEnemy
+                    ? checkName + "s against you"
+                    : "your " + checkName + "s",
+                isAidableAction, isEnemy);
+            canBeAided.SourceAction = action;
+                
+            aidee.AddQEffect(canBeAided);
+        });
+    }
+
+    public static QEffect AidEffect(
+        Creature aider,
+        ActiveRollSpecification rollSpec,
+        Proficiency rank,
+        List<Trait> bonusTraits,
+        string aidWhat,
+        Func<CombatAction,bool> isAidableAction,
+        bool aidActionsAgainstMe)
+    {
+        QEffect aidEffect = new QEffect(
+            "Recieving Aid",
+            $"{{Blue}}{aider}{{/Blue}} can Aid {{icon:Reaction}} {aidWhat}. They must be next to you when the check is made to do so.",
+            ExpirationCondition.ExpiresAtStartOfSourcesTurn,
             aider,
             ModData.Illustrations.Aid)
         {
             Id = ModData.QEffectIds.PreparedToAid,
-            Tag = check,
+            Tag = rollSpec
         };
         
-        return preparedEffect;
-    }
+        if (aidActionsAgainstMe)
+            aidEffect.YouAreTargeted = async (qfThis, action) =>
+            {
+                if (action.ActionId == ModData.ActionIds.PrepareToAid // Can't be Prepare to Aid
+                    || action.ActionId == ModData.ActionIds.AidReaction // Can't be Aid
+                    || !action.Owner.FriendOfAndNotSelf(qfThis.Source!) // Must be from someone else
+                    || qfThis.Owner.DistanceToWith10FeetException(qfThis.Source!) > qfThis.Owner.Space.NaturalReach // Must be in reach
+                    || action.ActiveRollSpecification is null // Must have an active roll spec
+                    || !isAidableAction(action))
+                    return;
 
-    public static QEffect CreateAidQEffect(QEffect preparation, bool isEnemy, object check)
-    {
-        QEffect aidEffect = new QEffect(
-            "Recieving Aid",
-            "[No Description Given]",
-            ExpirationCondition.ExpiresAtStartOfSourcesTurn,
-            preparation.Source,
-            null)
-        {
-            Tag = preparation,
-        };
-        switch (isEnemy)
-        {
-            case true:
-                aidEffect.YouAreTargeted = async (qfThis, aidableAction) =>
+                string checkName = action.ActiveRollSpecification?.TaggedDetermineBonus.InvolvedSkill is { } skill
+                    ? skill.ToStringOrTechnical() + " check"
+                    : "Attack roll";
+
+                if (await qfThis.Owner.Battle.AskToUseReaction(
+                        qfThis.Source!,
+                        $$"""
+                          {b}Aid {icon:Reaction}{/b}
+                          {{action.Owner.Name.WithColor("Blue")}} is about to make {{AorAn(checkName)}} {{checkName.WithColor("Blue")}} with {{action.Name.WithColor("Blue")}} against {{qfThis.Owner.Name.WithColor("Blue")}}.
+                          """,
+                        ModData.Illustrations.Aid,
+                        ["Aid {icon:Reaction}"]) == 0)
                 {
-                    if (
-                        qfThis.Source is not { } aider2 // Aid provider must still exist
-                        || aider2 == aidableAction.Owner // Aid provider cannot aid itself
-                        || !qfThis.Owner.IsAdjacentTo(aider2) // Aid provider must be adjacent to enemy
-                        || !aidableAction.HasTrait(Trait.Attack) // Must be an attack
-                        || aidableAction.ActiveRollSpecification is not { } rollSpec // Must have a roll spec
-                        || rollSpec.TaggedDetermineBonus.InvolvedSkill != null // Must not be a skill check
-                        || aidableAction.ActionId == ModData.ActionIds.PrepareToAid // Must not a preparation action
-                        || qfThis.Tag is not QEffect preparation2 // Source must actually still be preparing to aid that action
-                    )
-                        return;
-
-                    if (await aider2.AskToUseReaction(
-                            $"{{b}}Aid {{icon:Reaction}}{{/b}}\n{qfThis.Owner.Name} is about to attacked. Attempt to aid the attack roll?"))
-                    {
-                        await RollAidReaction(aider2, aidableAction.Owner, check, aidableAction);
+                    if (await DoAidReaction(
+                            qfThis.Source!,
+                            (ActiveRollSpecification)qfThis.Tag!,
+                            rank,
+                            bonusTraits,
+                            action)
+                        is not null)
                         qfThis.ExpiresAt = ExpirationCondition.Immediately;
-                        preparation2.ExpiresAt = ExpirationCondition.Immediately;
-                    }
-                };
-                break;
-            case false:
-                aidEffect.BeforeYourActiveRoll = async (qfThis, aidableAction, defender) =>
+                }
+            };
+        else
+            aidEffect.BeforeYourActiveRoll = async (qfThis, action, defender) =>
+            {
+                if (action.ActionId == ModData.ActionIds.PrepareToAid // Can't be Prepare to Aid
+                    || action.ActionId == ModData.ActionIds.AidReaction // Can't be Aid
+                    || !action.Owner.FriendOfAndNotSelf(qfThis.Source!) // Must be from someone else
+                    || qfThis.Owner.DistanceToWith10FeetException(qfThis.Source!) > qfThis.Owner.Space.NaturalReach // Must be in reach
+                    || !isAidableAction(action))
+                    return;
+
+                string checkName = action.ActiveRollSpecification?.TaggedDetermineBonus.InvolvedSkill is { } skill
+                    ? skill.ToStringOrTechnical() + " check"
+                    : "Attack roll";
+
+                if (await qfThis.Owner.Battle.AskToUseReaction(
+                        qfThis.Source!,
+                        $$"""
+                          {b}Aid {icon:Reaction}{/b}
+                          {{qfThis.Owner.Name.WithColor("Blue")}} is about to make {{AorAn(checkName)}} {{checkName.WithColor("Blue")}} with {{action.Name.WithColor("Blue")}} against {{defender.Name.WithColor("Blue")}}.
+                          """,
+                        ModData.Illustrations.Aid,
+                        ["Aid {icon:Reaction}"]) == 0)
                 {
-                    if (
-                        qfThis.Source is not { } aider // Aid provider must still exist
-                        || !qfThis.Owner.FriendOf(aider) // Self must be friend of source
-                        || !qfThis.Owner.IsAdjacentTo(aider) // Self must be adjacent to aider
-                        || qfThis.Tag is not QEffect preparation2
-                        || (preparation2.Tag is Skill aidSkill &&
-                            aidableAction.ActiveRollSpecification?.TaggedDetermineBonus.InvolvedSkill != aidSkill)
-                        || (preparation2.Tag is CombatAction aidAttack && !aidAttack.HasTrait(Trait.Attack))
-                        || preparation2.Tag == null
-                    )
-                        return;
-
-                    string checkName = preparation2.Tag is Skill aidSkill2 ? aidSkill2.HumanizeTitleCase2()+ " check" : "Attack roll";
-
-                    if (await aider.AskToUseReaction(
-                            $"{{b}}Aid {{icon:Reaction}}{{/b}}\n{qfThis.Owner.Name} is about to make {AorAn(checkName)} {checkName}. Attempt to aid their check?"))
-                    {
-                        await RollAidReaction(aider, qfThis.Owner, check, aidableAction);
+                    if (await DoAidReaction(
+                            qfThis.Source!,
+                            (ActiveRollSpecification)qfThis.Tag!,
+                            rank,
+                            bonusTraits,
+                            action)
+                        is not null)
                         qfThis.ExpiresAt = ExpirationCondition.Immediately;
-                        preparation2.ExpiresAt = ExpirationCondition.Immediately;
-                    }
-                };
-                break;
-        }
-
+                }
+            };
+        
         return aidEffect;
     }
 
-    /// <summary>
-    /// Performs an Aid reaction.
-    /// </summary>
-    /// <param name="aider">The creature reacting.</param>
-    /// <param name="aidee">The creature benefiting from the aid.</param>
-    /// <param name="check">A Skill or a CombatAction for a strike (must have an ActiveRollSpecification)</param>
-    /// <param name="aidableAction">The action being aided.</param>
-    public static async Task<bool> RollAidReaction(Creature aider, Creature aidee, object check, CombatAction aidableAction)
+    public static async Task<CheckResult?> DoAidReaction(Creature aider, ActiveRollSpecification rollSpec, Proficiency rank, List<Trait> bonusTraits, CombatAction aidableAction)
     {
-        // Target ally with skill check, or target enemy with attack check.
-        Creature target = (check is Skill ? aidee : aidableAction.ChosenTargets.ChosenCreature) ?? aidee;
-        return await aider.Battle.GameLoop.FullCast(CreateAidReaction(aider, check, aidableAction),
-            ChosenTargets.CreateSingleTarget(target));
+        CombatAction aidReaction = CreateAidReaction(aider, rollSpec, rank, bonusTraits, aidableAction);
+        if (!await aider.Battle.GameLoop.FullCast(
+                aidReaction,
+                ChosenTargets.CreateSingleTarget(aidableAction.Owner)))
+            return null;
+        return aidReaction.CheckResult;
     }
 
-    /// <summary>
-    /// Not to be executed on its own. Instead, pass this as an argument to <see cref="CommonSpellEffects.RollCheck(CombatAction, Creature)"/>.
-    /// </summary>
-    /// <param name="aider">The creature taking the reaction.</param>
-    /// <param name="check">The type of check being made to react with. Can only be of type Skill or CombatAction.</param>
-    /// <param name="aidableAction">The specific action which is allowed to be aided. This is acquired at the moment of reaction.</param>
-    /// <returns></returns>
-    public static CombatAction CreateAidReaction(Creature aider, object check, CombatAction aidableAction)
+    public static CombatAction CreateAidReaction(Creature aider, ActiveRollSpecification rollSpec, Proficiency rank, List<Trait> bonusTraits, CombatAction aidableAction)
     {
-        CombatAction aidReaction;
-        Proficiency rank;
-        switch (check)
-        {
-            case Skill skill:
-                rank = aider.Proficiencies.Get(Skills.SkillToTrait(skill));
-                aidReaction = new CombatAction(
-                        aider,
-                        IllustrationName.None,
-                        $"Aid ({skill.HumanizeTitleCase2()})",
-                        [ModData.Traits.MoreBasicActions],
-                        CreateAidReactionDescription(rank).Replace("{b}Aid{b} {icon:Reaction}\n", ""),
-                        Target.AdjacentCreature())
-                    .WithTag(aidableAction) // Aid reaction stores which action it's aiding
-                    .WithActionCost(0)
-                    .WithActionId(ModData.ActionIds.AidReaction)
-                    .WithActiveRollSpecification(new ActiveRollSpecification(TaggedChecks.SkillCheck(skill), Checks.FlatDC(AidDC())));
-                break;
-            case CombatAction attack:
-                if (attack.Item == null)
-                    throw new NullReferenceException("aidableAction cannot have a null Item field");
-                rank = aider.Proficiencies.Get(attack.Item.Traits);
-                aidReaction = aider.CreateStrike(attack.Item)
-                    .WithTag(aidableAction) // Aid reaction stores which action it's aiding
-                    .WithActionCost(0)
-                    .WithExtraTrait(Trait.ReactiveAttack)
-                    .WithActionId(ModData.ActionIds.AidReaction)
-                    .WithItem(attack.Item)
-                    .WithActiveRollSpecification(new ActiveRollSpecification(Checks.Attack(attack.Item, 0), Checks.FlatDC(AidDC())));
-                    //.WithSoundEffect(aider.HasTrait(Trait.Female) ? SfxName.Intimidate : SfxName.MaleIntimidate);
-                aidReaction.Name = $"Aid ({attack.Item.Name})";
-                aidReaction.Description = CreateAidReactionDescription(rank).Replace("{b}Aid{b} {icon:Reaction}\n", "");
-                aidReaction.ProjectileKind = ProjectileKind.None;
-                aidReaction.ChosenTargets = aidableAction.ChosenTargets;
-                aidReaction.EffectOnOneTarget = null;
-                aidReaction.EffectOnChosenTargets = null;
-                (aidReaction.Target as CreatureTarget)!.CreatureTargetingRequirements.RemoveAll(ctr => ctr is MeleeReachCreatureTargetingRequirement);
-                break;
-            default:
-                throw new ArgumentException("Invalid check type");
-        }
-        
-        aidReaction
-            .WithSoundEffect(SfxName.Grapple) // BUG: doesn't seem to replace SFX.
-            .WithEffectOnEachTarget(async (thisAction, aider, aidee, result) =>
-        {
-            if (result == CheckResult.Failure)
-                return;
-            
-            int bonus = result switch
+        CombatAction aidReaction = new CombatAction(
+                aider,
+                ModData.Illustrations.Aid,
+                "Aid (" + (rollSpec.TaggedDetermineBonus.InvolvedSkill?.ToStringOrTechnical() ?? "Attack") + ")",
+                [Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName, ModData.Traits.ModName, ..bonusTraits],
+                CreateAidReactionDescription(rank).Replace("{b}Aid{b} {icon:Reaction}\n", ""),
+                Target.RangedCreature(99))
+            .WithActiveRollSpecification(rollSpec)
+            .WithSoundEffect(SfxName.Grapple)
+            // Post action log before roll, just like a normal usage of an action.
+            .WithPrologueEffectOnChosenTargetsBeforeRolls(async (action, aider2, targs) =>
             {
-                CheckResult.CriticalSuccess => CriticalBonusFromProficiency(rank),
-                CheckResult.Success => 1,
-                _ => -1 // Crit fail
-            };
-        
-            aidableAction.Owner.AddQEffect(new QEffect(ExpirationCondition.Ephemeral)
+                aider2.Overhead(
+                    "Aid {icon:Reaction}",
+                    Color.Black,
+                    $"{aider2.Name.WithColor("Blue")} {ProficiencyAdjective(rank)} {{b}}Aids{{/b}} {{icon:Reaction}} {targs.ChosenCreature!.Name.WithColor("Blue")}.",
+                    "Aid {icon:Reaction}",
+                    action.Description,
+                    new Traits([ModData.Traits.ModName]));
+            })
+            .WithEffectOnEachTarget(async (action, aider2, aidee, result) =>
             {
-                BonusToAttackRolls = (qfThis, aidedAction, defender) =>
-                    aidedAction == aidableAction
-                        ? new Bonus(bonus, BonusType.Circumstance, $"Aid {result.HumanizeLowerCase2()}")
-                        : null,
+                int bonus;
+                switch (result)
+                {
+                    case CheckResult.CriticalSuccess:
+                        bonus = CriticalBonusFromProficiency(rank);
+                        break;
+                    case CheckResult.Success:
+                        bonus = 1;
+                        break;
+                    case CheckResult.CriticalFailure:
+                        bonus = -1;
+                        break;
+                    default: // Failure or other
+                        return;
+                }
+        
+                aidee.AddQEffect(new QEffect(ExpirationCondition.Ephemeral)
+                {
+                    BonusToAttackRolls = (_, aidedAction, _) =>
+                        aidedAction == aidableAction
+                            ? new Bonus(bonus, BonusType.Circumstance, $"Aid {result.HumanizeLowerCase2()}")
+                            : null,
+                });
             });
-        });
         
         return aidReaction;
     }
-    
+
     /// <summary>
     /// Generates the full rules string for the Prepare to Aid action card.
     /// </summary>
     /// <param name="rank">The proficiency rank of the skill or attack being used when aiding.</param>
     /// <param name="checkName">The name of the skill, or the string "Attack".</param>
     /// <returns></returns>
-    public static string CreatePrepareToAidDescription(Proficiency rank, string checkName)
+    public static string CreatePrepareToAidDescription(Proficiency rank, string? checkName)
     {
-        bool isAttack = checkName is "Attack";
+        bool isAttack = checkName?.Contains("Attack") ?? false;
+        string checkDesc = $"{AorAn(checkName ?? "check")} {{Blue}}{checkName ?? "???"}{{/Blue}} {(isAttack ? "roll" : "check")}";
         string flavorText = "{i}You prepare to help your ally with a task outside your turn.{/i}";
-        string rulesText = $"Choose an adjacent ally{(isAttack ? " or enemy" : null)}. When that ally makes {AorAn(checkName)} {{Blue}}{checkName}{{/Blue}} check while adjacent to you,{(isAttack ? " or that enemy is targeted by an attack while adjacent to you," : null)} you can use the aid {{icon:Reaction}} reaction for that check as the trigger.";
+        string rulesText = $"Choose an ally or enemy. When that ally makes {checkDesc} while within your reach, or that enemy is targeted by {checkDesc} while within your reach, you can use the aid {{icon:Reaction}} reaction for that {(isAttack ? "roll" : "check")} as the trigger.";
         return flavorText + "\n\n" + rulesText + "\n\n" + CreateAidReactionDescription(rank);
     }
 
@@ -469,6 +460,20 @@ public static class Aid
             default:
                 return "a";
         }
+    }
+
+    public static string ProficiencyAdjective(Proficiency rank)
+    {
+        switch (rank)
+        {
+            case Proficiency.Legendary: return "legendarily";
+            case Proficiency.Master: return "masterfully";
+            case Proficiency.Expert: return "expertly";
+            case Proficiency.Trained: return "professionally";
+            case Proficiency.UntrainedWithLevel: return "competently";
+            case Proficiency.Untrained: return "clumsily";
+        }
+        throw new ArgumentException("Invalid proficiency to MoreBasicActions.Aid.ProficiencyAdjective(Proficiency)");
     }
 
     public static int AidDC()
