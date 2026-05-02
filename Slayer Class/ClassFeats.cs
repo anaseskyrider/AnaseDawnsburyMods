@@ -451,7 +451,6 @@ public static class ClassFeats
                 });
         
         // Blood Rush
-        // PETR: Initiative free actions
         yield return new TrueFeat(
                 ModData.FeatNames.BloodRush,
                 4,
@@ -467,7 +466,36 @@ public static class ClassFeats
                 "If you roll initiative and have a quarry: Go On the Hunt.",
                 qfFeat =>
                 {
-                    qfFeat.StartOfCombatAfterInitiativeOrderIsSetUp = async qfThis =>
+                    qfFeat.StartOfCombatReaction = qfThis =>
+                    {
+                        Feat bloodRush = AllFeats.GetFeatByFeatName(ModData.FeatNames.BloodRush);
+                        CombatAction rushAct = new CombatAction(
+                                qfThis.Owner,
+                                IllustrationName.Rage,
+                                "Blood Rush",
+                                [ModData.Traits.Slayer],
+                                null!,
+                                Target.Self()
+                                    .WithAdditionalRestriction(self =>
+                                        self.Battle.AllCreatures.Any(cr => Slayer.IsMyQuarry(self, cr))
+                                        ? null
+                                        : "No quarry"))
+                            .WithDescription(bloodRush.FlavorText, bloodRush.RulesText)
+                            .WithActionCost(0)
+                            .WithEffectOnSelf(async self =>
+                                await Slayer.GoOnTheHunt(self, true));
+
+                        ReactionOption rushReact = ReactionOption.CreateFromCombatActionCustom(
+                            rushAct,
+                            "Go On the Hunt as a {icon:FreeAction} free action.",
+                            async () => await qfThis.Owner.Battle.GameLoop.FullCast(rushAct));
+                        rushReact.Caption += " {icon:FreeAction}"; // BUG: Doesn't seem to work
+                        
+                        return ((SelfTarget) rushAct.Target).CanBeginToUse(qfThis.Owner)
+                            ? (ReactionOptions) rushReact
+                            : null;
+                    };
+                    /*qfFeat.StartOfCombatAfterInitiativeOrderIsSetUp = async qfThis =>
                     {
                         if (qfThis.Owner.Battle.AllCreatures.All(cr => !Slayer.IsMyQuarry(qfThis.Owner, cr)))
                             return;
@@ -488,7 +516,7 @@ public static class ClassFeats
                                 await Slayer.GoOnTheHunt(self, true));
 
                         await qfThis.Owner.Battle.GameLoop.FullCast(rushAct);
-                    };
+                    };*/
                 });
         
         // Cure-all
