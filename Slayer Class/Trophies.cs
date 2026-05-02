@@ -87,7 +87,6 @@ public static class Trophies
         Trait.NonSummonable,
         Trait.Conjuration,
         // Tradition traits (stored elsewhere on a trophy)
-        // TODO: Determine if these traits actually must be stored as one of the trophy's traits, or if only the associated traditions are needed.
         Trait.Arcane,
         Trait.Divine,
         Trait.Primal,
@@ -160,7 +159,7 @@ public static class Trophies
         public const string TAGS_ALL_AROUND_VISION = "AllAroundVision";
 
         /// <summary>
-        /// The highest saving throw. This tag can appear more than once, with a different save each time.
+        /// The highest saving throw. This tag can appear more than once, with a different save each time. The Defense is added directly to the end of this constant (implicit invocation of ToString()).
         /// </summary>
         public const string TAGS_HIGHEST_SAVE = "HighestSave";
     }
