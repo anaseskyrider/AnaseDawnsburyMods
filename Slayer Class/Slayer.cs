@@ -8,6 +8,7 @@ using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
+using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
@@ -209,158 +210,119 @@ public static class Slayer
                 {
                     if (Settings.CurrentDifficulty <= Difficulty.Easy)
                         qfFeat.Description += " {Blue}{b}Easy:{/b} The creature can be 1 level lower than you.{/Blue}";
-                    qfFeat.StartOfCombat = async qfThis =>
+                    
+                    qfFeat.StartOfCombatReaction = qfThis =>
                     {
+                        // Data
                         Feat markQuarry = AllFeats.GetFeatByFeatName(ModData.FeatNames.MarkQuarry);
+                        
+                        // Must be able to take Concentrate actions.
                         if (qfThis.Owner.QEffects.Any(qf =>
                                 qf.PreventTakingAction?.Invoke(
-                                    CombatAction.CreateSimple(qfThis.Owner, "Mark Quarry", Trait.Concentrate))
+                                        CombatAction.CreateSimple(qfThis.Owner, "Mark Quarry", Trait.Concentrate))
                                     is not null))
-                        {
-                            qfThis.Owner.Overhead("*no quarry*", Color.Red, qfThis.Owner + " is unable to {b}Mark a Quarry{/b} due to being unable to take concentrate actions.", "Mark Quarry {icon:FreeAction}", "{i}" + markQuarry.FlavorText + "{/i}\n\n" + markQuarry.RulesText, new Traits([..markQuarry.Traits, ModData.Traits.Slayer]));
-                            return;
-                        }
+                            return null;
 
+                        CombatAction displayMark = MarkQuarryAction(qfThis.Owner);
                         int max = qfThis.Owner.HasFeat(ModData.FeatNames.DoubleQuarry) ? 2 : 1;
-                        for (int i = 1; i <= max; i++)
-                        {
-                            // Copying from FoB. Keep this.
-                            await qfThis.Owner.Battle.GameLoop.StateCheck();
+                        bool hasPackSlayer = qfThis.Owner.HasFeat(ModData.FeatNames.PackSlayer);
 
-                            List<Option> options = [];
-
-                            // Primary mark
-                            CombatAction bigMark = QuarryAction();
-                            GameLoop.AddDirectUsageOnCreatureOptions(bigMark, options);
-
-                            // Group mark from Pack Slayer
-                            if (qfThis.Owner.HasFeat(ModData.FeatNames.PackSlayer))
+                        return ReactionOption.CreateFromCombatActionCustom(
+                            displayMark,
+                            $"Choose {(max > 1 ? max : "a")} {(hasPackSlayer ? "creature or group" : "creature")} to become your quarry.",
+                            async () =>
                             {
-                                CombatAction groupMark = QuarryAction(true)
-                                    .With(ca =>
-                                    {
-                                        ((CreatureTarget)ca.Target).WithAdditionalConditionOnTargetCreature((a, d) =>
-                                            d.Battle.AllCreatures.Count(cr => cr.BaseName == d.BaseName) >= 3
-                                                ? Usability.Usable
-                                                : Usability.NotUsableOnThisCreature("Not in a group"));
-                                        ca.WithFullRename("Mark Quarry (group)");
-                                    })
-                                    .WithEffectOnEachTarget(async (_, caster, target, _) =>
-                                    {
-                                        foreach (Creature enemy in caster.Battle.AllCreatures
-                                                     .Where(cr => cr.BaseName == target.BaseName)
-                                                     .ToList())
-                                        {
-                                            QEffect? groupMark = enemy.QEffects.FirstOrDefault(qf =>
-                                                qf.Id == ModData.QEffectIds.MarkedQuarry && qf.Source == caster);
-                                            if (groupMark is null)
-                                            {
-                                                groupMark = MarkQuarry(caster);
-                                                enemy.AddQEffect(groupMark);
-                                            }
-
-                                            // When this creature dies, ensure all others in its group can no longer
-                                            // grant a trophy upon death.
-                                            groupMark.WhenCreatureDiesAtStateCheckAsync += async qfMark =>
-                                            {
-                                                foreach (Creature enemy2 in qfMark.Owner.Battle.AllCreatures
-                                                             .Where(cr => cr.BaseName == qfMark.Owner.BaseName))
-                                                {
-                                                    QEffect? myMark = enemy2.QEffects.FirstOrDefault(qf =>
-                                                        qf.Id == ModData.QEffectIds.MarkedQuarry &&
-                                                        qf.Source == caster);
-                                                    if (!(myMark?.Traits.Contains(ModData.Traits.DoNotClaimTrophy) ??
-                                                          false))
-                                                    {
-                                                        myMark?.Traits.Add(ModData.Traits.DoNotClaimTrophy);
-                                                        myMark?.Description = MarkQuarry(caster, true).Description;
-                                                    }
-                                                }
-                                            };
-                                        }
-                                    });
-                                GameLoop.AddDirectUsageOnCreatureOptions(groupMark, options);
-                            }
-
-                            Option chosenOption;
-
-                            // Let the player know they don't have any options
-                            if (options.Count == 0)
-                            {
-                                qfThis.Owner.Overhead("*no quarry*", Color.Red,
-                                    qfThis.Owner + $" has no{(max > 1 ? (" " + 1.Ordinalize2() + " ") : " ")}quarry to mark.", "Mark Quarry {icon:FreeAction}",
-                                    "{i}" + markQuarry.FlavorText + "{/i}\n\n" + markQuarry.RulesText,
-                                    new Traits([..markQuarry.Traits, ModData.Traits.Slayer]));
-                                return;
-                            }
-                            else if (options.Count <= max)
-                                chosenOption = options[0];
-                            else
-                            {
-                                options.Add(new PassViaButtonOption("Pass"));
-                                chosenOption = (await qfThis.Owner.Battle.SendRequest(
-                                    new AdvancedRequest(qfThis.Owner, "Choose a creature to Mark as a Quarry.", options)
-                                    {
-                                        TopBarText = "Choose a creature to Mark as a Quarry." + (max > 1
-                                            ? $" ({i}/{max})"
-                                            : null),
-                                        TopBarIcon = ModData.Illustrations.MarkQuarry,
-                                    })).ChosenOption;
-                            }
-
-                            await chosenOption.Action();
-                        }
-
-                        return;
-
-                        CombatAction QuarryAction(bool isGroup = false)
-                        {
-                            CreatureTargetingRequirement[] reqs = [
-                                new EnemyCreatureTargetingRequirement(),
-                                // Not undetected
-                                new LegacyCreatureTargetingRequirement((a,d) =>
-                                    d.DetectionStatus.IsUndetectedTo(a)
-                                        ? Usability.NotUsableOnThisCreature("Undetected") : Usability.Usable),
-                                // Not already my quarry
-                                new LegacyCreatureTargetingRequirement((a,d) =>
-                                    Slayer.IsMyQuarry(a, d)
-                                        ? Usability.NotUsableOnThisCreature("Already my quarry")
-                                        : Usability.Usable),
-                            ];
-                            if (!isGroup)
-                                // Level requirement
-                                reqs = reqs.Append(new LegacyCreatureTargetingRequirement((a, d) =>
-                                        d.Level < a.Level - (Settings.CurrentDifficulty > Difficulty.Easy ? 0 : 1)
-                                            ? Usability.NotUsableOnThisCreature("Level too low")
-                                            : Usability.Usable))
-                                    .ToArray();
-                            
-                            return new CombatAction(
-                                    qfThis.Owner,
-                                    ModData.Illustrations.MarkQuarry,
-                                    "Mark Quarry",
-                                    [Trait.Concentrate, ModData.Traits.Slayer, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName],
-                                    null!,
-                                    new CreatureTarget(RangeKind.Ranged, reqs, (_, _, them) => them.Level))
-                                .WithDescription(markQuarry.FlavorText, markQuarry.RulesText)
-                                .WithActionId(ModData.ActionIds.MarkQuarry)
-                                .WithActionCost(0)
-                                .WithSoundEffect(ModData.SfxNames.MarkQuarry)
-                                .WithTargetingTooltip((_, cr, _) =>
-                                    $"Mark {(isGroup ? "all {Blue}"+cr.BaseName+"{/Blue}" : "this creature")} as your quarry.")
-                                .WithEffectOnEachTarget(async (action, caster, target, _) =>
+                                for (int i = 1; i <= max; i++)
                                 {
-                                    target.AddQEffect(Slayer.MarkQuarry(caster));
-                                    
-                                    // Prettier log flavor
-                                    qfThis.Owner.Battle.Log(
-                                        $"{qfThis.Owner} {{b}}Marks{{/b}} {{Blue}}{target}{{/Blue}} as their {{b}}Quarry{{/b}}.",
-                                        "Mark Quarry {icon:FreeAction}",
-                                        action.Description,
-                                        action.Traits);
-                                });
-                        }
+                                    // Copying from FoB. Keep this.
+                                    await qfThis.Owner.Battle.GameLoop.StateCheck();
+
+                                    List<Option> options = [];
+
+                                    // Primary mark
+                                    CombatAction bigMark = MarkQuarryAction(qfThis.Owner);
+                                    GameLoop.AddDirectUsageOnCreatureOptions(bigMark, options);
+
+                                    // Group mark from Pack Slayer
+                                    if (hasPackSlayer)
+                                    {
+                                        CombatAction groupMark = MarkQuarryAction(qfThis.Owner, true)
+                                            .With(ca =>
+                                            {
+                                                ((CreatureTarget)ca.Target).WithAdditionalConditionOnTargetCreature((a, d) =>
+                                                    d.Battle.AllCreatures.Count(cr => cr.BaseName == d.BaseName) >= 3
+                                                        ? Usability.Usable
+                                                        : Usability.NotUsableOnThisCreature("Not in a group"));
+                                                ca.WithFullRename("Mark Quarry (group)");
+                                            })
+                                            .WithEffectOnEachTarget(async (_, caster, target, _) =>
+                                            {
+                                                foreach (Creature enemy in caster.Battle.AllCreatures
+                                                             .Where(cr => cr.BaseName == target.BaseName)
+                                                             .ToList())
+                                                {
+                                                    QEffect? groupMark = enemy.QEffects.FirstOrDefault(qf =>
+                                                        qf.Id == ModData.QEffectIds.MarkedQuarry && qf.Source == caster);
+                                                    if (groupMark is null)
+                                                    {
+                                                        groupMark = MarkQuarry(caster);
+                                                        enemy.AddQEffect(groupMark);
+                                                    }
+
+                                                    // When this creature dies, ensure all others in its group can no longer
+                                                    // grant a trophy upon death.
+                                                    groupMark.WhenCreatureDiesAtStateCheckAsync += async qfMark =>
+                                                    {
+                                                        foreach (Creature enemy2 in qfMark.Owner.Battle.AllCreatures
+                                                                     .Where(cr => cr.BaseName == qfMark.Owner.BaseName))
+                                                        {
+                                                            QEffect? myMark = enemy2.QEffects.FirstOrDefault(qf =>
+                                                                qf.Id == ModData.QEffectIds.MarkedQuarry &&
+                                                                qf.Source == caster);
+                                                            if (!(myMark?.Traits.Contains(ModData.Traits.DoNotClaimTrophy) ??
+                                                                  false))
+                                                            {
+                                                                myMark?.Traits.Add(ModData.Traits.DoNotClaimTrophy);
+                                                                myMark?.Description = MarkQuarry(caster, true).Description;
+                                                            }
+                                                        }
+                                                    };
+                                                }
+                                            });
+                                        GameLoop.AddDirectUsageOnCreatureOptions(groupMark, options);
+                                    }
+
+                                    Option chosenOption;
+
+                                    // Let the player know they don't have any options
+                                    if (options.Count == 0)
+                                    {
+                                        qfThis.Owner.Overhead("*no quarry*", Color.Red,
+                                            qfThis.Owner + $" has no{(max > 1 ? (" " + 1.Ordinalize2() + " ") : " ")}quarry to mark.", "Mark Quarry {icon:FreeAction}",
+                                            "{i}" + markQuarry.FlavorText + "{/i}\n\n" + markQuarry.RulesText,
+                                            new Traits([..markQuarry.Traits, ModData.Traits.Slayer]));
+                                        return;
+                                    }
+                                    else if (options.Count <= max)
+                                        chosenOption = options[0];
+                                    else
+                                    {
+                                        options.Add(new PassViaButtonOption("Pass"));
+                                        chosenOption = (await qfThis.Owner.Battle.SendRequest(
+                                            new AdvancedRequest(qfThis.Owner, "Choose a creature to Mark as a Quarry.", options)
+                                            {
+                                                TopBarText = "Choose a creature to Mark as a Quarry." + (max > 1
+                                                    ? $" ({i}/{max})"
+                                                    : null),
+                                                TopBarIcon = ModData.Illustrations.MarkQuarry,
+                                            })).ChosenOption;
+                                    }
+
+                                    await chosenOption.Action();
+                                }
+                            });
                     };
+                    
                     qfFeat.BonusToSkillChecks = (skill, action, target) =>
                         target is not null
                         && IsMyQuarry(qfFeat.Owner, target)
@@ -576,6 +538,56 @@ public static class Slayer
                 values.GrantFeat(ModData.FeatNames.SlayersArsenal);
             });
         yield return slayerClass;
+    }
+    
+    public static CombatAction MarkQuarryAction(Creature slayer, bool isGroup = false)
+    {
+        Feat markQuarry = AllFeats.GetFeatByFeatName(ModData.FeatNames.MarkQuarry);
+        
+        CreatureTargetingRequirement[] reqs = [
+            new EnemyCreatureTargetingRequirement(),
+            // Not undetected
+            new LegacyCreatureTargetingRequirement((a,d) =>
+                d.DetectionStatus.IsUndetectedTo(a)
+                    ? Usability.NotUsableOnThisCreature("Undetected") : Usability.Usable),
+            // Not already my quarry
+            new LegacyCreatureTargetingRequirement((a,d) =>
+                Slayer.IsMyQuarry(a, d)
+                    ? Usability.NotUsableOnThisCreature("Already my quarry")
+                    : Usability.Usable),
+        ];
+        if (!isGroup)
+            // Level requirement
+            reqs = reqs.Append(new LegacyCreatureTargetingRequirement((a, d) =>
+                    d.Level < a.Level - (Settings.CurrentDifficulty > Difficulty.Easy ? 0 : 1)
+                        ? Usability.NotUsableOnThisCreature("Level too low")
+                        : Usability.Usable))
+                .ToArray();
+        
+        return new CombatAction(
+                slayer,
+                ModData.Illustrations.MarkQuarry,
+                "Mark Quarry",
+                [Trait.Concentrate, ModData.Traits.Slayer, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName],
+                null!,
+                new CreatureTarget(RangeKind.Ranged, reqs, (_, _, them) => them.Level))
+            .WithDescription(markQuarry.FlavorText, markQuarry.RulesText)
+            .WithActionId(ModData.ActionIds.MarkQuarry)
+            .WithActionCost(0)
+            .WithSoundEffect(ModData.SfxNames.MarkQuarry)
+            .WithTargetingTooltip((_, cr, _) =>
+                $"Mark {(isGroup ? "all {Blue}"+cr.BaseName+"{/Blue}" : "this creature")} as your quarry.")
+            .WithEffectOnEachTarget(async (action, caster, target, _) =>
+            {
+                target.AddQEffect(Slayer.MarkQuarry(caster));
+                
+                // Prettier log flavor
+                slayer.Battle.Log(
+                    $"{slayer} {{b}}Marks{{/b}} {{Blue}}{target}{{/Blue}} as their {{b}}Quarry{{/b}}.",
+                    "Mark Quarry {icon:FreeAction}",
+                    action.Description,
+                    action.Traits);
+            });
     }
 
     public static QEffect MarkQuarry(Creature slayer, bool doNotClaimTrophy = false)
