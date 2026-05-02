@@ -621,6 +621,13 @@ public static class Slayer
 
     public static async Task GoOnTheHunt(Creature slayer, bool isFreeAction = false)
     {
+        CombatAction goHunting = OnTheHuntAction(slayer, isFreeAction);
+        if (((SelfTarget)goHunting.Target).CanBeginToUse(slayer))
+            await slayer.Battle.GameLoop.FullCast(goHunting);
+    }
+
+    public static CombatAction OnTheHuntAction(Creature slayer, bool isFreeAction = false)
+    {
         Feat onTheHunt = AllFeats.GetFeatByFeatName(ModData.FeatNames.OnTheHunt);
         
         CombatAction goHunting = new CombatAction(
@@ -633,7 +640,12 @@ public static class Slayer
 
                   {{onTheHunt.RulesText}}
                   """,
-                Target.Self())
+                Target.Self()
+                    // Doesn't work. Was hoping to make it so you'd only react while it was applied if it was your current turn so that you could extend the duration.
+                    /*.WithAdditionalRestriction(self =>
+                        self.QEffects.Any(qf => qf is { Key: ModData.CommonQfKeys.ON_THE_HUNT, RoundsLeft: 0 })
+                            ? "Already on the hunt"
+                            : null)*/)
             .WithActionCost(0)
             .WithActionId(ModData.ActionIds.OnTheHunt)
             .WithSoundEffect(ModData.SfxNames.OnTheHunt)
@@ -654,8 +666,7 @@ public static class Slayer
                     action.Description,
                     new Traits([ModData.Traits.Slayer]));
             });
-        
-        await slayer.Battle.GameLoop.FullCast(goHunting);
+
     }
 
     public static QEffect OnTheHunt(Creature slayer)
@@ -667,7 +678,6 @@ public static class Slayer
         onTheHunt.DoNotShowUpOverhead = true;
         onTheHunt.Description =
             "You have an extra action each turn. It can only be used to Step, Stride, or use an action with the relentless trait.";
-        onTheHunt.Key = "OnTheHunt";
         return onTheHunt;
     }
 }

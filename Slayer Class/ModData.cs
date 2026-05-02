@@ -68,6 +68,12 @@ public static class ModData
         }
     }
 
+    public static class CommonQfKeys
+    {
+        /// <summary>This key indicates a Quickened condition from the On the Hunt reaction.</summary>
+        public const string ON_THE_HUNT = "OnTheHunt";
+    }
+
     public static class FeatNames
     {
         #region Class
