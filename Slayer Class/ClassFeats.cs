@@ -105,6 +105,98 @@ public static class ClassFeats
                 });
         
         // Crossbow Slayer
+        yield return new TrueFeat(
+                ModData.FeatNames.CrossbowSlayer,
+                1,
+                "You find that a crossbow's versatility is the perfect companion to your own, and you eagerly reload it to get back in the fight.",
+                """
+                Reloading gains the relentless trait for you.
+                
+                {b}Special{/b} If you have a consecrated panoply signature tool, you can load a hunting spike into a crossbow when you reload it. The next time you use Hunting Spike, its thrown trait uses the crossbow’s range increment.
+                """,
+                [ModData.Traits.Slayer])
+            .WithPermanentQEffect(
+                "Reloading gains the relentless trait.",
+                qfFeat =>
+                {
+                    qfFeat.ModifyActionPossibility = (qfThis, action) =>
+                    {
+                        if (action.ActionId is ActionId.Reload)
+                            action.WithExtraTrait(ModData.Traits.Relentless);
+                    };
+
+                    if (HuntingTools.GetTool(qfFeat.Owner, HuntingTools.ToolId.ConsecratedPanoply)
+                        is not { } panoply)
+                        return;
+                    
+                    qfFeat.Description += " You can load a hunting spike into a crossbow to increase the range of your next throwable {b}Hunting Spike {icon:Action}{/b} to its range increment.";
+
+                    qfFeat.StartOfCombat = async qfThis =>
+                    {
+                        foreach (Item weapon in qfThis.Owner.HeldItems
+                                     .Where(item =>
+                                         item.HasTrait(Trait.Crossbow)
+                                         && item.WeaponProperties!.RangeIncrement > 0))
+                            qfThis.Owner.AddQEffect(CrossbowSlayer(weapon));
+                    };
+
+                    qfFeat.ProvideActionsIntoPossibilitySection = (qfThis, section) =>
+                    {
+                        List<Possibility> possibilities = [];
+                        if (section.PossibilitySectionId is not PossibilitySectionId.ItemActions)
+                            return possibilities;
+                        
+                        foreach (Item weapon in qfThis.Owner.HeldItems
+                                     .Where(item =>
+                                         item.HasTrait(Trait.Crossbow)
+                                         && item.WeaponProperties!.RangeIncrement > 0
+                                         && item.EphemeralItemProperties.NeedsReload))
+                        {
+                            CombatAction reload = qfThis.Owner.CreateReload(weapon)
+                                .WithDescription("Load a hunting spike into the weapon. The next time you use {b}Hunting Spike {icon:Action}{/b}, its thrown range increases to " + weapon.WeaponProperties!.RangeIncrement * 5 + " feet.");
+                            reload.WithFullRename(reload.Name.Replace("Reload", "Crossbow Slayer"));
+                            reload.WithEffectOnChosenTargets(async (self, _) =>
+                            {
+                                if (!weapon.EphemeralItemProperties.NeedsReload)
+                                    self.AddQEffect(CrossbowSlayer(weapon));
+                            });
+                            possibilities.Add(new ActionPossibility(reload));
+                        }
+
+                        return possibilities;
+                    };
+                    
+                    return;
+
+                    QEffect CrossbowSlayer(Item weapon) => new QEffect()
+                    {
+                        Name = "Crossbow Slayer",
+                        Description = "You have a hunting spike loaded into your " + weapon.ToString().WithColor("Blue") + ". Your next {b}Hunting Spike {icon:Action}{/b} with a throwable weapon uses the crossbow's range increment and expends its ammo.\n\nThis effect ends early if you Strike with the crossbow.",
+                        Illustration = weapon.Illustration,
+                        Id = ModData.QEffectIds.CrossbowSlayer,
+                        Tag = weapon,
+                        DoNotShowUpOverhead = true,
+                        AfterYouTakeAction = async (qfXBS, action) =>
+                        {
+                            if (!action.HasTrait(Trait.Strike))
+                                return;
+                            if (action.Item == weapon)
+                                qfXBS.ExpiresAt = ExpirationCondition.Immediately;
+                            if (action.Item!.Name.ToLower().Contains("hunting spike"))
+                            {
+                                qfXBS.ExpiresAt = ExpirationCondition.Immediately;
+                                if (weapon.WeaponProperties!.RepeatingMagazineSize is not null)
+                                {
+                                    weapon.EphemeralItemProperties.AmmunitionLeftInMagazine--;
+                                    if (weapon.EphemeralItemProperties.AmmunitionLeftInMagazine == 0)
+                                        weapon.EphemeralItemProperties.NeedsReload = true;
+                                }
+                                else
+                                    weapon.EphemeralItemProperties.NeedsReload = true;
+                            }
+                        }
+                    };
+                });
         
         // Drink Adaptation Serums
         

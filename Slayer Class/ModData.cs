@@ -105,7 +105,7 @@ public static class ModData
         #region 1st-Level
 
         public static readonly FeatName Bloodscent = ModManager.RegisterFeatName(IdPrepend+"Bloodscent", "Bloodscent");
-        public static readonly FeatName CrossbowSlayer = ModManager.RegisterFeatName(IdPrepend+"Crossbow Slayer", "CrossbowSlayer");
+        public static readonly FeatName CrossbowSlayer = ModManager.RegisterFeatName(IdPrepend+"CrossbowSlayer", "Crossbow Slayer");
         public static readonly FeatName DrinkAdaptationSerums = ModManager.RegisterFeatName(IdPrepend+"DrinkAdaptationSerums", "Drink Adaptation Serums");
         public static readonly FeatName RepellingShield = ModManager.RegisterFeatName(IdPrepend+"RepellingShield", "Repelling Shield");
         public static readonly FeatName SpikedSurcoat = ModManager.RegisterFeatName(IdPrepend+"SpikedSurcoat", "Spiked Surcoat");
@@ -264,11 +264,13 @@ public static class ModData
     {
         public static QEffectId MarkedQuarry;
         public static QEffectId ArmoredShelter;
+        public static QEffectId CrossbowSlayer;
         
         public static void Initialize()
         {
             MarkedQuarry = SafelyRegister<QEffectId>("MarkedQuarry");
             ArmoredShelter = SafelyRegister<QEffectId>("ArmoredShelter");
+            CrossbowSlayer = SafelyRegister<QEffectId>("CrossbowSlayer");
         }
     }
 
