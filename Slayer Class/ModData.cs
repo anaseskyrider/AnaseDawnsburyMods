@@ -463,6 +463,8 @@ public static class ModData
         /// </summary>
         public static readonly Trait DoNotClaimTrophy = ModManager.RegisterTrait("DoNotClaimTrophy", new TraitProperties("DoNotClaimTrophy", false));
         
+        public static readonly Trait BloodseekingBlade = ModManager.RegisterTrait("Bloodseeking Blade", new TraitProperties("Bloodseeking Blade", true));
+        
         /// <summary>
         /// This trait is for the feats which represent your choice of a rune for your bloodseeking blade's specialized arsenal feature.
         /// </summary>

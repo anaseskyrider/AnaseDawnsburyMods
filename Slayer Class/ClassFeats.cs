@@ -615,6 +615,19 @@ public static class ClassFeats
         // Cure-all
         
         // Expansive Panoply
+        yield return new TrueFeat(
+                ModData.FeatNames.ExpansivePanoply,
+                4,
+                "While a short, sharp piece of metal is a remarkably versatile tool, you know that it is not appropriate for every occasion.",
+                // clubs, darts, or shortswords.
+                $"When you use {{b}}Hunting Spike {{icon:Action}}{{/b}}, you can draw and Strike with spikes that function as {ItemName.Club.ToLink("clubs")} or {ItemName.Shortsword.ToLink("shortswords")}, rather than {ItemName.Dagger.ToLink("daggers")}.",
+                [ModData.Traits.Slayer])
+            .WithPrerequisite(
+                values => HuntingTools.GetTool(values, HuntingTools.ToolId.ConsecratedPanoply) is not null,
+                "You must know the consecrated panoply signature tool.")
+            .WithPermanentQEffect(
+                "Your hunting spikes can also be clubs or shortswords.",
+                qfFeat => {});
 
         #endregion
 
