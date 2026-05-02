@@ -418,42 +418,42 @@ public static class Trophies
                         "{i}something unspeakable{/i}",
                         CreatureId.None,
                         [Trait.Aberration],
-                        [DamageKind.Cold],
+                        [DamageKind.Cold, DamageKind.Piercing],
                         [Trait.Occult],
-                        null))
-                    .With(item => item.WithModification(ItemModification.Create("RENAME:starting trophy (horrifying aberration)"))),
+                        [DataConstants.TAGS_HIGHEST_SAVE+Defense.Reflex]))
+                    .With(item => item.WithModification(ItemRenaming.CreateRenameModification("starting trophy (horrifying aberration)"))),
                 CreateTrophy(TrophyDataToString(
                         "{i}an electric beast{/i}",
                         CreatureId.None,
-                        [Trait.Beast],
-                        [DamageKind.Electricity],
+                        [Trait.Beast, Trait.Electricity],
+                        [DamageKind.Electricity, DamageKind.Slashing],
                         [Trait.Primal],
-                        null))
-                    .With(item => item.WithModification(ItemModification.Create("RENAME:starting trophy (sparking beast)"))),
+                        [DataConstants.TAGS_HIGHEST_SAVE+Defense.Reflex]))
+                    .With(item => item.WithModification(ItemRenaming.CreateRenameModification("starting trophy (sparking beast)"))),
                 CreateTrophy(TrophyDataToString(
                         "{i}a fiery dragon{/i}",
                         CreatureId.None,
-                        [Trait.Dragon],
-                        [DamageKind.Fire],
+                        [Trait.Dragon, Trait.Fire],
+                        [DamageKind.Fire, DamageKind.Piercing],
                         [Trait.Arcane],
-                        null))
-                    .With(item => item.WithModification(ItemModification.Create("RENAME:starting trophy (flame dragon)"))),
+                        [DataConstants.TAGS_HIGHEST_SAVE+Defense.Fortitude]))
+                    .With(item => item.WithModification(ItemRenaming.CreateRenameModification("starting trophy (flame dragon)"))),
                 CreateTrophy(TrophyDataToString(
                         "{i}an icy giant{/i}",
                         CreatureId.None,
-                        [Trait.Giant],
-                        [DamageKind.Cold],
+                        [Trait.Cold, Trait.Giant, Trait.Humanoid],
+                        [DamageKind.Bludgeoning, DamageKind.Cold],
                         [Trait.Primal],
-                        null))
-                    .With(item => item.WithModification(ItemModification.Create("RENAME:starting trophy (frost giant)"))),
+                        [DataConstants.TAGS_HIGHEST_SAVE+Defense.Fortitude]))
+                    .With(item => item.WithModification(ItemRenaming.CreateRenameModification("starting trophy (frost giant)"))),
                 CreateTrophy(TrophyDataToString(
                         "{i}a ghostly undead{/i}",
                         CreatureId.None,
-                        [Trait.Undead],
-                        [DamageSpirit.Spirit],
+                        [Trait.Ghost, Trait.Incorporeal, Trait.Spirit, Trait.Undead, UnholyTrait.Unholy],
+                        [DamageKind.Bludgeoning, DamageSpirit.Spirit],
                         [Trait.Divine],
-                        null))
-                    .With(item => item.WithModification(ItemModification.Create("RENAME:starting trophy (ghostly undead)"))),
+                        [DataConstants.TAGS_HIGHEST_SAVE+Defense.Will]))
+                    .With(item => item.WithModification(ItemRenaming.CreateRenameModification("starting trophy (ghostly undead)"))),
             ];
             foreach (Item trophy in startingTrophies)
                 trophy
