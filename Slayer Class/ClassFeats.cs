@@ -337,7 +337,6 @@ public static class ClassFeats
         #region 2nd-Level
 
         // Instant Enmity
-        // DOC: Since you can usually Mark a Quarry, this restores your previous marks once the Instant one dies.
         yield return new TrueFeat(
                 ModData.FeatNames.InstantEnmity,
                 2,
