@@ -702,17 +702,6 @@ public static class ClassFeats
                     {
                         if (action.ActionId != ModData.ActionIds.OnTheHunt)
                             return;
-                        
-                        MethodInfo? advancedMove = qfThis.Owner.GetType().GetMethod("StrideOrStepAdvancedAsync", BindingFlags.NonPublic | BindingFlags.Instance);
-                        
-                        if (advancedMove is null)
-                        {
-                            qfThis.Owner.Battle.Log(
-                                "ERROR: StepOrStrideAdvancedAsync method not found! Please report this error if found.",
-                                "ERROR!",
-                                "Please report this error if found to Anase Skyrider, either by leaving a comment on the workshop page to the Slayer Class mod, or by contacting me on the Dawnsbury Days Discord server.");
-                            return;
-                        }
 
                         // Get all my enemies,
                         // taking only the closest ones to me,
@@ -726,14 +715,11 @@ public static class ClassFeats
                             .Distinct() // Just in case creatures ever share tiles
                             .ToList();
                         
-                        // string topBarText, bool allowStep = false, Tile? strideTowards = null, bool allowCancel = false, bool allowPass = false, bool allowStride = true, int? maximumSpeed = null, string? passText = null, Func<Tile, bool>? permissibleTarget = null
-                        await (Task<bool>)advancedMove.Invoke(
-                            qfThis.Owner,
-                            [
-                                "Choose where to Step.",
-                                true, null, true, true, false, null, null,
-                                (Tile stepTo) => enemies.Any(enemy => stepTo.DistanceTo(enemy) <= qfThis.Owner.DistanceTo(enemy))
-                            ])!;
+                        await qfThis.Owner.StrideOrStepAdvancedAsync(
+                            "Choose where to Step.",
+                            true, null, true, true, false, null, null,
+                            stepTo => enemies.Any(enemy =>
+                                stepTo.DistanceTo(enemy) <= qfThis.Owner.DistanceTo(enemy)));
                     };
                 });
         
