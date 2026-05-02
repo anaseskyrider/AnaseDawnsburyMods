@@ -209,7 +209,7 @@ public static class HuntingTools
             foreach (HuntingTool tool in tools)
             {
                 if (!tool.LegalItem.HasValue
-                    || !tool.LegalItem.Value.ItemValidator.Invoke(item))
+                    || !tool.LegalItem.Value.ItemValidator.Invoke(slot.CharacterSheet.Calculated, item))
                     continue;
                 ToggleDesignation(tool, tool.LegalItem.Value.LegalityDescription);
             }
@@ -330,7 +330,7 @@ public static class HuntingTools
                 },
                 (
                     "simple or martial weapon",
-                    item => item.HasAnyTraits([Trait.Simple, Trait.Martial])
+                    (values, item) => item.HasAnyTraits([Trait.Simple, Trait.Martial]) || (values.HasFeat(ModData.FeatNames.PeculiarWeaponry) && item.HasTrait(Trait.Advanced))
                 ))
             .ToSignatureToolFeat(
                 "You have an even closer connection to your weapon than most slayers.",
@@ -579,7 +579,7 @@ public static class HuntingTools
                 },
                 (
                     "armor",
-                    item => item.HasTrait(Trait.Armor)
+                    (_, item) => item.HasTrait(Trait.Armor)
                 ))
             .ToSignatureToolFeat(
                 "Your armor isn’t just protection: it fits you perfectly, matching your movements and warding off your quarry.",

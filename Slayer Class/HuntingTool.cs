@@ -1,3 +1,4 @@
+using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics.Enumerations;
@@ -45,7 +46,7 @@ public class HuntingTool
     /// <summary>
     /// Organizes information on what items can be legally designated as this hunting tool. LegalityDescription should be short and simple, and singular. E.g. "simple or martial weapon", "armor", etc. If null, then the hunting tool is linked to a specific item and cannot be changed, or otherwise doesn't take up inventory space, such as the "alchemist's toolkit" for the chymist's vials. 
     /// </summary>
-    public (string LegalityDescription, Func<Item,bool> ItemValidator)? LegalItem { get; set; }
+    public (string LegalityDescription, Func<CalculatedCharacterSheetValues,Item,bool> ItemValidator)? LegalItem { get; set; }
     
     /// <summary>
     /// If true, then this tool's specialized arsenal benefits are known.
@@ -191,7 +192,7 @@ public class HuntingTool
         HuntingTools.ToolKind kind,
         Illustration icon,
         Func<Creature,bool,string> shortDescription,
-        (string legalityDescription, Func<Item,bool> itemValidator)? legalItem)
+        (string legalityDescription, Func<CalculatedCharacterSheetValues,Item,bool> itemValidator)? legalItem)
     {
         this.Name = name;
         this.FeatName = ModManager.RegisterFeatName(

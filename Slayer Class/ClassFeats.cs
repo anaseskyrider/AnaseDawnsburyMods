@@ -139,7 +139,7 @@ public static class ClassFeats
                 },
                 (
                     "shield",
-                    item => item.HasTrait(Trait.Shield)
+                    (_, item) => item.HasTrait(Trait.Shield)
                 ))
             .ToSecondaryToolFeat(
                 1,
@@ -204,6 +204,40 @@ public static class ClassFeats
         // Paired Bloodseeker
         
         // Peculiar Weaponry
+        yield return new TrueFeat(
+                    ModData.FeatNames.PeculiarWeaponry,
+                    1,
+                    "You specialize in an unusual weapon, whether a common soldier's armament or a unique tool few can use.",
+                    $$"""
+                    If your bloodseeking blade signature tool is a simple weapon, increase its damage die size by one step.
+
+                    Your bloodseeking blade signature tool can be an advanced weapon, in addition to simple or martial, and you treat any advanced weapon you've designated as your signature tool as if it were a martial weapon for the purposes of proficiency {i}({{ModData.Illustrations.DdSun.IllustrationAsIconString}} your proficiency won't display in your inventory, but works in combat){/i}.
+                    """,
+                    [ModData.Traits.Slayer])
+            .WithPrerequisite(
+                values => HuntingTools.GetTool(values, HuntingTools.ToolId.BloodseekingBlade) is not null,
+                "You must know the bloodseeking blade signature tool.")
+            .WithOnSheet(values =>
+            {
+                values.Proficiencies.Autoupgrade(
+                    [Trait.Martial],
+                    [Trait.Advanced, ModData.Traits.BloodseekingBlade]);
+            })
+            .WithPermanentQEffect(
+                "The damage die of simple bloodseeking blades increases by one step. You can have advanced bloodseeking blades, and they use your martial proficiency.",
+                qfFeat =>
+                {
+                    if (HuntingTools.GetTool(qfFeat.Owner, HuntingTools.ToolId.BloodseekingBlade)
+                        is not { } blade)
+                        return;
+                        
+                    if (qfFeat.Owner.AllItems.FirstOrDefault(blade.IsMyTool) is {} bladeItem
+                        && !bladeItem.Traits.Contains(ModData.Traits.BloodseekingBlade))
+                        bladeItem.Traits.Add(ModData.Traits.BloodseekingBlade);
+
+                    qfFeat.IncreaseItemDamageDie = (qfThis, item) =>
+                        blade.IsMyTool(item) && item.HasTrait(Trait.Simple);
+                });
 
         #endregion
 

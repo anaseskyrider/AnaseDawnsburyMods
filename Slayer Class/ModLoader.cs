@@ -1,4 +1,5 @@
-﻿using Dawnsbury.Modding;
+﻿using Dawnsbury.IO;
+using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.SlayerClass;
 public static class ModLoader
