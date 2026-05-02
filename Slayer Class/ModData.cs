@@ -59,12 +59,14 @@ public static class ModData
         public static ActionId OnTheHunt;
         public static ActionId MarkQuarry;
         public static ActionId ArmoredShelter;
+        public static ActionId HuntingSpike;
         
         public static void Initialize()
         {
             OnTheHunt = SafelyRegister<ActionId>("OnTheHunt");
             MarkQuarry = SafelyRegister<ActionId>("MarkQuarry");
             ArmoredShelter = SafelyRegister<ActionId>("ArmoredShelter");
+            HuntingSpike = SafelyRegister<ActionId>("HuntingSpike");
         }
     }
 
@@ -462,7 +464,17 @@ public static class ModData
         /// <summary>
         /// This trait is for the feats which represent your choice of a rune for your bloodseeking blade's specialized arsenal feature.
         /// </summary>
-        public static readonly Trait BloodseekingBladePropertyRune = ModManager.RegisterTrait("DoNotClaimTrophy", new TraitProperties("DoNotClaimTrophy", false));
+        public static readonly Trait BloodseekingBladePropertyRune = ModManager.RegisterTrait("BloodseekingBladePropertyRune", new TraitProperties("BloodseekingBladePropertyRune", false));
+        
+        /// <summary>
+        /// This trait is for the feats which represent your choice of the holy or unholy traits for your consecrated panoply.
+        /// </summary>
+        public static readonly Trait HuntingSpikeConsecration = ModManager.RegisterTrait("HuntingSpikeConsecration", new TraitProperties("HuntingSpikeConsecration", false));
+        
+        /// <summary>
+        /// This trait is for the feats which represent your choice of a weapon material for your consecrated panoply's specialized arsenal feature.
+        /// </summary>
+        public static readonly Trait HuntingSpikeMaterial = ModManager.RegisterTrait("HuntingSpikeMaterial", new TraitProperties("HuntingSpikeMaterial", false));
 
         #endregion
     }

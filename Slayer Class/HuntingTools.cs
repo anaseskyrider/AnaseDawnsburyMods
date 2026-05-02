@@ -5,6 +5,8 @@ using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
@@ -18,12 +20,16 @@ using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
+using Dawnsbury.Display;
 using Dawnsbury.Display.ContextMenu;
 using Dawnsbury.Display.Controls;
 using Dawnsbury.Display.Controls.Statblocks;
 using Dawnsbury.Display.Illustrations;
+using Dawnsbury.Display.Text;
+using Dawnsbury.IO;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
+using SpiritDamage;
 
 namespace Dawnsbury.Mods.SlayerClass;
 
@@ -39,6 +45,14 @@ public static class HuntingTools
     /// Character sheet tag key to find the chosen ItemName runestone from your 7th-level bloodseeking blade specialized arsenal feature.
     /// </summary>
     public const string BLOODSEEKING_BLADE_RUNESTONE_KEY = "BLOODSEEKING_BLADE_SPECIALIZED_ARSENAL_RUNESTONE";
+    /// <summary>
+    /// Character sheet tag key to find the chosen consecration Trait from your consecrated panoply.
+    /// </summary>
+    public const string HUNTING_SPIKE_CONSECRATION_KEY = "HUNTING_SPIKE_CONSECRATION_KEY";
+    /// <summary>
+    /// Character sheet tag key to find the chosen material Trait from your 7th-level consecrated panoply specialized arsenal feature.
+    /// </summary>
+    public const string HUNTING_SPIKE_MATERIAL_KEY = "HUNTING_SPIKE_SPECIALIZED_ARSENAL_MATERIAL";
 
     #region ToolId
 
@@ -103,6 +117,8 @@ public static class HuntingTools
     public static ItemModificationKind ToolDesignation;
 
     public static ItemName ChymistsVials;
+
+    public static ItemName ConsecratedPanoply;
 
     #endregion
 
@@ -194,6 +210,20 @@ public static class HuntingTools
         
         /*ChymistsVials = ModManager.RegisterNewItemIntoTheShop(
             "")*/
+
+        ConsecratedPanoply = ModManager.RegisterNewItemIntoTheShop(
+            ModData.IdPrepend + "ConsecratedPanoply",
+            iName => new Item(
+                    iName,
+                    ModData.Illustrations.ConsecratedPanoply,
+                    "consecrated panoply",
+                    0, 0,
+                    [ModData.Traits.ModName, ModData.Traits.Slayer, Trait.Worn])
+                .WithDescription(
+                    "This harness or coat contains a seemingly endless array of charms and consecrated weapons, whether worn openly or in hidden pockets, and their blessings protect you and skewer your prey in equal measure.",
+                    "A slayer can designate this item as their consecrated panoply signature tool and reinforce it with trophies.")
+                .WithItemGreaterGroup(ModData.ItemGreaterGroups.ClassItems)
+                .WithItemGroup("Slayer"));
         
         // Hunting Tool designations
         InventoryContextMenu.Options.Add(new InventoryContextMenuOption((slot, item, inv) =>
@@ -517,9 +547,364 @@ public static class HuntingTools
                 "",
                 "",
                 "");*/
+
+        // Consecrated Panoply, choose holy or unholy
+        List<Trait> consecrationTraits = [HolyTrait.Holy, UnholyTrait.Unholy];
+        foreach (Trait trait in consecrationTraits)
+        {
+            string traitName = trait.ToStringOrTechnical();
+            yield return new Feat(
+                    ModManager.RegisterFeatName(
+                        ModData.IdPrepend + "HuntingSpikeConsecration." + traitName,
+                        traitName),
+                    null,
+                    $"Your hunting spikes gain the {traitName.ToLower()} trait.",
+                    [ModData.Traits.HuntingSpikeConsecration, trait],
+                    null)
+                .WithOnSheet(values =>
+                    values.Tags[HUNTING_SPIKE_CONSECRATION_KEY] = trait);
+        }
+        
+        // Consecrated Panoply, specialized arsenal material
+        var spikeMaterials = new List<(ItemName Material, Trait Trait, int Level)>
+        {
+            (ItemName.ColdIron, Trait.ColdIron, 7),
+            (ItemName.Silver, Trait.Silver, 7),
+            (ItemName.Adamantine, Trait.Adamantine, 13),
+        };
+        foreach ((ItemName material, Trait trait, int level) in spikeMaterials)
+        {
+            Item itemTemplate = Items.GetItemTemplate(material);
+            RuneProperties runeProperties = itemTemplate.RuneProperties!;
+            yield return new Feat(
+                    ModManager.RegisterFeatName(
+                        ModData.IdPrepend + "HuntingSpikeMaterial." + itemTemplate.Name,
+                        $"{{i}}{runeProperties.Prefix.Capitalize()}{{/i}} material"),
+                    runeProperties.FlavorText,
+                    $"Whenever you draw a hunting spike from your consecrated panoply, it gains the effects of the {material.ToLink(runeProperties.Prefix).WithTag("i")} material.",
+                    [..itemTemplate.Traits, ModData.Traits.HuntingSpikeMaterial],
+                    null)
+                .WithIllustration(itemTemplate.Illustration)
+                .WithLevel(level)
+                .WithOnSheet(values =>
+                    values.Tags[HUNTING_SPIKE_MATERIAL_KEY] = trait);
+        }
         
         // Consecrated Panoply
-        // TODO: Finish panoply
+        // DOC: Safeguard Charms' +1 is cumulative if a foe is both your quarry and applies your reinforced benefit. Removed Attack trait from the Hunting Spike activity, assuming it's unintentional to be at -5 before your first Strike and end at -10. Always grant the highest level runes for your level to the spikes. Add interesting small, typed damage bonuses at levels 7 and 13, with action compression at level 19. Move adamantine from 19 to 13. You can draw and Strike twice at level 19.
+        yield return new HuntingTool(
+                "Consecrated Panoply",
+                ToolId.ConsecratedPanoply,
+                ToolKind.Signature,
+                ModData.Illustrations.ConsecratedPanoply,
+                (self, isSpecialized) =>
+                {
+                    //var inventory = self.PersistentCharacterSheet?.Inventory.AllItems;
+                    var inventory = self.HeldItems
+                        .Concat(self.CarriedItems)
+                        .Append(self.BaseArmor ?? self.Armor.Item ?? null)
+                        .WhereNotNull()
+                        .ToList();
+                    Item? panoplyItem = inventory.FirstOrDefault(item =>
+                        GetToolId(item) is ToolId.ConsecratedPanoply);
+                    Item? trophy = panoplyItem is not null ? Trophies.GetTrophy(panoplyItem) : null;
+                    var data = trophy is not null ? Trophies.GetTrophyData(trophy) : null;
+
+                    string worn = "worn".WithColor(panoplyItem is null ? "Red" : "Green");
+                    var traitsList = data?.Traits?
+                        .Select(t => t.HumanizeLowerCase2().WithColor("Blue"))
+                        .ToList() ?? [];
+                    string traits = data?.Traits is null
+                        ? "creatures with any of the trophy's traits"
+                        : S.ConstructOrList(traitsList) + " creatures";
+                    var traditionsList = data?.Traditions?
+                        .Select(t =>
+                            t.HumanizeLowerCase2().WithColor(t.TraditionTraitToColor()))
+                        .ToList() ?? [];
+                    string traditions = data?.Traditions is null
+                        ? "spells of any of the trophy's traditions"
+                        : S.ConstructOrList(traditionsList) + " spells";
+                    int? potency = self.Level switch
+                    {
+                        >= 16 => 3,
+                        >= 10 => 2,
+                        >= 2 => 1,
+                        _ => null
+                    };
+                    string? striking = self.Level switch
+                    {
+                        >= 19 => "major striking",
+                        >= 12 => "greater striking",
+                        >= 4 => "striking",
+                        _ => null
+                    };
+                    int numDice = self.Level switch
+                    {
+                        >= 19 => 4,
+                        >= 12 => 3,
+                        >= 4 => 2,
+                        _ => 1
+                    };
+                    string runeDescription = (potency is not null ? "+" + potency + " " : null) + striking;
+                    if (!string.IsNullOrEmpty(runeDescription))
+                        runeDescription = "{i}{Blue}" + runeDescription + "{/Blue}{/i} ";
+                    Trait? consecration = self.PersistentCharacterSheet?.Calculated
+                        .GetTagOrNull<Trait>(HUNTING_SPIKE_CONSECRATION_KEY);
+                    Trait? material = self.PersistentCharacterSheet?.Calculated
+                        .GetTagOrNull<Trait>(HUNTING_SPIKE_MATERIAL_KEY);
+                    string traitDescription =
+                        consecration?.ToStringOrTechnical().ToLower()
+                        + (consecration is not null && material is not null ? ", " : null)
+                        + material?.HumanizeLowerCase2();
+                    if (!string.IsNullOrEmpty(traitDescription))
+                        traitDescription = " {Blue}(" + traitDescription + "){/Blue}";
+                    string? arsenal = null;
+                    if (isSpecialized)
+                    {
+                        arsenal += $"\n{{b}}Specialized{{/b}} Your hunting spikes deal {numDice} persistent {"bleed".WithColor(DamageKind.Bleed.DamageKindToColor())} damage, and can be cold iron or silver.";
+                        if (self.Level >= 13)
+                            arsenal = arsenal
+                                .Replace("damage,", $" and {numDice} {"spirit".WithColor(DamageSpirit.Spirit.DamageKindToColor())} damage;")
+                                .Replace("cold iron or silver", "cold iron, silver, or adamantine");
+                        if (self.Level >= 19)
+                            arsenal += " You draw and Strike twice with Hunting Spike.";
+                    }
+                    
+                    return $$"""
+                             {b}Safeguard Charms{/b} If {{worn}}, you gain a +1 status bonus to saves against your quarry.
+                             {b}Reinforced{/b} You also gain this bonus (+2 for your quarry) against {{traits}}, and against {{traditions}}.
+                             {b}Hunting Spike {icon:Action}{/b} [manipulate, relentless] If you have a free hand, draw and Strike with one of your {{runeDescription}}hunting spikes{{traitDescription}}.
+                             """ + arsenal;
+                },
+                (
+                    "harness or coat",
+                    (_, item) => item.ItemName == ConsecratedPanoply
+                ))
+            .ToSignatureToolFeat(
+                "Whether you worship a deity or not, you know that their trappings are anathema to many of the creatures you hunt.",
+                "You gain an item you can designate as your consecrated panoply when you Reinforce your Arsenal, gaining the following benefits while worn.",
+                "{b}Safeguard Charms{/b} While wearing this signature tool, the consecrated charms within protect you from harm. You gain a +1 status bonus to saving throws against your quarry.",
+                "You also gain this bonus against creatures with any of the trophy's traits and against spells of any of the trophy's traditions. This increases to +2 against your quarry.",
+                $"{{b}}Hunting Spike {{icon:Action}}{{/b}} (manipulate, relentless) {{b}}Requirements{{/b}} You have a free hand; {{b}}Effect{{/b}} You draw and Strike with one of your endless {ModData.Illustrations.HuntingSpike.IllustrationAsIconString} hunting spikes (these function as {ItemName.Dagger.ToLink("daggers")}). Your hunting spikes have either the holy or unholy trait, chosen when you Reinforce your Arsenal. Your panoply imbues the effects of the best fundamental runes for your level onto your spikes.",
+                $"Your hunting spikes deal an additional 1 persistent {"bleed".WithColor(DamageKind.Bleed.DamageKindToColor())} damage per weapon damage die. In addition, they are treated as either cold iron or silver, chosen when you Reinforce your Arsenal. At 13th level, your spikes deal 1 additional {"spirit".WithColor(DamageSpirit.Spirit.DamageKindToColor())} damage per weapon damage die, and you can choose adamantine instead of cold iron or silver. At 19th level, you can draw and Strike twice when you use the Hunting Spike activity.")
+            .WithExtraTrait(Trait.Rebalanced)
+            .WithFreeInventoryItem(ConsecratedPanoply)
+            .WithOnSheet(values =>
+            {
+                values.AtEndOfRecalculationBeforeMorningPreparations += values2 =>
+                {
+                    if (GetTool(values2, ToolId.ConsecratedPanoply) is not { } panoplyTool)
+                        return;
+                    
+                    // Slaying Technique, technically
+                    values.AddSelectionOption(new SingleFeatSelectionOption(
+                        "HuntingSpikeConsecration",
+                        "Hunting Spike consecration",
+                        SelectionOption.PRECOMBAT_PREPARATIONS_LEVEL,
+                        ft => ft.HasTrait(ModData.Traits.HuntingSpikeConsecration)));
+                    
+                    // Specialized benefit
+                    if (panoplyTool.AccessSpecialized)
+                    {
+                        values.AddSelectionOption(new SingleFeatSelectionOption(
+                            "HuntingSpikeMaterial",
+                            "Hunting Spike special material",
+                            SelectionOption.PRECOMBAT_PREPARATIONS_LEVEL,
+                            ft => ft.HasTrait(ModData.Traits.HuntingSpikeMaterial) && ft.LevelIfAny <= values2.CurrentLevel));
+                    }
+                };
+            })
+            .WithOnCreature(self =>
+            {
+                // Determination can be made on load since the item can't move anywhere after combat starts
+                if (HuntingTools.GetTool(self, ToolId.ConsecratedPanoply) is not { } panoplyTool
+                    || self.CarriedItems.FirstOrDefault(panoplyTool.IsMyTool) is not {} panoplyItem
+                    || Trophies.GetTrophy(panoplyItem) is not {} trophy
+                    || Trophies.GetTrophyData(trophy) is not {} data)
+                    return;
+                
+                QEffect panoplyQf = new QEffect()
+                {
+                    // Debugging identifier
+                    Name = "[HUNTING TOOL: CONSECRATED PANOPLY]",
+                    // Initial Benefit
+                    BonusToDefenses = (qfThis, action, def) =>
+                    {
+                        if (action?.Owner is null
+                            || !def.IsSavingThrow())
+                            return null;
+
+                        int bonus = 0;
+                        string subtitle = "";
+                        
+                        // Quarry
+                        if (Slayer.IsMyQuarry(qfThis.Owner, action.Owner))
+                        {
+                            bonus++;
+                            subtitle += "quarry";
+                        }
+                        
+                        // Reinforced Benefit
+                        if (action.Owner.Traits.ContainsOneOf([..data.Traits, ..data.Traditions])
+                            || (action.HasTrait(Trait.Spell) && data.Traditions.Contains(action.SpellcastingSource!.SpellcastingTradition)))
+                        {
+                            bonus++;
+                            if (subtitle is not "")
+                                subtitle += ", ";
+                            subtitle += "reinforced";
+                        }
+
+                        return bonus > 0
+                            ? new Bonus(bonus, BonusType.Status, $"Consecrated panoply ({subtitle})")
+                            : null;
+                    },
+                    ProvideMainAction = qfThis =>
+                    {
+                        Trait? consecration = self.PersistentCharacterSheet?.Calculated
+                            .GetTagOrNull<Trait>(HUNTING_SPIKE_CONSECRATION_KEY);
+                        Trait? material = self.PersistentCharacterSheet?.Calculated
+                            .GetTagOrNull<Trait>(HUNTING_SPIKE_MATERIAL_KEY);
+                        Item displaySpike = CreateHuntingSpike(qfThis.Owner, ItemName.Dagger, consecration, material, panoplyTool.AccessSpecialized);
+                        string? striking = displaySpike.WeaponProperties!.DamageDieCount switch
+                        {
+                            >= 4 => "major striking",
+                            >= 3 => "greater striking",
+                            >= 2 => "striking",
+                            _ => null
+                        };
+                        string runeDescription = (displaySpike.WeaponProperties!.ItemBonus > 0 ? "+" + displaySpike.WeaponProperties!.ItemBonus + " " : null) + striking;
+                        if (!string.IsNullOrEmpty(runeDescription))
+                            runeDescription = " {i}{Blue}" + runeDescription + "{/Blue}{/i} ";
+                        string traitDescription =
+                            consecration?.ToStringOrTechnical().ToLower()
+                            + (consecration is not null && material is not null ? ", " : null)
+                            + material?.HumanizeLowerCase2();
+                        if (!string.IsNullOrEmpty(traitDescription))
+                            traitDescription = " {Blue}(" + traitDescription + "){/Blue}";
+
+                        return qfThis.Owner.HasFeat(ModData.FeatNames.ExpansivePanoply)
+                            ? new SubmenuPossibility(
+                                ModData.Illustrations.HuntingSpike,
+                                "Hunting Spike")
+                            {
+                                SpellIfAny = HuntingSpikeAction(null, null),
+                                Subsections =
+                                [
+                                    new PossibilitySection("Base Items")
+                                    {
+                                        Possibilities = new List<ItemName>([ItemName.Dagger, ItemName.Shortsword, ItemName.Club])
+                                            .Select(Possibility (iName) =>
+                                                new ActionPossibility(HuntingSpikeAction(iName,
+                                                    iName.ToStringOrTechnical())))
+                                            .ToList(),
+                                    }
+                                ]
+                            }
+                            : new ActionPossibility(HuntingSpikeAction(ItemName.Dagger, "Dagger"));
+                        
+                        CombatAction HuntingSpikeAction(ItemName? weapon, string? subtitle)
+                        {
+                            bool isThrowable = weapon is ItemName.Dagger or ItemName.Club;
+
+                            string? itemDescription = weapon is not null
+                                ? $"\n\n{{b}}{subtitle}{{/b}} {Monk.DescribeAttack(Items.CreateNew(weapon.Value)).Replace("wizardweapon", null).Replace("rogueweapon", null).Replace("bardweapon", null).Replace(", ,", ",").Replace(", ,", ",")}"
+                                : null;
+                            
+                            return new CombatAction(
+                                    qfThis.Owner,
+                                    ModData.Illustrations.HuntingSpike,
+                                    "Hunting Spike" + (subtitle is not null ? " (" + subtitle + ")" : null),
+                                    [ModData.Traits.ModName, Trait.Manipulate, ModData.Traits.Relentless, Trait.Basic],
+                                    $$"""
+                                    {b}Requirements{/b} You have a free hand
+
+                                    You draw and Strike with one of your{{runeDescription}}hunting spikes{{traitDescription}}.{{(panoplyTool.AccessSpecialized && self.Level >= 19 ? " {Blue}You can do this twice.{/Blue}" : null)}}{{itemDescription}}
+                                    """,
+                                    Target.Self()
+                                        .WithAdditionalRestriction(self2 =>
+                                            self2.HasFreeHand
+                                            || (isThrowable 
+                                                && self2.QEffects.Any(qf =>
+                                                    qf.Id == ModData.QEffectIds.CrossbowSlayer &&
+                                                    self2.HeldItems.Any(item => item == qf.Tag)))
+                                                ? null
+                                                : "No free hand"))
+                                .WithActionCost(1)
+                                .WithActionId(ModData.ActionIds.HuntingSpike)
+                                .WithEffectOnSelf(async self2 =>
+                                {
+                                    if (weapon is null)
+                                        return;
+
+                                    await DoActivity();
+                                    
+                                    if (panoplyTool.AccessSpecialized && self.Level >= 19)
+                                        await DoActivity();
+
+                                    return;
+                                    
+                                    async Task DoActivity()
+                                    {
+                                        Item huntingSpike = CreateHuntingSpike(self2, weapon.Value, consecration, material, panoplyTool.AccessSpecialized);
+                                        
+                                        // Increase its thrown range, if any
+                                        if (self2.FindQEffect(ModData.QEffectIds.CrossbowSlayer) is var xbs
+                                            && xbs is not null
+                                            && huntingSpike.WeaponProperties!.Throwable)
+                                            huntingSpike.WeaponProperties!
+                                                .WithThrownXFeet(Math.Max(
+                                                    ((Item)xbs.Tag!).WeaponProperties!.RangeIncrement,
+                                                    huntingSpike.WeaponProperties!.RangeIncrement));
+
+                                        // Cache helds and add the spike
+                                        List<Item> helds = self2.HeldItems.ToList();
+                                        if (xbs is not null)
+                                        {
+                                            self2.HeldItems.Clear();
+                                        }
+                                        self2.AddHeldItem(huntingSpike);
+                                        
+                                        await self2.Battle.GameLoop.StateCheck();
+                                        
+                                        await CommonCombatActions.StrikeCreature(
+                                            self2,
+                                            strike =>
+                                            {
+                                                if (!(strike.Item?.Name.ToLower().Contains("hunting spike") ?? false))
+                                                    return false;
+                                                if (xbs is not null && strike.StrikeModifiers.CalculatedRangeKind is RangeKind.Melee)
+                                                    return false;
+                                                return true;
+                                            },
+                                            strike =>
+                                            {
+                                                // This is a thrown strike
+                                                if (strike.Item!.WeaponProperties!.Throwable
+                                                    && strike.StrikeModifiers.CalculatedRangeKind is RangeKind.Ranged)
+                                                {
+                                                    // End it early if possible
+                                                    strike.WithEffectOnSelf(async _ =>
+                                                    {
+                                                        xbs?.ExpiresAt = ExpirationCondition.Immediately;
+                                                    });
+                                                }
+                                            },
+                                            null,
+                                            ModData.Illustrations.HuntingSpike,
+                                            null, true, "Pass");
+
+                                        // Restore helds if necessary
+                                        if (xbs is not null)
+                                            self2.HeldItems.AddRange(helds);
+                                        // End later if necessary
+                                        xbs?.ExpiresAt = ExpirationCondition.Immediately;
+                                    }
+                                });
+                        }
+                    },
+                };
+                self.AddQEffect(panoplyQf);
+            });
         
         // Warded Mail
         yield return new HuntingTool(
@@ -728,5 +1113,83 @@ public static class HuntingTools
 
                 self.AddQEffect(mailQf);
             });
+    }
+
+    public static Item CreateHuntingSpike(Creature slayer, ItemName baseWeapon, Trait? consecration = null, Trait? material = null, bool isSpecialized = false)
+    {
+        Item spike = Items.CreateNew(baseWeapon);
+        spike.ProsaicName = "hunting spike (" + spike.BaseItemName.ToStringOrTechnical().ToLower() + ")";
+        spike.Illustration = ModData.Illustrations.HuntingSpike;
+        spike.Price = 0;
+        spike.Traits.Add(Trait.EncounterEphemeral);
+        spike.Traits.Add(Trait.HandEphemeral);
+        if (consecration is not null)
+            spike.Traits.Add(consecration.Value);
+        if (material is not null)
+            spike.Traits.Add(material.Value);
+        spike.WeaponProperties!.ItemBonus = slayer.Level switch
+        {
+            >= 16 => 3,
+            >= 10 => 2,
+            >= 2 => 1,
+            _ => 0
+        };
+        spike.WeaponProperties!.DamageDieCount = slayer.Level switch
+        {
+            >= 19 => 4,
+            >= 12 => 3,
+            >= 4 => 2,
+            _ => 1
+        };
+        if (isSpecialized)
+        {
+            if (slayer.Level >= 7)
+                spike.WeaponProperties!.WithAdditionalPersistentDamage(spike.WeaponProperties!.DamageDieCount.ToString(), DamageKind.Bleed);
+            if (slayer.Level >= 13)
+                spike.WeaponProperties!.WithAdditionalDamage(spike.WeaponProperties!.DamageDieCount.ToString(), DamageSpirit.Spirit);
+        }
+        return spike;
+    }
+    
+    /// <summary>
+    /// Appends OnSheet behavior which adds the given item to your inventory if it doesn't exist.
+    /// </summary>
+    internal static Feat WithFreeInventoryItem(this Feat toolFeat, ItemName freeItem)
+    {
+        return toolFeat
+            .WithOnSheet(values =>
+            {
+                // Create collection of all inventories, campaign and free play
+                var inventories = new Dictionary<int, Inventory>(values.Sheet.InventoriesByLevel)
+                {
+                    { 0, values.Sheet.CampaignInventory }
+                };
+                foreach (var (level, inv) in inventories)
+                {
+                    // If you don't have the free item, add it
+                    Item? firstFreeItem = inv.AllItems.FirstOrDefault(item => item.ItemName == freeItem);
+                    
+                    if (firstFreeItem is not null)
+                        continue;
+                    
+                    firstFreeItem = Items.CreateNew(freeItem);
+                    if (inv.IsEmpty
+                        && inventories
+                                .Where(kvp => kvp.Key >= 1 && kvp.Key < level && !kvp.Value.IsEmpty)
+                                .Select(kvp => kvp.Value)
+                                .LastOrDefault()
+                            is {} prevInv)
+                    {
+                        inv.BecomeFrom(prevInv);
+                    }
+                    inv.AddAtEndOfBackpack(firstFreeItem);
+                }
+            });
+    }
+
+    internal static Feat WithExtraTrait(this Feat toolFeat, Trait trait)
+    {
+        toolFeat.Traits.Add(trait);
+        return toolFeat;
     }
 }
