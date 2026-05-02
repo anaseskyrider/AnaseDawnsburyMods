@@ -910,7 +910,7 @@ public static class Trophies
             return "Smoke Vision";
         if (tag.Contains(DataConstants.TAGS_HIGHEST_SAVE))
             return Enum.TryParse(tag[DataConstants.TAGS_HIGHEST_SAVE.Length..], true, out Defense defense)
-                ? "highest save is " + defense.ToStringOrTechnical()
+                ? "highest save is " + defense.ToStringOrTechnical().WithColor(defense.ToColor())
                 : throw new Exception("Unknown Defense for Data Tag HighestSave: " + tag);
         throw new Exception("Unknown Trophy Data Tag: " + tag);
     }
