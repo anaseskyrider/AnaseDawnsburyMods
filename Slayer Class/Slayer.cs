@@ -667,6 +667,7 @@ public static class Slayer
                     new Traits([ModData.Traits.Slayer]));
             });
 
+        return goHunting;
     }
 
     public static QEffect OnTheHunt(Creature slayer)
@@ -678,6 +679,7 @@ public static class Slayer
         onTheHunt.DoNotShowUpOverhead = true;
         onTheHunt.Description =
             "You have an extra action each turn. It can only be used to Step, Stride, or use an action with the relentless trait.";
+        onTheHunt.Key = ModData.CommonQfKeys.ON_THE_HUNT;
         return onTheHunt;
     }
 }
