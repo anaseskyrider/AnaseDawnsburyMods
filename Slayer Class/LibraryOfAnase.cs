@@ -1,4 +1,5 @@
 using System.Reflection;
+using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Campaign.Encounters.Tutorial;
 using Dawnsbury.Campaign.Path;
@@ -18,6 +19,7 @@ using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
@@ -33,6 +35,7 @@ namespace Dawnsbury.Mods.SlayerClass;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
+/// <item>v1.7: Refactored string.ToColor, added string.WithTag() and string.WithLink(). Refactored some ToLink() functions and added more to various enums. Added Feat.With(). Added Defense.ToColor(). Add functions to filter valid Strike possibilities to CommonCombatActions.StrikeCreature() and .GetStrikePossibilities(). GetStrikePossibilities also now adds a thrown Strike for melee thrown weapons.</item>
 /// <item>v1.6: Added Trait extensions: IsTraditionTrait(), TraditionTraitToColor(). Added Feat.ToLink(caption). Added Item.With(). Converted various overloads into instance and static extension blocks. Added more flexible CommonCombatActions.StrikeCreature overload. Added CombatAction.CreatePass and a parameter to OfferOptions2 that uses it. Added FilterAnyPossibility2 functions to allow seeing SubmenuPossibilities.</item>
 /// <item>v1.5: Replaced error-prone params keywords with regular arrays. Added RefundReaction extensions. Added more robust PluralizeIf extension. Added ModManager extensions.</item>
 /// <item>v1.4: Added Item.WithDescription(flavorText, rulesText).</item>
@@ -41,7 +44,7 @@ namespace Dawnsbury.Mods.SlayerClass;
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
-/// <value>v1.6</value>
+/// <value>v1.7</value>
 public static class LibraryOfAnase
 {
     #region Extensions
@@ -191,6 +194,27 @@ public static class LibraryOfAnase
                 + (string.IsNullOrEmpty(rulesText) ? null : "\n\n");
             return item.WithDescription(newFlavor + rulesText);
         }
+
+        /// <summary>
+        /// Outputs a link to this item.
+        /// </summary>
+        /// <param name="caption">The caption of the link, such as "dagger".</param>
+        public string ToLink(string caption)
+        {
+            return item.ItemName.ToLink(caption);
+        }
+    }
+
+    extension(ItemName itemName)
+    {
+        /// <summary>
+        /// Outputs a link to this item.
+        /// </summary>
+        /// <param name="caption">The caption of the link, such as "dagger".</param>
+        public string ToLink(string caption)
+        {
+            return caption.WithLink(itemName.ToStringOrTechnical());
+        }
     }
     
     extension(Actions actions)
@@ -257,14 +281,77 @@ public static class LibraryOfAnase
 
     extension(Feat feat)
     {
+        /// <summary>
+        /// Runs any modifications to the Feat in one code block, similar to Zone.With().
+        /// </summary>
+        public Feat With(Action<Feat> changes)
+        {
+            changes.Invoke(feat);
+            return feat;
+        }
+        
+        /// <summary>
+        /// Outputs a link to this feat.
+        /// </summary>
+        /// <param name="caption">The caption of the link, such as "Shield Block {icon:Reaction}".</param>
         public string ToLink(string caption)
         {
-            return "{link:" + feat.ToTechnicalName() + "}" + caption + "{/}";
+            return feat.FeatName.ToLink(caption);
+        }
+    }
+
+    extension(FeatName featName)
+    {
+        /// <summary>
+        /// Outputs a link to this feat.
+        /// </summary>
+        /// <param name="caption">The caption of the link, such as "Shield Block {icon:Reaction}".</param>
+        public string ToLink(string caption)
+        {
+            return caption.WithLink(featName.ToStringOrTechnical());
+        }
+    }
+
+    extension(Defense def)
+    {
+        public string ToColor()
+        {
+            switch (def)
+            {
+                case Defense.AC:
+                    return nameof(Color.DimGray);
+                case Defense.Reflex:
+                    return nameof(Color.Goldenrod);
+                case Defense.Fortitude:
+                    return nameof(Color.Green);
+                case Defense.Will:
+                    return nameof(Color.Fuchsia);
+                default:
+                    return "Black";
+            }
         }
     }
 
     extension(ModManager)
     {
+        /// <summary>
+        /// Registers the source enum to the game, or returns the original if it's already registered.
+        /// </summary>
+        /// <param name="technicalName">The technicalName string of the enum being registered.</param>
+        /// <param name="displayName">The human-readable name of the enum, if the type supports a humanized name.</param>
+        /// <typeparam name="T">The enum being registered to.</typeparam>
+        /// <returns>The newly registered enum.</returns>
+        public static T SafelyRegisterEnumMember<T>(string technicalName, string? displayName = null) where T : struct, Enum
+        {
+            if (ModManager.TryParse(technicalName, out T alreadyRegistered))
+                return alreadyRegistered;
+            Type type = typeof(T);
+            if (type == typeof(FeatName))
+                return (T)(Enum)ModManager.RegisterFeatName(technicalName, displayName);
+            
+            return ModManager.RegisterEnumMember<T>(technicalName);
+        }
+        
         /// <summary>
         /// Creates a custom "Mod" trait which indicates which mod the traited content comes from. This trait is visible with a basic description that uses your humanized mod name.
         /// </summary>
@@ -284,17 +371,17 @@ public static class LibraryOfAnase
                     false));
         }
         
-        /// <summary>
-        /// As <see cref="ModManager.AddFeat"/>, but it removes the Mod trait and adds your mod's specific trait.
-        /// </summary>
-        /// <param name="newFeat">The feat to register.</param>
-        /// <param name="modName">The mod-source trait to replace the "Mod" trait with.</param>
-        public static void AddFeat(Feat newFeat, Trait modName)
-        {
-            ModManager.AddFeat(newFeat);
-            newFeat.Traits.Remove(Trait.Mod);
-            newFeat.Traits.Insert(0, modName);
-        }
+/// <summary>
+/// As <see cref="ModManager.AddFeat"/>, but it removes the Mod trait and adds your mod's specific trait.
+/// </summary>
+/// <param name="newFeat">The feat to register.</param>
+/// <param name="modName">The mod-source trait to replace the "Mod" trait with.</param>
+public static void AddFeat(Feat newFeat, Trait modName)
+{
+    ModManager.AddFeat(newFeat);
+    newFeat.Traits.Remove(Trait.Mod);
+    newFeat.Traits.Insert(0, modName);
+}
         
         /// <summary>
         /// As <see cref="ModManager.AddFeat"/>, but it registers the given strings as a mod-source trait and replaces the "Mod" trait with the new trait.
@@ -314,19 +401,19 @@ public static class LibraryOfAnase
     extension(CommonCombatActions)
     {
         /// <summary>
-        /// Functions as <see cref="CommonCombatActions.StrikeCreature(Creature, Func{Creature,bool}?, bool, string?, bool)"/> except you can overwrite the topbar's icon and question, and modify each Strike as it's being generated.
+        /// Functions as <see cref="CommonCombatActions.StrikeCreature(Creature, Func{Creature,bool}?, bool, string?, bool)"/> except you can overwrite the topbar's icon and question, modify each Strike as it's being generated, and filter Strikes.
         /// </summary>
         public static async Task<bool> StrikeCreature(
             Creature self,
-            Func<Creature, bool>? isValidTarget,
+            Func<CombatAction, bool>? isValidStrike,
             Action<CombatAction>? adjustStrike,
+            Func<Creature, bool>? isValidTarget,
             Illustration? topBarIcon,
             string? topBarText,
             bool allowCancel,
-            string? allowPass,
-            bool meleeOnly)
+            string? allowPass)
         {
-            List<Option> possibilities = CommonCombatActions.GetStrikePossibilities(self, meleeOnly, isValidTarget, adjustStrike);
+            List<Option> possibilities = CommonCombatActions.GetStrikePossibilities(self, isValidStrike, adjustStrike, isValidTarget);
             if (allowCancel)
                 possibilities.Add(new CancelOption(true));
             else if (allowPass != null)
@@ -351,19 +438,46 @@ public static class LibraryOfAnase
         }
         
         /// <summary>
-        /// Functions as <see cref="CommonCombatActions.GetStrikePossibilities(Creature, bool, Func{Creature,bool}?)"/> except you can modify each Strike as it's being generated.
+        /// Functions as <see cref="CommonCombatActions.GetStrikePossibilities(Creature, bool, Func{Creature,bool}?)"/> except you can modify each Strike as it's being generated, and filter Strikes.
         /// </summary>
         public static List<Option> GetStrikePossibilities(
             Creature self,
-            bool meleeOnly,
-            Func<Creature, bool>? isValidTarget,
-            Action<CombatAction>? adjustStrike)
+            Func<CombatAction, bool>? isValidStrike,
+            Action<CombatAction>? adjustStrike,
+            Func<Creature, bool>? isValidTarget)
         {
             List<Option> options = [];
-            foreach (Item obj in meleeOnly ? self.MeleeWeapons : self.Weapons)
+            foreach (Item item in self.Weapons)
             {
-                CombatAction strike = self.CreateStrike(obj)
-                    .WithActionCost(0);
+                CombatAction strike = StrikeRules.CreateStrike(
+                        self,
+                        item,
+                        item.HasTrait(Trait.Ranged)
+                            ? RangeKind.Ranged
+                            : RangeKind.Melee,
+                        -1);
+                FilterAndAdd(strike);
+                // If this is a melee weapon that can be thrown, add another possibility
+                if (item.HasTrait(Trait.Melee) && item.WeaponProperties!.Throwable)
+                {
+                    CombatAction thrown = StrikeRules.CreateStrike(
+                        self,
+                        item,
+                        RangeKind.Ranged,
+                        -1,
+                        true);
+                    FilterAndAdd(thrown);
+                }
+            }
+            return options;
+
+            void FilterAndAdd(CombatAction strike)
+            {
+                strike.WithActionCost(0);
+                if (strike.Item!.HasTrait(Trait.Ranged))
+                    strike.WithSoundEffect(strike.SoundEffectName ?? SfxName.Bow);
+                if (isValidStrike?.Invoke(strike) is not true)
+                    return;
                 adjustStrike?.Invoke(strike);
                 if (isValidTarget != null)
                     ((CreatureTarget) strike.Target).CreatureTargetingRequirements.Add(new LegacyCreatureTargetingRequirement((a, d) =>
@@ -372,7 +486,6 @@ public static class LibraryOfAnase
                             : Usability.Usable));
                 GameLoop.AddDirectUsageOnCreatureOptions(strike, options);
             }
-            return options;
         }
     }
 
@@ -388,6 +501,21 @@ public static class LibraryOfAnase
                 ? ":" + template.CombatActionSpell.SpellInformation.ClassOfOrigin.ToStringOrTechnical() + ":" + spellLevel
                 : "";
             return $"{{i}}{{link:{template.SpellId.ToStringOrTechnical()}{str}}}{template.Name.ToLower()}{{/link}}{{/i}}";
+        }
+    }
+
+    extension(SpellId id)
+    {
+        /// <summary>
+        /// Outputs a link to this spell.
+        /// </summary>
+        /// <param name="caption">The caption of the link, such as "fireball" or "5th-level fireball". Spell names should be in lower-case.</param>
+        /// <param name="classOfOrigin">The class origin of this spell, if any.</param>
+        /// <param name="spellLevel">The specific level of the spell, if any.</param>
+        public string ToLink(string caption, Trait? classOfOrigin, int? spellLevel)
+        {
+            string?[] parameters = [classOfOrigin?.ToStringOrTechnical(), spellLevel?.ToString()];
+            return caption.WithLink(id.ToStringOrTechnical(), parameters.WhereNotNull().ToArray());
         }
     }
 
@@ -594,14 +722,31 @@ public static class LibraryOfAnase
     extension(string text)
     {
         /// <summary>
-        /// Adds color tags to the given string.
+        /// Surrounds a given string with color tags.
         /// </summary>
         /// <param name="color">The color, formatted as "Green", to be added to the string.</param>
-        /// <returns></returns>
         public string WithColor(string color)
         {
-            color = color.Capitalize();
-            return "{"+color+"}" + text + "{/"+color+"}";
+            return text.WithTag(color.Capitalize());
+        }
+
+        /// <summary>
+        /// Surrounds a string with any arbitrary tag. 
+        /// </summary>
+        /// <param name="tag">The tag to be added to the string, such as "i".</param>
+        public string WithTag(string tag)
+        {
+            return "{"+tag+"}" + text + "{/"+tag+"}";
+        }
+
+        /// <summary>
+        /// Surrounds a given humanized string with a basic link tag.
+        /// </summary>
+        /// <param name="link">The link technical name such as "MinorHealingPotion".</param>
+        /// <param name="parameters">If this link has parameters like a spell's class or level, this is those parameters.</param>
+        public string WithLink(string link, string[]? parameters = null)
+        {
+            return "{link:" + link + (parameters is not null ? string.Join("", parameters.Select(para => ":" + para)) : null) + "}" + text + "{/}";
         }
 
         /// <summary>
@@ -626,8 +771,7 @@ public static class LibraryOfAnase
         /// <returns></returns>
         public string WithColor(string color)
         {
-            color = color.Capitalize();
-            return "{"+color+"}" + number + "{/"+color+"}";
+            return number.ToString().WithColor(color);
         }
     }
 

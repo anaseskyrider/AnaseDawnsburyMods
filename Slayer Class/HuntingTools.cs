@@ -284,11 +284,7 @@ public static class HuntingTools
                         ModData.IdPrepend + "BloodseekingBladePropertyRune." + itemTemplate.Name,
                         $"{{i}}{runeProperties.Prefix.Capitalize()}{{/i}} property rune"),
                     runeProperties.FlavorText,
-                    $$"""
-                       At the start of an encounter, your bloodseeking blade gains the effects of the {i}{{runeProperties.Prefix}}{/i} property rune. This doesn't count against the number of property runes the weapon may have.
-                       
-                       {b}{{runeProperties.Prefix.Capitalize()}}:{/b} {{runeProperties.RulesText}}
-                       """,
+                    $"At the start of an encounter, your bloodseeking blade gains the effects of the {rune.ToLink(runeProperties.Prefix).WithTag("i")} property rune. This doesn't count against the number of property runes the weapon may have.",
                     [..itemTemplate.Traits, ModData.Traits.BloodseekingBladePropertyRune],
                     null)
                 .WithIllustration(itemTemplate.Illustration)
