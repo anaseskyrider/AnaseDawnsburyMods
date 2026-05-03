@@ -1,0 +1,53 @@
+<Project>
+
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Platform>x64</Platform>
+        <PlatformTarget>x64</PlatformTarget>
+        <Configurations>Debug;Release</Configurations>
+        <NoWarn>1998;NETSDK1206;NU1901;NU1902;NU1903;NU1904</NoWarn>
+        <WarningsAsErrors>0618</WarningsAsErrors>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!-- Personal file path to your Dawnsbury Days directory-->
+        <DawnsburyInstall>Z:\Steam Library\steamapps\common\Dawnsbury Days</DawnsburyInstall>
+        <!-- Personal file path to your Dawnsbury Days workshop directory -->
+        <WorkshopInstalls>Z:\Steam Library\steamapps\workshop\content\2693730</WorkshopInstalls>
+        <!-- Portraits folder var -->
+        <Tokens1Folder>CustomPortraits</Tokens1Folder>
+        <!-- Portraits with ring folder var -->
+        <Tokens2Folder>CustomPortraitsWithCustomRing</Tokens2Folder>
+        <!-- Maps folder var -->
+        <MapsFolder>CustomMaps</MapsFolder>
+        <!-- Export each project to this folder in the repo root directory. -->
+        <!-- Because each project has its own Targets, this includes the directory backstep. -->
+        <WorkshopExport>..\[Exports]</WorkshopExport>
+    </PropertyGroup>
+
+    <!-- Async analyzer -->
+    <ItemGroup>
+        <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+    <PropertyGroup>
+        <NoWarn>$(NoWarn);VSTHRD200</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Reference Include="Common">
+            <HintPath>$(DawnsburyInstall)\Data\Common.dll</HintPath>
+        </Reference>
+        <Reference Include="Dawnsbury Days">
+            <HintPath>$(DawnsburyInstall)\Data\Dawnsbury Days.dll</HintPath>
+        </Reference>
+        <Reference Include="MonoGame.Framework">
+            <HintPath>$(DawnsburyInstall)\Data\MonoGame.Framework.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+
+</Project>
