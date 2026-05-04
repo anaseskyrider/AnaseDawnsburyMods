@@ -1,21 +1,12 @@
 <Project>
 
     <PropertyGroup>
-        <TargetFramework>net10.0-windows</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <Platform>x64</Platform>
-        <PlatformTarget>x64</PlatformTarget>
-        <Configurations>Debug;Release</Configurations>
-        <NoWarn>1998;NETSDK1206;NU1901;NU1902;NU1903;NU1904</NoWarn>
-        <WarningsAsErrors>0618</WarningsAsErrors>
-    </PropertyGroup>
-
-    <PropertyGroup>
+    
         <!-- Personal file path to your Dawnsbury Days directory-->
-        <DawnsburyInstall>Z:\Steam Library\steamapps\common\Dawnsbury Days</DawnsburyInstall>
+        <DawnsburyInstall>.....steamapps\common\Dawnsbury Days</DawnsburyInstall>
         <!-- Personal file path to your Dawnsbury Days workshop directory -->
-        <WorkshopInstalls>Z:\Steam Library\steamapps\workshop\content\2693730</WorkshopInstalls>
+        <WorkshopInstalls>.....steamapps\workshop\content\2693730</WorkshopInstalls>
+
         <!-- Portraits folder var -->
         <Tokens1Folder>CustomPortraits</Tokens1Folder>
         <!-- Portraits with ring folder var -->
@@ -25,6 +16,17 @@
         <!-- Export each project to this folder in the repo root directory. -->
         <!-- Because each project has its own Targets, this includes the directory backstep. -->
         <WorkshopExport>..\[Exports]</WorkshopExport>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Platform>x64</Platform>
+        <PlatformTarget>x64</PlatformTarget>
+        <Configurations>Debug;Release</Configurations>
+        <NoWarn>1998;NETSDK1206;NU1901;NU1902;NU1903;NU1904</NoWarn>
+        <WarningsAsErrors>0618</WarningsAsErrors>
     </PropertyGroup>
 
     <!-- Async analyzer -->
