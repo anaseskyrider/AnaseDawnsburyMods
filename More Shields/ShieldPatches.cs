@@ -1,13 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
-using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
@@ -21,7 +17,6 @@ using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.StatBlocks.Monsters.L5;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
-using Dawnsbury.Display.Text;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
 
@@ -144,7 +139,7 @@ public static class ShieldPatches
     }
 
     /// <summary>
-    /// This function has been altered to track which shield is associated with this effect, while removing the behavior of adding YouAreDealtDamage functionality to it.
+    /// This function has been altered to track which shield is associated with this effect, plus minor cosmetic improvements; and handling for <see cref="ModData.Traits.CoverShield"/>, not just tower shields.
     /// </summary>
     /// <para>Devoted Guardian's effect tooltip gained some textual enhancements, has CountAsABuff set to true, and works with any cover shield instead of just tower shields.</para>
     /// <seealso cref="PatchShieldBlock"/>
@@ -199,6 +194,26 @@ public static class ShieldPatches
                             : new Bonus(shieldAC, BonusType.Circumstance, "raised shield");
 
                     };
+                    // If you can block with this shield for any reason, add this reduction reaction
+                    if (shieldBlock)
+                        qfThis.YouAreDealtDamageReaction = (qfThis2, dEvent) =>
+                        {
+                            DamageStuff damageStuff = new DamageStuff(
+                                dEvent.TotalResolvedDamage,
+                                dEvent.CombatAction,
+                                dEvent.KindedDamages.First().DamageKind);
+                            
+                            // Uses normal triggers for Shield Block
+                            if ((!damageStuff.Kind.IsPhysical()
+                                 || damageStuff.Power == null
+                                 || !damageStuff.Power.HasTrait(Trait.Attack)
+                                 || damageStuff.Power.ActionId == ActionId.Trip)
+                                && !Magus.DoesSparklingTargeShieldBlockApply(damageStuff, qfThis2.Owner))
+                                return null;
+                            
+                            // Use new function
+                            return CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2(dEvent, dEvent.TargetCreature, qfThis2.Owner, shield);
+                        };
                 });
             
             // Adds devoted guardian to the target
@@ -237,7 +252,7 @@ public static class ShieldPatches
     }
 
     /// <summary>
-    /// The ShieldBlock ability provides a wood-impact sound when blocking the attack, and always contains YouAreDealtDamage functionality (requires you to have a shield raised, consolidates multiple raised shields to a single prompt if you have multiple). Does not rely on any action or function to add anything beyond an effect with the <see cref="QEffectId.RaisingAShield"/> id and an Item in its .Tag field.
+    /// The ShieldBlock ability now has a stat block description.
     /// </summary>
     [HarmonyPatch(typeof(QEffect), nameof(QEffect.ShieldBlock))]
     internal static class PatchShieldBlock
@@ -245,29 +260,6 @@ public static class ShieldPatches
         internal static void Postfix(ref QEffect __result)
         {
             __result.Description = "If you take physical damage while a shield is raised, you can block with it to reduce the damage.";
-            
-            __result.WhenYouUseShieldBlock = async (_, _, _, _) =>
-                Sfxs.Play(ModData.SfxNames.ShieldBlockWooodenImpact);
-            
-            // qfThis.Owner is the creature receiving damage reduction.
-            // defender is the creature reducing the damage.
-            // ShieldWarden passes the shield-user as the defender to the effect-owner.
-            __result.YouAreDealtDamage = async (qfThis, attacker, damageStuff, defender) =>
-            {
-                // Still performs standard checks for standard shield blocking
-                if ((!damageStuff.Kind.IsPhysical()
-                     || damageStuff.Power == null
-                     || !damageStuff.Power.HasTrait(Trait.Attack))
-                    && !Magus.DoesSparklingTargeShieldBlockApply(damageStuff, defender))
-                    return null;
-
-                /* Does not look for a raised shield
-                 * OfferAndMakeShieldBlock returns null if there's no shield
-                 */
-                
-                // Uses async function to pick just one shield to block with.
-                return await CommonShieldRules.OfferAndMakeShieldBlock(attacker, defender, damageStuff, qfThis.Owner);
-            };
         }
     }
 

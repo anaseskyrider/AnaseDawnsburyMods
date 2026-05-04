@@ -1,21 +1,19 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
-using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
+using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
+using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Display.Text;
 using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.MoreShields;
@@ -225,7 +223,86 @@ public static class CommonShieldRules
 
     // These functions relate to using Shield Block.
     #region Shield Block
+    
+    /// <summary>
+    /// This functions as <see cref="Fighter.ShieldBlockYouAreDealtDamageReaction"/>, except it no longer checks for stuff like whether damage is physical, and contains visual several enhancements. It uses a ReactionOption associated with a CombatAction for more detailed tooltip information.
+    /// </summary>
+    /// <param name="adjustReaction">If this Shield Block reaction is special in any meaningful way, adjust it here.</param>
+    public static ReactionOptions ShieldBlockYouAreDealtDamageReaction2(
+        // ReSharper disable once InvalidXmlDocComment
+        DamageEvent damageEvent,
+        // ReSharper disable once InvalidXmlDocComment
+        Creature targetedCreature,
+        // ReSharper disable once InvalidXmlDocComment
+        Creature blockingCreature,
+        // ReSharper disable once InvalidXmlDocComment
+        Item shield,
+        Action<ReactionOption>? adjustReaction = null)
+    {
+        DamageStuff damageStuff = new DamageStuff(
+            damageEvent.TotalResolvedDamage,
+            damageEvent.CombatAction,
+            damageEvent.KindedDamages.First().DamageKind);
 
+        int hardness = shield.Hardness + CommonShieldRules.GetShieldBlockHardnessBonuses(damageEvent.Source, damageStuff, targetedCreature, blockingCreature);
+        int preventHowMuch = Math.Min(hardness, damageStuff.Amount);
+
+        CombatAction displayReaction = ShieldBlockAction(blockingCreature, shield, hardness);
+
+        ReactionOption reaction = ReactionOption.CreateFromCombatActionCustom(
+                displayReaction,
+                $"{shield.Illustration.IllustrationAsIconString} Prevent {S.AllOrNumber(preventHowMuch, damageStuff.Amount)} of this damage.",
+                async () =>
+                {
+                    // Adds an impact sound
+                    Sfxs.Play(ModData.SfxNames.ShieldBlockWooodenImpact);
+
+                    foreach (QEffect qf in blockingCreature.QEffects.ToList())
+                        await qf.WhenYouUseShieldBlock.InvokeIfNotNull(qf, damageEvent.Source, targetedCreature,
+                            preventHowMuch);
+
+                    // Touched up overhead:
+                    // - add reaction symbol to overhead
+                    // - add CombatAction-like description
+                    blockingCreature.Overhead(
+                        "Shield Block {icon:Reaction}", // Don't include the item name
+                        Color.White,
+                        $"{blockingCreature} uses {{b}}Shield Block{{/b}} {{icon:Reaction}} to mitigate {{b}}{preventHowMuch}{{/b}} damage.",
+                        displayReaction.Name + " {icon:Reaction}",
+                        displayReaction.Description,
+                        displayReaction.Traits);
+
+                    damageEvent.ReduceBy(preventHowMuch, "Shield block");
+                })
+            .WithIsReaction()
+            .WithTraits(Trait.ShieldBlock);
+        adjustReaction?.Invoke(reaction);
+        
+        return reaction;
+    }
+
+    /// <summary>
+    /// Creates a Shield Block combat action used for display purposes only. The optional parameters let you specify the effects of a specific event.
+    /// </summary>
+    public static CombatAction ShieldBlockAction(Creature blocker, Item? shield, int? hardness)
+    {
+        return new CombatAction(
+                blocker,
+                ModData.Illustrations.ShieldBlock,
+                "Shield Block" + (shield is not null ? " ("  + shield.Name + ")" : ""),
+                [ModData.Traits.ModName, Trait.General, Trait.ShieldBlock],
+                $$"""
+                  {i}You snap your shield in place to ward off a blow.{/i}
+
+                  {b}Trigger{/b} While you have your shield raised, you would take damage from a physical attack.
+
+                  Your {{(shield is not null ? shield.Illustration.IllustrationAsIconString + " " + shield.Name.WithColor("Blue") : "shield")}} prevents you from taking up to {{hardness?.WithColor("Blue") ?? "the shield's hardness in"}} damage. You take any remaining damage.
+                  """,
+                Target.Self())
+            .WithActionCost(0);
+    }
+
+    [Obsolete("Use QEffect.YouAreDealtDamageReaction and CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2.")]
     public static async Task<DamageModification?> OfferAndMakeShieldBlock(
         Creature attacker,
         Creature defender,
@@ -235,6 +312,7 @@ public static class CommonShieldRules
         return await OfferAndMakeShieldBlock(attacker, defender, dStuff, blocker, null);
     }
 
+    [Obsolete("Use QEffect.YouAreDealtDamageReaction and CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2.")]
     public static async Task<DamageModification?> OfferAndMakeShieldBlock(
         Creature attacker,
         Creature defender,
@@ -288,6 +366,7 @@ public static class CommonShieldRules
     /// <param name="finalHardness">The shield's final hardness, after bonuses have been added up.</param>
     /// <param name="preventHowMuch">The amount of damage actually prevented (the final hardness, but only up to the actual damage dealt).</param>
     /// <returns></returns>
+    [Obsolete("Use QEffect.YouAreDealtDamageReaction and CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2.")]
     public static async Task<DamageModification?> ShieldBlockYouAreDealtDamage(
         Creature attacker,
         Creature defender,
@@ -306,9 +385,6 @@ public static class CommonShieldRules
             "Shield block {icon:Reaction}" + " (" + shieldName + ")",
             "{i}You snap your shield in place to ward off a blow.{/i}\n\n{b}Trigger{/b} While you have your shield raised, you would take damage from a physical attack.\n\nYour {Blue}" + shieldName + "{/Blue} prevents you from taking up to {Blue}" + finalHardness + "{/Blue} damage. You take any remaining damage.",
             new Traits([Trait.General]));
-        
-        // Adds an impact sound
-        //Sfxs.Play(ModData.SfxNames.ShieldBlockWooodenImpact);
         
         return new ReduceDamageModification(preventHowMuch, "Shield block");
     }

@@ -8,6 +8,7 @@ using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
@@ -30,162 +31,178 @@ public static class OldShields
     {
         // Aggressive Block
         // Patches alter this ability's associated QEffects.
-        Feat aggressiveBlock = AllFeats.GetFeatByFeatName(FeatName.AggressiveBlock);
-        aggressiveBlock.RulesText = aggressiveBlock.RulesText
-            .Replace(
-                "adjacent enemy",
-                "adjacent enemy of your size or smaller")
-            .Replace(
-                "to push",
-                "to automatically Shove");
+        AdjustFeatByEnum(FeatName.AggressiveBlock, aggroBlock =>
+        {
+            aggroBlock.RulesText = aggroBlock.RulesText
+                .Replace(
+                    "adjacent enemy",
+                    "adjacent enemy of your size or smaller")
+                .Replace(
+                    "to push",
+                    "to automatically Shove");
+        });
         
         // Shield Warden
         // The feat now independently handles defending allies.
-        Feat shieldWarden = AllFeats.GetFeatByFeatName(FeatName.ShieldWarden);
-        shieldWarden.Traits.Insert(0, ModData.Traits.ModName);
-        shieldWarden.OnCreature = null;
-        shieldWarden.WithPermanentQEffect(
-            "You can use Shield Block to prevent damage to an adjacent ally.",
-            qfFeat =>
-            {
-                qfFeat.Id = QEffectId.ShieldWarden;
-                qfFeat.AddGrantingOfTechnical(
-                    cr =>
-                        cr.FriendOfAndNotSelf(qfFeat.Owner) && cr.IsAdjacentTo(qfFeat.Owner),
-                    qfTech =>
+        AdjustFeatByEnum(FeatName.ShieldWarden, shieldWarden =>
+        {
+            shieldWarden.OnCreature = null;
+            shieldWarden.WithPermanentQEffect(
+                "You can use Shield Block to prevent damage to an adjacent ally.",
+                qfFeat =>
+                {
+                    qfFeat.Id = QEffectId.ShieldWarden;
+                    qfFeat.AfterYouAcquireEffect = async (qfFeat2, qfNew) =>
                     {
-                        qfTech.YouAreDealtDamage = async (qfThis, attacker, damageStuff, defender) =>
-                        {
-                            // Uses normal triggers for Shield Block
-                            if ((!damageStuff.Kind.IsPhysical()
-                                 || damageStuff.Power == null
-                                 || !damageStuff.Power.HasTrait(Trait.Attack))
-                                && !Magus.DoesSparklingTargeShieldBlockApply(damageStuff, qfFeat.Owner))
-                                return null;
-
-                            // TODO: Enhance stat block info from other SB triggers.
-                            return await CommonShieldRules.OfferAndMakeShieldBlock(attacker, defender, damageStuff, qfFeat.Owner);
-                        };
-                    });
-            });
+                        // When you raise a shield,
+                        if (qfNew.Id is not QEffectId.RaisingAShield)
+                            return;
+                        // Add the technical effect.
+                        qfNew.AddGrantingOfTechnical(
+                            cr =>
+                                cr.FriendOfAndNotSelf(qfFeat2.Owner) && cr.IsAdjacentTo(qfFeat2.Owner),
+                            qfTech =>
+                            {
+                                qfTech.YouAreDealtDamageReaction = (qfTech2, dEvent) =>
+                                {
+                                    DamageStuff damageStuff = new DamageStuff(
+                                        dEvent.TotalResolvedDamage,
+                                        dEvent.CombatAction,
+                                        dEvent.KindedDamages.First().DamageKind);
+        
+                                    // Uses normal triggers for Shield Block
+                                    if ((!damageStuff.Kind.IsPhysical()
+                                         || damageStuff.Power == null
+                                         || !damageStuff.Power.HasTrait(Trait.Attack)
+                                         || damageStuff.Power.ActionId == ActionId.Trip)
+                                        && !Magus.DoesSparklingTargeShieldBlockApply(damageStuff, qfFeat2.Owner))
+                                        return null;
+                                    
+                                    return CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2(
+                                        dEvent,
+                                        qfTech2.Owner,
+                                        qfFeat2.Owner,
+                                        (Item)qfNew.Tag!,
+                                        react =>
+                                            react.Caption = react.Caption.Replace("Shield Block", "Shield Warden"));
+                                };
+                            });
+                    };
+                });
+        });
         
         // Devoted Guardian
         // The feat now independently inserts its own action, and (homebrew) works with a Fortress Shield too. Description is also much more dynamic.
-        Feat devotedGuardian = AllFeats.GetFeatByFeatName(Champion.DevotedGuardianFeatName);
-        devotedGuardian.RulesText = devotedGuardian.RulesText.Replace("was a tower shield", "has the Cover Shield trait");
-        devotedGuardian.Traits.Insert(0, ModData.Traits.ModName);
-        devotedGuardian.Traits.Add(ModData.Traits.ShieldActionFeat);
-        devotedGuardian.OnCreature = null;
-        devotedGuardian.WithPermanentQEffect(
-            "You can raise your shield so that it grants an AC bonus also to an adjacent ally.",
-            qfFeat =>
-            {
-                qfFeat.Id = QEffectId.DevotedGuardian;
-                qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+        AdjustFeatByEnum(Champion.DevotedGuardianFeatName, devGuard =>
+        {
+            devGuard.RulesText = devGuard.RulesText.Replace("was a tower shield", "has the Cover Shield trait");
+            devGuard.Traits.Add(ModData.Traits.ShieldActionFeat);
+            devGuard.OnCreature = null;
+            devGuard.WithPermanentQEffect(
+                "You can raise your shield so that it grants an AC bonus also to an adjacent ally.",
+                qfFeat =>
                 {
-                    Item? shield = null;
-                    bool isRaised = false;
-                    // If this section is found, then this shield isn't raised
-                    if (section.Name == "Raise shield")
+                    qfFeat.Id = QEffectId.DevotedGuardian;
+                    qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
                     {
-                        var options = section.Filter(actPoss =>
-                            actPoss.CombatAction.ActionId is ActionId.RaiseShield);
-                        if ((options?.Possibilities.FirstOrDefault() as ActionPossibility) is { } raise)
-                            shield = raise.CombatAction.Item;
-                    }
-                    // Provide the action directly to the item section, outside the submenu.
-                    else if (section.PossibilitySectionId == PossibilitySectionId.ItemActions)
-                    {
-                        // Create this action only for the last shield that was raised with my last action
-                        if (qfThis.Owner.HasEffect(QEffectId.RaisingAShield)
-                            && qfThis.Owner.Actions.ActionHistoryThisTurn.LastOrDefault() is
-                                { ActionId: ActionId.RaiseShield } raise
-                            && !raise.Name.ToLower().Contains("devoted guardian"))
+                        Item? shield = null;
+                        bool isRaised = false;
+                        // If this section is found, then this shield isn't raised
+                        if (section.Name == "Raise shield")
                         {
-                            shield = raise.Item;
-                            isRaised = true;
+                            var options = section.Filter(actPoss =>
+                                actPoss.CombatAction.ActionId is ActionId.RaiseShield);
+                            if ((options?.Possibilities.FirstOrDefault() as ActionPossibility) is { } raise)
+                                shield = raise.CombatAction.Item;
                         }
-                    }
-
-                    if (shield is null
-                        || CommonShieldRules.GetAC(shield) is not { } acBonus )
-                        return null;
-
-                    int theirBonus = shield.HasTrait(ModData.Traits.CoverShield) ? 2 : 1;
-                    bool hasShieldBlock = qfThis.Owner.HasEffect(QEffectId.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
-
-                    CombatAction raiseGuardian = CommonShieldRules
-                        .CreateRaiseShieldCore(qfThis.Owner, shield, hasShieldBlock)
-                        .With(ca =>
+                        // Provide the action directly to the item section, outside the submenu.
+                        else if (section.PossibilitySectionId == PossibilitySectionId.ItemActions)
                         {
-                            // Will apply Fighter.RaiseShield as Devoted Guardian on ally.
-                            ca.Target = Target.AdjacentFriend();
-                        })
-                        .WithName("Devoted Guardian (" + shield.Name.ToLower().Capitalize() + ")")
-                        .WithDescription(
-                            "You adopt a wide stance, ready to defend both yourself and your chosen ward.",
-                            "Choose an adjacent ally. Until the start of your next turn, "
-                            + (isRaised
-                                ? $"your ally gains a {{Blue}}+{theirBonus}{{/Blue}} circumstance bonus to AC"
-                                : acBonus != theirBonus
-                                    ? $"you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC and the ally gains a {{Blue}}+{theirBonus}{{/Blue}} circumstance bonus to AC"
-                                    : $"both of you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC")
-                            + (hasShieldBlock && !isRaised
-                                ? ", and you can use the Shield Block {icon:Reaction} reaction"
-                                : null)
-                            + ".\n\nYour ally loses the bonus if they're no longer adjacent to you."
-                            + (isRaised
-                                ? "\n\n{icon:Action} {Green}(Last action was to Raise this Shield){/Green}"
-                                : null))
-                        .WithActionCost(isRaised ? 1 : 2)
-                        .WithActionId(ActionId.None); // So that you can't use this when offered to raise a shield
+                            // Create this action only for the last shield that was raised with my last action
+                            if (qfThis.Owner.HasEffect(QEffectId.RaisingAShield)
+                                && qfThis.Owner.Actions.ActionHistoryThisTurn.LastOrDefault() is
+                                    { ActionId: ActionId.RaiseShield } raise
+                                && !raise.Name.ToLower().Contains("devoted guardian"))
+                            {
+                                shield = raise.Item;
+                                isRaised = true;
+                            }
+                        }
 
-                    return new ActionPossibility(raiseGuardian);
-                };
-            });
+                        if (shield is null
+                            || CommonShieldRules.GetAC(shield) is not { } acBonus )
+                            return null;
+
+                        int theirBonus = shield.HasTrait(ModData.Traits.CoverShield) ? 2 : 1;
+                        bool hasShieldBlock = qfThis.Owner.HasEffect(QEffectId.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
+
+                        CombatAction raiseGuardian = CommonShieldRules
+                            .CreateRaiseShieldCore(qfThis.Owner, shield, hasShieldBlock)
+                            .With(ca =>
+                            {
+                                // Will apply Fighter.RaiseShield as Devoted Guardian on ally.
+                                ca.Target = Target.AdjacentFriend();
+                            })
+                            .WithName("Devoted Guardian (" + shield.Name.ToLower().Capitalize() + ")")
+                            .WithDescription(
+                                "You adopt a wide stance, ready to defend both yourself and your chosen ward.",
+                                "Choose an adjacent ally. Until the start of your next turn, "
+                                + (isRaised
+                                    ? $"your ally gains a {{Blue}}+{theirBonus}{{/Blue}} circumstance bonus to AC"
+                                    : acBonus != theirBonus
+                                        ? $"you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC and the ally gains a {{Blue}}+{theirBonus}{{/Blue}} circumstance bonus to AC"
+                                        : $"both of you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC")
+                                + (hasShieldBlock && !isRaised
+                                    ? ", and you can use the Shield Block {icon:Reaction} reaction"
+                                    : null)
+                                + ".\n\nYour ally loses the bonus if they're no longer adjacent to you."
+                                + (isRaised
+                                    ? "\n\n{icon:Action} {Green}(Last action was to Raise this Shield){/Green}"
+                                    : null))
+                            .WithActionCost(isRaised ? 1 : 2)
+                            .WithActionId(ActionId.None); // So that you can't use this when offered to raise a shield
+
+                        return new ActionPossibility(raiseGuardian);
+                    };
+                });
+        });
         
         // Shield Ally
         // The feat now adds a bonus to hardness that the game can broadly detect.
-        Feat shieldAlly = AllFeats.GetFeatByFeatName(Champion.ShieldAllyFeatName);
-        shieldAlly.Traits.Insert(0, ModData.Traits.ModName);
-        shieldAlly.OnCreature = null;
-        shieldAlly
-            .WithPermanentQEffect(
-                "When you prevent damage with Shield Block, you prevent 2 more damage.",
-                qfFeat =>
-                {
-                    qfFeat.Id = QEffectId.ShieldAlly;
-                })
-            .WithOnCreature(self =>
+        AdjustFeatByEnum(Champion.ShieldAllyFeatName, shieldAlly =>
+        {
+            shieldAlly.WithOnCreature(self =>
             {
                 self.AddQEffect(CommonShieldRules.BonusToShieldHardness(2, "Shield ally"));
             });
+        });
         
         // Sparkling Targe
         // The subclass now adds a bonus to hardness that the game can broadly detect.
         // The bonus also increases to 3 at level 15.
-        Feat sparklingTarge = AllFeats.GetFeatByFeatName(FeatName.SparklingTarge);
-        sparklingTarge.Traits.Insert(0, ModData.Traits.ModName);
-        sparklingTarge.OnCreature += (_, self) =>
+        AdjustFeatByEnum(FeatName.SparklingTarge, targe =>
         {
-            self.AddQEffect(CommonShieldRules.BonusToShieldHardness((_, stuff, _, blocker) =>
+            targe.OnCreature += (_, self) =>
             {
-                if (!Magus.DoesSparklingTargeShieldBlockApply(stuff, blocker))
-                    return null;
-                return new Bonus(
-                    blocker.Level >= 15 ? 3 : blocker.Level >= 7 ? 2 : 1,
-                    BonusType.Untyped,
-                    "Sparkling targe");
-            }));
-        };
+                self.AddQEffect(CommonShieldRules.BonusToShieldHardness((_, stuff, _, blocker) =>
+                {
+                    if (!Magus.DoesSparklingTargeShieldBlockApply(stuff, blocker))
+                        return null;
+                    return new Bonus(
+                        blocker.Level >= 15 ? 3 : blocker.Level >= 7 ? 2 : 1,
+                        BonusType.Untyped,
+                        "Sparkling targe");
+                }));
+            };
+        });
         
         // Reflexive Shield (More Dedications, Bastion Dedication, modded)
-        Feat? reflexiveShield = AllFeats.All.FirstOrDefault(feat => feat.Name.Contains("Reflexive Shield"));
-        if (reflexiveShield is not null)
+        Feat? reflexiveShield = null;
+        AdjustFeatByName("Reflexive Shield", feat =>
         {
-            reflexiveShield.Traits.Insert(0, ModData.Traits.ModName);
-            reflexiveShield.OnCreature = null;
-            reflexiveShield.WithPermanentQEffect(
+            reflexiveShield = feat;
+            feat.OnCreature = null;
+            feat.WithPermanentQEffect(
                 "Raise a Shield benefits your Reflex saves. If you have Shield Block, you can block any damage from a Reflex save.",
                 qfFeat =>
                 {
@@ -211,206 +228,220 @@ public static class OldShields
                     };
 
                     // Shield Block a Reflex save
-                    qfFeat.YouAreDealtDamage = async (qfThis, attacker, dStuff, defender) =>
-                        CommonShieldRules.DoesReflexiveShieldApply(dStuff.Power)
-                            ? await CommonShieldRules.OfferAndMakeShieldBlock(attacker, defender, dStuff, defender)
-                            : null;
-                    
-                    // Delayed in case of feat load orders
-                    qfFeat.StartOfCombatAfterInitiativeOrderIsSetUp = async qfThis =>
+                    qfFeat.YouAreDealtDamageReaction = (qfThis, dEvent) =>
                     {
-                        // Fire once
-                        qfThis.StartOfCombatAfterInitiativeOrderIsSetUp = null;
-                        
-                        // Shield Warden compatibility
-                        if (qfFeat.Owner.HasEffect(QEffectId.ShieldWarden))
-                        {
-                            qfFeat.AddGrantingOfTechnical(
-                                ally =>
-                                    ally.FriendOfAndNotSelf(qfFeat.Owner) && ally.IsAdjacentTo(qfFeat.Owner),
-                                qfAlly =>
-                                    qfAlly.YouAreDealtDamage = async (_, attacker, dStuff, defender) =>
-                                        CommonShieldRules.DoesReflexiveShieldApply(dStuff.Power)
-                                            ? await CommonShieldRules.OfferAndMakeShieldBlock(attacker, defender,
-                                                dStuff, qfFeat.Owner)
-                                            : null);
-                        }
+                        if (!CommonShieldRules.DoesReflexiveShieldApply(dEvent.CombatAction))
+                            return null;
+
+                        ReactionOptions options = [];
+                        foreach (Item shield in CommonShieldRules.GetRaisedShields(qfThis.Owner))
+                            options.Add(
+                                CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2(
+                                        dEvent,
+                                        dEvent.TargetCreature,
+                                        qfThis.Owner,
+                                        shield,
+                                        react =>
+                                            react.Caption = react.Caption.Replace("Shield Block", "Reflexive Shield"))
+                                    .First());
+
+                        return options;
                     };
-                });
-        }
-
-        Feat emergencyTarge = AllFeats.GetFeatByFeatName(FeatName.EmergencyTarge);
-        emergencyTarge.FlavorText = "Your targe comes readily in times of danger to avoid blows and spells.";
-        emergencyTarge.Traits.Insert(0, ModData.Traits.ModName);
-        emergencyTarge.OnCreature = null;
-        emergencyTarge.WithPermanentQEffect(
-            "You can Raise a Shield or cast {i}shield{/i} when you'd be hit by a melee attack or fail an enemy's spell save.",
-            qfFeat =>
-            {
-                qfFeat.YouAreTargetedByARoll = async (qfThis, action, breakdown) =>
-                {
-                    bool isSavingThrow;
-                    // is attack
-                    if (action.HasAnyTraits([Trait.Strike, Trait.Spell])
-                        && action.HasTrait(Trait.Melee)
-                        && action.ActiveRollSpecification == null)
-                    {
-                        if (breakdown.CheckResult < CheckResult.Success)
-                            return false;
-                        isSavingThrow = false;
-                    }
-                    // is saving throw
-                    else if (action.HasAnyTraits([Trait.Spell, Trait.Magical])
-                             && action.SavingThrow is not null)
-                    {
-                        if (breakdown.CheckResult > CheckResult.Failure)
-                            return false;
-                        isSavingThrow = true;
-                    }
-                    // neither
-                    else
-                        return false;
-
-                    return await AskToEmergencyTarge(qfThis.Owner, action, breakdown, isSavingThrow);
-                };
-
-                return;
-
-                async Task<bool> AskToEmergencyTarge(Creature defender, CombatAction action, CheckBreakdownResult breakdown, bool isSavingThrow = false)
-                {
-                    List<Item> shields = CommonShieldRules
-                        .GetWieldedShields(defender)
-                        .Union(defender.Spellcasting!.Sources
-                            .SelectMany(src => src.Spells
-                                .Where(spell => spell.SpellId is SpellId.Shield)
-                                .Select(spell =>
-                                    new Item(spell.Illustration, spell.Name)
-                                    {
-                                        Tag = spell
-                                    }))
-                            .ToList())
-                        .ToList();
-                    // Add shield spell as a dummy item.
-                    Item? shieldSpell = null;
-                    if (defender.Spellcasting?.Sources.Any(src =>
-                            src.Cantrips.Any(spell =>
-                                spell.SpellId is SpellId.Shield))
-                        ?? false)
-                    {
-                        shieldSpell = CreateShieldSpellItem();
-                        shields.Add(shieldSpell);
-                    }
-                    if (shields.Count == 0)
-                        return false;
-
-                    List<Item> raisableShields = shields
-                        .Except(CommonShieldRules.GetRaisedShields(defender))
-                        .ToList();
-                    if (shieldSpell is not null && defender.HasEffect(QEffectId.ShieldSpell))
-                        raisableShields.Remove(shieldSpell);
-
-                    int? threshold = null;
-                    List<Item> downgradeShields = [];
-                    if (isSavingThrow)
-                    {
-                        // If targe can handle it, then it's fine
-                        if (CommonShieldRules.DoesSparklingTargeShieldBlockApply(action, defender))
-                            threshold = breakdown.DetermineCircumstanceBonusThresholdNeededToUpgrade();
-                        // But if it's only because of Reflexive Shield, then the shield spell can't
-                        // actually block it, so remove it as a legal option.
-                        else if (reflexiveShield is not null
-                                 && defender.HasFeat(reflexiveShield.FeatName)
-                                 && CommonShieldRules.DoesReflexiveShieldApply(action))
-                        {
-                            threshold = breakdown.DetermineCircumstanceBonusThresholdNeededToUpgrade();
-                            if (shieldSpell is not null)
-                                raisableShields.Remove(shieldSpell);
-                        }
-                    }
-                    else // is melee attack
-                        threshold = breakdown.GetCircumstanceBonusThresholdNeededToDowngrade();
-                    
-                    if (threshold.HasValue)
-                        downgradeShields = raisableShields
-                            .Where(shield =>
-                                threshold <= CommonShieldRules.GetAC(shield))
-                            .ToList();
-                    bool canBeDowngraded = downgradeShields.Count > 0;
-                    List<Item> shieldOptions = canBeDowngraded
-                        ? downgradeShields
-                        : raisableShields;
-
-                    if (shieldOptions.Count == 0)
-                        return false;
-                    
-                    // Prettied text
-                    string question = "{b}Emergency Targe{/b} {icon:Reaction}\n";
-                    if (action.Owner == defender.Battle.Pseudocreature)
-                        question += "You're about to be hit by ";
-                    else
-                        question += "{Blue}" + action.Owner + "{/Blue} is about to hit you with ";
-                    question += "{Blue}" + action.Name + "{/Blue}.\nRaise a Shield";
-                    if (canBeDowngraded)
-                        question += $" and {(isSavingThrow ? "up" : "down")}grade the {breakdown.CheckResult.Greenify()} into a {(breakdown.CheckResult + (isSavingThrow ? 1 : -1)).Greenify()}?";
-                    // If you have a bonus reaction you could use
-                    else if (defender.Actions.DetermineReactionToUse(
-                                 question + "? {i}(You will still be hit but you'll be able to Shield Block.){/i}",
-                                 [Trait.ShieldBlock]) is not null)
-                        question += "? {i}(You will still be hit but you'll be able to Shield Block.){/i}";
-                    else
-                        return false;
-                    
-                    string[] stringOptions = shieldOptions
-                        .Select(shield =>
-                            shield.Illustration.IllustrationAsIconString + shield.Name)
-                        .ToArray();
-                    
-                    if (await defender.Battle.AskToUseReaction(
-                            defender,
-                            question,
-                            ModData.Illustrations.ReactiveShield, // New icon
-                            stringOptions) is not {} chosenIndex) // Lets you choose which shield to raise
-                        return false;
-                    
-                    Item chosenShield = shieldOptions[chosenIndex];
                         
-                    // Custom overhead
-                    defender.Overhead(
-                        "emergency targe",
-                        Color.Lime,
-                        defender + " uses {b}Emergency Targe{/b}.",
-                        "Emergency Targe {icon:Reaction}",
-                        "{i}Your targe comes readily in times of danger to avoid blows and spells.{/i}\n\nWhen an enemy would hit you with a melee Strike or a melee spell attack roll, or you would fail a save against an enemy's spell, as {icon:Reaction}a reaction, you can immediately raise a shield or cast {i}shield{/i} (its circumstance bonus applies to the triggering attack or spell).",
-                        new Traits([..AllFeats.GetFeatByFeatName(FeatName.EmergencyTarge).Traits, ModData.Traits.ReactiveAction]));
-
-                    if (chosenShield.Tag is SpellId.Shield)
-                        await LibraryOfAnase.OfferOptions2(
-                            defender,
-                            ap => ap.CombatAction.SpellId is SpellId.Shield);
-                    else
-                        Fighter.RaiseShield(defender, chosenShield, defender, false);
-
-                    return true;
-
-                    Item CreateShieldSpellItem() =>
-                        new Item(
-                            IllustrationName.ShieldSpell, "Shield",
-                            [Trait.Shield, ModData.Traits.LightShield])
+                    // Shield Warden compatibility
+                    if (qfFeat.Owner.HasEffect(QEffectId.ShieldWarden))
+                    {
+                        qfFeat.AfterYouAcquireEffect = async (qfFeat2, qfNew) =>
                         {
-                            Tag = SpellId.Shield
+                            // When you raise a shield,
+                            if (qfNew.Id is not QEffectId.RaisingAShield)
+                                return;
+                            // Add the technical effect.
+                            qfNew.AddGrantingOfTechnical(
+                                ally =>
+                                    ally.FriendOfAndNotSelf(qfFeat2.Owner) && ally.IsAdjacentTo(qfFeat2.Owner),
+                                qfAlly =>
+                                    qfAlly.YouAreDealtDamageReaction = (_, dEvent) => 
+                                        CommonShieldRules.DoesReflexiveShieldApply(dEvent.CombatAction)
+                                            ? CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2(dEvent, dEvent.TargetCreature, qfFeat2.Owner, (Item)qfNew.Tag!)
+                                            : null);
                         };
-                }
-            });
+                    }
+                });
+        });
+
+        AdjustFeatByEnum(FeatName.EmergencyTarge, eTarge =>
+        {
+            eTarge.FlavorText = "Your targe comes readily in times of danger to avoid blows and spells.";
+            eTarge.OnCreature = null;
+            eTarge.WithPermanentQEffect(
+                "You can Raise a Shield or cast {i}shield{/i} when you'd be hit by a melee attack or fail an enemy's spell save.",
+                qfFeat =>
+                {
+                    qfFeat.YouAreTargetedByARoll = async (qfThis, action, breakdown) =>
+                    {
+                        bool isSavingThrow;
+                        // is attack
+                        if (action.HasAnyTraits([Trait.Strike, Trait.Spell])
+                            && action.HasTrait(Trait.Melee)
+                            && action.ActiveRollSpecification == null)
+                        {
+                            if (breakdown.CheckResult < CheckResult.Success)
+                                return false;
+                            isSavingThrow = false;
+                        }
+                        // is saving throw
+                        else if (action.HasAnyTraits([Trait.Spell, Trait.Magical])
+                                 && action.SavingThrow is not null)
+                        {
+                            if (breakdown.CheckResult > CheckResult.Failure)
+                                return false;
+                            isSavingThrow = true;
+                        }
+                        // neither
+                        else
+                            return false;
+
+                        return await AskToEmergencyTarge(qfThis.Owner, action, breakdown, isSavingThrow);
+                    };
+
+                    return;
+
+                    async Task<bool> AskToEmergencyTarge(Creature defender, CombatAction action, CheckBreakdownResult breakdown, bool isSavingThrow = false)
+                    {
+                        List<Item> shields = CommonShieldRules
+                            .GetWieldedShields(defender)
+                            .Union(defender.Spellcasting!.Sources
+                                .SelectMany(src => src.Spells
+                                    .Where(spell => spell.SpellId is SpellId.Shield)
+                                    .Select(spell =>
+                                        new Item(spell.Illustration, spell.Name)
+                                        {
+                                            Tag = spell
+                                        }))
+                                .ToList())
+                            .ToList();
+                        // Add shield spell as a dummy item.
+                        Item? shieldSpell = null;
+                        if (defender.Spellcasting?.Sources.Any(src =>
+                                src.Cantrips.Any(spell =>
+                                    spell.SpellId is SpellId.Shield))
+                            ?? false)
+                        {
+                            shieldSpell = CreateShieldSpellItem();
+                            shields.Add(shieldSpell);
+                        }
+                        if (shields.Count == 0)
+                            return false;
+
+                        List<Item> raisableShields = shields
+                            .Except(CommonShieldRules.GetRaisedShields(defender))
+                            .ToList();
+                        if (shieldSpell is not null && defender.HasEffect(QEffectId.ShieldSpell))
+                            raisableShields.Remove(shieldSpell);
+
+                        int? threshold = null;
+                        List<Item> downgradeShields = [];
+                        if (isSavingThrow)
+                        {
+                            // If targe can handle it, then it's fine
+                            if (CommonShieldRules.DoesSparklingTargeShieldBlockApply(action, defender))
+                                threshold = breakdown.DetermineCircumstanceBonusThresholdNeededToUpgrade();
+                            // But if it's only because of Reflexive Shield, then the shield spell can't
+                            // actually block it, so remove it as a legal option.
+                            else if (reflexiveShield is not null
+                                     && defender.HasFeat(reflexiveShield.FeatName)
+                                     && CommonShieldRules.DoesReflexiveShieldApply(action))
+                            {
+                                threshold = breakdown.DetermineCircumstanceBonusThresholdNeededToUpgrade();
+                                if (shieldSpell is not null)
+                                    raisableShields.Remove(shieldSpell);
+                            }
+                        }
+                        else // is melee attack
+                            threshold = breakdown.GetCircumstanceBonusThresholdNeededToDowngrade();
+                        
+                        if (threshold.HasValue)
+                            downgradeShields = raisableShields
+                                .Where(shield =>
+                                    threshold <= CommonShieldRules.GetAC(shield))
+                                .ToList();
+                        bool canBeDowngraded = downgradeShields.Count > 0;
+                        List<Item> shieldOptions = canBeDowngraded
+                            ? downgradeShields
+                            : raisableShields;
+
+                        if (shieldOptions.Count == 0)
+                            return false;
+                        
+                        // Prettied text
+                        string question = "{b}Emergency Targe{/b} {icon:Reaction}\n";
+                        if (action.Owner == defender.Battle.Pseudocreature)
+                            question += "You're about to be hit by ";
+                        else
+                            question += "{Blue}" + action.Owner + "{/Blue} is about to hit you with ";
+                        question += "{Blue}" + action.Name + "{/Blue}.\nRaise a Shield";
+                        if (canBeDowngraded)
+                            question += $" and {(isSavingThrow ? "up" : "down")}grade the {breakdown.CheckResult.Greenify()} into a {(breakdown.CheckResult + (isSavingThrow ? 1 : -1)).Greenify()}?";
+                        // If you have a bonus reaction you could use
+                        else if (defender.Actions.DetermineReactionToUse(
+                                     question + "? {i}(You will still be hit but you'll be able to Shield Block.){/i}",
+                                     [Trait.ShieldBlock]) is not null)
+                            question += "? {i}(You will still be hit but you'll be able to Shield Block.){/i}";
+                        else
+                            return false;
+                        
+                        string[] stringOptions = shieldOptions
+                            .Select(shield =>
+                                shield.Illustration.IllustrationAsIconString + shield.Name)
+                            .ToArray();
+                        
+                        if (await defender.Battle.AskToUseReaction(
+                                defender,
+                                question,
+                                ModData.Illustrations.ReactiveShield, // New icon
+                                stringOptions) is not {} chosenIndex) // Lets you choose which shield to raise
+                            return false;
+                        
+                        Item chosenShield = shieldOptions[chosenIndex];
+                            
+                        // Custom overhead
+                        defender.Overhead(
+                            "emergency targe",
+                            Color.Lime,
+                            defender + " uses {b}Emergency Targe{/b}.",
+                            "Emergency Targe {icon:Reaction}",
+                            "{i}Your targe comes readily in times of danger to avoid blows and spells.{/i}\n\nWhen an enemy would hit you with a melee Strike or a melee spell attack roll, or you would fail a save against an enemy's spell, as {icon:Reaction}a reaction, you can immediately raise a shield or cast {i}shield{/i} (its circumstance bonus applies to the triggering attack or spell).",
+                            new Traits([..AllFeats.GetFeatByFeatName(FeatName.EmergencyTarge).Traits, ModData.Traits.ReactiveAction]));
+
+                        if (chosenShield.Tag is SpellId.Shield)
+                            await LibraryOfAnase.OfferOptions2(
+                                defender,
+                                ap => ap.CombatAction.SpellId is SpellId.Shield);
+                        else
+                            Fighter.RaiseShield(defender, chosenShield, defender, false);
+
+                        return true;
+
+                        Item CreateShieldSpellItem() =>
+                            new Item(
+                                IllustrationName.ShieldSpell, "Shield",
+                                [Trait.Shield, ModData.Traits.LightShield])
+                            {
+                                Tag = SpellId.Shield
+                            };
+                    }
+                });
+        });
         
         // Defensive Advance (Defensive Advance, modded)
-        Feat? defensiveAdvance = AllFeats.All.FirstOrDefault(feat => feat.Name.Contains("Defensive Advance"));
-        if (defensiveAdvance is not null)
+        AdjustFeatByName("Defensive Advance", defAdv =>
         {
             Illustration defAdvIcon = new ModdedIllustration("RDAssets/Advance.png");
-            defensiveAdvance.Traits.Insert(0, ModData.Traits.ModName);
-            defensiveAdvance.Traits.Add(ModData.Traits.ShieldActionFeat);
-            defensiveAdvance.OnCreature = null;
-            defensiveAdvance.WithPermanentQEffect(
+            defAdv.Traits.Insert(0, ModData.Traits.ModName);
+            defAdv.Traits.Add(ModData.Traits.ShieldActionFeat);
+            defAdv.OnCreature = null;
+            defAdv.WithPermanentQEffect(
                 null,
                 qfFeat =>
                 {
@@ -492,6 +523,40 @@ public static class OldShields
                         ];
                     };
                 });
+        });
+
+        // Emblazon Shield
+        // The feat now adds a bonus to hardness that the game can broadly detect.
+        AdjustFeatByEnum(FeatName.EmblazonShield, emblazonShield =>
+        {
+            emblazonShield.WithOnCreature(self =>
+            {
+                QEffect emblazonQf = CommonShieldRules.BonusToShieldHardness(1, "Emblazon shield")
+                    .WithName("Emblazon Shield");
+                emblazonQf.Description = "Your Shield Block with a physical shield prevents 1 more damage."; // Original description
+                self.AddQEffect(emblazonQf);
+            });
+        });
+
+        return;
+
+        void AdjustFeatByName(string featName, Action<Feat> adjustFeat)
+        {
+            Feat? feat = AllFeats.All.FirstOrDefault(feat => feat.Name.Contains(featName));
+            if (feat is not null)
+                AdjustFeat(feat, adjustFeat);
+        }
+
+        void AdjustFeatByEnum(FeatName featName, Action<Feat> adjustFeat)
+        {
+            Feat feat = AllFeats.GetFeatByFeatName(featName);
+            AdjustFeat(feat, adjustFeat);
+        }
+
+        void AdjustFeat(Feat feat, Action<Feat> adjustFeat)
+        {
+            feat.Traits.Insert(0, ModData.Traits.ModName);
+            adjustFeat(feat);
         }
     }
     
