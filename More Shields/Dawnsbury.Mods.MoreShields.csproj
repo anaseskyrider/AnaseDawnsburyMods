@@ -1,48 +1,47 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- See the template Directory.Builds.props for additional information -->
+  
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Platform>x64</Platform>
-    <PlatformTarget>x64</PlatformTarget>
-    <NoWarn>1998;NETSDK1206;NU1901;NU1902;NU1903;NU1904</NoWarn>
-    <WarningsAsErrors>0618</WarningsAsErrors>
-    <DevelopersDawnsburyInstall>Z:\Steam Library\steamapps\common\Dawnsbury Days</DevelopersDawnsburyInstall>
-    <WorkshopExport>[Workshop Files]\[Export]</WorkshopExport>
-    <AssetsFolder>MoreShieldsAssets</AssetsFolder>
+    <!--Modify This For Each Project-->
+    <ProjectName>MoreShields</ProjectName>
+  
+    <AssetsFolder>$(ProjectName)Assets</AssetsFolder>
   </PropertyGroup>
-
+  
   <ItemGroup>
-    <Reference Include="Common">
-      <HintPath>Z:\Steam Library\steamapps\common\Dawnsbury Days\Data\Common.dll</HintPath>
-    </Reference>
-    <Reference Include="Dawnsbury Days">
-      <HintPath>Z:\Steam Library\steamapps\common\Dawnsbury Days\Data\Dawnsbury Days.dll</HintPath>
-    </Reference>
-    <Reference Include="MonoGame.Framework">
-      <HintPath>Z:\Steam Library\steamapps\common\Dawnsbury Days\Data\MonoGame.Framework.dll</HintPath>
-    </Reference>
+    <!--<Reference Include="Dawnsbury.Mods.DawnniExpanded">
+      <HintPath>$(WorkshopInstalls)\3163146733\CustomMods\Dawnsbury.Mods.DawnniExpanded.dll</HintPath>
+    </Reference>-->
+    <!--<Reference Include="Dawnsbury.Mods.MoreShields">
+        <HintPath>..\More Shields\[Workshop Files]\[Export]\CustomModsV3\Dawnsbury.Mods.MoreShields.dll</HintPath>
+    </Reference>-->
   </ItemGroup>
-
+  
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
   </ItemGroup>
   
+  <!-- Asset Folders -->
+  <ItemGroup>
+    <Assets Include="$(AssetsFolder)\**\*.*"/>
+  </ItemGroup>
+  
   <Target Name="CopyToGameModsFolder" AfterTargets="Build">
-    <ItemGroup>
-      <Assets Include="$(AssetsFolder)\**\*.*"/>
-    </ItemGroup>
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods"/>
-    <Copy SourceFiles="@(Assets)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods\$(AssetsFolder)\%(RecursiveDir)"/>
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DawnsburyInstall)\CustomMods"/>
+    <Copy SourceFiles="@(Assets)" DestinationFolder="$(DawnsburyInstall)\CustomMods\$(AssetsFolder)\%(RecursiveDir)"/>
+  
+    <Message Text="Copied to game mod folder." />
   </Target>
-  <Target Name="CopyToWorkshopUploadable" AfterTargets="Build">
-    <ItemGroup>
-      <Assets Include="$(AssetsFolder)\**\*.*"/>
-    </ItemGroup>
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopExport)\CustomModsV3"/>
-    <Copy SourceFiles="0Harmony.dll" DestinationFolder="$(WorkshopExport)\CustomModsV3"/>
-    <Copy SourceFiles="OGL copyright notice.html" DestinationFolder="$(WorkshopExport)" ContinueOnError="true"/>
-    <Copy SourceFiles="@(Assets)" DestinationFolder="$(WorkshopExport)\CustomModsV3\$(AssetsFolder)\%(RecursiveDir)"/>
+  
+  <Target Name="CopyToWorkshopUploadable" AfterTargets="Build" Condition=" '$(Configuration)'=='Release' ">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopExport)\$(ProjectName)\CustomModsV3"/>
+    <Copy SourceFiles="0Harmony.dll" DestinationFolder="$(WorkshopExport)\$(ProjectName)\CustomModsV3"/>
+    <Copy SourceFiles="OGL copyright notice.html" DestinationFolder="$(WorkshopExport)\$(ProjectName)" ContinueOnError="true"/>
+    <Copy SourceFiles="@(Assets)" DestinationFolder="$(WorkshopExport)\$(ProjectName)\CustomModsV3\$(AssetsFolder)\%(RecursiveDir)"/>
+  
+    <Message Text="Copied to mod publishing folder." />
   </Target>
+
 </Project>
+
