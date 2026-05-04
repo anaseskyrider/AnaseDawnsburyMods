@@ -163,9 +163,9 @@ public static class ShieldPatches
             bool shieldBlock = caster.HasEffect(QEffectId.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
             
             QEffect qfRaised = QEffect.RaisingAShield(shieldBlock)
+                .WithName("Shield raised (" + shield.Name + ")")
                 .With(qfThis =>
                 {
-                    qfThis.Name += " (" + shield.Name + ")";
                     // Closely associate this effect with a shield.
                     qfThis.Tag = shield;
                     // Update the description to reflect this shield.
@@ -244,6 +244,8 @@ public static class ShieldPatches
     {
         internal static void Postfix(ref QEffect __result)
         {
+            __result.Description = "If you take physical damage while a shield is raised, you can block with it to reduce the damage.";
+            
             __result.WhenYouUseShieldBlock = async (_, _, _, _) =>
                 Sfxs.Play(ModData.SfxNames.ShieldBlockWooodenImpact);
             
