@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Campaign.Encounters.Tutorial;
