@@ -263,10 +263,13 @@ public static class CommonShieldRules
         int preventHowMuch = Math.Min(hardness, damageStuff.Amount);
 
         CombatAction displayReaction = ShieldBlockAction(blockingCreature, shield, hardness);
+        string whatDamage = DoesSparklingTargeShieldBlockApply(damageStuff.Power, blockingCreature)
+            ? "{Blue}magical{/Blue} damage"
+            : "damage";
 
         ReactionOption reaction = ReactionOption.CreateFromCombatActionCustom(
                 displayReaction,
-                $"{shield.Illustration.IllustrationAsIconString} Prevent {S.AllOrNumber(preventHowMuch, damageStuff.Amount)} of this damage.",
+                $"{shield.Illustration.IllustrationAsIconString} Prevent {S.AllOrNumber(preventHowMuch, damageStuff.Amount)} of this {whatDamage}.",
                 async () =>
                 {
                     // Adds an impact sound
