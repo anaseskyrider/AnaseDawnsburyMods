@@ -36,6 +36,7 @@
   
   <Target Name="CopyToWorkshopUploadable" AfterTargets="Build" Condition=" '$(Configuration)'=='Release' ">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopExport)\$(ProjectName)\CustomModsV3"/>
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).pdb" DestinationFolder="$(WorkshopExport)\$(ProjectName)\CustomModsV3"/>
     <Copy SourceFiles="0Harmony.dll" DestinationFolder="$(WorkshopExport)\$(ProjectName)\CustomModsV3"/>
     <Copy SourceFiles="OGL copyright notice.html" DestinationFolder="$(WorkshopExport)\$(ProjectName)" ContinueOnError="true"/>
     <Copy SourceFiles="@(Assets)" DestinationFolder="$(WorkshopExport)\$(ProjectName)\CustomModsV3\$(AssetsFolder)\%(RecursiveDir)"/>
