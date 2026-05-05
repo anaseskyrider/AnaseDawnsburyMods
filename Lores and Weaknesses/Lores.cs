@@ -161,6 +161,16 @@ public static class Lores
             (_, target) =>
                 target.HasTrait(Trait.Starborn),
             true);
+        
+        // Maritime Lore (credits: SilchasRuin, Junabell)
+        RegisterNewLore(
+            "Maritime Lore",
+            $"""
+            You have studied the seas and waterways of the world, learning about the creatures that call them home.
+
+            You can use this skill to {RecallWeakness.GetActionLink()} on amphibious, aquatic, and water creatures.
+            """,
+            (_, target) => target.Traits.ContainsOneOf([Trait.Amphibious, Trait.Aquatic, Trait.Water]));
     }
 
     internal static void AdjustFeatsAndFeatures()
