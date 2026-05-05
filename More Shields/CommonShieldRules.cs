@@ -126,6 +126,18 @@ public static class CommonShieldRules
     #region Shield Abilities
 
     /// <summary>
+    /// The basic triggers for Shield Block, with Sparkling Targe Magus.
+    /// </summary>
+    public static bool DoesShieldBlockApply(Creature blocker, DamageStuff dStuff)
+    {
+        return (dStuff.Kind.IsPhysical()
+                && dStuff.Power != null
+                && dStuff.Power.HasTrait(Trait.Attack)
+                && dStuff.Power.ActionId != ActionId.Trip)
+               || DoesSparklingTargeShieldBlockApply(dStuff.Power, blocker);
+    }
+
+    /// <summary>
     /// Does the Reflexive Shield feat apply to this action.
     /// </summary>
     /// <param name="power">The CombatAction being checked against, usually an action that imposes a saving throw.</param>
@@ -136,11 +148,14 @@ public static class CommonShieldRules
     }
     
     /// <summary>
-    /// Functions as <see cref="Magus.DoesSparklingTargeShieldBlockApply"/> but with a different overload.
+    /// Functions as <see cref="Magus.DoesSparklingTargeShieldBlockApply"/> but with a different overload and accepts magical Strikes (which CountsAsMagical currently excludes).
     /// </summary>
     public static bool DoesSparklingTargeShieldBlockApply(CombatAction? power, Creature magus)
     {
-        return magus.HasEffect(QEffectId.SparklingTarge) && magus.HasEffect(QEffectId.ArcaneCascade) && power != null && power.HasTrait(Trait.Spell);
+        return magus.HasEffect(QEffectId.SparklingTarge)
+               && magus.HasEffect(QEffectId.ArcaneCascade)
+               && power != null
+               && (power.CountsAsMagical || power.HasTrait(Trait.Magical));
     }
 
     #endregion

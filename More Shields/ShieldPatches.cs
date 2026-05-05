@@ -204,11 +204,7 @@ public static class ShieldPatches
                                 dEvent.KindedDamages.First().DamageKind);
                             
                             // Uses normal triggers for Shield Block
-                            if ((!damageStuff.Kind.IsPhysical()
-                                 || damageStuff.Power == null
-                                 || !damageStuff.Power.HasTrait(Trait.Attack)
-                                 || damageStuff.Power.ActionId == ActionId.Trip)
-                                && !Magus.DoesSparklingTargeShieldBlockApply(damageStuff, qfThis2.Owner))
+                            if (!CommonShieldRules.DoesShieldBlockApply(qfThis2.Owner, damageStuff))
                                 return null;
                             
                             // Use new function

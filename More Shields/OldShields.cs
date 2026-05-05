@@ -69,13 +69,9 @@ public static class OldShields
                                         dEvent.TotalResolvedDamage,
                                         dEvent.CombatAction,
                                         dEvent.KindedDamages.First().DamageKind);
-        
+                            
                                     // Uses normal triggers for Shield Block
-                                    if ((!damageStuff.Kind.IsPhysical()
-                                         || damageStuff.Power == null
-                                         || !damageStuff.Power.HasTrait(Trait.Attack)
-                                         || damageStuff.Power.ActionId == ActionId.Trip)
-                                        && !Magus.DoesSparklingTargeShieldBlockApply(damageStuff, qfFeat2.Owner))
+                                    if (!CommonShieldRules.DoesShieldBlockApply(qfFeat2.Owner, damageStuff))
                                         return null;
                                     
                                     return CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2(
@@ -186,7 +182,7 @@ public static class OldShields
             {
                 self.AddQEffect(CommonShieldRules.BonusToShieldHardness((_, stuff, _, blocker) =>
                 {
-                    if (!Magus.DoesSparklingTargeShieldBlockApply(stuff, blocker))
+                    if (!CommonShieldRules.DoesSparklingTargeShieldBlockApply(stuff.Power, blocker))
                         return null;
                     return new Bonus(
                         blocker.Level >= 15 ? 3 : blocker.Level >= 7 ? 2 : 1,
