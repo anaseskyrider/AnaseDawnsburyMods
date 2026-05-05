@@ -26,11 +26,11 @@ namespace Dawnsbury.Mods.LoresAndWeaknesses;
 public static class Lores
 {
     /// <summary>
-    /// All Lore skills that have been registered.
+    /// The list of all the Lore skills that have been registered.
     /// </summary>
     public static readonly List<Lore> AllLores = [];
     /// <summary>
-    /// All Lore skills that have been registered and that are public (<see cref="Lore.IsHidden"/> is false).
+    /// Gets from <see cref="AllLores"/>, the Lores that have been registered and that are public (<see cref="Lore.IsHidden"/> is false).
     /// </summary>
     public static IReadOnlyList<Lore> AllPublicLores => AllLores.Where(lore => !lore.IsHidden).ToList();
     /// <summary>
@@ -38,10 +38,28 @@ public static class Lores
     /// </summary>
     public const string DisplayOffset = "𝒵";
 
+    /*public static FeatName TrainedLoreCategory;
+    public static FeatName ExpertLoreCategory;
+    public static FeatName MasterLoreCategory;
+    public static FeatName LegendaryLoreCategory;*/
+
     #region Loading Procedures
 
     internal static void Load()
     {
+        /*TrainedLoreCategory = ModData.SafelyRegister<FeatName>(
+            "Lores",
+            "Trained Lores");
+        ExpertLoreCategory = ModData.SafelyRegister<FeatName>(
+            "ExpertLores",
+            "Expert Lores");
+        MasterLoreCategory = ModData.SafelyRegister<FeatName>(
+            "MasterLores",
+            "Master Lores");
+        LegendaryLoreCategory = ModData.SafelyRegister<FeatName>(
+            "LegendaryLores",
+            "Legendary Lores");*/
+        
         foreach (Feat ft in CreateFeats())
             ModManager.AddFeat(ft, ModData.Traits.ModName);
         RegisterLores();
@@ -54,6 +72,15 @@ public static class Lores
 
     internal static IEnumerable<Feat> CreateFeats()
     {
+        /*// Trained Category
+        yield return NewCategoryLore(TrainedLoreCategory, Proficiency.Trained);
+        // Expert Category
+        yield return NewCategoryLore(ExpertLoreCategory, Proficiency.Expert);
+        // Master Category
+        yield return NewCategoryLore(MasterLoreCategory, Proficiency.Master);
+        // Legendary Category
+        yield return NewCategoryLore(LegendaryLoreCategory, Proficiency.Legendary);*/
+        
         // Additional Lore
         Feat addLore = new TrueFeat(
                 RecallWeakness.FNAdditionalLore,
@@ -69,6 +96,22 @@ public static class Lores
             .WithIllustration(IllustrationName.SepiaFeat);
         addLore.CanSelectMultipleTimes = true;
         yield return addLore;
+
+        /*Feat NewCategoryLore(FeatName featName, Proficiency prof)
+        {
+            /*Feat category = prof > Proficiency.Trained
+                ? new SkillIncreaseFeat(featName, Skill.Athletics, Trait.Athletics, prof, null)
+                : new SkillSelectionFeat(featName, Skill.Athletics, Trait.Athletics);#1#
+            Feat category = prof > Proficiency.Trained
+                ? new SkillIncreaseFeat(featName, Skill.Athletics, Trait.Athletics, prof, null)
+                : new SkillSelectionFeat(featName, Skill.Athletics, Trait.Athletics);
+            category.OnSheet = null;
+            category.OnCreature = null;
+            category.RulesText = "Choose a Lore skill to become " + prof.HumanizeLowerCase2() + " in.";
+            category.CanSelectMultipleTimes = true;
+            category.Subfeats = [];
+            return category;
+        }*/
     }
 
     internal static void RegisterLores()
@@ -152,31 +195,36 @@ public static class Lores
         // Update the skill-training feats.
         LoadOrder.WhenFeatsBecomeLoaded += () =>
         {
-            List<SkillSelectionFeat> skillFeats = AllFeats.All
-                .Select(ft => ft as SkillSelectionFeat)
-                .WhereNotNull()
-                .ToList();
-            foreach (SkillSelectionFeat sFeat in skillFeats)
+            foreach (SkillSelectionFeat sFeat in AllFeats.All
+                         .Select(ft => ft as SkillSelectionFeat)
+                         .WhereNotNull())
+                AdjustFeat(sFeat, sFeat.Skill);
+            
+            foreach (Lore lore in AllLores)
+                AdjustFeat(lore.Trained, lore.Skill);
+
+            return;
+
+            void AdjustFeat(Feat feat, Skill skill)
             {
-                Skill skill = sFeat.Skill;
                 string name = skill.ToStringOrTechnical();
                 string ability = skill.ToAbility().ToStringOrTechnical();
-                Lore? lore = AllLores.FirstOrDefault(lore => lore.Skill == skill);
+                Lore? lore = feat.Tag as Lore;
                 
                 string trainedIn = "You become trained in " + name + ".";
-                if (sFeat.RulesText.IndexOf(trainedIn) != -1
-                    && string.IsNullOrEmpty(sFeat.FlavorText))
+                if (feat.RulesText.IndexOf(trainedIn) != -1
+                    && string.IsNullOrEmpty(feat.FlavorText))
                 {
-                    sFeat.RulesText = sFeat.RulesText.Replace(trainedIn + "\n\n", "");
-                    sFeat.FlavorText = trainedIn;
+                    feat.RulesText = feat.RulesText.Replace(trainedIn + "\n\n", "");
+                    feat.FlavorText = trainedIn;
                 }
 
                 string basedSkill = "This is " + ability.WithIndefiniteArticle() + "-based skill.";
                 string addMod = "{i}(You add your " + ability + " modifier to checks using this skill.){/i}";
-                if (sFeat.RulesText.IndexOf(basedSkill) != -1
-                    && sFeat.RulesText.IndexOf(addMod) != -1)
+                if (feat.RulesText.IndexOf(basedSkill) != -1
+                    && feat.RulesText.IndexOf(addMod) != -1)
                 {
-                    sFeat.RulesText = sFeat.RulesText.Replace(
+                    feat.RulesText = feat.RulesText.Replace(
                         basedSkill + " " + addMod,
                         $"{{b}}Ability{{/b}} {ability} {{i}}(add your {ability} modifier to checks with this skill){{/i}}"
                         + (lore is not null
@@ -186,12 +234,12 @@ public static class Lores
                             : null));
                 }
 
-                sFeat.RulesText = sFeat.RulesText.Replace(
+                feat.RulesText = feat.RulesText.Replace(
                     "{b}Trick Magic Item{/b}",
                     AllFeats.GetFeatByFeatName(FeatName.TrickMagicItem)
                         .ToLink("Trick Magic Item"));
 
-                sFeat.RulesText = sFeat.RulesText.Replace(
+                feat.RulesText = feat.RulesText.Replace(
                     "{b}Battle Medicine{/b}",
                     AllFeats.GetFeatByFeatName(FeatName.BattleMedicine)
                         .ToLink("Battle Medicine"));
@@ -219,11 +267,11 @@ public static class Lores
     }
 
     /// <summary>
-    /// Works as <see cref="CalculatedCharacterSheetValues.TrainInThisOrSubstitute"/>, but it adds <see cref="Lore.Trained"/> directly instead of finding it through a FeatName. Avoids errors caused in <see cref="Skills.SkillToFeat(Skill)"/> from trying to use the underlying proficiency feats for a hidden Lore, which aren't normally registered.
+    /// Works as <see cref="CalculatedCharacterSheetValues.TrainInThisOrSubstitute"/>, and you can determine if the substitution must be a Lore or can be any skill.
     /// </summary>
     /// <param name="values">This character sheet.</param>
     /// <param name="lore">The Lore to train in.</param>
-    /// <param name="mustSubLore">If true, the substituted skill must be a lore skill.</param>
+    /// <param name="mustSubLore">Whether the substituted skill must be a lore skill.</param>
     public static void TrainInThisOrSubstitute(this CalculatedCharacterSheetValues values, Lore lore, bool mustSubLore = false)
     {
         Feat skillFeat = lore.Trained;
@@ -246,8 +294,11 @@ public static class Lores
     }
 
     /// <summary>
-    /// Registers a new lore skill. If the lore already exists, then the original registration is returned instead. If you wish to modify a lore you know is already registered, use <see cref="GetRegisteredLore"/>.
+    /// Registers a new lore skill.
     /// </summary>
+    /// <remarks>
+    /// If you wish to find or modify a lore you know is already registered, use <see cref="GetRegisteredLore"/>.
+    /// </remarks>
     /// <param name="name">The full name of the lore skill, with the word Lore included, written in Title Case. Such as, "Warfare Lore".</param>
     /// <param name="description">The description of the lore skill. It's a good idea to look at existing skills for examples of what to write.</param>
     /// <param name="validRecallTarget">A function which determines whether the PLAYER attempting to Recall Weakness against a TARGET can use this lore skill for the check.</param>
@@ -270,118 +321,20 @@ public static class Lores
         // Begin constructing lore
         Lore newLore = new Lore(name, description, relevantAbility, isSpecific, isHidden, validRecallTarget);
         
-        // Add to the relevant lists before patched-functions try to find your lore.
+        // Add to the list before patched-functions try to find your lore.
         AllLores.Add(newLore);
 
         // Add feats which increase proficiency
-        newLore.Trained = AddSkillFeat(Proficiency.Trained, null);
-        newLore.Expert = AddSkillFeat(Proficiency.Expert, newLore.Trained.FeatName);
-        newLore.Master = AddSkillFeat(Proficiency.Master, newLore.Expert.FeatName);
-        newLore.Legendary = AddSkillFeat(Proficiency.Legendary, newLore.Master.FeatName);
+        newLore.Trained = RegisterSkillFeat(newLore, Proficiency.Trained, null);
+        newLore.Expert = RegisterSkillFeat(newLore, Proficiency.Expert, newLore.Trained.FeatName);
+        newLore.Master = RegisterSkillFeat(newLore, Proficiency.Master, newLore.Expert.FeatName);
+        newLore.Legendary = RegisterSkillFeat(newLore, Proficiency.Legendary, newLore.Master.FeatName);
         
         // Add to Additional Lore
         if (!newLore.IsHidden)
-        {
-            Feat additionalSubFeat = new Feat(
-                    ModManager.TryParse(ModData.IdPrepend + "AdditionalLore." + newLore.Name, out FeatName addLore)
-                        ? addLore
-                        : ModManager.RegisterFeatName(
-                            ModData.IdPrepend + "AdditionalLore." + newLore.Name,
-                            DisplayOffset + newLore.Name),
-                    "", "", [], null)
-                .WithIllustration(IllustrationName.NarratorBook)
-                .WithTag(newLore)
-                .WithOnSheet(values =>
-                {
-                    values.GrantFeat(newLore.Trained.FeatName);
-                    values.AddAtLevel(
-                        3,
-                        v3 =>
-                            v3.GrantFeat(newLore.Expert.FeatName));
-                    values.AddAtLevel(
-                        7,
-                        v7 =>
-                            v7.GrantFeat(newLore.Master.FeatName));
-                    values.AddAtLevel(
-                        15,
-                        v15 =>
-                            v15.GrantFeat(newLore.Legendary.FeatName));
-                });
-            additionalSubFeat.WithPrerequisite(
-                values =>
-                    values.HasFeat(additionalSubFeat)
-                    || values.GetProficiency(newLore.Trait) < Proficiency.Legendary,
-                "You are already legendary in this Lore.");
-            additionalSubFeat.WithRulesTextCreator(sheet =>
-            {
-                // Don't inform the user that they're trained and can still take the feat
-                // if they're legendary (feat is useless),
-                // if they're untrained (they aren't trained),
-                // if their training comes from this feat.
-                if (sheet.Calculated.GetProficiency(newLore.Trait) is var loreProf
-                    && loreProf is Proficiency.Legendary or Proficiency.Untrained
-                    || sheet.Calculated.AllFeats.Any(ft => ft == additionalSubFeat))
-                    return newLore.Trained.RulesText;
-
-                return newLore.Trained.RulesText +
-                       $"\n\n{{icon:YellowWarning}} You are already {loreProf.HumanizeLowerCase2()} in this lore. You can still take this feat and gain automatic increases.";
-            });
-            
-            // Enforce DisplayOffset behavior even if the FeatName was already registered
-            additionalSubFeat.CustomName = DisplayOffset + newLore.Name;
-            
-            ModManager.AddFeat(additionalSubFeat, ModData.Traits.ModName);
-            AllFeats.GetFeatByFeatName(RecallWeakness.FNAdditionalLore)
-                .Subfeats
-                !.Add(additionalSubFeat);
-        }
+            RegisterAdditionalLoreSubfeat(newLore);
         
         return newLore;
-
-        // Create a skill-training or skill-increasing feat.
-        // Gets an existing one, if possible.
-        Feat AddSkillFeat(Proficiency prof, FeatName? previous)
-        {
-            Feat skillFeat = (prof == Proficiency.Trained
-                    ? AllFeats.All.FirstOrDefault(ft => ft is SkillSelectionFeat ssf && ssf.Skill == newLore.Skill) ??
-                      new SkillSelectionFeat(
-                          ModManager.TryParse(name, out FeatName ssFN)
-                              ? ssFN
-                              : ModManager.RegisterFeatName(name, DisplayOffset + name),
-                          newLore.Skill,
-                          newLore.Trait)
-                    : AllFeats.All.FirstOrDefault(ft => ft is SkillIncreaseFeat sif && sif.Skill == newLore.Skill && sif.TargetProficiency == prof) ??
-                      new SkillIncreaseFeat(
-                          ModManager.TryParse(prof.ToStringOrTechnical() + name, out FeatName siFN)
-                              ? siFN
-                              : ModManager.RegisterFeatName(
-                                  prof.ToStringOrTechnical() + name,
-                                  DisplayOffset + prof.ToStringOrTechnical() + " in " + name),
-                          newLore.Skill,
-                          newLore.Trait,
-                          prof,
-                          previous))
-                .WithIllustration(IllustrationName.NarratorBook);
-            
-            // Enforce DisplayOffset behavior even if the FeatName was already registered
-            skillFeat.CustomName = skillFeat is SkillSelectionFeat
-                ? DisplayOffset + name
-                : DisplayOffset + prof.ToStringOrTechnical() + " in " + name;
-            
-            skillFeat.Traits.Add(ModData.Traits.Lore);
-            skillFeat.Traits.Sort((t1, t2) => t1.ToStringOrTechnical().CompareTo(t2.ToStringOrTechnical()));
-            
-            // If it already existed, tag it as now being modified by LoresAndWeaknesses
-            if (AllFeats.AlreadyExists(skillFeat.FeatName))
-            {
-                skillFeat.Traits.Insert(0, ModData.Traits.ModName);
-                skillFeat.Traits.Remove(Trait.Mod);
-            }
-            else if (!newLore.IsHidden)
-                ModManager.AddFeat(skillFeat, ModData.Traits.ModName);
-
-            return skillFeat;
-        }
     }
 
     /// <summary>
@@ -398,6 +351,179 @@ public static class Lores
     }
 
     #endregion
+
+    #region Private Functions
+        
+    /// <summary>
+    /// Create a skill-increasing feat.
+    /// </summary>
+    internal static Feat RegisterSkillFeat(Lore lore, Proficiency prof, FeatName? previous)
+    {
+        if (prof > Proficiency.Trained && previous is null)
+            throw new Exception("Proficiency cannot be greater than Trained without a previous feat it's increased from.");
+
+        string technicalName = lore.Name;
+        string displayName = lore.Name;
+        string featDescription;
+        FeatGroup group;
+        if (prof > Proficiency.Trained)
+        {
+            technicalName = prof.ToStringOrTechnical() + technicalName;
+            displayName = DisplayOffset + prof.ToStringOrTechnical() + " in " + displayName;
+            featDescription = IncreaseDescription(lore.Skill);
+            group = prof switch
+            {
+                Proficiency.Expert => FeatGroup.SkillExpertise,
+                Proficiency.Master => FeatGroup.SkillMastery,
+                Proficiency.Legendary => FeatGroup.SkillLegend,
+                _ => throw new ArgumentOutOfRangeException(nameof(prof), prof, null)
+            };
+        }
+        else
+        {
+            displayName = DisplayOffset + displayName;
+            featDescription = SelectionDescription(lore.Skill);
+            group = FeatGroup.SkillTraining;
+        }
+        FeatName featName = ModManager.TryParse(technicalName, out FeatName fn)
+            ? fn
+            : ModManager.RegisterFeatName(technicalName, displayName);
+
+        Feat skillFeat;
+        if (lore.IsHidden)
+        {
+            skillFeat = new Feat(featName, "", featDescription, [ModData.Traits.Lore], null)
+                .WithOnSheet(values => values.SetProficiency(lore.Trait, prof))
+                .WithOnCreature((sheet, cr) =>
+                    cr.Skills.Set(
+                        lore.Skill,
+                        sheet.FinalAbilityScores.TotalModifier(Skills.GetSkillAbility(lore.Skill)) +
+                        sheet.GetProficiency(lore.Trait).ToNumber(cr.Level)));
+            skillFeat.FeatGroup = group;
+            if (previous.HasValue)
+                skillFeat.WithPrerequisite(
+                    values => values.HasFeat(previous.Value),
+                    $"You must have {previous.HumanizeTitleCase2()}.");
+        }
+        else
+        {
+            skillFeat = prof == Proficiency.Trained
+                ? AllFeats.All.FirstOrDefault(ft => ft is SkillSelectionFeat ssf && ssf.Skill == lore.Skill) ??
+                  new SkillSelectionFeat(featName, lore.Skill, lore.Trait)
+                : AllFeats.All.FirstOrDefault(ft => ft is SkillIncreaseFeat sif && sif.Skill == lore.Skill && sif.TargetProficiency == prof) ??
+                  new SkillIncreaseFeat(featName, lore.Skill, lore.Trait, prof, previous);
+            
+            // Enforce DisplayOffset behavior even if the FeatName was already registered
+            skillFeat.CustomName = displayName;
+            
+            skillFeat.Traits.Add(ModData.Traits.Lore);
+        }
+
+        skillFeat
+            .WithIllustration(IllustrationName.NarratorBook)
+            .WithTag(lore);
+        
+        // If it already existed, tag it as now being modified by LoresAndWeaknesses
+        if (AllFeats.AlreadyExists(skillFeat.FeatName))
+        {
+            skillFeat.Traits.Insert(0, ModData.Traits.ModName);
+            skillFeat.Traits.Remove(Trait.Mod);
+        }
+        else
+        {
+            ModManager.AddFeat(skillFeat, ModData.Traits.ModName);
+            /*if (!lore.IsHidden)
+                if (prof == Proficiency.Trained)
+                    AllFeats.GetFeatByFeatName(Lores.TrainedLoreCategory).Subfeats!.Add(skillFeat);
+                else if (prof == Proficiency.Expert)
+                    AllFeats.GetFeatByFeatName(Lores.ExpertLoreCategory).Subfeats!.Add(skillFeat);
+                else if (prof == Proficiency.Master)
+                    AllFeats.GetFeatByFeatName(Lores.MasterLoreCategory).Subfeats!.Add(skillFeat);
+                else if (prof == Proficiency.Legendary)
+                    AllFeats.GetFeatByFeatName(Lores.LegendaryLoreCategory).Subfeats!.Add(skillFeat);*/
+        }
+
+        return skillFeat;
+
+        string SelectionDescription(Skill skill) =>
+            $$"""
+              You become trained in {{skill.HumanizeTitleCase2()}}.
+
+              This is {{Skills.GetSkillAbility(skill).ToString().WithIndefiniteArticle()}}-based skill. {i}(You add your {{Skills.GetSkillAbility(skill).ToString()}} modifier to checks using this skill.){/i}
+
+              {{Skills.GetSkillDescription(skill)}}
+              """;
+
+        string IncreaseDescription(Skill skill) =>
+            $"""
+             You become {prof.HumanizeLowerCase2()} in {skill.HumanizeTitleCase2()}, which increases your proficiency bonus to {skill.HumanizeTitleCase2()} skill checks by an additional +2.
+
+             {Skills.GetSkillDescription(skill)}
+             """;
+    }
+
+    /// <summary>
+    /// Creates and adds to Additional Lore the subfeat that governs this Lore skill.
+    /// </summary>
+    internal static Feat RegisterAdditionalLoreSubfeat(Lore lore)
+    {
+        Feat additionalSubFeat = new Feat(
+                ModManager.TryParse(ModData.IdPrepend + "AdditionalLore." + lore.Name, out FeatName addLore)
+                    ? addLore
+                    : ModManager.RegisterFeatName(
+                        ModData.IdPrepend + "AdditionalLore." + lore.Name,
+                        DisplayOffset + lore.Name),
+                "", "", [], null)
+            .WithIllustration(IllustrationName.NarratorBook)
+            .WithTag(lore)
+            .WithOnSheet(values =>
+            {
+                values.GrantFeat(lore.Trained.FeatName);
+                values.AddAtLevel(
+                    3,
+                    v3 =>
+                        v3.GrantFeat(lore.Expert.FeatName));
+                values.AddAtLevel(
+                    7,
+                    v7 =>
+                        v7.GrantFeat(lore.Master.FeatName));
+                values.AddAtLevel(
+                    15,
+                    v15 =>
+                        v15.GrantFeat(lore.Legendary.FeatName));
+            });
+        additionalSubFeat.WithPrerequisite(
+            values =>
+                values.HasFeat(additionalSubFeat)
+                || values.GetProficiency(lore.Trait) < Proficiency.Legendary,
+            "You are already legendary in this Lore.");
+        additionalSubFeat.WithRulesTextCreator(sheet =>
+        {
+            // Don't inform the user that they're trained and can still take the feat
+            // if they're legendary (feat is useless),
+            // if they're untrained (they aren't trained),
+            // if their training comes from this feat.
+            if (sheet.Calculated.GetProficiency(lore.Trait) is var loreProf
+                && loreProf is Proficiency.Legendary or Proficiency.Untrained
+                || sheet.Calculated.AllFeats.Any(ft => ft == additionalSubFeat))
+                return lore.Trained.RulesText;
+
+            return lore.Trained.RulesText +
+                   $"\n\n{{icon:YellowWarning}} You are already {loreProf.HumanizeLowerCase2()} in this lore. You can still take this feat and gain automatic increases.";
+        });
+        
+        // Enforce DisplayOffset behavior even if the FeatName was already registered
+        additionalSubFeat.CustomName = DisplayOffset + lore.Name;
+        
+        ModManager.AddFeat(additionalSubFeat, ModData.Traits.ModName);
+        AllFeats.GetFeatByFeatName(RecallWeakness.FNAdditionalLore)
+            .Subfeats
+            !.Add(additionalSubFeat);
+        
+        return additionalSubFeat;
+    }
+
+    #endregion
 }
 
 /// <summary>
@@ -405,75 +531,146 @@ public static class Lores
 /// </summary>
 public class Lore
 {
+    // Assign these values on instance creation. Can safely use set accessor after initial registration.
+    private bool _isHidden;
+    private string _description;
+
     #region Instance Data
 
     /// <summary>
-    /// The name of the lore which includes the name of the lore with spaces, such as "Warfare Lore". This string is both the humanized name and technical name of the lore, and is equal to the output of <see cref="ModManager.ToStringOrTechnical(Dawnsbury.Core.Mechanics.Enumerations.Skill)"/>
+    /// Gets the name of the lore.
     /// </summary>
+    /// <remarks>
+    /// Lore names should always include the word Lore with spaces, such as "Warfare Lore". This string is both the humanized name and technical name of the lore, and is equal to the output of <see cref="ModManager.ToStringOrTechnical(Dawnsbury.Core.Mechanics.Enumerations.Skill)"/>.
+    /// </remarks>
     public string Name { get; }
     
     /// <summary>
-    /// The description of the lore. It should tell you what creatures it can Recall Weaknesses for, or none if it doesn't interact with creatures on its own.
+    /// Gets or sets the description of the lore.
     /// </summary>
-    /// <para>
-    /// To modify a description for a Lore that's already been registered, see <see cref="WithNewDescription"/>.
-    /// </para>
-    public string Description { get; set; }
+    /// <remarks>
+    /// A good description should tell you what creatures it can Recall Weaknesses for, or none if it doesn't interact with creatures on its own. Setting this value also edits <see cref="Trained"/> to reflect the new change.
+    /// </remarks>
+    public string Description {
+        get => _description;
+        set
+        {
+            this.Trained.RulesText = this.Trained.RulesText.Replace(_description, value);
+            _description = value;
+        }}
 
     /// <summary>
-    /// The ability used when making checks to Recall Weakness with this skill. Most Lore skills use Intelligence.
+    /// Gets or sets the ability that's used when making checks to Recall Weakness with this skill.
     /// </summary>
-    /// <para>
-    /// To modify the ability for a Lore that's already been registered, see <see cref="WithAbility"/>.
-    /// </para>
-    public Ability RelevantAbility { get; set; }
+    /// <remarks>
+    /// Most Lore skills use Intelligence.
+    /// </remarks>
+    public Ability RelevantAbility {
+        get;
+        set
+        {
+            if (field == value)
+                return;
+            
+            // Use reflection to add this lore's associated ability to a hidden dictionary
+            Type skills = typeof(Skills);
+            var myObject = new Skills();
+            FieldInfo? relField = skills.GetField("relevantAbility", BindingFlags.Static | BindingFlags.NonPublic);
+            if (relField != null)
+            {
+                if (relField.GetValue(myObject) is not IDictionary<Skill, Ability> dict)
+                {
+                    dict = new Dictionary<Skill, Ability>();
+                    relField.SetValue(myObject, dict);
+                }
+                dict[this.Skill] = value;
+            }
+        
+            field = value;
+        }}
 
     /// <summary>
-    /// Specific Lores reduce the DC to checks to Recall Weakness by 5, while unspecific lores reduce them by 2. Most lores are unspecific.
+    /// Gets or sets whether this Lore is specific.
     /// </summary>
+    /// <remarks>
+    /// Most lores are unspecific. Lores reduce the DC to checks to Recall Weakness by 5, while unspecific lores reduce them by 2.
+    /// </remarks>
     public bool IsSpecific { get; set; }
     
     /// <summary>
-    /// If true, this lore is unavailable to standard skill selection and must be granted from a feature directly, such as with <see cref="CalculatedCharacterSheetValues.TrainInThisOrSubstitute"/>.
+    /// Gets or sets whether this lore is hidden from standard skill selections.
     /// </summary>
-    public bool IsHidden { get; set; }
+    /// <remarks>
+    /// If true, this lore can only be granted from a feature directly, such as with the variant overload, <see cref="Lores.TrainInThisOrSubstitute"/>.
+    /// </remarks>
+    public bool IsHidden {
+        get => _isHidden;
+        set
+        {
+            if (_isHidden == value)
+                return;
+        
+            if (value) // this lore is hidden
+            {
+                /*AllFeats.GetFeatByFeatName(Lores.TrainedLoreCategory).Subfeats!.Remove(this.Trained);
+                AllFeats.GetFeatByFeatName(Lores.ExpertLoreCategory).Subfeats!.Remove(this.Expert);
+                AllFeats.GetFeatByFeatName(Lores.MasterLoreCategory).Subfeats!.Remove(this.Master);
+                AllFeats.GetFeatByFeatName(Lores.LegendaryLoreCategory).Subfeats!.Remove(this.Legendary);*/
+                AllFeats.GetFeatByFeatName(RecallWeakness.FNAdditionalLore).Subfeats!.RemoveAll(ft => ft.Tag == this);
+            }
+            else // this lore is not hidden
+            {
+                /*AllFeats.GetFeatByFeatName(Lores.TrainedLoreCategory).Subfeats!.Add(this.Trained);
+                AllFeats.GetFeatByFeatName(Lores.ExpertLoreCategory).Subfeats!.Add(this.Expert);
+                AllFeats.GetFeatByFeatName(Lores.MasterLoreCategory).Subfeats!.Add(this.Master);
+                AllFeats.GetFeatByFeatName(Lores.LegendaryLoreCategory).Subfeats!.Add(this.Legendary);*/
+                Lores.RegisterAdditionalLoreSubfeat(this);
+            }
+
+            _isHidden = value;
+            
+            this.Trained = Lores.RegisterSkillFeat(this, Proficiency.Trained, null);
+            this.Expert = Lores.RegisterSkillFeat(this, Proficiency.Expert, this.Trained.FeatName);
+            this.Master = Lores.RegisterSkillFeat(this, Proficiency.Master, this.Expert.FeatName);
+            this.Legendary = Lores.RegisterSkillFeat(this, Proficiency.Legendary, this.Master.FeatName);
+        }}
     
     /// <summary>
-    /// The registered <see cref="Skill"/> enum associated with this lore.
+    /// Gets the registered <see cref="Skill"/> enum associated with this lore.
     /// </summary>
     public Skill Skill { get; }
     
     /// <summary>
-    /// The <see cref="Trait"/> associated with this lore.
+    /// Gets the <see cref="Trait"/> enum associated with this lore.
     /// </summary>
     public Trait Trait { get; }
     
     /// <summary>
-    /// The <see cref="SkillSelectionFeat"/> that trains you in this lore.
+    /// Gets or sets the <see cref="Feat"/> that trains you in this lore.
     /// </summary>
-    public Feat Trained { get; set; } = null!;
+    public Feat Trained { get; internal set; } = null!;
 
     /// <summary>
-    /// The <see cref="SkillIncreaseFeat"/> that makes you Expert in this lore.
+    /// Gets or sets the <see cref="Feat"/> that makes you Expert in this lore.
     /// </summary>
-    public Feat Expert { get; set; } = null!;
+    public Feat Expert { get; internal set; } = null!;
 
     /// <summary>
-    /// The <see cref="SkillIncreaseFeat"/> that makes you Master in this lore.
+    /// Gets or sets the <see cref="Feat"/> that makes you Master in this lore.
     /// </summary>
-    public Feat Master { get; set; } = null!;
+    public Feat Master { get; internal set; } = null!;
 
     /// <summary>
-    /// The <see cref="SkillIncreaseFeat"/> that makes you Legendary in this lore.
+    /// Gets or sets the <see cref="Feat"/> that makes you Legendary in this lore.
     /// </summary>
-    public Feat Legendary { get; set; } = null!;
+    public Feat Legendary { get; internal set; } = null!;
 
     /// <summary>
-    /// When the THINKER attempts to Recall a Weakness on the TARGET, this returns WHETHER this lore applies to that check.
+    /// (Get;set;) When the THINKER attempts to Recall a Weakness on the TARGET, this returns WHETHER this lore applies to that check.
     /// </summary>
-    /// <para>
+    /// <remarks>
     /// If the function is added onto, such as with a `+=` assignment, then the first function to return true will apply to the creature.
-    /// </para>
+    /// </remarks>
     public Func<Creature,Creature,bool>? ValidRecallTarget { get; set; }
 
     #endregion
@@ -484,14 +681,14 @@ public class Lore
     internal Lore(string name, string description, Ability relevantAbility, bool isSpecific, bool isHidden, Func<Creature,Creature,bool>? validRecallTarget)
     {
         this.Name = name;
-        this.Description = description;
+        this._description = description;
         this.Skill = ModManager.TryParse(name, out Skill alreadyRegistered)
             ? alreadyRegistered
             : ModManager.RegisterEnumMember<Skill>(name);
         this.Trait = ModManager.RegisterTrait(name, new TraitProperties(name, true));
         this.IsSpecific = isSpecific;
-        this.IsHidden = isHidden;
-        this.WithAbility(relevantAbility);
+        this._isHidden = isHidden;
+        this.RelevantAbility = relevantAbility;
         this.ValidRecallTarget = validRecallTarget;
     }
 
@@ -509,9 +706,9 @@ public class Lore
         string addedUsage,
         Func<Creature, Creature, bool>? validRecallTarget)
     {
-        this.WithNewDescription(this.Description + $"\n\n{{b}}{modName}{{/b}} {addedUsage}");
+        this.Description = this.Description + $"\n\n{{b}}{modName}{{/b}} {addedUsage}";
         if (validRecallTarget is not null)
-            this.WithExtraRecallTarget(validRecallTarget);
+            this.ValidRecallTarget += validRecallTarget;
         return this;
     }
 
@@ -534,18 +731,12 @@ public class Lore
     }
 
     /// <summary>
-    /// Replaces <see cref="Description"/> with a new string. This also edits all existing <see cref="SkillSelectionFeat"/>s to reflect the new change.
+    /// Replaces <see cref="Description"/> with a new string.
     /// </summary>
     /// <param name="description"></param>
     /// <returns></returns>
     public Lore WithNewDescription(string description)
     {
-        foreach (SkillSelectionFeat skillFeat in AllFeats.All
-                     .Select(ft => ft as SkillSelectionFeat)
-                     .WhereNotNull()
-                     .ToList())
-            if (skillFeat.Skill == this.Skill)
-                skillFeat.RulesText = skillFeat.RulesText.Replace(this.Description, description);
         this.Description = description;
         return this;
     }
@@ -555,22 +746,16 @@ public class Lore
     /// </summary>
     public Lore WithAbility(Ability ability)
     {
-        // Use reflection to add this lore's associated ability to a hidden dictionary
-        Type skills = typeof(Skills);
-        var myObject = new Skills();
-        FieldInfo? relField = skills.GetField("relevantAbility", BindingFlags.Static | BindingFlags.NonPublic);
-        if (relField != null)
-        {
-            if (relField.GetValue(myObject) is not IDictionary<Skill, Ability> dict)
-            {
-                dict = new Dictionary<Skill, Ability>();
-                relField.SetValue(myObject, dict);
-            }
-            dict[this.Skill] = ability;
-        }
-        
         this.RelevantAbility = ability;
-        
+        return this;
+    }
+
+    /// <summary>
+    /// Sets whether the Lore is hidden or not.
+    /// </summary>
+    public Lore WithHiddenState(bool isHidden)
+    {
+        this.IsHidden = isHidden;
         return this;
     }
 
