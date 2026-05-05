@@ -10,15 +10,6 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <!--<Reference Include="Dawnsbury.Mods.DawnniExpanded">
-      <HintPath>$(WorkshopInstalls)\3163146733\CustomMods\Dawnsbury.Mods.DawnniExpanded.dll</HintPath>
-    </Reference>-->
-    <!--<Reference Include="Dawnsbury.Mods.MoreShields">
-        <HintPath>..\More Shields\[Workshop Files]\[Export]\CustomModsV3\Dawnsbury.Mods.MoreShields.dll</HintPath>
-    </Reference>-->
-  </ItemGroup>
-  
-  <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
   </ItemGroup>
   
