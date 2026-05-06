@@ -7,7 +7,6 @@ using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Kineticist;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
-using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
@@ -31,7 +30,6 @@ using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
-using Dawnsbury.Mods.MoreShields;
 using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.GuardianClass;
@@ -977,17 +975,17 @@ public static class GuardianFeats
                                 "You provoke attacks from foes that might otherwise stop your allies from moving.",
                                 "Raise your Shield, then Stride up to half your Speed. This movement triggers enemies' reactions as normal. Each enemy who reacted to your movement is unable to react to your allies' movement until the start of your next turn (even if they've since regained their reaction).")
                             .WithActionCost(1)
-                            .WithEffectOnSelf(async self =>
+                            .WithEffectOnSelf(async (action, self) =>
                             {
                                 CombatAction pathStride = CommonCombatActions.StepByStepStride(self)
                                     .WithActionCost(0);
                                 pathStride.EffectOnChosenTargets = null;
-                                pathStride.WithEffectOnChosenTargets(async (action, self2, targets) =>
+                                pathStride.WithEffectOnChosenTargets(async (action2, self2, targets) =>
                                 {
-                                    await MoreShields.CommonShieldRules.OfferToRaiseAShield(self);
+                                    await MoreShields.CommonShieldRules.OfferToRaiseAShield(self2);
                                     await self2.MoveToUsingStepByStepPath(
                                         targets.ChosenTiles,
-                                        action,
+                                        action2,
                                         new MovementStyle()
                                         {
                                             MaximumSquares = 1000
@@ -999,18 +997,18 @@ public static class GuardianFeats
                                     // Half speed
                                     BonusToAllSpeeds = _ =>
                                         new Bonus(
-                                            -(int)Math.Ceiling(self.Speed / (double) 2),
+                                            -(int)Math.Round(self.Speed / 2f, MidpointRounding.ToPositiveInfinity),
                                             BonusType.Untyped, 
                                             "Shielded attrition"),
                                     // Remove after completion
-                                    AfterYouTakeAction = async (qfThis2, action) =>
+                                    AfterYouTakeAction = async (qfThis2, action2) =>
                                     {
-                                        if (action == pathStride)
+                                        if (action2 == pathStride)
                                             qfThis2.ExpiresAt = ExpirationCondition.Immediately;
                                     },
-                                    AfterYouAreTargeted = async (qfThis2, action) =>
+                                    AfterYouAreTargeted = async (qfThis2, action2) =>
                                     {
-                                        if (!action.HasTrait(Trait.ReactiveAttack))
+                                        if (!action2.HasTrait(Trait.ReactiveAttack))
                                             return;
 
                                         QEffect cantReact = new QEffect(
@@ -1030,7 +1028,7 @@ public static class GuardianFeats
                                             {
                                                 qfTech.PreventTargetingBy = ca =>
                                                 {
-                                                    if (ca.Owner != action.Owner)
+                                                    if (ca.Owner != action2.Owner)
                                                         return null;
                                                     if (!ca.HasTrait(Trait.ReactiveAttack))
                                                         return null;
@@ -1040,10 +1038,11 @@ public static class GuardianFeats
                                                 };
                                             });
 
-                                        action.Owner.AddQEffect(cantReact);
+                                        action2.Owner.AddQEffect(cantReact);
                                     },
                                 });
-                                await self.Battle.GameLoop.FullCast(pathStride);
+                                if (!await self.Battle.GameLoop.FullCast(pathStride))
+                                    action.RevertRequested = true;
                             });
 
                         return (ActionPossibility) shieldedAttrition;
