@@ -10,6 +10,7 @@ using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
+using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Intelligence;
@@ -2274,7 +2275,57 @@ public static class GuardianFeats
                 });
 
         // Opening Stance
+        // PETR: When the OGL "StanceSavant" comes out, use TrueFeat.CreateDuplicateFeat in order to retain the modded FeatName and not break saves.
+        yield return new TrueFeat(
+                ModData.FeatNames.OpeningStance,
+                14,
+                "At the first sign of trouble, often before you consciously realize the danger, you drop into a stance with a mere thought.",
+                """
+                {b}Trigger{/b} You roll initiative.
 
+                Use a stance action.
+                """,
+                [ModData.Traits.Guardian])
+            .WithActionCost(0)
+            .WithPermanentQEffect(
+                "Use a stance action when you roll initiative.",
+                qfFeat =>
+                {
+                    qfFeat.StartOfCombatReaction = qfThis =>
+                    {
+                        CombatAction opStance = new CombatAction(
+                                qfThis.Owner,
+                                ModData.Illustrations.OpeningStance,
+                                "Opening Stance",
+                                [ModData.Traits.ModName, ModData.Traits.Guardian],
+                                null!,
+                                Target.Self())
+                            .WithDescription(
+                                "At the first sign of trouble, often before you consciously realize the danger, you drop into a stance with a mere thought.",
+                                """
+                                {b}Trigger{/b} You roll initiative.
+
+                                Use a stance action.
+                                """)
+                            .WithEffectOnChosenTargets(async (self, chosen) =>
+                            {
+                                await self.Battle.GameLoop.OfferOptions2(
+                                    self,
+                                    ap => ap.CombatAction.HasTrait(Trait.Stance),
+                                    true);
+                            });
+                        ReactionOption react = ReactionOption.CreateFromCombatActionCustom(
+                            opStance,
+                            "Use a stance action.",
+                            async () =>
+                            {
+                                await qfThis.Owner.Battle.GameLoop.FullCast(opStance);
+                            });
+                        react.Caption += " {icon:FreeAction}";
+                        return react;
+                    };
+                });
+        
         #endregion
 
         #region Level 16
