@@ -399,9 +399,9 @@ public static class GuardianClass
                                 Creature ally = qfTech2.Owner;
                                 Creature attacker = dEvent.Source;
                                 Trait[] reactionTraits = [ModData.Traits.Guardian];
-                                
-                                string? reactionToUse = guardian.Actions.DetermineReactionToUse("{b}Intercept Attack{/b} {icon:Reaction}", reactionTraits);
-                                CombatAction interceptAttack = CreateInterceptAttack(guardian, attacker, dEvent, reactionToUse);
+
+                                (string? Name, string Id)? reactionToUse = DetermineReactionToUseWithSourceName(guardian, "{b}Intercept Attack{/b} {icon:Reaction}", reactionTraits);
+                                CombatAction interceptAttack = CreateInterceptAttack(guardian, attacker, dEvent, reactionToUse?.Id);
                                 
                                 if (!interceptAttack.CanBeginToUse(qfFeat.Owner))
                                     return null;
@@ -429,12 +429,10 @@ public static class GuardianClass
                                     .WithTraits(reactionTraits)
                                     .WithIsReaction();
                                 if (reactionToUse is not null)
-                                    react.Caption += " {icon:FreeAction}";
+                                    react.Caption += $" (using {(string.IsNullOrEmpty(reactionToUse.Value.Name) ? "a" : reactionToUse.Value.Name)} bonus reaction)".WithTag("i");
 
                                 return react;
                             };
-
-                            return;
                         });
                     
                     // Intercept filter toggles
@@ -522,6 +520,20 @@ public static class GuardianClass
                         }
                         return null;
                     };
+                    
+                    return;
+
+                    (string? Name, string Id)? DetermineReactionToUseWithSourceName(Creature self, string question, Trait[] reactionTraits)
+                    {
+                        foreach (QEffect qf in self.QEffects)
+                        {
+                            Func<QEffect, string, Trait[], string?>? offerExtraReaction = qf.OfferExtraReaction;
+                            string? reactionToUse = offerExtraReaction?.Invoke(qf, question, reactionTraits);
+                            if (reactionToUse != null && !self.Actions.ReactionsUsedUpThisRound.Contains(reactionToUse))
+                                return (qf.Name, reactionToUse);
+                        }
+                        return null;
+                    }
                 });
         
         // Tough to Kill
