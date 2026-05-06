@@ -371,26 +371,14 @@ public static class Lores
 
         string technicalName = lore.Name;
         string displayName = lore.Name;
-        string featDescription;
-        FeatGroup group;
         if (prof > Proficiency.Trained)
         {
             technicalName = prof.ToStringOrTechnical() + technicalName;
             displayName = DisplayOffset + prof.ToStringOrTechnical() + " in " + displayName;
-            featDescription = IncreaseDescription(lore.Skill);
-            group = prof switch
-            {
-                Proficiency.Expert => FeatGroup.SkillExpertise,
-                Proficiency.Master => FeatGroup.SkillMastery,
-                Proficiency.Legendary => FeatGroup.SkillLegend,
-                _ => throw new ArgumentOutOfRangeException(nameof(prof), prof, null)
-            };
         }
         else
         {
             displayName = DisplayOffset + displayName;
-            featDescription = SelectionDescription(lore.Skill);
-            group = FeatGroup.SkillTraining;
         }
         FeatName featName = ModManager.TryParse(technicalName, out FeatName fn)
             ? fn
@@ -399,6 +387,17 @@ public static class Lores
         Feat skillFeat;
         if (lore.IsHidden)
         {
+            string featDescription = prof > Proficiency.Trained
+                ? IncreaseDescription(lore.Skill)
+                : SelectionDescription(lore.Skill);
+            FeatGroup group = prof switch
+            {
+                Proficiency.Trained => FeatGroup.SkillTraining,
+                Proficiency.Expert => FeatGroup.SkillExpertise,
+                Proficiency.Master => FeatGroup.SkillMastery,
+                Proficiency.Legendary => FeatGroup.SkillLegend,
+                _ => throw new ArgumentOutOfRangeException(nameof(prof), prof, null)
+            };
             skillFeat = new Feat(featName, "", featDescription, [ModData.Traits.Lore], null)
                 .WithOnSheet(values => values.SetProficiency(lore.Trait, prof))
                 .WithOnCreature((sheet, cr) =>
@@ -688,10 +687,10 @@ public class Lore
     internal Lore(string name, string description, Ability relevantAbility, bool isSpecific, bool isHidden, Func<Creature,Creature,bool>? validRecallTarget)
     {
         this.Name = name;
-        this._description = description;
         this.Skill = ModManager.TryParse(name, out Skill alreadyRegistered)
             ? alreadyRegistered
             : ModManager.RegisterEnumMember<Skill>(name);
+        this._description = description;
         this.Trait = ModManager.RegisterTrait(name, new TraitProperties(name, true));
         this.IsSpecific = isSpecific;
         this._isHidden = isHidden;
