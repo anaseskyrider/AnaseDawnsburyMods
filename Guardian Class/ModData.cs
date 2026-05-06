@@ -319,9 +319,12 @@ public static class ModData
         public static readonly Illustration StompGround = new ModdedIllustration(ModFolder+"quake-stomp.png");
         public static readonly Illustration HamperingStance = new ModdedIllustration(ModFolder+"banana-peel + hot-surface.png");
         public static readonly Illustration LockDown = new ModdedIllustration(ModFolder+"foot-trip.png");
+        public static readonly Illustration GetBehindMe = IllustrationName.FleetStep;
         public static readonly Illustration ToughCookie = IllustrationName.Enlarge;
         public static readonly Illustration ArmoredCounterattack = new CornerIllustration(InterceptAttack, IllustrationName.StarHit, Direction.Southeast);
+        public static readonly Illustration WeakeningAssault = new CornerIllustration(new SideBySideIllustration(IllustrationName.Swipe, IllustrationName.Swipe), IllustrationName.Enfeebled, Direction.Southeast);
         public static readonly Illustration KeepUpTheGoodFight = IllustrationName.WinningStreak;
+        public static readonly Illustration OpeningStance = IllustrationName.RemoveConfusion;
         
         #endregion
         
