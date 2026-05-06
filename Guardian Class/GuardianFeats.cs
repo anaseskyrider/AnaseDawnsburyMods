@@ -523,7 +523,8 @@ public static class GuardianFeats
                 {
                     qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
                     {
-                        if (section.Name != "Raise shield")
+                        if (section.Name != "Raise shield"
+                            && section.PossibilitySectionId != ModData.PossibilitySectionIds.TauntActivities)
                             return null;
                         
                         Creature guardian = qfFeat.Owner;

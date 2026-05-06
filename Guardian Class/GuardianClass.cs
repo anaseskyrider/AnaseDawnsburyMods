@@ -266,6 +266,10 @@ public static class GuardianClass
                                         new ActionPossibility(audibleTaunt){Caption = "Auditory"},
                                         new ActionPossibility(visualTaunt){Caption = "Visual"},
                                     ]
+                                },
+                                new PossibilitySection("Other Activities")
+                                {
+                                    PossibilitySectionId = ModData.PossibilitySectionIds.TauntActivities
                                 }
                             ]
                         };

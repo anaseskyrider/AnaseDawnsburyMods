@@ -334,11 +334,13 @@ public static class ModData
     public static class PossibilitySectionIds
     {
         public static PossibilitySectionId BasicTaunts;
+        public static PossibilitySectionId TauntActivities;
         public static PossibilitySectionId InterceptAttackToggles;
         
         public static void Initialize()
         {
             BasicTaunts = SafelyRegister<PossibilitySectionId>("BasicTaunts");
+            TauntActivities = SafelyRegister<PossibilitySectionId>("TauntActivities");
             InterceptAttackToggles = SafelyRegister<PossibilitySectionId>("InterceptAttackToggles");
         }
     }
