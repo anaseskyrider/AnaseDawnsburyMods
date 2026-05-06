@@ -929,6 +929,8 @@ public static class GuardianFeats
                             proudNail.Illustration, IllustrationName.StarHit);
                         ((CreatureTarget)proudNail.Target) // Strikes always make CreatureTargets
                             .WithAdditionalConditionOnTargetCreature(
+                                ModData.CommonRequirements.IsMyTauntedEnemy())
+                            .WithAdditionalConditionOnTargetCreature(
                                 ModData.CommonRequirements.OffGuardDueToMyTaunt());
                         
                         return proudNail;
@@ -1577,6 +1579,8 @@ public static class GuardianFeats
                             .WithAdditionalConditionOnTargetCreature(
                                 ModData.CommonRequirements.MustWearMediumOrHeavyArmor())
                             .WithAdditionalConditionOnTargetCreature(
+                                ModData.CommonRequirements.IsMyTauntedEnemy())
+                            .WithAdditionalConditionOnTargetCreature(
                                 ModData.CommonRequirements.OffGuardDueToMyTaunt());
                         
                         return ringTheirBell;
@@ -2168,35 +2172,35 @@ public static class GuardianFeats
         #region Level 16
 
         // Clang!
-        
+
         // Clobber
-        
+
         // Improved Reflexive Shield
-        
+
         // Never!
 
         #endregion
-        
+
         #region Level 18
-        
+
         // Demolish Defenses
-        
+
         // Perfect Protection
-        
+
         // Quick Vengeance
-        
+
         // Shield from Spells
-        
+
         #endregion
-        
+
         #region Level 20
-        
+
         // Boundless Reprisals
-        
+
         // Great Shield Mastery
-        
+
         // Unyielding Force
-        
+
         #endregion
     }
 }

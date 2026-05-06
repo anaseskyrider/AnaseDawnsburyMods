@@ -91,7 +91,17 @@ public static class ModData
             return new LegacyCreatureTargetingRequirement((a,_) =>
                 IsWearingMediumOrHeavyArmor(a)
                     ? Usability.Usable
-                    : Usability.NotUsable("must be wearing medium or heavy armor"));
+                    : Usability.NotUsable("Must be wearing medium or heavy armor"));
+        }
+
+        public static CreatureTargetingRequirement IsMyTauntedEnemy()
+        {
+            return new LegacyCreatureTargetingRequirement((a, d) =>
+                d.QEffects.Any(qf =>
+                    qf.Id == ModData.QEffectIds.TauntTarget
+                    && qf.Key == ModData.CommonQfKeys.TauntedEnemy + a.Name)
+                    ? Usability.Usable
+                    : Usability.NotUsableOnThisCreature("Not your taunted enemy"));
         }
 
         public static CreatureTargetingRequirement OffGuardDueToMyTaunt()
