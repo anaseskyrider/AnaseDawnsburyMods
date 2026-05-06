@@ -878,6 +878,7 @@ public static class GuardianClass
     }
     
     /// <summary>
+    /// Creates a CombatAction with an action cost of 0 (used as a reaction) for a given damage event.
     /// </summary>
     /// <remarks>
     /// This action should be used with <see cref="GameLoop.FullCast(CombatAction)"/> in order to apply its effects. Because this is a reaction, the target is supplied when creating the action; do not use it with the alternative overload (<see cref="GameLoop.FullCast(CombatAction, ChosenTargets)"/>).
