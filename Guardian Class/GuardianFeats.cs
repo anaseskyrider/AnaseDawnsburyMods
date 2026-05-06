@@ -375,6 +375,7 @@ public static class GuardianFeats
                 "Your very presence on the field of battle protects nearby allies from harm.",
                 "At the end of each of your turns while you're in this stance, choose one ally adjacent to you to gain lesser cover until the start of your next turn.\n\nThat ally loses this benefit if they move to a space that is no longer adjacent to you at any point during their move.\n\nIf you Intercept an Attack that would harm the ally you're covering, that ally can Step as a free action after your reaction is complete.",
                 [ModData.Traits.Guardian]);*/
+        
         // Hampering Stance
         yield return new TrueFeat(
                 ModData.FeatNames.HamperingStance,
