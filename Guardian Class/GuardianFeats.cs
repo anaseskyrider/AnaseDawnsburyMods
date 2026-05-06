@@ -1917,6 +1917,46 @@ public static class GuardianFeats
         // Belly Flop
         
         // Get Behind Me!
+        // DOC: You can choose not to move the ally further away.
+        yield return new TrueFeat(
+                ModData.FeatNames.GetBehindMe,
+                10,
+                "When saving your allies from harm, you push them behind you to better protect them.",
+                $"When you use {ModData.FeatNames.InterceptAttack.ToLink("Intercept Attack")} to protect an ally, you can move that ally up to 10 feet to an unoccupied space that's within your reach. This movement doesn't trigger reactions.",
+                [ModData.Traits.Guardian])
+            .WithPermanentQEffect(
+                "When you Intercept Attack, you can move the triggering ally up to 10 feet.",
+                qfFeat =>
+                {
+                    qfFeat.AfterYouTakeAction = async (qfThis, action) =>
+                    {
+                        if (action.ActionId != ModData.ActionIds.InterceptAttack)
+                            return;
+                        Creature ally = action.ChosenTargets.ChosenCreature!;
+                        if (await qfThis.Owner.Battle.AskToChooseATile(
+                                qfThis.Owner,
+                                qfThis.Owner.Battle.Map.AllTiles
+                                    .Where(tile =>
+                                        tile.LooksFreeTo(ally)
+                                        && tile.DistanceTo(qfThis.Owner) <= qfThis.Owner.Space.NaturalReach
+                                        && ally.DistanceTo(tile) <= 2),
+                                ModData.Illustrations.GetBehindMe,
+                                $"Choose a space to move {ally.ToColoredName()} to.",
+                                "Lorem ipsum.",
+                                true, true,
+                                ally)
+                            is not { } chosenTile)
+                            return;
+                        await ally.MoveTo(chosenTile, null, new MovementStyle()
+                        {
+                            ForcedMovement = true,
+                            IgnoresUnevenTerrain = true,
+                            MaximumSquares = 99,
+                            Shifting = true,
+                            ShortestPath = true,
+                        });
+                    };
+                });
         
         // Momentum Strike
         
