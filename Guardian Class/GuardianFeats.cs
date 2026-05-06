@@ -514,7 +514,7 @@ public static class GuardianFeats
                 ModData.FeatNames.ShieldingTaunt,
                 2,
                 "By banging loudly on your shield, you get the attention of even the most stubborn of foes.",
-                "Raise a Shield, and then Taunt a creature. Your Taunt gains the auditory trait.",
+                $"Raise a Shield, and then {ModData.FeatNames.Taunt.ToLink("Taunt")} a creature. Your Taunt gains the auditory trait.",
                 [Trait.Flourish, ModData.Traits.Guardian, MoreShields.ModData.Traits.ShieldActionFeat])
             .WithActionCost(1)
             .WithPermanentQEffect(
