@@ -557,6 +557,9 @@ public static class GuardianFeats
                                     .WithActionCost(0);
                                 await caster.Battle.GameLoop.FullCast(aTaunt2, ChosenTargets.CreateSingleTarget(target));
                             });
+                        
+                        if (section.Name == "Raise shield")
+                            shieldTaunt.Traits.Add(Trait.DoNotShowInContextMenu);
 
                         return (ActionPossibility)shieldTaunt;
                     };
