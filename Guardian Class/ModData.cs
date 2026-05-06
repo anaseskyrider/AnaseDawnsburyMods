@@ -69,6 +69,10 @@ public static class ModData
 
     public static class CommonQfKeys
     {
+        /// <summary>
+        /// This key includes the name of the Guardian who inflicted it -- search using this string + Creature.Name.
+        /// </summary>
+        public static readonly string TauntedEnemy = "Taunt";
         /// <summary>This key includes the name of the Guardian who inflicted it -- search using this name + Creature.Name. Searching for the source of this effect also ensures that the creature is off-guard due to ignoring YOUR Taunt.</summary>
         public static readonly string OffGuardDueToTaunt = "TauntOffGuard";
         /// <summary>This key includes the name of the Guardian who inflicted it -- search using this name + Creature.Name. This QF should also include the Guardian as a Source.</summary>

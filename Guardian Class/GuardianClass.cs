@@ -789,7 +789,7 @@ public static class GuardianClass
             ModData.Illustrations.Taunt_1)
         {
             Id = ModData.QEffectIds.TauntTarget,
-            Key = "Taunt"+taunter.Name, // Discard duplicates for each source
+            Key = ModData.CommonQfKeys.TauntedEnemy+taunter.Name, // Discard duplicates for each source
             CountsAsADebuff = true,
             BonusToAttackRolls = (qfThis, action, target) =>
             {
