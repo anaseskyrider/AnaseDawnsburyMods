@@ -652,7 +652,7 @@ public static class GuardianClass
                             ? guardian.PersistentCharacterSheet.Calculated.FinalAbilityScores.TotalModifier(Ability.Dexterity)
                             : guardian.Abilities.Dexterity;
                         bool hasBulwark = armor.Item != null && armor.Item.HasTrait(Trait.Bulwark);
-                        bool hasMightyBulwark = ModManager.TryParse("MightyBulwark", out QEffectId mightyBulwark) && guardian.HasEffect(mightyBulwark); // TODO: Mighty Bulwark
+                        bool hasMightyBulwark = guardian.HasEffect(QEffectId.MightyBulwark);
                         int finalDex = Math.Max(
                             dexterity,
                             hasBulwark ? (hasMightyBulwark ? 4 : 3) : -99);
