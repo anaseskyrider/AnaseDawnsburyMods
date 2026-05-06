@@ -157,8 +157,8 @@ public static class ModData
         
         #region Class Features
         public static readonly FeatName GuardiansArmor = ModManager.RegisterFeatName(IdPrepend + "GuardiansArmor", "Guardian's Armor");
-        public static readonly FeatName Taunt = ModManager.RegisterFeatName(IdPrepend + "Taunt", "Taunt");
-        public static readonly FeatName InterceptAttack = ModManager.RegisterFeatName(IdPrepend + "InterceptAttack", "Intercept Attack");
+        public static readonly FeatName Taunt = ModManager.RegisterFeatName(IdPrepend + "Taunt", "Taunt {icon:Action}");
+        public static readonly FeatName InterceptAttack = ModManager.RegisterFeatName(IdPrepend + "InterceptAttack", "Intercept Attack {icon:Action}");
         public static readonly FeatName ToughToKill = ModManager.RegisterFeatName(IdPrepend + "ToughToKill", "Tough To Kill");
         public static readonly FeatName ReactionTime = ModManager.RegisterFeatName(IdPrepend + "ReactionTime", "Reaction Time");
         public static readonly FeatName GuardianMastery = ModManager.RegisterFeatName(IdPrepend + "GuardianMastery", "Guardian Mastery");
