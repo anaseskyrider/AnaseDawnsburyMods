@@ -429,7 +429,7 @@ public static class RecallWeakness
                 owner,
                 IllustrationName.NarratorBook,
                 "Recall Weakness",
-                [Trait.Basic, ModData.Traits.ModName, Trait.Homebrew, Trait.Concentrate, Trait.Skill],
+                [Trait.Basic, ModData.Traits.ModName, Trait.Homebrew, Trait.Concentrate, Trait.Skill, Trait.UnaffectedByConcealment, Trait.DoesNotBreakStealth],
                 $$"""
                 {i}You attempt to spot or remember a foe's weakness to use to your advantage.{/i}
                 
