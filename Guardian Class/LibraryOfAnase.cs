@@ -35,7 +35,7 @@ namespace Dawnsbury.Mods.GuardianClass;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
-/// <item>v1.8: Added int.WithColor() and int.WithTag(). Made all WithColor and WithTag functions optionally apply colors when null.</item>
+/// <item>v1.8: Added int.WithColor() and int.WithTag(). Made all WithColor and WithTag functions optionally apply colors when null. Fix StrikeCreature overload to not return false if not providing a validity function.</item>
 /// <item>v1.7: Refactored string.ToColor, added string.WithTag() and string.WithLink(). Refactored some ToLink() functions and added more to various enums. Added Feat.With(). Added Defense.ToColor(). Add functions to filter valid Strike possibilities to CommonCombatActions.StrikeCreature() and .GetStrikePossibilities(). GetStrikePossibilities also now adds a thrown Strike for melee thrown weapons.</item>
 /// <item>v1.6: Added Trait extensions: IsTraditionTrait(), TraditionTraitToColor(). Added Feat.ToLink(caption). Added Item.With(). Converted various overloads into instance and static extension blocks. Added more flexible CommonCombatActions.StrikeCreature overload. Added CombatAction.CreatePass and a parameter to OfferOptions2 that uses it. Added FilterAnyPossibility2 functions to allow seeing SubmenuPossibilities.</item>
 /// <item>v1.5: Replaced error-prone params keywords with regular arrays. Added RefundReaction extensions. Added more robust PluralizeIf extension. Added ModManager extensions.</item>
@@ -477,7 +477,7 @@ public static void AddFeat(Feat newFeat, Trait modName)
                 strike.WithActionCost(0);
                 if (strike.Item!.HasTrait(Trait.Ranged))
                     strike.WithSoundEffect(strike.SoundEffectName ?? SfxName.Bow);
-                if (isValidStrike?.Invoke(strike) is not true)
+                if (isValidStrike?.Invoke(strike) is false)
                     return;
                 adjustStrike?.Invoke(strike);
                 if (isValidTarget != null)
