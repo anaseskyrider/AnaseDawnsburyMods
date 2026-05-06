@@ -42,6 +42,8 @@ public static class RecallWeakness
     /// </summary>
     public static QEffectId CombatAssessmentBonus;
 
+    public static QEffectId DubiousKnowledge;
+
     /// <summary> The effect which represents having any Automatic Knowledge feat. </summary>
     public static QEffectId AutomaticKnowledge;
 
@@ -229,34 +231,7 @@ public static class RecallWeakness
                     return validTraits.Any(t => values.GetProficiency(t) >= Proficiency.Trained);
                 },
                 "You must be trained in a Recall Weakness skill {i}(any Lore skill; or Arcana, Crafting, Nature, Occultism, Religion, or Society){/i}.")
-            .WithPermanentQEffect(
-                "Failing (but not critically failing) to Recall Weakness {icon:Action} doesn't increase the DC, and creatures never become immune to it.",
-                qfFeat =>
-                {
-                    qfFeat.AfterYouTakeAction = async (qfThis, action) =>
-                    {
-                        if (action.ActionId != RWActionId
-                            || action.ChosenTargets.ChosenCreature is not { } target)
-                            return;
-
-                        // Remove immunity
-                        target.RemoveAllQEffects(qf =>
-                            qf.Id == QEffectId.ImmunityToTargeting
-                            && qf.Source == qfThis.Owner
-                            && qf.Tag is ActionId id
-                            && id == action.ActionId);
-                        
-                        // Reverse the attempt-increase
-                        if (action.CheckResult is not CheckResult.Failure
-                            || target.QEffects.FirstOrDefault(qf =>
-                                    qf.Id == RecallWeaknessAttempts
-                                    && qf.Source == qfThis.Owner)
-                                is not { } attempts)
-                            return;
-
-                        attempts.Value--;
-                    };
-                });
+            .WithOnCreature(_ => DubiousKnowledgeEffect());
 
         // Slightest Glance Weakness
         const string glanceFlavor = "You can more easily observe and convey your foe's weaknesses.";
@@ -434,7 +409,7 @@ public static class RecallWeakness
             : 6; // 30 feet
         string rulesText = DefaultActionDescription;
         
-        if (owner.HasFeat(FNDubiousKnowledge))
+        if (owner.HasEffect(DubiousKnowledge))
             rulesText = rulesText.Replace(
                 " You can't attempt to Recall Weakness on that creature after attempting a check at DC+10.",
                 " {Blue}You can attempt this check any number of times.{/Blue}");
@@ -689,5 +664,42 @@ public static class RecallWeakness
         }
         
         return false;
+    }
+
+    /// <summary>
+    /// Creates an innate <see cref="QEffect"/> that contains Dubious Knowledge logic.
+    /// </summary>
+    /// <returns></returns>
+    public static QEffect DubiousKnowledgeEffect()
+    {
+        return new QEffect(
+            "Dubious Knowledge",
+            "Failing (but not critically failing) to Recall Weakness {icon:Action} doesn't increase the DC, and creatures never become immune to it.")
+        {
+            Id = DubiousKnowledge,
+            AfterYouTakeAction = async (qfThis, action) =>
+            {
+                if (action.ActionId != RWActionId
+                    || action.ChosenTargets.ChosenCreature is not { } target)
+                    return;
+
+                // Remove immunity
+                target.RemoveAllQEffects(qf =>
+                    qf.Id == QEffectId.ImmunityToTargeting
+                    && qf.Source == qfThis.Owner
+                    && qf.Tag is ActionId id
+                    && id == action.ActionId);
+
+                // Reverse the attempt-increase
+                if (action.CheckResult is not CheckResult.Failure
+                    || target.QEffects.FirstOrDefault(qf =>
+                            qf.Id == RecallWeaknessAttempts
+                            && qf.Source == qfThis.Owner)
+                        is not { } attempts)
+                    return;
+
+                attempts.Value--;
+            }
+        };
     }
 }

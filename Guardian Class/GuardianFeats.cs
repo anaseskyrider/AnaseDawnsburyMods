@@ -100,8 +100,8 @@ public static class GuardianFeats
                 ModData.FeatNames.Bodyguard,
                 1,
                 "You swear a vow to protect one of your allies at all costs, regardless of the risk this might pose to you.",
-                """
-                Choose one of your allies as your charge. When you Taunt, the penalty your taunted enemy takes increases to –2 against your charge.
+                $$"""
+                Choose one of your allies as your charge. When you {{ModData.FeatNames.Taunt.ToLink("Taunt")}}, the penalty your taunted enemy takes increases to –2 against your charge.
 
                 {b}Precombat preparations:{/b} You can choose which ally is your charge at any time outside combat.
                 """,
@@ -201,7 +201,7 @@ public static class GuardianFeats
             ModData.FeatNames.LongDistanceTaunt,
             1,
             "You can draw the wrath of your foes even at a great distance.",
-            "When you use Taunt, you can choose a target within 120 feet.",
+            $"When you use {ModData.FeatNames.Taunt.ToLink("Taunt")}, you can choose a target within 120 feet.",
             [ModData.Traits.Guardian]);
         
         // Punishing Shove
@@ -568,7 +568,7 @@ public static class GuardianFeats
                 ModData.FeatNames.TauntingStrike,
                 2,
                 "The force of your blow causes your enemy to focus their attention on you.",
-                "Make a Strike. Regardless of whether the Strike hits, you Taunt the target. Your Taunt gains the visual trait.",
+                $"Make a Strike. Regardless of whether the Strike hits, you {ModData.FeatNames.Taunt.ToLink("Taunt")} the target. Your Taunt gains the visual trait.",
                 [Trait.Flourish, ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPermanentQEffect(
@@ -719,7 +719,7 @@ public static class GuardianFeats
                 ModData.FeatNames.EnergyInterceptor,
                 4,
                 "Though other guardians understand how to anticipate the flow of martial combat, you predict blasts of magical lightning, blazing trap runes, and more.",
-                "You can use "+ModData.Tooltips.ActionInterceptAttack("Intercept Attack {icon:Reaction}")+" when an ally would take acid, cold, electricity, fire, or sonic damage, not only when they would take physical damage.",
+                $"You can use {ModData.FeatNames.InterceptAttack.ToLink("Intercept Attack {icon:Reaction}")} when an ally would take acid, cold, electricity, fire, or sonic damage, not only when they would take physical damage.",
                 [ModData.Traits.Guardian])
             .WithPrerequisite(
                 ModData.CommonRequirements.HasInterceptAttack,
@@ -890,8 +890,8 @@ public static class GuardianFeats
                 ModData.FeatNames.ProudNail,
                 4,
                 "When a foe ignores your taunts, you make them pay.",
-                """
-                {b}Requirements{/b} Your taunted enemy is off-guard because it didn't target you or include you in an area effect.
+                $$"""
+                {b}Requirements{/b} Your {{ModData.FeatNames.Taunt.ToLink("taunted enemy")}} is off-guard because it didn't target you or include you in an area effect.
 
                 Make a melee Strike against your taunted enemy. If this Strike hits, you deal an extra die of weapon damage. If you're at least 10th level, increase this to two extra dice, and if you're at least 18th level, increase it to three extra dice.
                 """,
@@ -1058,8 +1058,8 @@ public static class GuardianFeats
                 ModData.FeatNames.DisarmingIntercept,
                 6,
                 "When you catch a weapon in your armor, you can move your body to wrench it from your foe's grasp.",
-                """
-                {b}Trigger{/b} You Intercept an Attack that was made with a melee weapon by a creature you're adjacent to.
+                $$"""
+                {b}Trigger{/b} You {{ModData.FeatNames.InterceptAttack.ToLink("Intercept an Attack")}} that was made with a melee weapon by a creature you're adjacent to.
 
                 After Intercepting the Attack, attempt to Disarm the weapon used for that attack. You don't need to have a hand free, and you gain an item bonus to the Athletics check equal to the value of your armor's potency rune.
                 """,
@@ -1501,8 +1501,8 @@ public static class GuardianFeats
                 ModData.FeatNames.RingTheirBell,
                 6,
                 "Using your armor, you pummel a foe that isn't focused on you in the head or face to stagger them.",
-                """
-                {b}Requirements{/b}You are wearing medium or heavy armor, and your taunted enemy is off-guard because it didn't target you or include you in an area effect.
+                $$"""
+                {b}Requirements{/b}You are wearing medium or heavy armor, and your {{ModData.FeatNames.Taunt.ToLink("taunted enemy")}} is off-guard because it didn't target you or include you in an area effect.
 
                 Make a Strike with a fist or kick against your taunted enemy. If the Strike hits and deals damage, the creature must attempt a Fortitude save against your class DC {i}(this is an incapacitation effect){/i}.
                 """
@@ -1654,7 +1654,7 @@ public static class GuardianFeats
             ModData.FeatNames.GroupTaunt,
             8,
             "Your taunts draw the attention of multiple enemies at once.",
-            "When you use Taunt, you can choose up to three targets within range, and you can have up to three taunted enemies at a time. Each time you Taunt, you can choose which enemies remain taunted and which the effect ends for. You must remain at or below this limit.",
+            $"When you use {ModData.FeatNames.Taunt.ToLink("Taunt")}, you can choose up to three targets within range, and you can have up to three taunted enemies at a time. Each time you Taunt, you can choose which enemies remain taunted and which the effect ends for. You must remain at or below this limit.",
             [ModData.Traits.Guardian]);
         
         // Juggernaut Charge
@@ -1992,10 +1992,10 @@ public static class GuardianFeats
                 ModData.FeatNames.ArmoredCounterattack,
                 12,
                 "With the might of your armor behind you, you hit back at a foe who would dare try to hurt your allies.",
-                """
-                {b}Trigger{/b} You use Intercept Attack against a melee Strike and are adjacent to the creature that made the Strike.
+                $$"""
+                {b}Trigger{/b} You use {{ModData.FeatNames.InterceptAttack.ToLink("Intercept Attack")}} against a melee Strike and are adjacent to the creature that made the Strike.
                 
-                After Intercepting the Attack, make your own Strike against the triggering enemy. If your Strike hits, you Taint the target; this Taunt gains the visual trait.
+                After Intercepting the Attack, make your own Strike against the triggering enemy. If your Strike hits, you {{ModData.FeatNames.Taunt.ToLink("Taunt")}} the target; this Taunt gains the visual trait.
                 """,
                 [ModData.Traits.Guardian])
             .WithActionCost(0)

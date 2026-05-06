@@ -59,10 +59,10 @@ public static class GuardianClass
                 $$"""
                 {b}1. Guardian's Armor.{/b} While wearing medium or heavy armor, you gain resistance to {{ModData.Tooltips.CommonDamageTypesRemastered("physical")}} damage equal to 1 + half your level. In addition, you can {{ModData.Tooltips.ArmorResting("rest normally")}} while wearing medium and heavy armor.
                 
-                {b}2. Taunt.{/b} Often, the best way to protect your allies is to have the enemy want to attack you instead. You gain the {{ModData.Tooltips.ActionTaunt("Taunt {icon:Action}")}} action.
+                {b}2. Taunt.{/b} Often, the best way to protect your allies is to have the enemy want to attack you instead. You gain the {{ModData.FeatNames.Taunt.ToLink("Taunt {icon:Action}")}} action.
                 
                 {b}3. Intercept Attack.{/b} You keep your charges safe from harm, even if it means you
-                get hurt yourself. You gain the {{ModData.Tooltips.ActionInterceptAttack("Intercept Attack {icon:Reaction}")}} reaction.
+                get hurt yourself. You gain the {{ModData.FeatNames.InterceptAttack.ToLink("Intercept Attack {icon:Reaction}")}} reaction.
                 
                 {b}4. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks.
                 

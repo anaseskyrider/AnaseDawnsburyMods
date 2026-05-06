@@ -19,7 +19,7 @@ public static class GuardianArchetype
                 $$"""
                  You become trained in Athletics; if you were already trained in Athletics, you instead become trained in a skill of your choice.
 
-                 You become trained in guardian class DC, and you can use the {{ModData.Tooltips.ActionTaunt("Taunt {icon:Action}")}} action.
+                 You become trained in guardian class DC, and you can use the {{ModData.FeatNames.Taunt.ToLink("Taunt {icon:Action}")}} action.
 
                  You become trained in light armor and medium armor, or trained in heavy armor if you were already trained in both.
 
@@ -93,7 +93,7 @@ public static class GuardianArchetype
                 ModData.FeatNames.GuardiansIntercept,
                 6,
                 null,
-                $"You can use the {ModData.Tooltips.ActionInterceptAttack("Intercept Attack {icon:Reaction}")} reaction once per combat.",
+                $"You can use the {ModData.FeatNames.InterceptAttack.ToLink("Intercept Attack {icon:Reaction}")} reaction once per combat.",
                 [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.Guardian)
             .WithOnSheet(values =>
