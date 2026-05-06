@@ -2122,6 +2122,116 @@ public static class GuardianFeats
         // Right Where You Want Them
 
         // Scattering Charge
+        yield return new TrueFeat(
+                ModData.FeatNames.ScatteringCharge,
+                12,
+                "You charge into a group of enemies to send them flying.",
+                """
+                    {b}Requirements{/b} You are wearing medium or heavy armor.
+
+                    Stride up to your Speed. At the end of your movement, you can Shove up to three creatures within your reach. You don't need a hand free to do so. You attempt a separate Athletics check for each one; each attempt counts toward your multiple attack penalty, but the penalty doesn't increase until after you've made all the attempts. Regardless of your results, you can’t Stride to follow any of the targets.
+                    """,
+                    [Trait.Flourish, ModData.Traits.Guardian])
+            .WithActionCost(3)
+            .WithPermanentQEffect(null, qfFeat =>
+            {
+                qfFeat.ProvideMainAction = qfThis =>
+                {
+                    CombatAction scatter = new CombatAction(
+                            qfThis.Owner,
+                            ModData.Illustrations.ScatteringCharge,
+                            "Scattering Charge",
+                            [ModData.Traits.ModName, Trait.Flourish, ModData.Traits.Guardian],
+                            null!,
+                            Target.Self()
+                                .WithAdditionalRestriction(self =>
+                                    CombatAction.CreateSimple(self, "Stride")
+                                        .WithActionId(ActionId.Stride)
+                                        .CanBeginToUse(self)
+                                            ? null
+                                            : "Can't Stride"))
+                        .WithDescription(
+                            "You charge into a group of enemies to send them flying.",
+                            """
+                            {b}Requirements{/b} You are wearing medium or heavy armor.
+
+                            Stride up to your Speed. At the end of your movement, you can Shove up to three creatures within your reach. You don't need a hand free to do so. You attempt a separate Athletics check for each one; each attempt counts toward your multiple attack penalty, but the penalty doesn't increase until after you've made all the attempts. Regardless of your results, you can’t Stride to follow any of the targets.
+                            """)
+                        .WithShortDescription("Stride, then Shove up to three enemies.")
+                        .WithActionCost(3)
+                        .WithEffectOnEachTarget(async (action, caster, _, _) =>
+                        {
+                            if (!await caster.StrideOrStepAsync("Choose where to Stride with Scattering Charge. You should end your movement within your reach of multiple enemies.", allowCancel: true))
+                                action.RevertRequested = true;
+                            else
+                            {
+                                int mapBefore = caster.Actions.AttackedThisManyTimesThisTurn;
+                                int mapCounting = mapBefore;
+                                List<Creature> alreadyShoved = [];
+                                QEffect preventStride = new QEffect()
+                                {
+                                    Name = "[SCATTERING CHARGE: PREVENT STRIDE]",
+                                    PreventTakingAction = action2 =>
+                                        action2.ActionId is ActionId.Stride
+                                            ? "Scattering charge" : null,
+                                };
+                                caster.AddQEffect(preventStride);
+                                for (int i = 0; i < 3; ++i)
+                                {
+                                    await caster.Battle.GameLoop.StateCheck();
+                                    caster.Actions.AttackedThisManyTimesThisTurn = mapBefore;
+                                    
+                                    List<Option> options = [];
+                                    foreach (CombatAction shove in CombatManeuverPossibilities.GetAllOptions(
+                                                 CombatManeuverPossibilities.CreateShovePossibility(caster)))
+                                    {
+                                        // PETR: If this later causes bugs, it might be because of the addition of another requirement, or because the free hand requirement became a dedicated object
+                                        ((CreatureTarget)shove.Target).CreatureTargetingRequirements.RemoveAll(req =>
+                                            req is LegacyCreatureTargetingRequirement);
+                                        ((CreatureTarget)shove.Target).WithAdditionalConditionOnTargetCreature((_,d) =>
+                                            alreadyShoved.Contains(d) ? Usability.NotUsableOnThisCreature("Already Shoved") : Usability.Usable);
+                                        shove
+                                            .WithActionCost(0)
+                                            .WithEffectOnChosenTargets(async (self, chosen) =>
+                                            {
+                                                if (chosen.ChosenCreature is not null)
+                                                    alreadyShoved.Add(chosen.ChosenCreature);
+                                            });
+                                        GameLoop.AddDirectUsageOnCreatureOptions(shove, options);
+                                    }
+                                    
+                                    if (options.Count <= 0)
+                                        continue;
+                                    
+                                    Option chosenOption;
+                                    if (options.Count >= 2 || i == 0)
+                                    {
+                                        if (i == 0)
+                                            options.Add(new CancelOption(true));
+                                        chosenOption = (await caster.Battle.SendRequest(new AdvancedRequest(caster, "Choose a creature to Shove.", options)
+                                        {
+                                            TopBarText = $"Choose a creature to Shove. ({i+1}/3)",
+                                            TopBarIcon = IllustrationName.Shove
+                                        })).ChosenOption;
+                                    }
+                                    else
+                                        chosenOption = options[0];
+                                    if (chosenOption is CancelOption)
+                                    {
+                                        action.RevertRequested = true;
+                                        return;
+                                    }
+                                    await chosenOption.Action();
+                                    ++mapCounting;
+                                }
+                                caster.Actions.AttackedThisManyTimesThisTurn = mapCounting;
+                                preventStride.ExpiresAt = ExpirationCondition.Immediately;
+                            }
+                        });
+
+                    return new ActionPossibility(scatter);
+                };
+            });
 
         // Weakening Assault
         yield return new TrueFeat(

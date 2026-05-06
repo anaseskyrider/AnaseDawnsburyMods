@@ -322,6 +322,7 @@ public static class ModData
         public static readonly Illustration GetBehindMe = IllustrationName.FleetStep;
         public static readonly Illustration ToughCookie = IllustrationName.Enlarge;
         public static readonly Illustration ArmoredCounterattack = new CornerIllustration(InterceptAttack, IllustrationName.StarHit, Direction.Southeast);
+        public static readonly Illustration ScatteringCharge = new SideBySideIllustration(IllustrationName.FleetStep, IllustrationName.Shove);
         public static readonly Illustration WeakeningAssault = new CornerIllustration(new SideBySideIllustration(IllustrationName.Swipe, IllustrationName.Swipe), IllustrationName.Enfeebled, Direction.Southeast);
         public static readonly Illustration KeepUpTheGoodFight = IllustrationName.WinningStreak;
         public static readonly Illustration OpeningStance = IllustrationName.RemoveConfusion;
