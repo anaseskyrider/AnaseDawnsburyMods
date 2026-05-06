@@ -8,6 +8,7 @@ using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Intelligence;
@@ -392,38 +393,48 @@ public static class GuardianClass
                             && cr.DistanceTo(qfFeat.Owner) <= interceptRange,
                         qfTech =>
                         {
-                            qfTech.YouAreDealtDamageEvent = async (qfTech2, @event) =>
+                            qfTech.YouAreDealtDamageReaction = (qfTech2, dEvent) =>
                             {
                                 Creature guardian = qfFeat.Owner;
                                 Creature ally = qfTech2.Owner;
-                                Creature attacker = @event.Source;
-                                bool isCritical = @event.CheckResult is CheckResult.CriticalSuccess or CheckResult.CriticalFailure;
-                                int totalResolved = @event.KindedDamages
-                                    .Sum(kd => kd.ResolvedDamage);
-                                int totalOriginal = @event.KindedDamages
-                                    .Sum(kd => kd.OriginalResolvedDamage);
-                                string describeDamage = totalResolved + (totalResolved < totalOriginal ? " of " + totalOriginal : null);
-                                string question =
-                                    $$"""
-                                      {b}Intercept Attack{/b} {icon:Reaction}
-                                      {Blue}{{attacker}}{/Blue} is about to{{(isCritical ? " {Red}critically{/Red}" : null)}} deal {{describeDamage}} damage to {Blue}{{ally}}{/Blue}. Take {{totalOriginal}} damage for them instead?
-                                      """;
+                                Creature attacker = dEvent.Source;
                                 Trait[] reactionTraits = [ModData.Traits.Guardian];
                                 
-                                CombatAction interceptAttack = CreateInterceptAttack(guardian, attacker, @event, guardian.Actions.DetermineReactionToUse(question, reactionTraits));
+                                string? reactionToUse = guardian.Actions.DetermineReactionToUse("{b}Intercept Attack{/b} {icon:Reaction}", reactionTraits);
+                                CombatAction interceptAttack = CreateInterceptAttack(guardian, attacker, dEvent, reactionToUse);
                                 
                                 if (!interceptAttack.CanBeginToUse(qfFeat.Owner))
-                                    return;
+                                    return null;
                                 
-                                if (await guardian.Battle.AskToUseReaction(guardian, question, ModData.Illustrations.InterceptAttack, reactionTraits))
-                                {
-                                    await guardian.Battle.GameLoop.FullCast(
-                                        interceptAttack, ChosenTargets.CreateSingleTarget(ally));
-                                    if (guardian.HasFeat(ModData.FeatNames.GuardiansIntercept))
-                                        qfFeat.Description = qfFeat.Description?
-                                            .Replace("Green}", "Red}");
-                                }
+                                bool canStride = attacker.HasEffect(ModData.QEffectIds.TauntTarget);
+                                bool isCritical = dEvent.CheckResult is CheckResult.CriticalSuccess or CheckResult.CriticalFailure;
+                                int totalResolved = dEvent.KindedDamages
+                                    .Sum(kd => kd.ResolvedDamage);
+                                int totalOriginal = dEvent.KindedDamages
+                                    .Sum(kd => kd.OriginalResolvedDamage);
+                                string describeDamage = totalOriginal.WithTag("b").WithColor(isCritical ? "Red" : null) + (totalResolved < totalOriginal ? " of " + totalResolved.WithTag("b") : null);
+
+                                ReactionOption react = ReactionOption.CreateFromCombatActionCustom(
+                                        interceptAttack,
+                                        $"{(canStride ? "Step " + "or Stride".WithColor("Green") : "Step")} towards {ally.ToColoredName()} and take {describeDamage} damage.",
+                                        async () =>
+                                        {
+                                            await guardian.Battle.GameLoop.FullCast(
+                                                interceptAttack, ChosenTargets.CreateSingleTarget(ally));
+                                            if (guardian.HasFeat(ModData.FeatNames.GuardiansIntercept))
+                                                qfFeat.Description = qfFeat.Description?
+                                                    .Replace("Green}", "Red}");
+                                        }
+                                    )
+                                    .WithTraits(reactionTraits)
+                                    .WithIsReaction();
+                                if (reactionToUse is not null)
+                                    react.Caption += " {icon:FreeAction}";
+
+                                return react;
                             };
+
+                            return;
                         });
                     
                     // Intercept filter toggles
@@ -496,9 +507,8 @@ public static class GuardianClass
                     // Applying Intercept filter toggles
                     qfFeat.PreventTakingAction = action =>
                     {
-                        if (action.ActionId != ModData.ActionIds.InterceptAttack)
-                            return null;
-                        if (action.Tag is not DamageEvent dEvent)
+                        if (action.ActionId != ModData.ActionIds.InterceptAttack
+                            || action.Tag is not DamageEvent dEvent)
                             return null;
                         if (qfFeat.Owner.QEffects.FirstOrDefault(qf => qf.Traits.Contains(ModData.Traits.InterceptAttackToggle))
                                 is not { Tag: List<FeatName> activeToggles })
@@ -868,8 +878,10 @@ public static class GuardianClass
     }
     
     /// <summary>
-    /// Creates a CombatAction with an action cost of 0 (used as a reaction) for a given damage event. This action should be used with <see cref="GameLoop.FullCast(CombatAction)"/> in order to apply its effects. Because this is a reaction, the target is supplied when creating the action; do not use it with the alternative overload (<see cref="GameLoop.FullCast(CombatAction, ChosenTargets)"/>).
     /// </summary>
+    /// <remarks>
+    /// This action should be used with <see cref="GameLoop.FullCast(CombatAction)"/> in order to apply its effects. Because this is a reaction, the target is supplied when creating the action; do not use it with the alternative overload (<see cref="GameLoop.FullCast(CombatAction, ChosenTargets)"/>).
+    /// </remarks>
     /// <param name="guardian_1">The guardian taking this reaction.</param>
     /// <param name="attacker">The creature dealing damage from a damage event.</param>
     /// <param name="dEvent">The damage event being reacted to.</param>
