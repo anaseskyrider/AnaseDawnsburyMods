@@ -2123,6 +2123,74 @@ public static class GuardianFeats
         // Scattering Charge
 
         // Weakening Assault
+        yield return new TrueFeat(
+                ModData.FeatNames.WeakeningAssault,
+                12,
+                "With a barrage of blows, you diminish an enemy's strength.",
+                $"Strike an enemy affected by your {ModData.FeatNames.Taunt.ToLink("Taunt")} twice. If either Strike hits, the target is enfeebled 1 (3 if both Strikes hit) until the beginning of your next turn.",
+                [ModData.Traits.Guardian])
+            .WithActionCost(2)
+            .WithPermanentQEffect(null, qfFeat =>
+            {
+                qfFeat.ProvideMainAction = qfThis =>
+                {
+                    CombatAction assault = new CombatAction(
+                            qfThis.Owner,
+                            ModData.Illustrations.WeakeningAssault,
+                            "Weakening Assault",
+                            [ModData.Traits.ModName, ModData.Traits.Guardian],
+                            null!,
+                            Target.Self()
+                                .WithAdditionalRestriction(self =>
+                                {
+                                    bool usable = false;
+                                    var tauntedReq = ModData.CommonRequirements.IsMyTauntedEnemy();
+                                    var offGuardReq = ModData.CommonRequirements.OffGuardDueToMyTaunt();
+                                    if (self.Battle.AllCreatures.Any(cr =>
+                                            tauntedReq.Satisfied(self, cr)
+                                            || offGuardReq.Satisfied(self, cr)))
+                                        usable = true;
+                                    return usable ? null : "No-one affected by my taunt";
+                                }))
+                        .WithActionCost(2)
+                        .WithDescription(
+                            "With a barrage of blows, you diminish an enemy's strength.",
+                            $"Strike an enemy affected by your {ModData.FeatNames.Taunt.ToLink("Taunt")} twice. If either Strike hits, the target is enfeebled 1 until the beginning of your next turn. If both Strikes hit, the target is enfeebled 3 instead.")
+                        .WithShortDescription("Strike an enemy affected by your Taunt twice and make them enfeebled 1 or 3.")
+                        .WithEffectOnEachTarget(async (action, caster, _, _) =>
+                        {
+                            int hits = 0;
+                            Creature? chosen = null;
+                            Action<CombatAction> adjustStrike = strike =>
+                            {
+                                CreatureTargetingRequirement tauntedReq = ModData.CommonRequirements.IsMyTauntedEnemy();
+                                CreatureTargetingRequirement offGuardReq = ModData.CommonRequirements.OffGuardDueToMyTaunt();
+                                ((CreatureTarget)strike.Target).WithAdditionalConditionOnTargetCreature((a, d) =>
+                                    tauntedReq.Satisfied(a, d)
+                                    || offGuardReq.Satisfied(a, d)
+                                        ? Usability.Usable
+                                        : Usability.NotUsableOnThisCreature("Not affected by my taunt"));
+                                strike.WithEffectOnEachTarget(async (_, caster2, target, result) =>
+                                {
+                                    chosen = target;
+                                    if (result < CheckResult.Success)
+                                        return;
+                                    target.AddQEffect(QEffect.Enfeebled(hits > 0 ? 3 : 1)
+                                        .WithExpirationAtStartOfSourcesTurn(caster2, 1));
+                                    hits++;
+                                });
+                            };
+                            if (!await CommonCombatActions.StrikeCreature(caster, null, adjustStrike, null, action.Illustration, "Choose a creature to Strike with Weakening Assault. (1/2)", true, "Cancel"))
+                            {
+                                action.RevertRequested = true;
+                                return;
+                            }
+                            await CommonCombatActions.StrikeCreature(caster, null, adjustStrike, cr => cr == chosen, action.Illustration, "Choose a creature to Strike with Weakening Assault. (2/2)", true, "Pass");
+                        });
+
+                    return new ActionPossibility(assault);
+                };
+            });
 
         #endregion
 
