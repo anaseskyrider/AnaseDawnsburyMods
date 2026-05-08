@@ -93,6 +93,11 @@ public static class ModData
         public static readonly FeatName BreathLikeHoney = ModManager.RegisterFeatName(IdPrepend+"BreathLikeHoney", "Breath Like Honey");
         public static readonly FeatName GrandmothersWisdom = ModManager.RegisterFeatName(IdPrepend+"GrandmothersWisdom", "Grandmother's Wisdom");
         public static readonly FeatName LaughingKholo = ModManager.RegisterFeatName(IdPrepend+"LaughingKholo", "Laughing Kholo");
+        public static readonly FeatName AncestorsRage = ModManager.RegisterFeatName(IdPrepend+"AncestorsRage", "Ancestor's Rage");
+        public static readonly FeatName BonekeepersBane = ModManager.RegisterFeatName(IdPrepend+"BonekeepersBane", "Bonekeeper's Bane");
+        public static readonly FeatName FirstToStrikeFirstToFall = ModManager.RegisterFeatName(IdPrepend+"FirstToStrikeFirstToFall", "First to Strike, First to Fall");
+        public static readonly FeatName ImpalingBone = ModManager.RegisterFeatName(IdPrepend+"ImpalingBone", "Impaling Bone");
+        public static readonly FeatName LegendaryLaugh = ModManager.RegisterFeatName(IdPrepend+"LegendaryLaugh", "Legendary Laugh");
         #endregion
     }
 
@@ -120,10 +125,14 @@ public static class ModData
     public static class QEffectIds
     {
         public static QEffectId AbsorbStrengthImmunity;
+        public static QEffectId BonekeepersBaneStartOfTurn;
+        public static QEffectId FirstToFall;
         
         public static void Initialize()
         {
             AbsorbStrengthImmunity = SafelyRegister<QEffectId>("AbsorbStrengthImmunity");
+            BonekeepersBaneStartOfTurn = SafelyRegister<QEffectId>("BonekeepersBaneStartOfTurn");
+            FirstToFall = SafelyRegister<QEffectId>("FirstToFall");
         }
     }
 

@@ -1,7 +1,5 @@
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
-using Dawnsbury.Campaign.Encounters.Tutorial;
-using Dawnsbury.Campaign.Path;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
@@ -16,6 +14,8 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
+using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
@@ -23,6 +23,7 @@ using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Controls.Portraits;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
+using Dawnsbury.Mods.LoresAndWeaknesses;
 
 namespace Dawnsbury.Mods.KholoAncestry;
 
@@ -37,16 +38,21 @@ public static class AncestryFeats
     public static IEnumerable<Feat> CreateFeats()
     {
         #region Level 1
+        
         // Ask The Bones
         yield return new TrueFeat(
                 ModData.FeatNames.AskTheBones,
                 1,
                 "You keep the bones of a knowledgeable ancestor or friend to call upon for advice.",
-                "{b}Frequency{/b} once per day\n\nAttempt to "+ModData.Tooltips.RecallWeakness("Recall Weakness {icon:Action}")+" with a +1 circumstance bonus to your check.",
+                $$"""
+                  {b}Frequency{/b} once per day
+
+                  Attempt to {{RecallWeakness.GetActionLink()}} with a +1 circumstance bonus to your check.
+                  """,
                 [ModData.Traits.Kholo])
             .WithActionCost(0)
             .WithPermanentQEffect(
-                "Attempt to Recall Weakness with a +1 circumstance bonus to your check.",
+                "Recall Weakness with a +1 circumstance bonus to your check.",
                 qfFeat =>
                 {
                     qfFeat.ProvideMainAction = qfThis =>
@@ -58,25 +64,29 @@ public static class AncestryFeats
                                 qfThis.Owner,
                                 IllustrationName.ArmorOfBones,
                                 "Ask the Bones",
-                                [Trait.Basic, ModData.Traits.Kholo, Trait.DoesNotBreakStealth, Trait.UnaffectedByConcealment],
-                                "{i}You keep the bones of a knowledgeable ancestor or friend to call upon for advice.{/i}\n\n{b}Frequency{/b} once per day\n\nAttempt to Recall Weakness with a +1 circumstance bonus to your check.",
+                                [ModData.Traits.ModName, Trait.Basic, ModData.Traits.Kholo, Trait.DoesNotBreakStealth, Trait.UnaffectedByConcealment],
+                                """
+                                {i}You keep the bones of a knowledgeable ancestor or friend to call upon for advice.{/i}
+
+                                {b}Frequency{/b} once per day
+
+                                Attempt to Recall Weakness with a +1 circumstance bonus to your check.
+                                """,
                                 Target.Self())
                             .WithActionCost(0)
                             .WithEffectOnEachTarget(async (action, caster, target, result) =>
                             {
+                                CombatAction recall = RecallWeakness.CreateRecallWeaknessAction(caster);
                                 QEffect bonesBonus = new QEffect()
                                 {
                                     Name = "[ASK THE BONES]",
-                                    BonusToAttackRolls = (qfThis2, combatAction, defender) =>
-                                    {
-                                        if (!ModManager.TryParse("RecallWeaknessActionID", out ActionId recall)
-                                            || combatAction.ActionId != recall)
-                                            return null;
-                                        return new Bonus(1, BonusType.Circumstance, "Ask the bones");
-                                    },
+                                    BonusToAttackRolls = (_, combatAction, _) =>
+                                        combatAction == recall
+                                            ? new Bonus(1, BonusType.Circumstance, "Ask the bones")
+                                            : null,
                                 };
                                 caster.AddQEffect(bonesBonus);
-                                if (await OfferToRecallWeakness(caster))
+                                if (await caster.Battle.GameLoop.FullCast(recall))
                                     qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.AskTheBones);
                                 else
                                     action.RevertRequested = true;
@@ -116,7 +126,7 @@ public static class AncestryFeats
                 ModData.FeatNames.HyenaFamiliar,
                 1,
                 "Hyenas serve kholo as pets and trackers. Some kholos, such as yourself, draw the attention of smaller hyenas that are vessels for magical spirits.",
-                "You gain a hyena as a {link:ClassFamiliar}combat familiar{/}. It always has the {link:"+ModData.FeatNames.FamiliarScent+"}scent{/} ability prepared, which counts against the number of familiar abilities it has.",
+                $"You gain a hyena as a {FeatName.ClassFamiliar.ToLink("combat familiar")}. It always has the {ModData.FeatNames.FamiliarScent.ToLink("scent")} ability prepared, which counts against the number of familiar abilities it has.",
                 [ModData.Traits.Kholo, ModData.Traits.DeployableFamiliarFeat])
             .WithIllustration(ModData.Illustrations.HyenaFamiliar)
             .WithEquivalent(values => values.Tags.ContainsKey(Familiars.FAMILIAR_KEY))
@@ -188,12 +198,20 @@ public static class AncestryFeats
                 ModData.FeatNames.KholoLore,
                 1,
                 "You paid close attention to the senior hunters in your clan to learn their tricks.",
-                "You gain the trained proficiency rank in Stealth and Survival. If you would automatically become trained in one of those skills (from your background or class, for example), you instead become trained in a skill of your choice.",
+                $"""
+                You gain the trained proficiency rank in Stealth and Survival. If you would automatically become trained in one of those skills (from your background or class, for example), you instead become trained in a skill of your choice.
+                
+                You gain the {RecallWeakness.FNAdditionalLore.ToLink("Additional Lore")} skill feat with Kholo Lore, a specific lore skill that can be used to {RecallWeakness.GetActionLink()} on kholos and similar ancestries.
+                """,
                 [ModData.Traits.Kholo])
             .WithOnSheet(values =>
             {
                 values.TrainInThisOrSubstitute(Skill.Stealth);
                 values.TrainInThisOrSubstitute(Skill.Survival);
+                values.TrainInThisOrSubstitute(Kholo.KholoLore);
+                values.IncreaseProficiency(3, Kholo.KholoLore.Trait, Proficiency.Expert);
+                values.IncreaseProficiency(7, Kholo.KholoLore.Trait, Proficiency.Master);
+                values.IncreaseProficiency(15, Kholo.KholoLore.Trait, Proficiency.Legendary);
             });
 
         // Kholo Weapon Familiarity
@@ -201,13 +219,12 @@ public static class AncestryFeats
                 ModData.FeatNames.KholoWeaponFamiliarity,
                 1,
                 "You gain greater access to weapons specific to your cultural lineage.",
-                "You have familiarity with " + ModData.Tooltips.KholoWeapon("kholo weapons") +
-                " — for the purpose of proficiency, you use your proficiency with any simple weapon for simple kholo weapons, and you treat any of these that are martial weapons as simple weapons and any that are advanced weapons as martial weapons.\n\nAt 5th level, whenever you get a critical hit with one of these weapons, you get its {tooltip:criteffect}critical specialization effect{/}.",
+                $"You have familiarity with {ModData.Tooltips.KholoWeapon("kholo weapons")} — for the purpose of proficiency, you use your proficiency with any simple weapon for simple kholo weapons, and you treat any of these that are martial weapons as simple weapons and any that are advanced weapons as martial weapons.\n\nAt 5th level, whenever you get a critical hit with one of these weapons, you get its {{tooltip:criteffect}}critical specialization effect{{/}}.",
                 [ModData.Traits.Kholo])
             .WithOnSheet(values =>
             {
                 // Trained in simple kholo weapons, using however your class scales itself.
-                foreach (Trait weapon in KholoAncestry.KholoWeapons)
+                foreach (Trait weapon in Kholo.KholoWeapons)
                 {
                     values.Proficiencies.AutoupgradeAlongBestWeaponProficiency(
                         [Trait.Simple, weapon]);
@@ -215,11 +232,11 @@ public static class AncestryFeats
 
                 // Martial -> Simple
                 values.Proficiencies.AddProficiencyAdjustment(
-                    traits => traits.Any(KholoAncestry.KholoWeapons.Contains) && traits.Contains(Trait.Martial),
+                    traits => traits.Any(Kholo.KholoWeapons.Contains) && traits.Contains(Trait.Martial),
                     Trait.Simple);
                 // Advanced -> Martial
                 values.Proficiencies.AddProficiencyAdjustment(
-                    traits => traits.Any(KholoAncestry.KholoWeapons.Contains) && traits.Contains(Trait.Advanced),
+                    traits => traits.Any(Kholo.KholoWeapons.Contains) && traits.Contains(Trait.Advanced),
                     Trait.Martial);
             })
             .WithPermanentQEffect(
@@ -233,7 +250,7 @@ public static class AncestryFeats
                     }
                     qfFeat.Description += " {Blue}and they trigger {tooltip:criteffect}critical specialization effects{/}{/Blue}.";
                     qfFeat.YouHaveCriticalSpecialization = (_, item, _, _) =>
-                        item.Traits.Any(KholoAncestry.KholoWeapons.Contains);
+                        item.Traits.Any(Kholo.KholoWeapons.Contains);
                 });
         
         // Pack Hunter
@@ -242,8 +259,11 @@ public static class AncestryFeats
                 ModData.FeatNames.PackHunter,
                 1,
                 "You were taught how to hunt as part of a pack.",
-                "You gain a +2 circumstance bonus to checks to Aid, and your allies gain a +2 circumstance bonus to checks to Aid you."
-                    + "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " {b}Modding{/b} Requires another mod which includes Aiding in some form.",
+                $$"""
+                  You gain a +2 circumstance bonus to checks to Aid, and your allies gain a +2 circumstance bonus to checks to Aid you.
+
+                  {{ModData.Illustrations.DawnsburySun.IllustrationAsIconString}} {b}Modding{/b} Requires another mod which includes Aiding in some form.
+                  """,
                 [ModData.Traits.Kholo])
             .WithPermanentQEffect(
                 "You have a +2 circumstance bonus on checks to Aid {icon:Reaction}, and your allies gain the same bonus to Aiding you.",
@@ -300,7 +320,14 @@ public static class AncestryFeats
                 ModData.FeatNames.AbsorbStrength,
                 5,
                 "You consume a piece of your enemy, absorbing their strength.",
-                "{b}Frequency{/b} once per encounter\n{b}Requirements{/b} You are adjacent to an enemy's "+ ModData.Illustrations.AbsorbStrengthMeatBigger.IllustrationAsIconString + " corpse.\n\nYou gain temporary Hit Points equal to the enemy's level (minimum of 1).\n\n" + ModData.Illustrations.AbsorbStrengthMeatBigger.IllustrationAsIconString + " {b}Corpses{/b} This feat leaves behind a piece of an enemy on death. These corpses don't occupy their space nor block line of sight, and can't be targeted in any way. Undead and constructs {Red}do not{/Red} leave behind a consumable corpse.",
+                $$"""
+                  {b}Frequency{/b} once per encounter
+                  {b}Requirements{/b} You are adjacent to an enemy's {{ModData.Illustrations.AbsorbStrengthMeatBigger.IllustrationAsIconString}} corpse.
+
+                  You gain temporary Hit Points equal to the enemy's level (minimum of 1).
+
+                  {{ModData.Illustrations.AbsorbStrengthMeatBigger.IllustrationAsIconString}} {b}Corpses{/b} This feat leaves behind a piece of an enemy on death. These corpses don't occupy their space nor block line of sight, and can't be targeted in any way. Undead and constructs {Red}do not{/Red} leave behind a consumable corpse.
+                  """,
                 [ModData.Traits.Kholo])
             .WithActionCost(1)
             .WithPermanentQEffect(
@@ -402,12 +429,12 @@ public static class AncestryFeats
                 ModData.FeatNames.DistantCackle,
                 5,
                 "It takes a very brave person to enter the laughter-haunted forest where you dwell.",
-                "You can cast {i}fear{/i} once per day as a 1st-rank occult innate spell.",
+                $"You can cast {SpellId.Fear.ToLink("fear", ModData.Traits.Kholo, 1).WithTag("i")} once per day as a 1st-rank occult innate spell.",
                 [ModData.Traits.Kholo])
             .WithPrerequisite(
                 values => values.HasFeat(ModData.FeatNames.KholoWitch),
                 "Must have the witch kholo heritage.")
-            .WithRulesBlockForSpell(SpellId.Fear, ModData.Traits.Kholo)
+            .WithRulesBlockForSpell(SpellId.Fear, ModData.Traits.Kholo, 1)
             .WithOnCreature(self =>
             {
                 self.GetOrCreateSpellcastingSource(
@@ -423,7 +450,11 @@ public static class AncestryFeats
                 ModData.FeatNames.LefthandBlood,
                 5,
                 "It's said that the flesh of the left side of a hyena is deadly and poisonous.",
-                "{b}Frequency{/b} once per combat\n\nYou deal 1 slashing damage to yourself to poison a weapon you are holding. If you hit with the weapon and deal damage, the target also takes 1d4 persistent poison damage. The poison on your weapon becomes inert after you hit, or at the end of your next turn, whichever comes first.",
+                """
+                {b}Frequency{/b} once per combat
+
+                You deal 1 slashing damage to yourself to poison a weapon you are holding. If you hit with the weapon and deal damage, the target also takes 1d4 persistent poison damage. The poison on your weapon becomes inert after you hit, or at the end of your next turn, whichever comes first.
+                """,
                 [ModData.Traits.Kholo])
             .WithActionCost(1)
             .WithPermanentQEffect(
@@ -522,7 +553,11 @@ public static class AncestryFeats
                 ModData.FeatNames.PackStalker,
                 5,
                 "Ambushes are an honored kholo tradition.",
-                "{b}Requirements{/b} " + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " You have the {i}Exploration Activities{/i} mod installed.\n\nWhile you are Avoiding Notice, your allies also gain the benefits of the exploration activity. {i}(This effect applies after initiative is already determined, so your allies must still take the activity to roll using Stealth.){i}",
+                $$"""
+                  {b}Requirements{/b} {{ModData.Illustrations.DawnsburySun.IllustrationAsIconString}} You have the {i}Exploration Activities{/i} mod installed.
+
+                  While you are Avoiding Notice, your allies also gain the benefits of the exploration activity. {i}(This effect applies after initiative is already determined, so your allies must still take the activity to roll using Stealth.){i}
+                  """,
                 [ModData.Traits.Kholo])
             .WithPermanentQEffect(
                 "Your allies can also Avoid Notice when you do.",
@@ -544,7 +579,11 @@ public static class AncestryFeats
                 ModData.FeatNames.RabidSprint,
                 5,
                 "You run on all fours as fast as you can.",
-                "{b}Requirements{/b} You have both your hands free.\n\nStride three times.",
+                """
+                {b}Requirements{/b} You have both your hands free.
+
+                Stride three times.
+                """,
                 [ModData.Traits.Kholo])
             .WithActionCost(2)
             .WithPrerequisite(
@@ -639,7 +678,11 @@ public static class AncestryFeats
                 ModData.FeatNames.AmbushHunter,
                 9,
                 "You are always searching for the perfect opportunity to ambush your enemies.",
-                "{b}Requirements{/b} " + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " You have the {i}Exploration Activities{/i} mod installed.\n\nYou can perform the Scout exploration activity at the same time as the Avoid Notice exploration activity. {i}(Selecting either activity grants the benefits of the other.){/i}",
+                $$"""
+                  {b}Requirements{/b} {{ModData.Illustrations.DawnsburySun.IllustrationAsIconString}} You have the {i}Exploration Activities{/i} mod installed.
+
+                  You can perform the Scout exploration activity at the same time as the Avoid Notice exploration activity. {i}(Selecting either activity grants the benefits of the other.){/i}
+                  """,
                 [ModData.Traits.Kholo])
             .WithOnCreature(self =>
             {
@@ -666,12 +709,12 @@ public static class AncestryFeats
                 ModData.FeatNames.BreathLikeHoney,
                 9,
                 "You smell of honey and savory things.",
-                "You can cast {i}soothe{/i} once per day as an occult innate spell, heightened to 3rd-rank.",
+                $"You can cast {SpellId.Soothe.ToLink("soothe", ModData.Traits.Kholo, 3).WithTag("i")} once per day as an occult innate spell, heightened to 3rd-rank.",
                 [ModData.Traits.Kholo])
             .WithPrerequisite(
                 values => values.HasFeat(ModData.FeatNames.KholoSweetbreath),
                 "Must have the sweetbreath kholo heritage.")
-            .WithRulesBlockForSpell(SpellId.Soothe, ModData.Traits.Kholo)
+            .WithRulesBlockForSpell(SpellId.Soothe, ModData.Traits.Kholo, 3)
             .WithOnCreature(self =>
             {
                 self.GetOrCreateSpellcastingSource(
@@ -687,9 +730,9 @@ public static class AncestryFeats
                 ModData.FeatNames.GrandmothersWisdom,
                 9,
                 "You carry the bones of your ancestors with you, who in turn watch over you.",
-                "You can cast {i}deflect critical hit{/i} once per day as a 3rd-rank occult innate spell.",
+                $"You can cast {SpellId.DeflectCriticalHit.ToLink("deflect critical hit", ModData.Traits.Kholo, 3).WithTag("i")} once per day as a 3rd-rank occult innate spell.",
                 [ModData.Traits.Kholo])
-            .WithRulesBlockForSpell(SpellId.DeflectCriticalHit, ModData.Traits.Kholo)
+            .WithRulesBlockForSpell(SpellId.DeflectCriticalHit, ModData.Traits.Kholo, 3)
             .WithOnCreature(self =>
             {
                 self.GetOrCreateSpellcastingSource(
@@ -705,7 +748,7 @@ public static class AncestryFeats
                 ModData.FeatNames.LaughingKholo,
                 9,
                 "Your sinister giggle is a sound of warning and threat.",
-                "You gain the Intimidating Glare skill feat.\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " {b}Modding{/b} If you have the {i}Skill Feats, Skill Items and Backgrounds{/i} mod installed, you also gain its Battle Cry skill feat.",
+                $"You gain the {FeatName.IntimidatingGlare.ToLink("Intimidating Glare")} and {FeatName.BattleCry.ToLink("Battle Cry")} skill feats.",
                 [ModData.Traits.Kholo])
             .WithPrerequisite(
                 values => values.HasFeat(FeatName.MasterIntimidation),
@@ -713,9 +756,229 @@ public static class AncestryFeats
             .WithOnSheet(values =>
             {
                 values.GrantFeat(FeatName.IntimidatingGlare);
-                if (ModManager.TryParse("Battle Cry", out FeatName battleCry))
-                    values.GrantFeat(battleCry);
+                values.GrantFeat(FeatName.BattleCry);
             });
+
+        #endregion
+
+        #region Level 13
+
+        // Ancestor's Rage
+        // DOC: Reordered Animal Form list.
+        ModManager.RegisterActionOnEachSpell(spell =>
+        {
+            if (spell.SpellId is not SpellId.AnimalForm
+                || spell.Variants is null)
+                return;
+            // Reorder list to put the Wolf first, resolving the bug described further down.
+            SpellVariant[] wolfFirst = spell.Variants
+                .OrderBy(v => v.Name == "Wolf" ? 0 : 1)
+                .ThenBy(v => spell.Variants.IndexOf(v))
+                .ToArray();
+            spell.WithVariants(wolfFirst);
+        });
+        yield return new TrueFeat(
+                ModData.FeatNames.AncestorsRage,
+                13,
+                "You transform into an enormous, otherworldly hyena.",
+                $"You can cast {SpellId.AnimalForm.ToLink("animal form", ModData.Traits.Kholo, 5)} (canine form only) once per day as a 5th-rank occult innate spell.",
+                [ModData.Traits.Kholo])
+            .WithRulesBlockForSpell(SpellId.AnimalForm, ModData.Traits.Kholo, 5)
+            .WithOnCreature(self =>
+            {
+                self.GetOrCreateSpellcastingSource(
+                        SpellcastingKind.Innate,
+                        ModData.Traits.Kholo,
+                        Ability.Charisma,
+                        Trait.Occult)
+                    .WithSpells([SpellId.AnimalForm], 5);
+                self.AddQEffect(new QEffect()
+                {
+                    Name = "[KHOLO: ANCESTOR'S RAGE]",
+                    ModifyActionPossibility = (qfThis, action) =>
+                    {
+                        if (action.SpellId != SpellId.AnimalForm
+                            || action.SpellcastingSource?.ClassOfOrigin != ModData.Traits.Kholo
+                            || action.Variants?.FirstOrDefault(v => v.Name == "Wolf")
+                                is not {} wolf)
+                            return;
+                        // BUG: This restriction doesn't seem to be recognized
+                        // for the first variant in an action.
+                        action.Target = Target.DependsOnSpellVariant(variant =>
+                        {
+                            SelfTarget formTarget = Target.Self();
+                            if (variant.Id != "WOLF")
+                                formTarget.WithAdditionalRestriction(_ => "Canine form only");
+                            return formTarget;
+                        });
+                    }
+                });
+            });
+
+        // Bonekeeper's Bane
+        yield return new TrueFeat(
+                ModData.FeatNames.BonekeepersBane,
+                13,
+                null,
+                """
+                Whenever an enemy starts its turn adjacent to you, it must attempt a Will saving throw against your class DC or spell DC {i}(whichever is highest){/i}. On a failure, the enemy takes a –1 status penalty to attack rolls and skill checks. This effect ends when they are no longer adjacent to you.
+
+                Regardless of the result of its save, they are then immune to bonekeeper's bane.
+                """,
+                [ModData.Traits.Kholo])
+            .WithPermanentQEffect(
+                "",
+                qfFeat =>
+                {
+                    qfFeat.AddGrantingOfTechnical(
+                        cr => cr.EnemyOf(qfFeat.Owner) && cr.IsAdjacentTo(qfFeat.Owner),
+                        qfTech =>
+                        {
+                            qfTech.Id = ModData.QEffectIds.BonekeepersBaneStartOfTurn;
+                            qfTech.StartOfYourPrimaryTurn = async (qfTech2, self) =>
+                            {
+                                CombatAction boneBane = new CombatAction(qfFeat.Owner, IllustrationName.Bane,
+                                        "Bonekeeper's Bane", [ModData.Traits.ModName, ModData.Traits.Kholo],
+                                        "Whenever an enemy starts its turn adjacent to you, it must attempt a Will saving throw against your class DC or spell DC {i}(whichever is highest){/i}. On a failure, the enemy takes a –1 status penalty to attack rolls and skill checks. This effect ends when they are no longer adjacent to you.\n\nRegardless of the result of its save, they are then immune to bonekeeper's bane.",
+                                        Target.Self())
+                                    .WithSavingThrow(new SavingThrow(Defense.Will, _ => qfFeat.Owner.ClassOrSpellDC()));
+
+                                if (await CommonSpellEffects.RollSavingThrowAsync(self, boneBane,
+                                        boneBane.SavingThrow!) > CheckResult.Failure)
+                                    return;
+
+                                QEffect bane = new QEffect(
+                                    "Bonekeeper's Bane",
+                                    $"You have a {"-1 status penalty".WithColor("Red")} to attack rolls and skill checks. This effect ends if you cease being adjacent to {qfFeat.Owner.ToColoredName()}.",
+                                    ExpirationCondition.Never,
+                                    qfFeat.Owner,
+                                    IllustrationName.Bane)
+                                {
+                                    SourceAction = boneBane,
+                                    StateCheck = qfThis =>
+                                    {
+                                        if (!qfThis.Owner.IsAdjacentTo(qfThis.Source!))
+                                            qfThis.ExpiresAt = ExpirationCondition.Immediately;
+                                    },
+                                    BonusToSkills = _ => new Bonus(-1, BonusType.Status, "Bonekeeper's bane"),
+                                    BonusToAttackRolls = (_, action, _) =>
+                                        action.HasTrait(Trait.Attack)
+                                        // PETR: Deviation from tabletop makes skill attacks an attack roll
+                                        /*&& action.ActiveRollSpecification is not null
+                                        && action.ActiveRollSpecification.TaggedDetermineBonus.InvolvedSkill is null*/
+                                            ? new Bonus(-1, BonusType.Status, "Bonekeeper's bane")
+                                            : null
+                                };
+                                self.AddQEffect(bane);
+                                self.AddQEffect(QEffect.ImmunityToCondition(ModData.QEffectIds.BonekeepersBaneStartOfTurn)
+                                    .With(qf => qf.StateCheck = sc => sc.Owner.WeaknessAndResistance.OtherImmunities.Add("bonekeeper's bane")));
+                            };
+                        });
+                });
+
+        #endregion
+
+        #region Level 17
+
+        // First to Strike, First to Fall
+        yield return new TrueFeat(
+                ModData.FeatNames.FirstToStrikeFirstToFall,
+                17,
+                null,
+                "Whenever you successfully Strike a creature that has not acted in the first round of combat, that creature is off-guard until the end of your next turn. If that creature is reduced to 0 Hit Points before the end of your next turn, you and all allies within 30 feet of the creature become quickened until the end of your next turn. You can use the extra action only to move or Strike.",
+                [ModData.Traits.Kholo])
+            .WithPermanentQEffect(
+                "Striking creatures before they've acted in round 1, and killing them within 1 round (end of your turn) of that, makes you and all allies within 30 feet quickened (Move or Strike).",
+                qfFeat =>
+                {
+                    qfFeat.StateCheck = qfFirstRound =>
+                    {
+                        // Only on round 1
+                        if (qfFirstRound.Owner.Battle.RoundNumber != 1)
+                            return;
+                        // For each creature who hasn't acted yet
+                        foreach (Creature unactor in qfFirstRound.Owner.Battle.AllCreatures
+                                     .Where(cr => !cr.Actions.ActedThisEncounter && cr.EnemyOf(qfFirstRound.Owner) && !cr.HasEffect(ModData.QEffectIds.FirstToFall, qf => qf.Source == qfFirstRound.Owner)))
+                            // Apply a visible effect that makes it easier to play around
+                            unactor.AddQEffect(new QEffect(
+                                "First to Strike...",
+                                $"When {qfFirstRound.Owner.ToColoredName()} Strikes you, you gain an additional effect.\n\n{{b}}First to Strike...{{/b}} ends at the start of your first turn.",
+                                ExpirationCondition.Ephemeral,
+                                qfFirstRound.Owner,
+                                IllustrationName.BlackFist)
+                            {
+                                DoNotShowUpOverhead = true,
+                                AfterYouAreDealtDamageOfKind = async (attacker, action, _, defender) =>
+                                {
+                                    if (action.HasTrait(Trait.Strike)
+                                        && action.CheckResult > CheckResult.Failure)
+                                        defender.AddQEffect(new QEffect(
+                                            "... First to Fall",
+                                            $"You are off-guard. When you die, {qfFirstRound.Owner.ToColoredName()} and their allies who are within 30 feet of you become quickened (only to move or Strike).",
+                                            ExpirationCondition.Never,
+                                            attacker,
+                                            IllustrationName.BlackFist)
+                                        {
+                                            Id = ModData.QEffectIds.FirstToFall,
+                                            IsFlatFootedTo = (_, _, _) => "First to Strike, First to Fall",
+                                            WhenCreatureDiesAtStateCheckAsync = async qfThis2 =>
+                                            {
+                                                foreach (Creature ally in qfThis2.Owner.Battle.AllCreatures
+                                                             .Where(cr => cr.FriendOf(qfFirstRound.Owner) && qfThis2.Owner.DistanceTo(cr) <= 6))
+                                                {
+                                                    ally.AddQEffect(QEffect.Quickened(quick =>
+                                                        quick.Traits.ContainsOneOf([Trait.Move, Trait.Strike]))
+                                                        .WithExpirationAtEndOfSourcesNextTurn(qfFirstRound.Owner, true)
+                                                        .WithDescription("You have an extra action each turn. You can only use it to move or Strike.")
+                                                        .With(qf => qf.Key = "FirstToFallQuickened"));
+                                                }
+                                            }
+                                        });
+                                }
+                            });
+                    };
+                });
+        
+        // Impaling Bone
+        // PETR: Level 17 feat. Missing Impaling Spike spell.
+        
+        // Legendary Laugh
+        yield return new TrueFeat(
+                ModData.FeatNames.LegendaryLaugh,
+                17,
+                "Your laugher echoes in the minds of your enemies.",
+                "You can Demoralize creatures up to 60 feet away. Whenever you successfully Demoralize a creature, it takes 3d8 mental damage (or 6d8 on a critical success).",
+                [ModData.Traits.Kholo])
+            .WithPrerequisite(ModData.FeatNames.LaughingKholo, "Laughing Kholo")
+            .WithPermanentQEffect(
+                "Increase Demoralize's range to 60 feet. Demoralize deals 3d8 mental damage (6d8 on a critical success).",
+                qfFeat =>
+                {
+                    qfFeat.ModifyActionPossibility = (qfThis, action) =>
+                    {
+                        if (action.ActionId is not ActionId.Demoralize)
+                            return;
+                        if (action.Target is not CreatureTarget crTar)
+                            return;
+                        if (crTar.CreatureTargetingRequirements.FirstOrDefault(req =>
+                                req is MaximumRangeCreatureTargetingRequirement) is not MaximumRangeCreatureTargetingRequirement range)
+                            return;
+                        range.Range = Math.Max(range.Range, 12);
+                        action.Description = action.Description
+                            .Replace("30 feet", "60 feet".WithColor("Blue"))
+                            .Replace("1.", "1, {Blue}and takes 3d8 mental damage{/Blue}.")
+                            .Replace("2.", "2, {Blue}and takes 6d8 mental damage{/Blue}.");
+                    };
+                    qfFeat.AfterYouTakeActionAgainstTarget = async (qfThis, action, target, result) =>
+                    {
+                        if (action.ActionId is not ActionId.Demoralize
+                            || result < CheckResult.Success)
+                            return;
+
+                        int numDice = result == CheckResult.CriticalSuccess ? 6 : 3;
+                        await CommonSpellEffects.DealDirectDamage(action, DiceFormula.FromText(numDice + "d6", "Legendary laugh" + (result == CheckResult.CriticalSuccess ? " (Critical success)" : null)), target, result, DamageKind.Mental);
+                    };
+                });
 
         #endregion
     }

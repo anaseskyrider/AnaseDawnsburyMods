@@ -1,5 +1,4 @@
-﻿using Dawnsbury.Core.Coroutines.Requests;
-using Dawnsbury.Core.Mechanics.Enumerations;
+﻿using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Modding;
 
@@ -31,7 +30,7 @@ public static class ModLoader
         
         // Our regularly scheduled load functions
         ModData.LoadData();
-        KholoAncestry.LoadAncestry();
+        Kholo.LoadAncestry();
         AncestryFeats.LoadFeats();
     }
 }

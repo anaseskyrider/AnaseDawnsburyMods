@@ -9,15 +9,18 @@ using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.StatBlocks;
 using Dawnsbury.Modding;
+using Dawnsbury.Mods.LoresAndWeaknesses;
 
 namespace Dawnsbury.Mods.KholoAncestry;
 
-public static class KholoAncestry
+public static class Kholo
 {
-    public static List<Trait> KholoWeapons = [
+    public static readonly List<Trait> KholoWeapons = [
         ModData.Traits.Kholo,
         ModData.Traits.FlailItself,
     ];
+    
+    public static Lore KholoLore { set; get; }
     
     public static void LoadAncestry()
     {
@@ -29,6 +32,17 @@ public static class KholoAncestry
             if (ModManager.TryParse("WarFlail", out Trait warFlail))
                 KholoWeapons.Add(warFlail);
         };
+
+        KholoLore = Lores.RegisterNewLore(
+            "Kholo Lore",
+            $"""
+             You've studied extensively about kholo history and culture.
+
+             You can use this skill to {RecallWeakness.GetActionLink()} on kholos and similar creatures.
+             """,
+            (_, target) => target.Traits.ContainsOneOf([Trait.Gnoll, ModData.Traits.Kholo]),
+            true,
+            true);
         
         LoadFeatures();
         
