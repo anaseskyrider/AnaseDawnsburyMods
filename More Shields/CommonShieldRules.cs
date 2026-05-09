@@ -292,8 +292,8 @@ public static class CommonShieldRules
 
                     damageEvent.ReduceBy(preventHowMuch, "Shield block");
                 })
-            .WithIsReaction()
-            .WithTraits(Trait.ShieldBlock);
+            .WithTraits(Trait.ShieldBlock)
+            .WithIsReaction();
         adjustReaction?.Invoke(reaction);
         
         return reaction;
