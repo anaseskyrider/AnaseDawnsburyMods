@@ -7,6 +7,7 @@ using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
+using Dawnsbury.Display;
 using Dawnsbury.Display.ContextMenu;
 using Dawnsbury.Display.Controls;
 using Dawnsbury.Display.Notifications;
@@ -232,15 +233,15 @@ public static class Trophies
                 if (tagData.Traits is not null)
                     dataText += "\n{b}Traits{/b} " + string.Join(
                         ", ",
-                        tagData.Traits.Select(t => t.ToStringOrTechnical()));
+                        tagData.Traits.Select(t => t.HumanizeTitleCase2()));
                 if (tagData.Kinds is not null)
                     dataText += "\n{b}Damage Types{/b} " + string.Join(
                         ", ",
                         tagData.Kinds.Select(kind =>
-                            kind.ToStringOrTechnical().WithColor(kind.DamageKindToColor())));
+                            kind.HumanizeTitleCase2().WithColor(kind.DamageKindToColor())));
                 if (tagData.Traditions is not null)
                     dataText += "\n{b}Traditions{/b} " + string.Join(", ", tagData.Traditions.Select(trad =>
-                        trad.ToStringOrTechnical().WithColor(trad.TraditionTraitToColor())));
+                        trad.HumanizeTitleCase2().WithColor(trad.TraditionTraitToColor())));
                 if (tagData.Tags is not null)
                 {
                     // Remove all the save-defense tags
@@ -638,7 +639,7 @@ public static class Trophies
         data.Add(finalName);
         
         // Creature Id
-        string finalId = DataConstants.CREATURE_ID + id.ToString();
+        string finalId = DataConstants.CREATURE_ID + id.ToStringOrTechnical();
         data.Add(finalId);
         
         // Traits
@@ -651,7 +652,7 @@ public static class Trophies
                 DataConstants.TRAITS
                 + string.Join(
                     DataConstants.ITEM_SEPARATOR,
-                    filteredTraits.Select(t => t.ToString()));
+                    filteredTraits.Select(t => t.ToStringOrTechnical()));
             data.Add(finalTraits);
         }
         
@@ -662,7 +663,7 @@ public static class Trophies
                 DataConstants.DAMAGE_KINDS
                 + string.Join(
                     DataConstants.ITEM_SEPARATOR,
-                    kinds.Select(t => t.ToString()));
+                    kinds.Select(t => t.ToStringOrTechnical()));
             data.Add(finalKinds);
         }
 
@@ -673,7 +674,7 @@ public static class Trophies
                 DataConstants.TRADITIONS
                 + string.Join(
                     DataConstants.ITEM_SEPARATOR,
-                    traditions.Select(t => t.ToString()));
+                    traditions.Select(t => t.ToStringOrTechnical()));
             data.Add(finalTraditions);
         }
         
@@ -716,17 +717,23 @@ public static class Trophies
 
         List<Trait>? finalTraits = GetString(DataConstants.TRAITS)
             ?.Split(DataConstants.ITEM_SEPARATOR)
-            .Select(Trait.Parse)
+            .Select(t => ModManager.TryParse(t, out Trait iTrait) ? iTrait : (Trait?)null)
+            .Where(t => t.HasValue)
+            .Cast<Trait>()
             .ToList();
         
         List<DamageKind>? finalKinds = GetString(DataConstants.DAMAGE_KINDS)
             ?.Split(DataConstants.ITEM_SEPARATOR)
-            .Select(DamageKind.Parse)
+            .Select(dk => ModManager.TryParse(dk, out DamageKind iDk) ? iDk : (DamageKind?)null)
+            .Where(dk => dk.HasValue)
+            .Cast<DamageKind>()
             .ToList();
         
         List<Trait>? finalTraditions = GetString(DataConstants.TRADITIONS)
             ?.Split(DataConstants.ITEM_SEPARATOR)
-            .Select(Trait.Parse)
+            .Select(t => ModManager.TryParse(t, out Trait iTrait) ? iTrait : (Trait?)null)
+            .Where(t => t.HasValue)
+            .Cast<Trait>()
             .ToList();
         
         List<string>? finalTags = GetString(DataConstants.TAGS)
