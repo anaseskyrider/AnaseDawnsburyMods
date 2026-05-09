@@ -21,6 +21,7 @@ using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
 using Dawnsbury.Mods.LoresAndWeaknesses;
+using Dawnsbury.Mods.MoreShields;
 
 namespace Dawnsbury.Mods.SlayerClass;
 
@@ -260,32 +261,36 @@ public static class ClassFeats
                         && (action.ChosenTargets.ChosenTile is not null || action.ChosenTargets.ChosenTiles.Count > 0)
                             ? new Bonus(2, BonusType.Circumstance, "Repelling shield", true)
                             : null,
-                    YouAreDealtDamageEvent = async (qfThis, @event) =>
+                    YouAreDealtDamageReaction = (qfThis, dEvent) =>
                     {
-                        // Use regular Shield Block for physical triggers
-                        if (@event.KindedDamages[0].DamageKind.IsPhysical())
-                            return;
-                        if (HuntingTools.GetTool(qfThis.Owner, HuntingTools.ToolId.RepellingShield) is not { } shield
-                            || MoreShields.CommonShieldRules.GetRaisedShields(qfThis.Owner).FirstOrDefault(shield.IsMyTool) is not {} iShield
-                            || @event.CombatAction is not { } action
+                        if (dEvent.CombatAction is not { } action
                             || !action.HasTrait(Trait.Attack)
-                            || action.ActionId == ActionId.Trip
+                            || action.ActionId == ActionId.Trip)
+                            return null;
+                        
+                        DamageStuff dStuff = new DamageStuff(
+                            dEvent.TotalResolvedDamage,
+                            dEvent.CombatAction,
+                            dEvent.KindedDamages.First().DamageKind);
+                        
+                        // Use regular Shield Block for physical triggers
+                        if (CommonShieldRules.DoesShieldBlockApply(qfThis.Owner, dStuff))
+                            return null;
+                        
+                        if (HuntingTools.GetTool(qfThis.Owner, HuntingTools.ToolId.RepellingShield) is not { } shield
+                            || CommonShieldRules.GetRaisedShields(qfThis.Owner).FirstOrDefault(shield.IsMyTool)
+                                is not {} iShield
                             || Trophies.GetTrophy(iShield) is not {} trophy
                             || Trophies.GetTrophyData(trophy)?.Kinds is not { } kinds
-                            || !@event.KindedDamages.Any(kd => kinds.Contains(kd.DamageKind)))
-                            return;
-                        
-                        (await MoreShields.CommonShieldRules.OfferAndMakeShieldBlock(
-                                @event.Source,
-                                @event.TargetCreature,
-                                new DamageStuff(
-                                    @event.KindedDamages.Sum(n => n.ResolvedDamage),
-                                    @event.CombatAction,
-                                    @event.KindedDamages[0].DamageKind),
-                                @event.TargetCreature,
-                                shield.IsMyTool))
-                            ?.Apply(@event);
-                    },
+                            || !dEvent.KindedDamages.Any(kd => kinds.Contains(kd.DamageKind)))
+                            return null;
+
+                        return CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2(
+                            dEvent,
+                            dEvent.TargetCreature,
+                            qfThis.Owner,
+                            iShield);
+                    }
                 };
                 self.AddQEffect(repellQF);
             });
