@@ -591,7 +591,6 @@ public static class HuntingTools
         }
         
         // Consecrated Panoply
-        // DOC: Safeguard Charms' +1 is cumulative if a foe is both your quarry and applies your reinforced benefit. Removed Attack trait from the Hunting Spike activity, assuming it's unintentional to be at -5 before your first Strike and end at -10. Always grant the highest level runes for your level to the spikes. Add interesting small, typed damage bonuses at levels 7 and 13, with action compression at level 19. Move adamantine from 19 to 13. You can draw and Strike twice at level 19.
         yield return new HuntingTool(
                 "Consecrated Panoply",
                 ToolId.ConsecratedPanoply,
