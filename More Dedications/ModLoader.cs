@@ -30,5 +30,17 @@ public static class ModLoader
         Assassin.LoadArchetype();
         DualWeaponWarrior.LoadArchetype();
         FamiliarMaster.LoadArchetype();
+        // TODO: Student of Perfection
+        // TODO: Staff Acrobat
+        // TODO: Poisoner
+        // TODO: Sniping Duo
+        // TODO: Bounty Hunter
+        // TODO: Chronoskimmer
+        // TODO: Curse Maelstrom
+        // TODO: Eldritch Researcher
+        // TODO: Gladiator
+        // TODO: Mind Smith
+        // TODO: Pistol Phenom
+        // TODO: Shadowcaster
     }
 }
