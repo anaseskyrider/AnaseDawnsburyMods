@@ -59,36 +59,83 @@ public static class RunesmithClass
                 + "\r\n\r\n{b}5. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks."
                 + (Constants.CharacterLevelCap > 8 ? "\r\n\r\n" + new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString + " (INCOMPLETE CONTENT: level 9 & 17 runes, level 10+ class feats) " + new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString : null),
                 null)
-            .WithClassFeatures(cf =>
+            .WithEffectiveClassFeatures(cf =>
             {
                 // Features are listed in the order added for each level //
-                cf.AddFeature(2, ModData.Tooltips.FeatureRunicCrafter("runic crafter"));
-                cf.AddFeature(5, "Expert in weapons", "unarmed, simple, martial");
+                cf.AddFeature(2, new ClassFeature(ModData.Tooltips.FeatureRunicCrafter("runic crafter"))
+                    .WithOnSheet(values =>
+                        values.GrantFeat(ModData.FeatNames.RunicCrafter)));
+                cf.AddFeature(5, new ClassFeature("Expert in weapons", "unarmed, simple, martial")
+                    .WithOnSheet(values =>
+                    {
+                        values.SetProficiency(Trait.Unarmed, Proficiency.Expert);
+                        values.SetProficiency(Trait.Simple, Proficiency.Expert);
+                        values.SetProficiency(Trait.Martial, Proficiency.Expert);
+                        values.SetProficiency(ModData.Traits.ArtisansHammer, Proficiency.Expert);
+                    }));
                 cf.AddFeature(7, WellKnownClassFeature.ExpertInClassDC);
                 cf.AddFeature(7, WellKnownClassFeature.ExpertInReflex);
-                cf.AddFeature(7, ModData.Tooltips.FeatureRunicOptimization("runic optimization"));
-                cf.AddFeature(9, ModData.Tooltips.FeatureAssuredRunicCrafter("assured runic crafter"));
-                cf.AddFeature(11, ModData.Tooltips.FeatureSmithsEndurance("smith's endurance"));
-                cf.AddFeature(13, "Expert in defenses", "unarmored, light, medium");
+                cf.AddFeature(7, new ClassFeature(ModData.Tooltips.FeatureRunicOptimization("runic optimization"))
+                    .WithOnCreature((values, cr) =>
+                        cr.AddQEffect(RunicOptimization(cr.Level >= 15))));
+                cf.AddFeature(9, new ClassFeature(ModData.Tooltips.FeatureAssuredRunicCrafter("assured runic crafter"))
+                    .WithOnSheet(values =>
+                        values.GrantFeat(ModData.FeatNames.AssuredRunicCrafter)));
+                cf.AddFeature(11, new ClassFeature(ModData.Tooltips.FeatureSmithsEndurance("smith's endurance"))
+                    .WithOnSheet(values =>
+                        values.SetProficiency(Trait.Fortitude, Proficiency.Master))
+                    .WithOnCreature((values, cr) =>
+                        cr.AddQEffect(new QEffect("Smith's Endurance", "When you roll a success on a Fortitude save, you get a critical success instead.")
+                        {
+                            Innate = false,
+                            AddToDefenseBlock = _ => "{b}Smith's Endurance.{/b} When you roll a success on a Fortitude save, you get a critical success instead.",
+                            AdjustSavingThrowCheckResult = (effect, defense, action, checkResult) =>
+                                defense != Defense.Fortitude || checkResult != CheckResult.Success
+                                    ? checkResult
+                                    : CheckResult.CriticalSuccess
+                        })));
+                cf.AddFeature(13, new ClassFeature("Expert in defenses", "unarmored, light, medium")
+                    .WithOnSheet(values =>
+                    {
+                        values.SetProficiency(Trait.UnarmoredDefense, Proficiency.Expert);
+                        values.SetProficiency(Trait.LightArmor, Proficiency.Expert);
+                        values.SetProficiency(Trait.MediumArmor, Proficiency.Expert);
+                    }));
                 cf.AddFeature(13, WellKnownClassFeature.ExpertInPerception);
-                cf.AddFeature(13, "Master in weapons", "unarmed, simple, martial");
+                cf.AddFeature(13, new ClassFeature("Master in weapons", "unarmed, simple, martial")
+                    .WithOnSheet(values =>
+                    {
+                        values.SetProficiency(Trait.Unarmed, Proficiency.Master);
+                        values.SetProficiency(Trait.Simple, Proficiency.Master);
+                        values.SetProficiency(Trait.Martial, Proficiency.Master);
+                        values.SetProficiency(ModData.Traits.ArtisansHammer, Proficiency.Expert);
+                    }));
                 cf.AddFeature(15, ModData.Tooltips.FeatureRunicOptimization("greater runic optimization"));
-                cf.AddFeature(15, "Master in " + cf.ClassSelectionFeat.Name.ToLower() + " DC");
-                cf.AddFeature(19, "Legendary in " + cf.ClassSelectionFeat.Name.ToLower() + " DC");
-                cf.AddFeature(19, "Master in defenses", "unarmored, light, medium");
+                cf.AddFeature(15, WellKnownClassFeature.MasterInClassDC);
+                cf.AddFeature(19, new ClassFeature("Legendary in " + cf.ClassSelectionFeat.Name.ToLower() + " DC")
+                    .WithOnSheet(values =>
+                        values.SetProficiency(ModData.Traits.Runesmith, Proficiency.Legendary)));
+                cf.AddFeature(19, new ClassFeature("Master in defenses", "unarmored, light, medium")
+                    .WithOnSheet(values =>
+                    {
+                        values.SetProficiency(Trait.UnarmoredDefense, Proficiency.Master);
+                        values.SetProficiency(Trait.LightArmor, Proficiency.Master);
+                        values.SetProficiency(Trait.MediumArmor, Proficiency.Master);
+                    }));
                 for (int lv = 1; lv <= 20; lv++)
                 {
                     if (lv > 1 && lv % 2 == 1) // Levels 3, 5, 7, 9, 11, 13, 15, 17, 19
                         cf.AddFeature(lv, "Additional rune known", "level " + (lv > 16 ? 17 : lv > 8 ? 9 : 1));
                     if (lv > 1 && lv % 4 == 1) // Levels 5, 9, 13, 17
-                        cf.AddFeature(lv, "Etch limit increase", (2 + lv / 4) + " runes");
+                        cf.AddFeature(lv, new ClassFeature("Etch limit increase", (2 + lv / 4) + " runes")
+                            .WithOnSheet(values =>
+                                RunicRepertoireFeat.GetRepertoireOnSheet(values)?.IncreaseEtchLimit(5, 1)));
                 }
                 // cf.AddFeature(_, "Expert in simple and martial weapons and in unarmed attacks");
                 // cf.AddFeature(_, "Expert martial weapons", "Your proficiency ranks for simple weapons, martial weapons, and unarmed attacks increase to expert.");
             })
             .WithOnSheet(values =>
             {
-                #region Level 1 Features
                 // Bonus skills
                 values.AddSelectionOption(new SingleFeatSelectionOption(
                         "runesmithSkills",
@@ -123,102 +170,6 @@ public static class RunesmithClass
                 values.GrantFeat(FeatName.ShieldBlock);
                 // Class feat
                 values.AddClassFeatOption("RunesmithFeat1", ModData.Traits.Runesmith, 1);
-                #endregion
-                
-                #region Higher Levels
-                values.AddAtLevel(2, values2 =>
-                {
-                    values2.GrantFeat(ModData.FeatNames.RunicCrafter);
-                });
-                values.AddAtLevel(5, values2 =>
-                {
-                    values2.SetProficiency(Trait.Unarmed, Proficiency.Expert);
-                    values2.SetProficiency(Trait.Simple, Proficiency.Expert);
-                    values2.SetProficiency(Trait.Martial, Proficiency.Expert);
-                    values2.SetProficiency(ModData.Traits.ArtisansHammer, Proficiency.Expert);
-                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values2)!;
-                    repertoire.IncreaseEtchLimit(5, 1);
-                });
-                values.AddAtLevel(7, values2 =>
-                {
-                    values2.SetProficiency(Trait.Reflex, Proficiency.Expert);
-                    values2.SetProficiency(ModData.Traits.Runesmith, Proficiency.Expert);
-                });
-                #endregion
-                
-                #region Future Content
-                values.AddAtLevel(9, values2 =>
-                {
-                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values2)!;
-                    repertoire.IncreaseEtchLimit(9, 1);
-                    values2.GrantFeat(ModData.FeatNames.AssuredRunicCrafter);
-                });
-                #endregion
-
-                #region Post-Game Content
-                values.AddAtLevel(11, values2 =>
-                {
-                    values2.SetProficiency(Trait.Fortitude, Proficiency.Master);
-                    // See WithOnCreature for the success->critical effect.
-                });
-                values.AddAtLevel(13, values2 =>
-                {
-                    values2.SetProficiency(Trait.UnarmoredDefense, Proficiency.Expert);
-                    values2.SetProficiency(Trait.LightArmor, Proficiency.Expert);
-                    values2.SetProficiency(Trait.MediumArmor, Proficiency.Expert);
-                    
-                    values2.SetProficiency(Trait.Perception, Proficiency.Expert);
-                    
-                    values2.SetProficiency(Trait.Unarmed, Proficiency.Master);
-                    values2.SetProficiency(Trait.Simple, Proficiency.Master);
-                    values2.SetProficiency(Trait.Martial, Proficiency.Master);
-                    values2.SetProficiency(ModData.Traits.ArtisansHammer, Proficiency.Expert);
-                    
-                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values2)!;
-                    repertoire.IncreaseEtchLimit(13, 1);
-                });
-                values.AddAtLevel(15, values2 =>
-                {
-                    values2.SetProficiency(ModData.Traits.Runesmith, Proficiency.Master);
-                });
-                values.AddAtLevel(17, values2 =>
-                {
-                    RunicRepertoireFeat repertoire = RunicRepertoireFeat.GetRepertoireOnSheet(values2)!;
-                    repertoire.IncreaseEtchLimit(17, 1);
-                });
-                values.AddAtLevel(19, values2 =>
-                {
-                    values2.SetProficiency(ModData.Traits.Runesmith, Proficiency.Legendary);
-                    
-                    values2.SetProficiency(Trait.UnarmoredDefense, Proficiency.Master);
-                    values2.SetProficiency(Trait.LightArmor, Proficiency.Master);
-                    values2.SetProficiency(Trait.MediumArmor, Proficiency.Master);
-                });
-                #endregion
-            })
-            .WithOnCreature(cr =>
-            {
-                #region Higher Levels
-                if (cr.Level >= 7)
-                {
-                    QEffect optimize = RunicOptimization(cr.Level >= 15);
-                    cr.AddQEffect(optimize);
-                }
-                #endregion
-
-                #region Post-Game Content
-                if (cr.Level >= 11)
-                {
-                    cr.AddQEffect(new QEffect("Smith's Endurance", "When you roll a success on a Fortitude save, you get a critical success instead.")
-                    {
-                        AdjustSavingThrowCheckResult = (effect, defense, action, checkResult) =>
-                            defense != Defense.Fortitude || checkResult != CheckResult.Success
-                                ? checkResult
-                                : CheckResult.CriticalSuccess
-                    });
-                    // See WithOnSheet for the Master proficiency increase.
-                }
-                #endregion
             });
         runesmithClassFeat.RulesText = runesmithClassFeat.RulesText
             .Replace("Key ability", "Key attribute")
