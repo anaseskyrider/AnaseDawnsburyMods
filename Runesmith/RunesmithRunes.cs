@@ -2448,7 +2448,7 @@ public static class RunesmithRunes
         if (!AllRunes.Contains(rune))
             AllRunes.Add(rune);
         AllRuneFeats.Add(runeFeat);
-        ModManager.AddFeat(runeFeat);
+        ModManager.AddFeat(runeFeat, ModData.Traits.ModName);
         return runeFeat;
     }
 }

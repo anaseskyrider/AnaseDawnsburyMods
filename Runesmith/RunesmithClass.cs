@@ -35,10 +35,10 @@ public static class RunesmithClass
     {
         // Class Features
         foreach (Feat ft in CreateFeatures())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
         
         // Class
-        ModManager.AddFeat(CreateClass());
+        ModManager.AddFeat(CreateClass(), ModData.Traits.ModName);
     }
 
     public static Feat CreateClass()

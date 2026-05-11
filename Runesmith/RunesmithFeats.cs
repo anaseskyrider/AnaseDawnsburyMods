@@ -33,14 +33,14 @@ public static class RunesmithFeats
     public static void LoadFeats()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddFeat(ft, ModData.Traits.ModName);
     }
     
     public static IEnumerable<Feat> CreateFeats()
     {
         bool isTraitParsed = ModManager.TryParse("Shield Action Feat", out Trait shieldActionFeat);
         
-        #region 1st-Level Feats
+        #region 1st-Level
         
         // Backup Runic Enhancement
         yield return new TrueFeat(
@@ -348,7 +348,7 @@ public static class RunesmithFeats
         
         #endregion
         
-        #region 2nd-Level Feats
+        #region 2nd-Level
         
         // Fortifying Knock
         Feat fortifyingKnock = new TrueFeat(
@@ -732,7 +732,7 @@ public static class RunesmithFeats
         
         #endregion
         
-        #region 4th-Level Feats
+        #region 4th-Level
         
         // Artist's Attendance
         yield return new TrueFeat(
@@ -1085,7 +1085,7 @@ public static class RunesmithFeats
         
         #endregion
         
-        #region 6th-Level Feats
+        #region 6th-Level
         
         // Runic Reprisal
         yield return new TrueFeat(
@@ -1463,7 +1463,7 @@ public static class RunesmithFeats
         
         #endregion
         
-        #region 8th-Level Feats
+        #region 8th-Level
         
         // Drawn In Red
         yield return new TrueFeat(
@@ -1739,7 +1739,7 @@ public static class RunesmithFeats
         // - Return Unto Runes
         // - Forge New Word
         
-        #region 10th-Level Feats
+        #region 10th-Level
         
         // Chain of Words
         
@@ -1749,7 +1749,7 @@ public static class RunesmithFeats
         
         #endregion
         
-        #region 12th-Level Feats
+        #region 12th-Level
         
         // Astral Composite Invocation <--- Priority
         
@@ -1759,7 +1759,7 @@ public static class RunesmithFeats
         
         #endregion
         
-        #region 14th-Level Feats
+        #region 14th-Level
         
         // Dance of Bloody Ink <--- Priority
         
@@ -1769,7 +1769,7 @@ public static class RunesmithFeats
         
         #endregion
         
-        #region 16th-Level Feats
+        #region 16th-Level
         
         // By Your Name <--- Priority
         
@@ -1777,7 +1777,7 @@ public static class RunesmithFeats
         
         #endregion
         
-        #region 18th-Level Feats
+        #region 18th-Level
         
         // Annihilating Composite Invocation <--- Priority
         
@@ -1785,7 +1785,7 @@ public static class RunesmithFeats
         
         #endregion
         
-        #region 20th-Level Feats
+        #region 20th-Level
         
         // Forge New Word
         

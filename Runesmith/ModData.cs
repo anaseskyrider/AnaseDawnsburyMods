@@ -310,6 +310,8 @@ public static class ModData
     
     public static class Traits
     {
+        public static readonly Trait ModName = ModManager.RegisterModNameTrait("RunesmithClass", "Runesmith Class");
+        
         #region Class
         public static readonly Trait Runesmith = ModManager.RegisterTrait("Runesmith", 
             new TraitProperties("Runesmith", true) { IsClassTrait = true });

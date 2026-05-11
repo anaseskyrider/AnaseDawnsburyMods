@@ -251,6 +251,7 @@ public static class CommonRuneRules
         
         // Determine traits
         Trait[] traits = [
+                ModData.Traits.ModName,
                 ..rune.Traits,
                 Trait.Magical,
                 Trait.Spell // <- Should apply magic immunity.
@@ -423,14 +424,24 @@ public static class CommonRuneRules
                                         ? "{i}Tattooed{/i}\n" 
                                         : $"{{i}}{drawTrait.ToStringOrTechnical()}{{/i}}\n");
 
-        Trait[] traits = rune.Traits.ToArray().Concat(
+        List<Trait> traits = rune.Traits.ToArray().Concat(
             [
                 ModData.Traits.Invocation,
                 Trait.UnaffectedByConcealment,
                 Trait.Spell, // <- Should apply magic immunity.
                 Trait.DoNotShowOverheadOfActionName,
             ])
-            .ToArray();
+            .ToList();
+        traits.Sort((x, y) => string.Compare(x.ToStringOrTechnical(), y.ToStringOrTechnical(), StringComparison.Ordinal));
+        traits.Insert(0, ModData.Traits.ModName);
+        /*Trait[] traits = rune.Traits.ToArray().Concat(
+            [
+                ModData.Traits.Invocation,
+                Trait.UnaffectedByConcealment,
+                Trait.Spell, // <- Should apply magic immunity.
+                Trait.DoNotShowOverheadOfActionName,
+            ])
+            .ToArray();*/
         
         CreatureTarget invokeTarget = Target.RangedCreature(range);
         if (requiresTargetHasDrawnRune)
@@ -861,7 +872,8 @@ public static class CommonRuneRules
         
         // Generate options
         List<Option> options = [];
-        foreach (Rune rune in repertoireFeat.GetRunesKnown(caster).Where(rune => runeFilter == null || runeFilter.Invoke(rune) == true))
+        foreach (Rune rune in repertoireFeat.GetRunesKnown(caster)
+                     .Where(rune => runeFilter == null || runeFilter.Invoke(rune) == true))
         {
             caster.Battle.AllCreatures.ForEach(cr =>
             {
@@ -870,9 +882,9 @@ public static class CommonRuneRules
                     .ToList()
                     .ForEach(dr =>
                     {
-                        CombatAction? newInvokeAction =
-                            CommonRuneRules.CreateInvokeAction(sourceAction, caster, dr, rune)
-                                ?.WithActionCost(0); // Use at normal range.
+                        CombatAction? newInvokeAction = CommonRuneRules
+                            .CreateInvokeAction(sourceAction, caster, dr, rune)
+                            ?.WithActionCost(0); // Use at normal range.
                         if (newInvokeAction != null)
                             GameLoop.AddDirectUsageOnCreatureOptions(newInvokeAction, options, false);
                     });
@@ -892,11 +904,12 @@ public static class CommonRuneRules
         options.Add(new PassViaButtonOption(passText ?? " Confirm no trace action "));
         
         // Pick a target
-        string topBarText = "Choose a rune to invoke"
-                            + (target != null ? $" on {target.Name}" : null)
-                            + (canBeCanceled == true ? " or right-click to cancel" : null)
-                            + "."
-                            + additionalTopText;
+        string topBarText =
+            "Choose a rune to invoke"
+            + (target != null ? $" on {target.Name}" : null)
+            + (canBeCanceled == true ? " or right-click to cancel" : null)
+            + "."
+            + additionalTopText;
         Option chosenOption = (await caster.Battle.SendRequest( // Send a request to pick an option
             new AdvancedRequest(caster, "Choose a rune to invoke.", options)
             {
