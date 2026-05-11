@@ -596,7 +596,7 @@ public static class RunesmithClass
     {
         int basicIncrease = greater ? 4 : 2;
         const int step = 1;
-        string specializationName = greater ? "Greater runic optimization" : "Runic optimization";
+        string specializationName = greater ? "Greater Runic Optimization" : "Runic Optimization";
         string description = $"You deal an additional {basicIncrease} damage with weapons and unarmed attacks in which you have expert proficiency. This damage increases to {basicIncrease + step} if you're a master, and {basicIncrease + 2 * step} if you're legendary.";
         return new QEffect(specializationName, description)
         {
