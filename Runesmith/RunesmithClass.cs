@@ -401,31 +401,29 @@ public static class RunesmithClass
             });
         
         // Etch Rune
-        // BUG: Action triggers before animal companions spawn.
         yield return new Feat(
                 ModData.FeatNames.EtchRune,
                 "An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.",
                 "At the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to 2 runes, and you can etch an additional rune at levels 5, 9, 13, and 17.",
                 [], null)
             .WithPermanentQEffect(
-                "You apply runes to your allies at the start of combat which last until the end of combat or consumed.",
+                "At the start of each combat, apply runes to your party (lasts until consumed).",
                 qfFeat =>
                 {
-                    qfFeat.Innate = false;
-                    qfFeat.StartOfCombat = async qfThis =>
+                    qfFeat./*StartOfCombat =*/StartOfCombatAfterInitiativeOrderIsSetUp = async qfThis =>
                     {
                         RunicRepertoireFeat? repertoire = RunicRepertoireFeat.GetRepertoireOnCreature(qfThis.Owner);
                         if (repertoire == null)
                             return;
                         
-                        // Runic Tattoo first
+                        /*// Runic Tattoo first
                         if (qfThis.Owner.HasFeat(ModData.FeatNames.RunicTattoo))
                         {
                             QEffect? runicTattooFeat = qfFeat.Owner.QEffects.FirstOrDefault(qf =>
                                 qf.Name is { } name && name.Contains("Runic Tattoo"));
                             if (runicTattooFeat != null)
                                 await runicTattooFeat.StartOfCombat!.Invoke(runicTattooFeat);
-                        }
+                        }*/
                         
                         // Get etch data
                         List<Rune> runesKnown = repertoire.GetRunesKnown(qfFeat.Owner);
