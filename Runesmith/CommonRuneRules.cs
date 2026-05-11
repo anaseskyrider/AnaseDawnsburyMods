@@ -958,7 +958,7 @@ public static class CommonRuneRules
     /// <param name="rune">(DrawnRune) The rune to move.</param>
     /// <param name="newOwner">(Creature) The creature who will own the DrawnRune.</param>
     /// <param name="newDrawnOn">(Creature, DrawnRune, Item) The new "real" target from the newOwner to apply the DrawnRune to, such as an item wielded by the newOwner, the creature itself, or another DrawnRune.</param>
-    public static async void MoveRuneToTarget(DrawnRune rune, Creature newOwner, object? newDrawnOn)
+    public static /*async*/ void MoveRuneToTarget(DrawnRune rune, Creature newOwner, object? newDrawnOn)
     {
         // Might need expanded functionality in the future.
         

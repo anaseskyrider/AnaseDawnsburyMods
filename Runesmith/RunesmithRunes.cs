@@ -120,7 +120,7 @@ public static class RunesmithRunes
                 {
                     int roundHalfLevel = ((caster.Level - 1) / 2);
                     int damageAmount = 2 + roundHalfLevel * 2;
-                    CheckResult result = CommonSpellEffects.RollSavingThrow(
+                    CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(
                         target,
                         sourceAction,
                         Defense.Fortitude,
@@ -233,7 +233,7 @@ public static class RunesmithRunes
                 List<string> validItemsString = [];
                 List<Item> validItems = [];
                 foreach (Item item in target.HeldItems.Where(item =>
-                             item.WeaponProperties != null && item.WeaponProperties.DamageKind != null &&
+                             item.WeaponProperties?.DamageKind != null &&
                              (item.DetermineDamageKinds().Contains(DamageKind.Piercing) ||
                               item.DetermineDamageKinds().Contains(DamageKind.Slashing))))
                 {
@@ -636,7 +636,7 @@ public static class RunesmithRunes
                 List<string> validItemsString = [];
                 List<Item> validItems = [];
                 foreach (Item item in target.HeldItems.Where(item =>
-                             item.WeaponProperties != null && item.WeaponProperties.DamageKind != null &&
+                             item.WeaponProperties?.DamageKind != null &&
                              item.DetermineDamageKinds().Contains(DamageKind.Bludgeoning)))
                 {
                     validItemsString.Add(item.Name);
@@ -705,7 +705,7 @@ public static class RunesmithRunes
                             action.CheckResult >= CheckResult.Success) // and it at least succeeds.
                         {
                             action.Owner.RemoveAllQEffects(qfToRemove => qfToRemove == qfSelf);
-                            CheckResult result = CommonSpellEffects.RollSavingThrow(action.ChosenTargets.ChosenCreature,
+                            CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(action.ChosenTargets.ChosenCreature,
                                 CombatAction.CreateSimple(action.Owner, $"Invoked {thisRune.Name}"), Defense.Fortitude,
                                 action.Owner.ClassDC(ModData.Traits.Runesmith));
                             int tilePush = result <= CheckResult.Failure
@@ -1218,7 +1218,7 @@ public static class RunesmithRunes
                 {
                     int numDice = 2 + (int)Math.Floor((caster.Level - thisRune.BaseLevel) / 2d) * 2;
                     DiceFormula invocationDamage = DiceFormula.FromText($"{numDice}d6");
-                    CheckResult result = CommonSpellEffects.RollSavingThrow(
+                    CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(
                         target,
                         sourceAction,
                         Defense.Fortitude,
@@ -1552,7 +1552,7 @@ public static class RunesmithRunes
                     CheckResult result = CheckResult.Failure;
                     if (!target.FriendOf(caster))
                     {
-                        result = CommonSpellEffects.RollSavingThrow(
+                        result = await CommonSpellEffects.RollSavingThrowAsync(
                             target,
                             sourceAction,
                             Defense.Will,
@@ -1806,10 +1806,16 @@ public static class RunesmithRunes
             {
                 DrawnRune ichelsuPassive = new DrawnRune(
                     thisRune,
-                    "You gain the effects of see the unseen and all-around vision.\n\n{b}See the Unseen{/b} You see invisible creatures as though they were just concealed, not invisible.\n\n{b}All-Around Vision{/b} You can't be flanked.",
+                    """
+                    You gain the effects of see the unseen and all-around vision.
+
+                    {b}See the Unseen{/b} You see invisible creatures as though they were just concealed, not invisible.
+
+                    {b}All-Around Vision{/b} You can't be flanked.
+                    """,
                     caster)
                 {
-                    StateCheck = async qfThis =>
+                    StateCheck = qfThis =>
                     {
                         QEffect see = QEffect.SeeInvisibility()
                             .WithExpirationEphemeral();
@@ -2293,7 +2299,7 @@ public static class RunesmithRunes
             .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
             {
                 Sfxs.Play(ModData.SfxNames.InvokedKojastri);
-                target.QEffects.ForEach(qf =>
+                foreach (QEffect qf in target.QEffects)
                 {
                     if (qf.Id is not QEffectId.Grappled || invokedRune.Tag is not DamageKind damageType || CommonRuneRules.IsImmuneToThisInvocation(target, thisRune))
                         return;
@@ -2302,12 +2308,12 @@ public static class RunesmithRunes
                     CombatAction invocationDetails = CombatAction.CreateSimple(caster, sourceAction.Name, [..invokedRune.Traits])
                         .WithTag(invokedRune)
                         .WithSavingThrow(new SavingThrow(Defense.Reflex, caster.ClassDC(ModData.Traits.Runesmith)));
-                    CheckResult result = CommonSpellEffects.RollSavingThrow(
+                    CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(
                         grappler,
                         invocationDetails,
                         Defense.Reflex,
                         caster.ClassDC(ModData.Traits.Runesmith));
-                    CommonSpellEffects.DealBasicDamage(
+                    await CommonSpellEffects.DealBasicDamage(
                         invocationDetails,
                         caster,
                         grappler,
@@ -2317,7 +2323,7 @@ public static class RunesmithRunes
                     if (result < CheckResult.Success)
                         qf.ExpiresAt = ExpirationCondition.Immediately;
                     CommonRuneRules.ApplyImmunity(grappler, thisRune);
-                });
+                }
                 CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
                 return;
                 
