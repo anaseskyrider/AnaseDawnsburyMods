@@ -372,7 +372,8 @@ public static class CommonRuneRules
         Creature owner,
         Rune rune)
     {
-        CombatAction etchAction = CommonRuneRules.CreateDrawAction(owner, rune, 2)
+        CombatAction etchAction = CommonRuneRules
+            .CreateDrawAction(owner, rune, 2)
             .WithActionId(ModData.ActionIds.EtchRune)
             .WithActionCost(0)
             .WithExtraTrait(ModData.Traits.Etched)
@@ -419,10 +420,11 @@ public static class CommonRuneRules
             return null;
 
         Trait drawTrait = runeTarget.DrawTrait ?? Trait.None;
-        string initialDescription = $"{{b}}{runeTarget.Name}{{/b}}\n"
-                                    + (runeTarget.Description!.Contains("Tattoo") 
-                                        ? "{i}Tattooed{/i}\n" 
-                                        : $"{{i}}{drawTrait.ToStringOrTechnical()}{{/i}}\n");
+        string initialDescription =
+            $"{{b}}{runeTarget.Name}{{/b}}\n"
+            + (runeTarget.Description!.Contains("Tattoo")
+                ? "{i}Tattooed{/i}\n"
+                : $"{{i}}{drawTrait.ToStringOrTechnical()}{{/i}}\n");
 
         List<Trait> traits = rune.Traits.ToArray().Concat(
             [
@@ -458,7 +460,7 @@ public static class CommonRuneRules
                 caster,
                 rune.Illustration,
                 "Invoke " + rune.Name,
-                traits,
+                traits.ToArray(),
                 initialDescription + (rune.InvocationTextWithHeightening(rune, caster.Level) ?? "[No invocation entry]"),
                 invokeTarget)
             .WithTag(runeTarget)
