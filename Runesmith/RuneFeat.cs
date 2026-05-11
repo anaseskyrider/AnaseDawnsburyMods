@@ -20,6 +20,7 @@ public class RuneFeat : Feat
             [..rune.Traits],
             null)
     {
+        this.LevelIfAny = rune.BaseLevel;
         this.Rune = rune;
         this.Traits.RemoveFirst(trait => trait == ModData.Traits.Runesmith); // Rune feat needs to not show up as a class feat option.
         this.WithPrerequisite(
