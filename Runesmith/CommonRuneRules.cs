@@ -120,7 +120,7 @@ public static class CommonRuneRules
                     return rank + " {i}" + runes + "{/i}";
                 })
         );
-        return $"{{b}}Traditions{{/b}} {string.Join(", ", traditions)}\n{{b}}DC{{/b}} {DC}"
+        return $"{ModData.Tooltips.RuneTradition("Traditions")} {string.Join(", ", traditions)}\n{{b}}DC{{/b}} {DC}"
             + (etchLim > 0 ? $"; {{b}}etch limit{{/b}} {etchLim}" : null)
             + (tattoo != null ? $"\n{{b}}Tattoo{{/b}} {{i}}{tattoo}{{/i}}" : null)
             + (owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.RunicTattoo) ? " (faded)" : null)

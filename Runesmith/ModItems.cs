@@ -16,10 +16,11 @@ public static class ModItems
                         [ModData.Traits.CountsAsRunesmithFreeHand, Trait.Hammer, Trait.Homebrew, /*Trait.Martial,*/ Trait.Mod, /*Trait.Melee,*/ Trait.Razing, ModData.Traits.Runesmith, Trait.TwoHand1d12, Trait.Uncommon])
                     .WithMainTrait(ModData.Traits.ArtisansHammer)
                     .WithWeaponProperties(new WeaponProperties("1d8", DamageKind.Bludgeoning))
-                    .WithDescription($$"""
-                                       {i}This blacksmith's hammer has an especially long haft and bears special runic engravings which allows a runesmith to wield it with ease whilst practicing their craft, whether in battle or at a workbench.{/i}
+                    .WithDescription(
+                        $$"""
+                          {i}This blacksmith's hammer has an especially long haft and bears special runic engravings which allows a runesmith to wield it with ease whilst practicing their craft, whether in battle or at a workbench.{/i}
 
-                                       Wielding this weapon counts as having a free hand for the purposes of {{ModData.Tooltips.ActionTraceRune("Tracing Runes")}}.
-                                       """));
+                          Wielding this weapon counts as having a free hand for the purposes of {{ModData.FeatNames.TraceRune.ToLink("Tracing Runes")}}.
+                          """));
     }
 }

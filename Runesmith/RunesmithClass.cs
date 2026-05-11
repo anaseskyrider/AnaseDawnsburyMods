@@ -52,12 +52,17 @@ public static class RunesmithClass
                 [Trait.Perception, Trait.Reflex, Trait.Unarmed, Trait.Simple, Trait.Martial, Trait.UnarmoredDefense, Trait.LightArmor, Trait.MediumArmor, Trait.Crafting],
                 [Trait.Fortitude, Trait.Will],
                 2,
-                "{b}1. Runic Repertoire.{/b} A runesmith doesn't cast spells, but they can use "+ModData.Tooltips.TraitRune("runesmith runes")+". You start with 4 runes of 1st level, and learn an additional rune every 2nd level. Your runes are the same level you are, regardless of when you learn them {i}(some runes increase in power at higher levels, as listed in their Level entry){/i}. Runes use your class DC, which is based on Intelligence. If a rune lists a tradition trait (such as Arcane), then it belongs to that tradition; it otherwise belongs to any tradition "+ModData.Tooltips.FeatureTraditionSkill("whose skill")+" you're trained in for the purposes of abilities which require a rune of a specific tradition." 
-                + "\r\n\r\n{b}2. Applying Runes.{/b} You can apply runes in one of two ways: {i}tracing{/i} the rune with the "+ModData.Tooltips.ActionTraceRune("Trace Rune")+" action, or by {i}etching{/i} the rune at the start of combat with the "+ModData.Tooltips.ActionEtchRune("Etch Rune")+" activity."
-                + "\r\n\r\n{b}3. Invoking Runes.{/b} You can activate one or more runes' invocation feature with the "+ModData.Tooltips.ActionInvokeRune("Invoke Rune")+" action."
-                + "\r\n\r\n{b}4. Runesmith feat.{/b}"
-                + "\r\n\r\n{b}5. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks."
-                + (Constants.CharacterLevelCap > 8 ? "\r\n\r\n" + new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString + " (INCOMPLETE CONTENT: level 9 & 17 runes, level 10+ class feats) " + new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString : null),
+                $$"""
+                  {b}1. Runic Repertoire.{/b} A runesmith doesn't cast spells, but they can use {{ModData.Tooltips.TraitRune("runesmith runes")}}. You start with 4 runes of 1st level, and learn an additional rune every 2nd level. Your runes are the same level you are, regardless of when you learn them {i}(some runes increase in power at higher levels, as listed in their Level entry){/i}. Runes use your class DC, which is based on Intelligence. Runes can also belong to a {{ModData.Tooltips.RuneTradition("tradition")}} if it lists one, or tradition skills you're trained in if it doesn't.
+
+                  {b}2. Applying Runes.{/b} You can apply runes in one of two ways: {i}tracing{/i} the rune with the {{ModData.FeatNames.TraceRune.ToLink("Trace Rune {icon:Action}–{icon:TwoActions}")}} action, or by {i}etching{/i} the rune at the start of combat with the {{ModData.FeatNames.EtchRune.ToLink("Etch Rune")}} activity.
+
+                  {b}3. Invoking Runes.{/b} You can activate one or more runes' invocation feature with the {{ModData.FeatNames.InvokeRune.ToLink("Invoke Rune {icon:Action}")}} action.
+
+                  {b}4. Runesmith feat.{/b}
+
+                  {b}5. Shield block {icon:Reaction}.{/b} You can use your shield to reduce damage you take from attacks.{{(Constants.CharacterLevelCap > 8 ? "\r\n\r\n" + new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString + " (INCOMPLETE CONTENT: level 17 runes, level 10+ class feats) " + new SimpleIllustration(IllustrationName.YellowWarning).IllustrationAsIconString : null)}}
+                  """,
                 null)
             .WithEffectiveClassFeatures(cf =>
             {
@@ -191,7 +196,11 @@ public static class RunesmithClass
         yield return new Feat(
                 ModData.FeatNames.TraceRune,
                 "Your fingers dance, glowing light leaving behind the image of a rune.",
-                "You apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.",
+                """
+                {b}Requirements{/b} You have a hand free.
+
+                You apply one rune to an adjacent target matching the rune's Usage description. The rune remains until the end of your next turn. If you spend 2 actions to Trace a Rune, you draw the rune in the air and it appears on a target within 30 feet. You can have any number of runes applied in this way.
+                """,
                 [Trait.Concentrate, Trait.Magical, Trait.Manipulate],
                 null)
             .WithPermanentQEffect(
@@ -421,7 +430,11 @@ public static class RunesmithClass
                         qfThis.Owner.Battle.Log(
                             $"{qfThis.Owner.Name} begins {{b}}Etching Runes{{/b}}.",
                             "Etch Rune",
-                            $"{{i}}An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.{{/i}}\n\nAt the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to {etchLimit} runes.",
+                            $$"""
+                              {i}An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.{/i}
+
+                              At the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to {{etchLimit.WithColor("Blue")}} runes.
+                              """,
                             new Traits([Trait.Manipulate, Trait.DoesNotProvoke, ModData.Traits.Runesmith]));
                         
                         // Old implementation
@@ -534,8 +547,7 @@ public static class RunesmithClass
         yield return new Feat(
                 ModData.FeatNames.AssuredRunicCrafter,
                 "You’re so used to tracing and etching runes in the field that when given the peace and quiet of a proper workshop, it’s hard for things to go astray.",
-                "{b}Precombat Preparations{/b}You can select one ally to gain the benefits of your " +
-                ModData.Tooltips.FeatureRunicCrafter("Runic Crafter") + " feature.",
+                $"{{b}}Precombat Preparations{{/b}}You can select one ally to gain the benefits of your {ModData.Tooltips.FeatureRunicCrafter("Runic Crafter")} feature.",
                 [],
                 null)
             .WithOnSheet(values =>
