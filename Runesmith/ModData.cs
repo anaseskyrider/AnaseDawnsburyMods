@@ -8,6 +8,7 @@ using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
+using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.RunesmithPlaytest;
 
@@ -359,21 +360,21 @@ public static class ModData
         public static readonly Trait Traced = ModManager.RegisterTrait("Traced",
             new TraitProperties("Traced", true,
                 "A traced rune is drawn lightly in dust, light, or a similar fleeting medium. A runesmith can trace runes with the Trace Rune action, and it remains until the end of their next turn.",
-                relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
+                relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith, BackgroundColor = Color.BurlyWood });
         
         /// <summary>A <see cref="DrawnRune"/> with this trait represents a QEffect which has been semi-permanently etched.</summary>
         public static readonly Trait Etched = ModManager.RegisterTrait("Etched",
             new TraitProperties("Etched", true,
                 "An etched rune is carved, inked, or branded in. A runesmith's magic can sustain up to 2 etched runes at a time, or more at higher levels. Etched runes remain indefinitely until they're expended or removed.", //"Runes are etched before combat begins."
-                relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
+                relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith, BackgroundColor = Color.BurlyWood });
         
         /// <summary>A <see cref="DrawnRune"/> with this hidden technical trait represents a QEffect which has been tattooed via the Runic Tattoo feat.</summary>
         public static readonly Trait Tattooed = ModManager.RegisterTrait("Tattooed",
-            new TraitProperties("Tattooed", false));
+            new TraitProperties("Tattooed", false) { BackgroundColor = Color.BurlyWood });
         
         /// <summary>A <see cref="DrawnRune"/> with this hidden technical trait represents a QEffect which has been traced via the Runic Reprisal feat.</summary>
         public static readonly Trait Reprised = ModManager.RegisterTrait("Reprised",
-            new TraitProperties("Reprised", false));
+            new TraitProperties("Reprised", false) { BackgroundColor = Color.BurlyWood });
         
         /// <summary>An action with this trait represents an invocation action. A QEffect with this trait represents the effects of an invocation, as opposed to an effect that is the result of a rune being applied.</summary>
         public static readonly Trait Invocation = ModManager.RegisterTrait("Invocation",
