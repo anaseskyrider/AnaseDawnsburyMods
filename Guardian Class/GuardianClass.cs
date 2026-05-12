@@ -287,7 +287,7 @@ public static class GuardianClass
         yield return CreateInterceptAttackToggle(
             ModData.FeatNames.InterceptToggleCrits,
             "a critical hit, unless that ally would be knocked out.",
-            "Resistance is a flat reduction, barely affecting the damage total. Your guardian might be one of your party's primary damage dealers, and can't afford to eat a crit slightly better than another party member. You might also have better tools to mitigate or avenge a wild crits.",
+            "Resistance is a flat reduction, barely affecting the damage total. Your guardian might be one of your party's primary damage dealers, and can't afford to eat a crit slightly better than another party member. You might also have better tools to mitigate or avenge wild crits.",
             (action, dEvent) =>
                 dEvent.CheckResult >= CheckResult.CriticalSuccess
                 && dEvent.TargetCreature.HP > dEvent.KindedDamages.Sum(kd => kd.ResolvedDamage)
@@ -325,7 +325,7 @@ public static class GuardianClass
             IllustrationName.Dying);
         yield return CreateInterceptAttackToggle(
             ModData.FeatNames.InterceptToggleSummons,
-            "for summoned creatures (including the tree produced by {i}{link:ProtectorTree}protector tree{/}{/i}).",
+            $"for summoned creatures (including the tree produced by {SpellId.ProtectorTree.ToLink("protector tree", Trait.Druid, 1)}).",
             "Your party might have a large number of summons, either in quantity or in spawn-rate; or otherwise you value your own HP more than theirs.",
             (action, dEvent) =>
                 dEvent.TargetCreature.HasTrait(Trait.Summoned)
