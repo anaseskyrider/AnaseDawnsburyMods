@@ -46,13 +46,16 @@ public static class ModData
     /// Registers the source enum to the game, or returns the original if it's already registered.
     /// </summary>
     /// <param name="technicalName">The technicalName string of the enum being registered.</param>
+    /// <param name="displayName">The human readable name of the enum, if the type supports a humanized name.</param>
     /// <typeparam name="T">The enum being registered to.</typeparam>
     /// <returns>The newly registered enum.</returns>
-    public static T SafelyRegister<T>(string technicalName) where T : struct, Enum
+    public static T SafelyRegister<T>(string technicalName, string? displayName = null) where T : struct, Enum
     {
-        return ModManager.TryParse(technicalName, out T alreadyRegistered)
+        return (T)(ModManager.TryParse(technicalName, out T alreadyRegistered)
             ? alreadyRegistered
-            : ModManager.RegisterEnumMember<T>(technicalName);
+            : typeof(T) == typeof(FeatName)
+                ? (Enum)ModManager.RegisterFeatName(technicalName, displayName)
+                : ModManager.RegisterEnumMember<T>(technicalName));
     }
 
     public static class ActionIds
