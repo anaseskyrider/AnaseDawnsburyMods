@@ -683,37 +683,48 @@ public static class GuardianClass
                 /*"While wearing armor, when you attempt a Reflex save to avoid a damaging effect, such as a fireball, you can add your armor's item bonus to AC instead of your Dexterity modifier; if your armor has the bulwark trait, increase this bonus by 1. If you get a success when you do this, you get a critical success instead."*/
                 [],
                 null)
-            .WithPermanentQEffect(
-                "{b}Requires{/b} wearing armor; {b}Effect{/b} You use your armor's AC instead of your Dexterity for Reflex saves (+1 more with bulwark). Additionally, if you succeed on a Reflex save, you critically succeed instead.",
-                qfFeat =>
+            .WithPermanentQEffect(null, qfFeat =>
+            {
+                qfFeat.AddToDefenseBlock = qfThis =>
                 {
-                    qfFeat.StateCheck = qfThis =>
-                    {
-                        qfThis.Tag = qfThis.Owner.BaseArmor is { ArmorProperties: not null };
-                    };
-                    qfFeat.AdjustSavingThrowCheckResult = (qfThis, def,_, result) =>
-                        def != Defense.Reflex || result != CheckResult.Success || qfThis.Owner.Armor.Item == null
-                            ? result
-                            : CheckResult.CriticalSuccess;
-                    qfFeat.BonusToDefenses = (qfThis, action, def) =>
-                    {
-                        if (def is not Defense.Reflex || qfThis.Tag is not true)
-                            return null;
-                        Creature guardian = qfThis.Owner;
-                        Armor armor = qfThis.Owner.Armor;
-                        int dexterity = guardian.PersistentCharacterSheet != null
-                            ? guardian.PersistentCharacterSheet.Calculated.FinalAbilityScores.TotalModifier(Ability.Dexterity)
-                            : guardian.Abilities.Dexterity;
-                        bool hasBulwark = armor.Item != null && armor.Item.HasTrait(Trait.Bulwark);
-                        bool hasMightyBulwark = guardian.HasEffect(QEffectId.MightyBulwark);
-                        int finalDex = Math.Max(
-                            dexterity,
-                            hasBulwark ? (hasMightyBulwark ? 4 : 3) : -99);
-                        int AC = armor.ItemBonus + (hasBulwark ? 1 : 0); // Includes base AC plus increases
-                        int amount = Math.Max(0, AC - finalDex);
-                        return new Bonus(amount, BonusType.Untyped, "Armor's AC");
-                    };
-                });
+                    string bonus = qfThis.Tag is not true
+                        ? "your armor's AC".WithColor("Red")
+                        : $"a {{b}}+{ACBonus().AC}{{/b}} item bonus";
+                    return $"{{b}}Guardian Mastery.{{/b}} You use {bonus} instead of your Dexterity for Reflex saves{(qfThis.Tag is not true ? " (+1 with bulwark)" : null)}. If you succeed on a Reflex save, you critically succeed instead.";
+                };
+                qfFeat.StateCheck = qfThis =>
+                {
+                    qfThis.Tag = qfThis.Owner.BaseArmor is { ArmorProperties: not null };
+                };
+                qfFeat.AdjustSavingThrowCheckResult = (qfThis, def,_, result) =>
+                    def != Defense.Reflex || result != CheckResult.Success || qfThis.Owner.Armor.Item == null
+                        ? result
+                        : CheckResult.CriticalSuccess;
+                qfFeat.BonusToDefenses = (qfThis, _, def) =>
+                {
+                    if (def is not Defense.Reflex || qfThis.Tag is not true)
+                        return null;
+                    return new Bonus(ACBonus().Final, BonusType.Item, "Guardian mastery");
+                };
+                
+                return;
+
+                (int Final, int AC, int DEX) ACBonus()
+                {
+                    Armor armor = qfFeat.Owner.Armor;
+                    int dexterity = qfFeat.Owner.PersistentCharacterSheet != null
+                        ? qfFeat.Owner.PersistentCharacterSheet.Calculated.FinalAbilityScores.TotalModifier(Ability.Dexterity)
+                        : qfFeat.Owner.Abilities.Dexterity;
+                    bool hasBulwark = armor.Item != null && armor.Item.HasTrait(Trait.Bulwark);
+                    bool hasMightyBulwark = qfFeat.Owner.HasEffect(QEffectId.MightyBulwark);
+                    int finalDex = Math.Max(
+                        dexterity,
+                        hasBulwark ? (hasMightyBulwark ? 4 : 3) : -99);
+                    int AC = armor.ItemBonus + (hasBulwark ? 1 : 0); // Includes base AC plus increases
+                    int amount = Math.Max(0, AC - finalDex);
+                    return (amount, AC, finalDex);
+                }
+            });
     }
 
     /// <summary>
