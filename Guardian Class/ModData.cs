@@ -175,7 +175,7 @@ public static class ModData
         #region Class Features
         public static readonly FeatName GuardiansArmor = ModManager.RegisterFeatName(IdPrepend + "GuardiansArmor", "Guardian's Armor");
         public static readonly FeatName Taunt = ModManager.RegisterFeatName(IdPrepend + "Taunt", "Taunt {icon:Action}");
-        public static readonly FeatName InterceptAttack = ModManager.RegisterFeatName(IdPrepend + "InterceptAttack", "Intercept Attack {icon:Action}");
+        public static readonly FeatName InterceptAttack = ModManager.RegisterFeatName(IdPrepend + "InterceptAttack", "Intercept Attack {icon:Reaction}");
         public static readonly FeatName ToughToKill = ModManager.RegisterFeatName(IdPrepend + "ToughToKill", "Tough To Kill");
         public static readonly FeatName ReactionTime = ModManager.RegisterFeatName(IdPrepend + "ReactionTime", "Reaction Time");
         public static readonly FeatName BattleHardened = ModManager.RegisterFeatName(IdPrepend + "BattleHardened", "Battle Hardened");
@@ -348,6 +348,7 @@ public static class ModData
     {
         public const string ToughToKill = "ToughToKill";
         public const string ToughCookie = "ToughCookie";
+        public const string GuardiansIntercept = "GuardiansIntercept";
     }
     
     public static class PossibilityGroups

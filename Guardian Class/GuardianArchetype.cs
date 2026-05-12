@@ -96,25 +96,23 @@ public static class GuardianArchetype
                 $"You can use the {ModData.FeatNames.InterceptAttack.ToLink("Intercept Attack {icon:Reaction}")} reaction once per combat.",
                 [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.Guardian)
-            .WithOnSheet(values =>
+            .WithOnSheet(values => values.GrantFeat(ModData.FeatNames.InterceptAttack))
+            .WithPermanentQEffect(null, qfFeat =>
             {
-                values.GrantFeat(ModData.FeatNames.InterceptAttack);
-            })
-            .WithPermanentQEffect(
-                null,
-                qfFeat =>
+                qfFeat.AfterYouTakeAction = async (qfThis, action) =>
                 {
-                    qfFeat.AfterYouTakeAction = async (qfThis, action) =>
+                    if (action.ActionId != ModData.ActionIds.InterceptAttack)
+                        return;
+                    qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.GuardiansIntercept);
+                    qfThis.Owner.AddQEffect(new QEffect()
                     {
-                        if (action.ActionId == ModData.ActionIds.InterceptAttack)
-                            qfThis.Owner.AddQEffect(new QEffect()
-                            {
-                                PreventTakingAction = action2 => action2.ActionId == ModData.ActionIds.InterceptAttack
-                                    ? "Already used this encounter"
-                                    : null
-                            });
-                    };
-                });
+                        Name = "[GUARDIAN'S INTERCEPT LIMIT]", // Identifier
+                        PreventTakingAction = action2 => action2.ActionId == ModData.ActionIds.InterceptAttack
+                            ? "Already used this encounter"
+                            : null
+                    });
+                };
+            });
         ModManager.AddFeat(guardiansIntercept, ModData.Traits.ModName);
 
         Feat armoredResistance = new TrueFeat(
@@ -133,10 +131,6 @@ public static class GuardianArchetype
                 "You resist some of the physical damage you take when you use Intercept Attack.",
                 qfFeat =>
                 {
-                    if (!ModData.CommonRequirements.MustWearMediumOrHeavyArmor().Satisfied(
-                            qfFeat.Owner, qfFeat.Owner))
-                        qfFeat.Description = "{Red}(Must be wearing medium or heavy armor){/Red}.";
-                    
                     qfFeat.YouBeginAction = async (qfThis, action) =>
                     {
                         if (action.ActionId != ModData.ActionIds.InterceptAttack
@@ -153,7 +147,7 @@ public static class GuardianArchetype
                             {
                                 if (action.ActionId != ModData.ActionIds.InterceptAttack)
                                     return;
-
+                                
                                 qfResist.ExpiresAt = ExpirationCondition.Immediately;
                             }
                         });

@@ -362,172 +362,172 @@ public static class GuardianClass
                         InterceptAttackToggles.Count)
                     .WithIsOptional());
             })
-            .WithPermanentQEffect(
-                "Take physical damage for an adjacent ally, Stepping towards the ally if necessary, or Striding if the attacker is your taunted enemy.",
-                qfFeat =>
+            .WithPermanentQEffect(null, qfFeat =>
+            {
+                // Cache these since they don't change often.
+                string frequency = qfFeat.Owner.HasFeat(ModData.FeatNames.GuardiansIntercept)
+                    ? " (Once per combat) "
+                    : " ";
+                string damage = "physical" + (qfFeat.Owner.HasFeat(ModData.FeatNames.EnergyInterceptor)
+                    ? " {Blue}or energy (but not vitality or void){/Blue}"
+                    : null);
+                bool unarmored =
+                    qfFeat.Owner.HasFeat(ModData.FeatNames.ArmoredResistance)
+                    && !ModData.CommonRequirements.MustWearMediumOrHeavyArmor()
+                        .Satisfied(qfFeat.Owner, qfFeat.Owner);
+                // Add Intercept Attack to the defense section,
+                // with considerations for multiclassed Guardians.
+                qfFeat.AddToDefenseBlock = qfThis =>
                 {
-                    qfFeat.Name += " {icon:Reaction}";
-                    qfFeat.Traits.Add(ModData.Traits.InterceptAttackToggle);
-                    qfFeat.Tag = new List<FeatName>(); // Don't intercept for
-                    
-                    if (qfFeat.Owner.HasFeat(ModData.FeatNames.GuardiansIntercept))
-                        qfFeat.Description = "{Green}(once per combat){/Green} " + qfFeat.Description;
-                    qfFeat.Description = qfFeat.Description!.Replace(
-                        "physical",
-                        qfFeat.Owner.HasFeat(ModData.FeatNames.EnergyInterceptor)
-                            ? ModData.Tooltips.CommonDamageTypesRemastered("physical {Blue}or energy (but not vitality or void){/Blue}")
-                            : ModData.Tooltips.CommonDamageTypesRemastered("physical"));
-
-                    // Intercept Attack functionality
-                    const int interceptRange = 3;
-                    qfFeat.AddGrantingOfTechnical(cr =>
-                            qfFeat.Owner.FriendOfAndNotSelf(cr)
-                            && cr.DistanceTo(qfFeat.Owner) <= interceptRange,
-                        qfTech =>
-                        {
-                            qfTech.YouAreDealtDamageReaction = (qfTech2, dEvent) =>
-                            {
-                                Creature guardian = qfFeat.Owner;
-                                Creature ally = qfTech2.Owner;
-                                Creature attacker = dEvent.Source;
-                                Trait[] reactionTraits = [ModData.Traits.Guardian];
-
-                                //(string? Name, string Id)? reactionToUse = DetermineReactionToUseWithSourceName(guardian, "{b}Intercept Attack{/b} {icon:Reaction}", reactionTraits);
-                                string? reactionToUse = guardian.Actions.DetermineReactionToUse("{b}Intercept Attack{/b} {icon:Reaction}", reactionTraits);
-                                CombatAction interceptAttack = CreateInterceptAttack(guardian, attacker, dEvent, reactionToUse);
-                                
-                                if (!interceptAttack.CanBeginToUse(qfFeat.Owner))
-                                    return null;
-                                
-                                bool canStride = attacker.HasEffect(ModData.QEffectIds.TauntTarget);
-                                bool isCritical = dEvent.CheckResult is CheckResult.CriticalSuccess or CheckResult.CriticalFailure;
-                                int totalResolved = dEvent.KindedDamages
-                                    .Sum(kd => kd.ResolvedDamage);
-                                int totalOriginal = dEvent.KindedDamages
-                                    .Sum(kd => kd.OriginalResolvedDamage);
-                                string describeDamage = totalOriginal.WithTag("b").WithColor(isCritical ? "Red" : null) + (totalResolved < totalOriginal ? " of " + totalResolved.WithTag("b") : null);
-
-                                ReactionOption react = ReactionOption.CreateFromCombatActionCustom(
-                                        interceptAttack,
-                                        $"{(canStride ? "Step " + "or Stride".WithColor("Green") : "Step")} towards {ally.ToColoredName()} and take {describeDamage} damage.",
-                                        async () =>
-                                        {
-                                            await guardian.Battle.GameLoop.FullCast(
-                                                interceptAttack, ChosenTargets.CreateSingleTarget(ally));
-                                            if (guardian.HasFeat(ModData.FeatNames.GuardiansIntercept))
-                                                qfFeat.Description = qfFeat.Description?
-                                                    .Replace("Green}", "Red}");
-                                        }
-                                    )
-                                    .WithTraits(reactionTraits)
-                                    .WithIsReaction();
-                                /*if (reactionToUse is not null)
-                                    react.Caption += $" (using {(string.IsNullOrEmpty(reactionToUse.Value.Name) ? "a" : reactionToUse.Value.Name)} bonus reaction)".WithTag("i");*/
-
-                                return react;
-                            };
-                        });
-                    
-                    // Intercept filter toggles
-                    qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                    const string title = "{b}Intercept Attack {icon:Reaction}{/b}";
+                    string desc = $"Take {damage} damage for an adjacent ally, Stepping towards the ally if necessary, or Striding if the attacker is your taunted enemy";
+                    if (qfThis.Owner.HasFeat(ModData.FeatNames.ArmoredResistance))
                     {
-                        if (qfThis.Owner.PersistentCharacterSheet is null)
-                            return null;
-                        if (section.PossibilitySectionId is not PossibilitySectionId.SkillActions)
-                            return null;
-                        
-                        return new SubmenuPossibility(
-                                ModData.Illustrations.InterceptAttack,
-                                "Intercept Attack Options")
-                        {
-                            Subsections =
-                            [
-                                new PossibilitySection("Intercept for...")
-                                {
-                                    PossibilitySectionId = ModData.PossibilitySectionIds.InterceptAttackToggles,
-                                    Possibilities = InterceptAttackToggles
-                                        .Select(fn => (Possibility)CreateToggleAction(AllFeats.GetFeatByFeatName(fn)))
-                                        .ToList()
-                                }
-                            ]
-                        }
-                        .WithPossibilityGroup(Constants.POSSIBILITY_GROUP_TOGGLES);
-
-                        ActionPossibility CreateToggleAction(Feat toggle)
-                        {
-                            List<FeatName>? activeToggles = qfFeat.Tag as List<FeatName>;
-                            bool noIntercept =
-                                activeToggles is not null
-                                && activeToggles.Contains(toggle.FeatName);
-                            string baseName = toggle.DisplayName(qfThis.Owner.PersistentCharacterSheet!);
-                            return new ActionPossibility(
-                                new CombatAction(
-                                    qfThis.Owner,
-                                    new CornerIllustration(
-                                        toggle.Illustration ?? IllustrationName.Shield,
-                                        noIntercept ? ModData.Illustrations.NoSymbol : ModData.Illustrations.CheckSymbol,
-                                        Direction.Southeast),
-                                    baseName + (noIntercept ? " (Enable)" : " (Disable)"),
-                                    [Trait.Basic, Trait.DoesNotPreventDelay, Trait.DoNotShowOverheadOfActionName],
-                                    noIntercept
-                                        ? toggle.RulesText.Replace("Don't ask to", "Ask to")
-                                        : toggle.RulesText,
-                                    Target.Self())
-                                .WithActionCost(0)
-                                .WithEffectOnSelf(async (action, self) =>
-                                {
-                                    if (activeToggles is null)
-                                        return;
-                                    if (noIntercept)
-                                        activeToggles.Remove(toggle.FeatName);
-                                    else
-                                        activeToggles.Add(toggle.FeatName);
-                                    noIntercept = !noIntercept;
-                                    self.Overhead(
-                                        // Text is mirrored; overhead tells you what you set it to
-                                        (noIntercept ? "Don't Intercept: " : "Intercept: ") + baseName,
-                                        Color.Black,
-                                        self.Name + "");
-                                }))
-                            {
-                                Caption = baseName + (noIntercept ? " (Disabled)" : " (Enabled)")
-                            };
-                        }
-                    };
-                    
-                    // Applying Intercept filter toggles
-                    qfFeat.PreventTakingAction = action =>
-                    {
-                        if (action.ActionId != ModData.ActionIds.InterceptAttack
-                            || action.Tag is not DamageEvent dEvent)
-                            return null;
-                        if (qfFeat.Owner.QEffects.FirstOrDefault(qf => qf.Traits.Contains(ModData.Traits.InterceptAttackToggle))
-                                is not { Tag: List<FeatName> activeToggles })
-                            return null;
-                        foreach (Feat feat in activeToggles.Select(AllFeats.GetFeatByFeatName))
-                        {
-                            if (feat.Tag is not Func<CombatAction, DamageEvent, string?> preventAction)
-                                continue;
-                            if (preventAction.Invoke(action, dEvent) is { } reason)
-                                return reason;
-                        }
-                        return null;
-                    };
-                    
-                    return;
-
-                    (string? Name, string Id)? DetermineReactionToUseWithSourceName(Creature self, string question, Trait[] reactionTraits)
-                    {
-                        foreach (QEffect qf in self.QEffects)
-                        {
-                            Func<QEffect, string, Trait[], string?>? offerExtraReaction = qf.OfferExtraReaction;
-                            string? reactionToUse = offerExtraReaction?.Invoke(qf, question, reactionTraits);
-                            if (reactionToUse != null && !self.Actions.ReactionsUsedUpThisRound.Contains(reactionToUse))
-                                return (qf.Name, reactionToUse);
-                        }
-                        return null;
+                        desc += "; ";
+                        if (unarmored)
+                            desc += "{Red}(must be wearing medium or heavy armor){/Red} ";
+                        desc += $"{{Blue}}and resisting {{b}}{qfThis.Owner.Level / 2}{{/b}} physical damage{{/Blue}}";
                     }
-                });
+                    desc += ".";
+                    return title + (frequency + desc).WithTag(qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains(
+                        ModData.PersistentActions.GuardiansIntercept)
+                        ? "strike"
+                        : null);
+                };
+                
+                qfFeat.Traits.Add(ModData.Traits.InterceptAttackToggle);
+                qfFeat.Tag = new List<FeatName>(); // Don't intercept for
+
+                // Intercept Attack functionality
+                const int interceptRange = 3;
+                qfFeat.AddGrantingOfTechnical(cr =>
+                        qfFeat.Owner.FriendOfAndNotSelf(cr)
+                        && cr.DistanceTo(qfFeat.Owner) <= interceptRange,
+                    qfTech =>
+                    {
+                        qfTech.YouAreDealtDamageReaction = (qfTech2, dEvent) =>
+                        {
+                            Creature guardian = qfFeat.Owner;
+                            Creature ally = qfTech2.Owner;
+                            Creature attacker = dEvent.Source;
+                            Trait[] reactionTraits = [ModData.Traits.Guardian];
+
+                            string? reactionToUse = guardian.Actions.DetermineReactionToUse("{b}Intercept Attack{/b} {icon:Reaction}", reactionTraits);
+                            CombatAction interceptAttack = CreateInterceptAttack(guardian, attacker, dEvent, reactionToUse);
+                            
+                            if (!interceptAttack.CanBeginToUse(qfFeat.Owner))
+                                return null;
+                            
+                            bool canStride = attacker.HasEffect(ModData.QEffectIds.TauntTarget);
+                            bool isCritical = dEvent.CheckResult is CheckResult.CriticalSuccess or CheckResult.CriticalFailure;
+                            int totalResolved = dEvent.KindedDamages
+                                .Sum(kd => kd.ResolvedDamage);
+                            int totalOriginal = dEvent.KindedDamages
+                                .Sum(kd => kd.OriginalResolvedDamage);
+                            string describeDamage = totalOriginal.WithTag("b").WithColor(isCritical ? "Red" : null) + (totalResolved < totalOriginal ? " of " + totalResolved.WithTag("b") : null);
+
+                            ReactionOption react = ReactionOption.CreateFromCombatActionCustom(
+                                    interceptAttack,
+                                    $"{(canStride ? "Step " + "or Stride".WithColor("Green") : "Step")} towards {ally.ToColoredName()} and take {describeDamage} damage.",
+                                    async () =>
+                                    {
+                                        await guardian.Battle.GameLoop.FullCast(
+                                            interceptAttack, ChosenTargets.CreateSingleTarget(ally));
+                                    }
+                                )
+                                .WithTraits(reactionTraits)
+                                .WithIsReaction();
+
+                            return react;
+                        };
+                    });
+                
+                // Intercept filter toggles
+                qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                {
+                    if (qfThis.Owner.PersistentCharacterSheet is null)
+                        return null;
+                    if (section.PossibilitySectionId is not PossibilitySectionId.SkillActions)
+                        return null;
+                    
+                    return new SubmenuPossibility(
+                            ModData.Illustrations.InterceptAttack,
+                            "Intercept Attack Options")
+                    {
+                        Subsections =
+                        [
+                            new PossibilitySection("Intercept for...")
+                            {
+                                PossibilitySectionId = ModData.PossibilitySectionIds.InterceptAttackToggles,
+                                Possibilities = InterceptAttackToggles
+                                    .Select(fn => (Possibility)CreateToggleAction(AllFeats.GetFeatByFeatName(fn)))
+                                    .ToList()
+                            }
+                        ]
+                    }
+                    .WithPossibilityGroup(Constants.POSSIBILITY_GROUP_TOGGLES);
+
+                    ActionPossibility CreateToggleAction(Feat toggle)
+                    {
+                        List<FeatName>? activeToggles = qfFeat.Tag as List<FeatName>;
+                        bool noIntercept =
+                            activeToggles is not null
+                            && activeToggles.Contains(toggle.FeatName);
+                        string baseName = toggle.DisplayName(qfThis.Owner.PersistentCharacterSheet!);
+                        return new ActionPossibility(
+                            new CombatAction(
+                                qfThis.Owner,
+                                new CornerIllustration(
+                                    toggle.Illustration ?? IllustrationName.Shield,
+                                    noIntercept ? ModData.Illustrations.NoSymbol : ModData.Illustrations.CheckSymbol,
+                                    Direction.Southeast),
+                                baseName + (noIntercept ? " (Enable)" : " (Disable)"),
+                                [Trait.Basic, Trait.DoesNotPreventDelay, Trait.DoNotShowOverheadOfActionName],
+                                noIntercept
+                                    ? toggle.RulesText.Replace("Don't ask to", "Ask to")
+                                    : toggle.RulesText,
+                                Target.Self())
+                            .WithActionCost(0)
+                            .WithEffectOnSelf(async (action, self) =>
+                            {
+                                if (activeToggles is null)
+                                    return;
+                                if (noIntercept)
+                                    activeToggles.Remove(toggle.FeatName);
+                                else
+                                    activeToggles.Add(toggle.FeatName);
+                                noIntercept = !noIntercept;
+                                self.Overhead(
+                                    // Text is mirrored; overhead tells you what you set it to
+                                    (noIntercept ? "Don't Intercept: " : "Intercept: ") + baseName,
+                                    Color.Black,
+                                    self.Name + "");
+                            }))
+                        {
+                            Caption = baseName + (noIntercept ? " (Disabled)" : " (Enabled)")
+                        };
+                    }
+                };
+                
+                // Applying Intercept filter toggles
+                qfFeat.PreventTakingAction = action =>
+                {
+                    if (action.ActionId != ModData.ActionIds.InterceptAttack
+                        || action.Tag is not DamageEvent dEvent)
+                        return null;
+                    if (qfFeat.Owner.QEffects.FirstOrDefault(qf => qf.Traits.Contains(ModData.Traits.InterceptAttackToggle))
+                            is not { Tag: List<FeatName> activeToggles })
+                        return null;
+                    foreach (Feat feat in activeToggles.Select(AllFeats.GetFeatByFeatName))
+                    {
+                        if (feat.Tag is not Func<CombatAction, DamageEvent, string?> preventAction)
+                            continue;
+                        if (preventAction.Invoke(action, dEvent) is { } reason)
+                            return reason;
+                    }
+                    return null;
+                };
+            });
         
         // Tough to Kill
         yield return new Feat(
