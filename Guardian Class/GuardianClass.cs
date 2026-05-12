@@ -662,8 +662,18 @@ public static class GuardianClass
                 [], null)
             .WithOnSheet(values =>
                 values.SetProficiency(Trait.Will, Proficiency.Master))
-            .WithOnCreature((sheet, creature) =>
-                CommonCharacterFeatures.AddEvasion(sheet, creature, "Unyielding Resolve", Defense.Will));
+            .WithOnCreature((sheet, self) =>
+            {
+                CommonCharacterFeatures.AddEvasion(sheet, self, "Unyielding Resolve", Defense.Will);
+                self.QEffects.FirstOrDefault(qf => qf.Name == "Unyielding Resolve")
+                    ?.With(qf =>
+                    {
+                        qf.Innate = false;
+                        string desc = qf.Description!;
+                        qf.Description = null;
+                        qf.AddToDefenseBlock = _ => "{b}Unyielding Resolve.{/b} " + desc;
+                    });
+            });
         
         // Guardian Mastery
         yield return new Feat(
