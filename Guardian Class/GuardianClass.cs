@@ -641,8 +641,18 @@ public static class GuardianClass
                 [], null)
             .WithOnSheet(values =>
                 values.SetProficiency(Trait.Fortitude, Proficiency.Master))
-            .WithOnCreature((sheet, creature) =>
-                CommonCharacterFeatures.AddEvasion(sheet, creature, "Battle Hardened", Defense.Fortitude));
+            .WithOnCreature((sheet, self) =>
+            {
+                CommonCharacterFeatures.AddEvasion(sheet, self, "Battle Hardened", Defense.Fortitude);
+                self.QEffects.FirstOrDefault(qf => qf.Name == "Battle Hardened")
+                    ?.With(qf =>
+                    {
+                        qf.Innate = false;
+                        string desc = qf.Description!;
+                        qf.Description = null;
+                        qf.AddToDefenseBlock = _ => "{b}Battle Hardened.{/b} " + desc;
+                    });
+            });
         
         // Unyielding Resolve
         yield return new Feat(
