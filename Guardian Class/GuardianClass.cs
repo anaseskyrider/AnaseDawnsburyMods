@@ -543,70 +543,72 @@ public static class GuardianClass
                         "RetrainDieHard",
                         "Retrain die hard",
                         values.CurrentLevel,
-                        ft => ft.HasTrait(Trait.General)));
+                        ft => ft.HasTrait(Trait.General) && ft.LevelIfAny <= 3));
                 else
                     values.GrantFeat(FeatName.Diehard);
             })
-            .WithPermanentQEffect(
-                "Once per day, you remain at dying 2 when you'd die.",
-                qfFeat =>
+            .WithPermanentQEffect(null, qfFeat =>
+            {
+                // Cache so that updating it is less performance intensive
+                string description = "Once per day, you remain at dying 2 when you'd die.";
+                qfFeat.AddToDefenseBlock = _ => "{b}Tough to Kill.{/b} " + description;
+                
+                // Update description if already used
+                if (qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.ToughToKill))
+                    UseUpDescription();
+                
+                // Change from tabletop: Only triggers when you'd actually die.
+                qfFeat.PreventDeathDueToDyingReaction = (qfThis, dEvent) =>
                 {
-                    // Update description if already used
-                    if (qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.ToughToKill))
-                        UseUpDescription();
-                    
-                    // Change from tabletop: Only triggers when you'd actually die.
-                    qfFeat.PreventDeathDueToDyingReaction = (qfThis, dEvent) =>
-                    {
-                        // Only works if you're dying at dying 3+, such that dying 2 would keep you alive
-                        if (dEvent.Dying.Value < 3
-                            || DeathRules.GetMaximumDying(qfThis.Owner) < 3
-                            || qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions
-                                .ToughToKill))
-                            return null;
+                    // Only works if you're dying at dying 3+, such that dying 2 would keep you alive
+                    if (dEvent.Dying.Value < 3
+                        || DeathRules.GetMaximumDying(qfThis.Owner) < 3
+                        || qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions
+                            .ToughToKill))
+                        return null;
 
-                        CombatAction ttk = new CombatAction(
-                                qfThis.Owner,
-                                ModData.Illustrations.ToughToKill,
-                                "Tough to Kill",
-                                [ModData.Traits.Guardian],
-                                """
-                                {i}The protectiveness of your armor ensures that even if you fall, you take longer to die.{/i}
+                    CombatAction ttk = new CombatAction(
+                            qfThis.Owner,
+                            ModData.Illustrations.ToughToKill,
+                            "Tough to Kill",
+                            [ModData.Traits.Guardian],
+                            """
+                            {i}The protectiveness of your armor ensures that even if you fall, you take longer to die.{/i}
 
-                                You gain the Diehard general feat. Additionally, the first time each day you'd die while at dying 3 or higher, you stay at dying 2 instead.
-                                """,
-                                Target.Self())
-                            .WithActionCost(0);
+                            You gain the Diehard general feat. Additionally, the first time each day you'd die while at dying 3 or higher, you stay at dying 2 instead.
+                            """,
+                            Target.Self())
+                        .WithActionCost(0);
 
-                        ReactionOption alive = ReactionOption.CreateFromCombatActionCustom(
-                            ttk,
-                            $"Reduce your dying {dEvent.Dying.Value} to dying 2 and remain alive.",
-                            async () => StayingAlive(dEvent, ttk));
+                    ReactionOption alive = ReactionOption.CreateFromCombatActionCustom(
+                        ttk,
+                        $"Reduce your dying {dEvent.Dying.Value} to dying 2 and remain alive.",
+                        async () => StayingAlive(dEvent, ttk));
 
-                        return alive;
-                    };
-                    return;
+                    return alive;
+                };
+                return;
 
-                    void StayingAlive(DeathEvent dEvent, CombatAction ttk) // Ah! Ha! Ha! Ha!
-                    {
-                        dEvent.Dying.Value = 2;
-                        dEvent.PreventDeath = true;
-                        dEvent.Dying.Owner.PersistentUsedUpResources.UsedUpActions
-                            .Add(ModData.PersistentActions.ToughToKill);
-                        dEvent.Dying.Owner.Overhead(
-                            "Tough to Kill!!",
-                            Color.Lime,
-                            $"{dEvent.Dying.Owner.ToColoredName()} remains at dying 2 due to {{b}}Tough to Kill{{/b}}!",
-                            ttk.Name, ttk.Description, ttk.Traits);
-                        UseUpDescription();
-                    }
+                void StayingAlive(DeathEvent dEvent, CombatAction ttk) // Ah! Ha! Ha! Ha!
+                {
+                    dEvent.Dying.Value = 2;
+                    dEvent.PreventDeath = true;
+                    dEvent.Dying.Owner.PersistentUsedUpResources.UsedUpActions
+                        .Add(ModData.PersistentActions.ToughToKill);
+                    dEvent.Dying.Owner.Overhead(
+                        "Tough to Kill!!",
+                        Color.Lime,
+                        $"{dEvent.Dying.Owner.ToColoredName()} remains at dying 2 due to {{b}}Tough to Kill{{/b}}!",
+                        ttk.Name, ttk.Description, ttk.Traits);
+                    UseUpDescription();
+                }
 
-                    void UseUpDescription()
-                    {
-                        if (qfFeat.Description![0] != '{')
-                            qfFeat.Description = qfFeat.Description!.WithTag("strike");
-                    }
-                });
+                void UseUpDescription()
+                {
+                    if (description[0] != '{')
+                        description = description.WithTag("strike");
+                }
+            });
         
         // Reaction Time
         yield return new Feat(
