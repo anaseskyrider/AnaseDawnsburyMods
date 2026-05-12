@@ -225,49 +225,49 @@ public static class GuardianClass
                 """,
                 [Trait.Concentrate],
                 null)
-            .WithPermanentQEffect("Designate an enemy within 30 feet. Hostile actions which don't include you take penalties and make them off-guard.",
-                qfFeat =>
+            .WithPermanentQEffect(null, qfFeat =>
+            {
+                qfFeat.AddToOffenseBlock = qfThis =>
                 {
-                    qfFeat.Name += " {icon:Action}";
-                    if (qfFeat.Owner.HasFeat(ModData.FeatNames.GroupTaunt))
-                        qfFeat.Description = qfFeat.Description?.Replace(
-                            "a taunted enemy",
-                            "{Blue}up to 3{/Blue} taunted enemies");
-                    if (qfFeat.Owner.HasFeat(ModData.FeatNames.LongDistanceTaunt))
-                        qfFeat.Description = qfFeat.Description?.Replace(
-                            "30 feet",
-                            "{Blue}120 feet{/Blue}");
-                    qfFeat.ProvideMainAction = qfThis =>
+                    string targets = qfFeat.Owner.HasFeat(ModData.FeatNames.GroupTaunt)
+                        ? "{Blue}up to 3 enemies{/Blue}"
+                        : "an enemy";
+                    string range = qfFeat.Owner.HasFeat(ModData.FeatNames.LongDistanceTaunt)
+                        ? "{Blue}120 feet{/Blue}"
+                        : "30 feet";
+                    return $"{{b}}Taunt {{icon:Action}}{{/b}} Designate {targets} within {range}. Hostile actions which don't include you are penalized and make them off-guard.";
+                };
+                qfFeat.ProvideMainAction = qfThis =>
+                {
+                    CombatAction visualTaunt = CreateTaunt(qfThis.Owner, false, Trait.Visual);
+                    visualTaunt.ContextMenuName = "Taunt (Visual)";
+                    CombatAction audibleTaunt = CreateTaunt(qfThis.Owner, false, Trait.Auditory);
+                    audibleTaunt.ContextMenuName = "Taunt (Auditory)";
+                    
+                    return new SubmenuPossibility(
+                        qfThis.Owner.HasFeat(ModData.FeatNames.GroupTaunt) ? ModData.Illustrations.Taunt_3 : ModData.Illustrations.Taunt_1,
+                        "Taunt")
                     {
-                        CombatAction visualTaunt = CreateTaunt(qfThis.Owner, false, Trait.Visual);
-                        visualTaunt.ContextMenuName = "Taunt (Visual)";
-                        CombatAction audibleTaunt = CreateTaunt(qfThis.Owner, false, Trait.Auditory);
-                        audibleTaunt.ContextMenuName = "Taunt (Auditory)";
-                        
-                        return new SubmenuPossibility(
-                            qfThis.Owner.HasFeat(ModData.FeatNames.GroupTaunt) ? ModData.Illustrations.Taunt_3 : ModData.Illustrations.Taunt_1,
-                            "Taunt")
-                        {
-                            SubmenuId = ModData.SubmenuIds.Taunt,
-                            PossibilityGroup = ModData.PossibilityGroups.TauntActions,
-                            SpellIfAny = CreateTaunt(qfThis.Owner),
-                            Subsections = [
-                                new PossibilitySection("Taunt")
-                                {
-                                    PossibilitySectionId = ModData.PossibilitySectionIds.BasicTaunts,
-                                    Possibilities = [
-                                        new ActionPossibility(audibleTaunt){Caption = "Auditory"},
-                                        new ActionPossibility(visualTaunt){Caption = "Visual"},
-                                    ]
-                                },
-                                new PossibilitySection("Other Activities")
-                                {
-                                    PossibilitySectionId = ModData.PossibilitySectionIds.TauntActivities
-                                }
-                            ]
-                        };
+                        SubmenuId = ModData.SubmenuIds.Taunt,
+                        PossibilityGroup = ModData.PossibilityGroups.TauntActions,
+                        SpellIfAny = CreateTaunt(qfThis.Owner),
+                        Subsections = [
+                            new PossibilitySection("Taunt")
+                            {
+                                PossibilitySectionId = ModData.PossibilitySectionIds.BasicTaunts,
+                                Possibilities = [
+                                    new ActionPossibility(audibleTaunt){Caption = "Auditory"},
+                                    new ActionPossibility(visualTaunt){Caption = "Visual"},
+                                ]
+                            },
+                            new PossibilitySection("Other Activities")
+                            {
+                                PossibilitySectionId = ModData.PossibilitySectionIds.TauntActivities
+                            }
+                        ]
                     };
-                });
+                };
+            });
         
         // Intercept Attack Toggles
         yield return CreateInterceptAttackToggle(
