@@ -165,47 +165,52 @@ public static class GuardianClass
                 $"While wearing medium or heavy armor, you gain resistance to {ModData.Tooltips.CommonDamageTypesRemastered("physical")} damage equal to 1 + half your level.\n\nIn addition, you can rest normally while wearing medium and heavy armor.",
                 [],
                 null)
-            .WithPermanentQEffect(
-                $"While wearing medium or heavy armor, you resist an amount of {ModData.Tooltips.CommonDamageTypesRemastered("physical")} damage equal to 1 + half your level. You can also rest normally in all armor",
-                qfFeat =>
+            .WithPermanentQEffect(null, qfFeat =>
+            {
+                qfFeat.AddToDefenseBlock = qfThis =>
                 {
-                    qfFeat.Description = $"While wearing medium or heavy armor, you resist {{Blue}}{1 + (qfFeat.Owner.Level / 2)}{{/Blue}} {ModData.Tooltips.CommonDamageTypesRemastered("physical")} damage. You can also rest normally in all armor.";
-                    qfFeat.StateCheck = self =>
+                    const string line = "{b}Guardian's Armor.{/b} ";
+                    if (qfThis.Owner.Armor.Item is { } item &&
+                        (item.HasTrait(Trait.MediumArmor) || item.HasTrait(Trait.HeavyArmor)))
+                        return line + "You can rest normally in all armor.";
+                    return line + $"While wearing medium or heavy armor, you resist {{Blue}}{1 + (qfFeat.Owner.Level / 2)}{{/Blue}} {ModData.Tooltips.CommonDamageTypesRemastered("physical")} damage. You can also rest normally in all armor.";
+                };
+                qfFeat.StateCheck = self =>
+                {
+                    if (self.Owner.Armor.Item is not { } item ||
+                        (!item.HasTrait(Trait.MediumArmor) && !item.HasTrait(Trait.HeavyArmor)))
+                        return;
+                    int amount = 1 + (self.Owner.Level / 2);
+                    self.Owner.WeaknessAndResistance.AddSpecialResistance(
+                        "physical",
+                        (_, dk) => dk.IsPhysical(),
+                        amount,
+                        null);
+                };
+                qfFeat.StartOfCombatBeforeOpeningCutscene = async qfThis =>
+                {
+                    qfThis.Tag = qfThis.Owner.BaseArmor;
+                };
+                qfFeat.StartOfCombat = async qfThis =>
+                {
+                    if (qfThis.Owner.BaseArmor is null && qfThis.Tag is Item { ArmorProperties: not null } tagItem)
                     {
-                        if (self.Owner.Armor.Item is not { } item ||
-                            (!item.HasTrait(Trait.MediumArmor) && !item.HasTrait(Trait.HeavyArmor)))
-                            return;
-                        int amount = 1 + (self.Owner.Level / 2);
-                        self.Owner.WeaknessAndResistance.AddSpecialResistance(
-                            "physical",
-                            (_, dk) => dk.IsPhysical(),
-                            amount,
-                            null);
-                    };
-                    qfFeat.StartOfCombatBeforeOpeningCutscene = async qfThis =>
-                    {
-                        qfThis.Tag = qfThis.Owner.BaseArmor;
-                    };
-                    qfFeat.StartOfCombat = async qfThis =>
-                    {
-                        if (qfThis.Owner.BaseArmor is null && qfThis.Tag is Item { ArmorProperties: not null } tagItem)
-                        {
-                            qfThis.Owner.BaseArmor = tagItem;
-                            // TODO: Comfort trait
-                            // Heavy armor is replaced with padded armor?
-                            if ((tagItem.HasTrait(Trait.MediumArmor) || tagItem.HasTrait(Trait.HeavyArmor)) && qfThis.Owner.FindQEffect(QEffectId.SpeakAboutMissingArmor) is { } s2e3_armor)
-                                s2e3_armor.StartOfYourPrimaryTurn = async (effect, self) =>
-                                {
-                                    if (!self.Actions.CanTakeActions())
-                                        return;
-                                    effect.ExpiresAt = ExpirationCondition.Immediately;
-                                    await self.Battle.Cinematics.ShowQuickBubble(
-                                        self,
-                                        "{Green}{b}Guardian's Armor!{b}{/Green}\nIt's a good thing I can sleep in my armor. Now to pick up my weapons.");
-                                };
-                        }
-                    };
-                });
+                        qfThis.Owner.BaseArmor = tagItem;
+                        // TODO: Comfort trait
+                        // Heavy armor is replaced with padded armor?
+                        if ((tagItem.HasTrait(Trait.MediumArmor) || tagItem.HasTrait(Trait.HeavyArmor)) && qfThis.Owner.FindQEffect(QEffectId.SpeakAboutMissingArmor) is { } s2e3_armor)
+                            s2e3_armor.StartOfYourPrimaryTurn = async (effect, self) =>
+                            {
+                                if (!self.Actions.CanTakeActions())
+                                    return;
+                                effect.ExpiresAt = ExpirationCondition.Immediately;
+                                await self.Battle.Cinematics.ShowQuickBubble(
+                                    self,
+                                    "{Green}{b}Guardian's Armor!{b}{/Green}\nIt's a good thing I can sleep in my armor. Now to pick up my weapons.");
+                            };
+                    }
+                };
+            });
         
         // Taunt
         yield return new Feat(
