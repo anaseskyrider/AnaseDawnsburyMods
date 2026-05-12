@@ -387,8 +387,9 @@ public static class GuardianClass
                                 Creature attacker = dEvent.Source;
                                 Trait[] reactionTraits = [ModData.Traits.Guardian];
 
-                                (string? Name, string Id)? reactionToUse = DetermineReactionToUseWithSourceName(guardian, "{b}Intercept Attack{/b} {icon:Reaction}", reactionTraits);
-                                CombatAction interceptAttack = CreateInterceptAttack(guardian, attacker, dEvent, reactionToUse?.Id);
+                                //(string? Name, string Id)? reactionToUse = DetermineReactionToUseWithSourceName(guardian, "{b}Intercept Attack{/b} {icon:Reaction}", reactionTraits);
+                                string? reactionToUse = guardian.Actions.DetermineReactionToUse("{b}Intercept Attack{/b} {icon:Reaction}", reactionTraits);
+                                CombatAction interceptAttack = CreateInterceptAttack(guardian, attacker, dEvent, reactionToUse);
                                 
                                 if (!interceptAttack.CanBeginToUse(qfFeat.Owner))
                                     return null;
@@ -415,8 +416,8 @@ public static class GuardianClass
                                     )
                                     .WithTraits(reactionTraits)
                                     .WithIsReaction();
-                                if (reactionToUse is not null)
-                                    react.Caption += $" (using {(string.IsNullOrEmpty(reactionToUse.Value.Name) ? "a" : reactionToUse.Value.Name)} bonus reaction)".WithTag("i");
+                                /*if (reactionToUse is not null)
+                                    react.Caption += $" (using {(string.IsNullOrEmpty(reactionToUse.Value.Name) ? "a" : reactionToUse.Value.Name)} bonus reaction)".WithTag("i");*/
 
                                 return react;
                             };
