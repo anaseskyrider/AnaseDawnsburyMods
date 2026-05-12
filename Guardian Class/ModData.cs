@@ -315,6 +315,7 @@ public static class ModData
         public static readonly Illustration Taunt_1 = new ModdedIllustration(ModFolder+"intimidation_1.png");
         public static readonly Illustration Taunt_3 = new ModdedIllustration(ModFolder+"intimidation.png");
         public static readonly Illustration InterceptAttack = new ModdedIllustration(ModFolder+"intercept attack.png");
+        public static readonly Illustration ToughToKill = IllustrationName.WinningStreak;
         
         #endregion
         

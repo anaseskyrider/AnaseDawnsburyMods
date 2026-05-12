@@ -528,7 +528,7 @@ public static class GuardianClass
         yield return new Feat(
                 ModData.FeatNames.ToughToKill,
                 "The protectiveness of your armor ensures that even if you fall, you take longer to die.",
-                "You gain the Diehard general feat {i}(you should retrain it if you already have it){/i}. Additionally, the first time each day you'd be reduced to dying 3 or higher, you stay at dying 2 instead.",
+                "You gain the Diehard general feat {i}(you should retrain it if you already have it){/i}. Additionally, the first time each day you'd die while at dying 3 or higher, you stay at dying 2 instead.",
                 [],
                 null)
             .WithOnSheet(values =>
@@ -543,47 +543,63 @@ public static class GuardianClass
                     values.GrantFeat(FeatName.Diehard);
             })
             .WithPermanentQEffect(
-                "The {Green}first time{/Green} each day you reach dying 3+, you stay at dying 2.",
+                "Once per day, you remain at dying 2 when you'd die.",
                 qfFeat =>
                 {
-                    // Update description to red /*Remove if found*/
+                    // Update description if already used
                     if (qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.ToughToKill))
-                        //qfFeat.ExpiresAt = ExpirationCondition.Immediately;
-                        qfFeat.Description = qfFeat.Description?.Replace("{Green}first time{/Green}", "{Red}first time{/Red}");
-                    // If you somehow jump straight to death:
-                    qfFeat.PreventDeathDueToDyingAsync = async (qfThis, qfDying) =>
+                        UseUpDescription();
+                    
+                    // Change from tabletop: Only triggers when you'd actually die.
+                    qfFeat.PreventDeathDueToDyingReaction = (qfThis, dEvent) =>
                     {
-                        if (qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.ToughToKill))
-                            return false;
-                        StayingAlive(qfDying);
-                        return true;
-                    };
-                    // Everything else:
-                    qfFeat.StateCheck = qfThis =>
-                    {
-                        if (qfThis.Owner.FindQEffect(QEffectId.Dying) is not { } qfDying)
-                            return;
-                        if (qfDying.Value < 3)
-                            return;
-                        if (!qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.ToughToKill))
-                            StayingAlive(qfDying);
+                        // Only works if you're dying at dying 3+, such that dying 2 would keep you alive
+                        if (dEvent.Dying.Value < 3
+                            || DeathRules.GetMaximumDying(qfThis.Owner) < 3
+                            || qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions
+                                .ToughToKill))
+                            return null;
+
+                        CombatAction ttk = new CombatAction(
+                                qfThis.Owner,
+                                ModData.Illustrations.ToughToKill,
+                                "Tough to Kill",
+                                [ModData.Traits.Guardian],
+                                """
+                                {i}The protectiveness of your armor ensures that even if you fall, you take longer to die.{/i}
+
+                                You gain the Diehard general feat. Additionally, the first time each day you'd die while at dying 3 or higher, you stay at dying 2 instead.
+                                """,
+                                Target.Self())
+                            .WithActionCost(0);
+
+                        ReactionOption alive = ReactionOption.CreateFromCombatActionCustom(
+                            ttk,
+                            $"Reduce your dying {dEvent.Dying.Value} to dying 2 and remain alive.",
+                            async () => StayingAlive(dEvent, ttk));
+
+                        return alive;
                     };
                     return;
 
-                    void StayingAlive(QEffect qfDying) // Ah! Ha! Ha! Ha!
+                    void StayingAlive(DeathEvent dEvent, CombatAction ttk) // Ah! Ha! Ha! Ha!
                     {
-                        qfDying.Value = 2;
-                        qfDying.Owner.PersistentUsedUpResources.UsedUpActions
+                        dEvent.Dying.Value = 2;
+                        dEvent.PreventDeath = true;
+                        dEvent.Dying.Owner.PersistentUsedUpResources.UsedUpActions
                             .Add(ModData.PersistentActions.ToughToKill);
-                        qfDying.Owner.Overhead(
+                        dEvent.Dying.Owner.Overhead(
                             "Tough to Kill!!",
                             Color.Lime,
-                            $"{qfDying.Owner} remains at dying 2 due to tough to kill!",
-                            "Tough To Kill",
-                            "{i}The protectiveness of your armor ensures that even if you fall, you take longer to die.{/i}\n\nYou gain the Diehard general feat. Additionally, the first time each day you'd be reduced to dying 3 or higher, you stay at dying 2 instead.",
-                            new Traits([ModData.Traits.Guardian]));
-                        //qfFeat.ExpiresAt = ExpirationCondition.Immediately;
-                        qfFeat.Description = qfFeat.Description?.Replace("{Green}first time{/Green}", "{Red}first time{/Red}");
+                            $"{dEvent.Dying.Owner.ToColoredName()} remains at dying 2 due to {{b}}Tough to Kill{{/b}}!",
+                            ttk.Name, ttk.Description, ttk.Traits);
+                        UseUpDescription();
+                    }
+
+                    void UseUpDescription()
+                    {
+                        if (qfFeat.Description![0] != '{')
+                            qfFeat.Description = qfFeat.Description!.WithTag("strike");
                     }
                 });
         
