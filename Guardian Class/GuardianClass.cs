@@ -7,6 +7,7 @@ using Dawnsbury.Core.CharacterBuilder.Feats.Features;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
+using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Creatures;
@@ -71,8 +72,7 @@ public static class GuardianClass
                 """,
                 null)
             .WithEffectiveClassFeatures(cf => cf
-                .AddFeature(3, new ClassFeature(ModData.Tooltips.FeatureToughToKill("Tough to Kill"))
-                    .WithOnSheet(values => values.GrantFeat(ModData.FeatNames.ToughToKill)))
+                .AddFeature(3, ClassFeature.FromFeat(ModData.FeatNames.ToughToKill))
                 .AddFeature(5, new ClassFeature(
                         "Expert in defenses",
                         "medium, heavy")
@@ -90,14 +90,9 @@ public static class GuardianClass
                             values.SetProficiency(trait, Proficiency.Expert);
                     }))
                 .AddFeature(7, WellKnownClassFeature.ExpertInPerception)
-                .AddFeature(7, new ClassFeature(ModData.Tooltips.FeatureReactionTime("Reaction Time"))
-                    .WithOnSheet(values => values.GrantFeat(ModData.FeatNames.ReactionTime)))
+                .AddFeature(7, ClassFeature.FromFeat(ModData.FeatNames.ReactionTime))
                 .AddFeature(7, WellKnownClassFeature.ExpertInReflex)
-                .AddFeature(9, new ClassFeature(ModData.Tooltips.FeatureBattleHardened("Battle Hardened"))
-                    .WithOnSheet(values =>
-                        values.SetProficiency(Trait.Fortitude, Proficiency.Master))
-                    .WithOnCreature((sheet, creature) =>
-                        CommonCharacterFeatures.AddEvasion(sheet, creature, "Battle Hardened", Defense.Fortitude)))
+                .AddFeature(9, ClassFeature.FromFeat(ModData.FeatNames.BattleHardened))
                 .AddFeature(9, WellKnownClassFeature.ExpertInClassDC)
                 .AddFeature(11, new ClassFeature(
                         "Master in defenses",
@@ -144,17 +139,9 @@ public static class GuardianClass
                     }))
                 .AddFeature(17, new ClassFeature(ModData.Tooltips.CommonGreaterWeaponSpec("Greater Weapon Specialization"))
                     .WithOnSheet(values => values.Tags["GREATER_WEAPON_SPECIALIZATION"] = true))
-                .AddFeature(17, new ClassFeature(ModData.Tooltips.FeatureUnyieldingResolve("Unyielding Resolve"))
-                    .WithOnSheet(values =>
-                        values.SetProficiency(Trait.Will, Proficiency.Master))
-                    .WithOnCreature((sheet, creature) =>
-                        CommonCharacterFeatures.AddEvasion(sheet, creature, "Unyielding Resolve", Defense.Will)))
-                .AddFeature(19, new ClassFeature(ModData.Tooltips.FeatureGuardianMastery("Guardian Mastery"))
-                    .WithOnSheet(values =>
-                    {
-                        values.SetProficiency(ModData.Traits.Guardian, Proficiency.Master);
-                        values.GrantFeat(ModData.FeatNames.GuardianMastery);
-                    })))
+                .AddFeature(17, ClassFeature.FromFeat(ModData.FeatNames.UnyieldingResolve))
+                .AddFeature(19, WellKnownClassFeature.MasterInClassDC)
+                .AddFeature(19, ClassFeature.FromFeat(ModData.FeatNames.GuardianMastery)))
             .WithOnSheet(values =>
             {
                 values.AddClassFeatOption("GuardianFeat1", ModData.Traits.Guardian, 1);
@@ -621,6 +608,28 @@ public static class GuardianClass
                             ? ModData.CommonReactionKeys.ReactionTime
                             : null;
                 });
+        
+        // Battle Hardened
+        yield return new Feat(
+                ModData.FeatNames.BattleHardened,
+                "Your experience in battle helps protect you against magic and toxins alike.",
+                "Your proficiency rank for Fortitude saves increases to master. When you roll a success on a Fortitude save, you get a critical success instead.",
+                [], null)
+            .WithOnSheet(values =>
+                values.SetProficiency(Trait.Fortitude, Proficiency.Master))
+            .WithOnCreature((sheet, creature) =>
+                CommonCharacterFeatures.AddEvasion(sheet, creature, "Battle Hardened", Defense.Fortitude));
+        
+        // Unyielding Resolve
+        yield return new Feat(
+                ModData.FeatNames.UnyieldingResolve,
+                "Stalwart as your armor, you refuse to break.",
+                "Your proficiency ranks for Will saves increases to master. When you roll a success on a Will save, you get a critical success instead.",
+                [], null)
+            .WithOnSheet(values =>
+                values.SetProficiency(Trait.Will, Proficiency.Master))
+            .WithOnCreature((sheet, creature) =>
+                CommonCharacterFeatures.AddEvasion(sheet, creature, "Unyielding Resolve", Defense.Will));
         
         // Guardian Mastery
         yield return new Feat(

@@ -175,6 +175,8 @@ public static class ModData
         public static readonly FeatName InterceptAttack = ModManager.RegisterFeatName(IdPrepend + "InterceptAttack", "Intercept Attack {icon:Action}");
         public static readonly FeatName ToughToKill = ModManager.RegisterFeatName(IdPrepend + "ToughToKill", "Tough To Kill");
         public static readonly FeatName ReactionTime = ModManager.RegisterFeatName(IdPrepend + "ReactionTime", "Reaction Time");
+        public static readonly FeatName BattleHardened = ModManager.RegisterFeatName(IdPrepend + "BattleHardened", "Battle Hardened");
+        public static readonly FeatName UnyieldingResolve = ModManager.RegisterFeatName(IdPrepend + "UnyieldingResolve", "Unyielding Resolve");
         public static readonly FeatName GuardianMastery = ModManager.RegisterFeatName(IdPrepend + "GuardianMastery", "Guardian Mastery");
         #endregion
         
@@ -454,68 +456,12 @@ public static class ModData
             {i}Common class feature{/i}
             Your damage from weapon specialization increases to 4 with weapons and unarmed attacks in which you're expert, 6 if you're a master, and 8 if you're legendary.
             """);
-        public static readonly Func<string, string> ActionTaunt = RegisterTooltipInserter(
-            IdPrepend + "Actions.Taunt",
-            """
-            {b}Taunt{/b} {icon:Action}
-            {i}Concentrate, (Visual or Auditory){/i}
-            Choose an enemy within 30 feet to be your taunted enemy. If your taunted enemy takes a hostile action that includes at least one of your allies but doesn't include you, they take a –1 circumstance penalty to their attack rolls and DCs for that action, and they also become off-guard until the start of their next turn.
-
-            Your enemy remains taunted until the start of your next turn, and you can have only one Taunt in effect at a time. Taunting a new enemy ends this effect on any current target.
-
-            Taunt gains the auditory trait, visual trait, or both, depending on how you draw the target's attention.
-            """);
-        public static readonly Func<string, string> ActionInterceptAttack = RegisterTooltipInserter(
-            IdPrepend + "Actions.InterceptAttack",
-            """
-            {b}Intercept Attack{/b} {icon:Reaction}
-            {b}Trigger{/b} An ally within 10 feet of you takes physical damage.
-
-            You can Step, but you must end your movement adjacent to the triggering ally. You take the damage instead of the triggering ally. Apply your own immunities, weaknesses, and resistances to the damage, not the ally's.
-
-            {b}Special{/b} You can extend this ability to an ally within 15 feet of you if the damage comes from your taunted enemy. If this ally is farther than you can Step to reach, you can Stride instead of Stepping; you still must end the movement adjacent to your ally.
-            """);
         public static readonly Func<string, string> ArmorResting = RegisterTooltipInserter(
             IdPrepend + "Feature.GuardiansArmorResting",
             """
             {b}Resting in Armor{/b}
             {i}Common rule{/i}
             Sleeping in armor is uncomfortable, and would lead to poor-quality sleep. Some encounters occur while the party is sleeping. If you aren't able to sleep in armor, you won't have your armor donned at the start of combat.
-            """);
-        public static readonly Func<string, string> FeatureToughToKill = RegisterTooltipInserter(
-            IdPrepend + "Feature.ToughToKill",
-            """
-            {b}Tough to Kill{/b}
-            {i}Level 3 Guardian feature{/i}
-            You gain the Diehard general feat {i}(you should retrain it if you already have it){/i}. Additionally, the first time each day you'd be reduced to dying 3 or higher, you stay at dying 2 instead.
-            """);
-        public static readonly Func<string, string> FeatureReactionTime = RegisterTooltipInserter(
-            IdPrepend + "Feature.ReactionTime",
-            """
-            {b}Reaction Time{/b}
-            {i}Level 7 Guardian feature{/i}
-            At the start of combat and for each of your turns, you gain an additional reaction that you can use only for reactions from guardian feats or class features (including Shield Block).
-            """);
-        public static readonly Func<string, string> FeatureBattleHardened = RegisterTooltipInserter(
-            IdPrepend + "Feature.BattleHardened",
-            """
-            {b}Battle Hardened{/b}
-            {i}Level 9 Guardian feature{/i}
-            Your proficiency rank for Fortitude saves increases to master; when you roll a success on a Fortitude save, you get a critical success instead.
-            """);
-        public static readonly Func<string, string> FeatureUnyieldingResolve = RegisterTooltipInserter(
-            IdPrepend + "Feature.UnyieldingResolve",
-            """
-            {b}Unyielding Resolve{/b}
-            {i}Level 17 Guardian feature{/i}
-            Your proficiency rank for Will saves increases to master; when you roll a success on a Will save, you get a critical success instead.
-            """);
-        public static readonly Func<string, string> FeatureGuardianMastery = RegisterTooltipInserter(
-            IdPrepend + "Feature.GuardianMastery",
-            """
-            {b}Guardian Mastery{/b}
-            {i}Level 19 Guardian feature{/i}
-            While wearing armor, when you attempt a Reflex save, you can add your armor's item bonus to AC instead of your Dexterity modifier if it's higher; if your armor has the bulwark trait, increase this bonus by 1. If you get a success when you do this, you get a critical success instead.
             """);
         
         public static Func<string, string> RegisterTooltipInserter(string tooltipName, string tooltipDescription)

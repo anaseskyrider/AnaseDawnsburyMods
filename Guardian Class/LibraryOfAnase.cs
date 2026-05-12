@@ -7,6 +7,8 @@ using Dawnsbury.Core;
 using Dawnsbury.Core.Animations;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.Feats.Features;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Spellbook;
 using Dawnsbury.Core.CharacterBuilder.Library;
@@ -25,6 +27,7 @@ using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
@@ -35,6 +38,8 @@ namespace Dawnsbury.Mods.GuardianClass;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
+/// <item>v2.0: Added ClassFeature.FromFeat().</item>
+/// <item>v1.9: SpellId.ToLink() now automatically lowercases and italicizes the caption. Added alternative Creature.HasEffect() overloads. Added QEffect.WithDescription().</item>
 /// <item>v1.8: Added int.WithColor() and int.WithTag(). Made all WithColor and WithTag functions optionally apply colors when null. Fix StrikeCreature overload to not return false if not providing a validity function.</item>
 /// <item>v1.7: Refactored string.ToColor, added string.WithTag() and string.WithLink(). Refactored some ToLink() functions and added more to various enums. Added Feat.With(). Added Defense.ToColor(). Add functions to filter valid Strike possibilities to CommonCombatActions.StrikeCreature() and .GetStrikePossibilities(). GetStrikePossibilities also now adds a thrown Strike for melee thrown weapons.</item>
 /// <item>v1.6: Added Trait extensions: IsTraditionTrait(), TraditionTraitToColor(). Added Feat.ToLink(caption). Added Item.With(). Converted various overloads into instance and static extension blocks. Added more flexible CommonCombatActions.StrikeCreature overload. Added CombatAction.CreatePass and a parameter to OfferOptions2 that uses it. Added FilterAnyPossibility2 functions to allow seeing SubmenuPossibilities.</item>
@@ -45,10 +50,29 @@ namespace Dawnsbury.Mods.GuardianClass;
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
-/// <value>v1.8</value>
+/// <value>v1.9</value>
 public static class LibraryOfAnase
 {
     #region Extensions
+
+    extension(Creature cr)
+    {
+        /// <summary>
+        /// Returns whether you have a QEffect of the given Id that meets the given condition. This is not as efficient as <see cref="Creature.HasEffect(QEffectId)"/>.
+        /// </summary>
+        public bool HasEffect(QEffectId id, Func<QEffect,bool> condition)
+        {
+            return cr.QEffects.Any(qf => qf.Id == id && condition(qf));
+        }
+        
+        /// <summary>
+        /// Returns whether you have a QEffect that meets the given condition. This is not as efficient as <see cref="Creature.HasEffect(QEffectId)"/>.
+        /// </summary>
+        public bool HasEffect(Func<QEffect,bool> condition)
+        {
+            return cr.QEffects.Any(condition);
+        }
+    }
 
     extension(CombatAction caThis)
     {
@@ -137,6 +161,12 @@ public static class LibraryOfAnase
         public QEffect With(Action<QEffect> changes)
         {
             changes.Invoke(qfThis);
+            return qfThis;
+        }
+
+        public QEffect WithDescription(string newDescription)
+        {
+            qfThis.Description = newDescription;
             return qfThis;
         }
 
@@ -310,6 +340,24 @@ public static class LibraryOfAnase
         public string ToLink(string caption)
         {
             return caption.WithLink(featName.ToStringOrTechnical());
+        }
+    }
+
+    extension(ClassFeature)
+    {
+        /// <summary>
+        /// This creates a class feature whose caption links to a Feat link block, with no details. It grants the feat and subFeat (if any).
+        /// </summary>
+        public static ClassFeature FromFeat(FeatName featName, FeatName? subFeat = null, bool titleCase = true)
+        {
+            Feat feat = AllFeats.GetFeatByFeatName(featName);
+            string name = titleCase
+                ? feat.Name
+                : feat.Name.ToLower();
+            return new ClassFeature(featName.ToLink(name))
+            {
+                OnSheet = values => values.GrantFeat(featName, subFeat)
+            };
         }
     }
 
@@ -516,7 +564,7 @@ public static void AddFeat(Feat newFeat, Trait modName)
         public string ToLink(string caption, Trait? classOfOrigin, int? spellLevel)
         {
             string?[] parameters = [classOfOrigin?.ToStringOrTechnical(), spellLevel?.ToString()];
-            return caption.WithLink(id.ToStringOrTechnical(), parameters.WhereNotNull().ToArray());
+            return caption.ToLower().WithLink(id.ToStringOrTechnical(), parameters.WhereNotNull().ToArray()).WithTag("i");
         }
     }
 
