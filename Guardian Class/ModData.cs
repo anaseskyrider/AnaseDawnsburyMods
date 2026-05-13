@@ -1,4 +1,5 @@
 using Dawnsbury.Audio;
+using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
@@ -9,6 +10,7 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
+using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
@@ -117,10 +119,16 @@ public static class ModData
 
         public static bool IsWearingMediumOrHeavyArmor(Creature cr)
         {
-            return (cr.Armor.Item is {} armor1
-                    && (armor1.HasTrait(Trait.MediumArmor) || armor1.HasTrait(Trait.HeavyArmor)))
-                   || (cr.BaseArmor is {} armor2
-                       && (armor2.HasTrait(Trait.MediumArmor) || armor2.HasTrait(Trait.HeavyArmor)));
+            return (cr.Armor.Item ?? cr.BaseArmor) is {} armor
+                   && armor.Traits.ContainsOneOf([Trait.MediumArmor, Trait.HeavyArmor]);
+        }
+
+        public static Item? GetMediumOrHeavyArmor(Creature cr)
+        {
+            return (cr.Armor.Item ?? cr.BaseArmor) is { } armor
+                   && armor.Traits.ContainsOneOf([Trait.MediumArmor, Trait.HeavyArmor])
+                ? armor
+                : null;
         }
 
         public static bool IsWearingHeavyArmor(Creature cr)
