@@ -496,11 +496,9 @@ public static class OldShields
                                     });
                                 })
                                 .WithName("Defensive Advance (" + shield.Name.ToLower().Capitalize() + ")")
-                                .WithDescription(
-                                    "You Raise your Shield and Stride. If you end your movement within melee reach of at least one enemy, you can make a melee Strike against that enemy.")
+                                .WithDescription("You Raise your Shield and Stride. If you end your movement within melee reach of at least one enemy, you can make a melee Strike against that enemy.")
                                 .WithActionCost(2)
-                                .WithActionId(ActionId
-                                    .None) // So that you can't use this when offered to raise a shield
+                                .WithActionId(ActionId.None) // So that you can't use this when offered to raise a shield
                                 .WithExtraTrait(Trait.Flourish)
                                 .WithEffectOnEachTarget(async (action, caster, _, _) =>
                                 {
