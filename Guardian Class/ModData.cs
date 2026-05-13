@@ -215,7 +215,7 @@ public static class ModData
         public static readonly FeatName ArmoredCourage = ModManager.RegisterFeatName(IdPrepend + "ArmoredCourage", "Armored Courage");
         public static readonly FeatName EnergyInterceptor = ModManager.RegisterFeatName(IdPrepend + "EnergyInterceptor", "Energy Interceptor");
         public static readonly FeatName FlyingTackle = ModManager.RegisterFeatName(IdPrepend + "FlyingTackle", "FlyingTackle");
-        public static readonly FeatName NotSoFast = ModManager.RegisterFeatName(IdPrepend + "NotSoFast", "Not so Fast");
+        public static readonly FeatName NotSoFast = ModManager.RegisterFeatName(IdPrepend + "NotSoFast", "Not so Fast!");
         public static readonly FeatName ProudNail = ModManager.RegisterFeatName(IdPrepend + "ProudNail", "Proud Nail");
         public static readonly FeatName ShieldedAttrition = ModManager.RegisterFeatName(IdPrepend + "ShieldedAttrition", "Shielded Attrition");
         
