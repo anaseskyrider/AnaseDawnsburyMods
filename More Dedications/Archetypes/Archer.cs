@@ -32,38 +32,6 @@ public static class Archer
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.QuickDraw, Trait.Archer, 4);
         
-        // Advanced Bow Training
-        yield return new TrueFeat(
-                ModData.FeatNames.AdvancedBowTraining,
-                6,
-                "Through constant practice and the crucible of experience, you increase your skill with advanced bows.",
-                "You gain proficiency with all advanced bows as if they were martial weapons in the bow weapon group.",
-                [])
-            .WithAvailableAsArchetypeFeat(Trait.Archer)
-            .WithOnSheet(values =>
-            {
-                values.Proficiencies.AddProficiencyAdjustment(traits =>
-                        traits.Contains(Trait.Bow) && traits.Contains(Trait.Advanced), Trait.Martial
-                );
-
-                // Fighter compatibility
-                values.AtEndOfRecalculation += values2 =>
-                {
-                    Feat? fighterWeaponMastery = values2.AllFeats
-                        .Where(feat => feat.HasTrait(Trait.FighterWeaponMasteryWeaponGroup))
-                        .FirstOrDefault((Feat?)null);
-
-                    if (fighterWeaponMastery != null)
-                    {
-                        Trait fighterWeaponTrait =
-                            ((FighterWeaponMasteryWeaponGroupFeat)fighterWeaponMastery).WeaponGroup;
-                        values2.Proficiencies.AddProficiencyAdjustment(traits =>
-                                traits.Contains(Trait.Bow) && traits.Contains(Trait.Advanced), fighterWeaponTrait
-                        );
-                    }
-                };
-            });
-        
         // Crossbow Terror
         yield return new TrueFeat(
                 ModData.FeatNames.CrossbowTerror,
