@@ -1,6 +1,7 @@
 using Dawnsbury.Audio;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Specific;
 using Dawnsbury.Core.CombatActions;
@@ -29,6 +30,7 @@ public static class Archer
     public static IEnumerable<Feat> CreateFeats()
     {
         // Quick Shot: Add Quick Draw to Archer Dedication
+        // DEPRECATED (remaster)
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.QuickDraw, Trait.Archer, 4);
         
@@ -59,6 +61,7 @@ public static class Archer
         });
         
         // Parting Shot
+        // DEPRECATED (remaster)
         yield return new TrueFeat(
                 ModData.FeatNames.FighterPartingShot,
                 4,
