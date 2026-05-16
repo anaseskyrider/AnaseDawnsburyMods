@@ -31,7 +31,8 @@
     <ItemGroup>
       <Assets Include="$(AssetsFolder)\**\*.*"/>
     </ItemGroup>
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods"/>
+    <!--<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods"/>-->
+    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(DevelopersDawnsburyInstall)\CustomMods\1$(TargetName).dll"/>
     <Copy SourceFiles="@(Assets)" DestinationFolder="$(DevelopersDawnsburyInstall)\CustomMods\$(AssetsFolder)\%(RecursiveDir)"/>
   </Target>
   <Target Name="CopyToWorkshopUploadable" AfterTargets="Build">
