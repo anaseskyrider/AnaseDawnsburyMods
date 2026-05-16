@@ -492,7 +492,8 @@ public static class Marshal
 
                     bool IsFlankedByAnyEnemy(Creature cr)
                     {
-                        return cr.HasEffect(QEffectId.FlankedBy); // Source is always an enemy
+                        //return cr.HasEffect(QEffectId.FlankedBy); // Source is always an enemy
+                        return cr.Cache.FlankedBy.Count > 0;
                     }
                 });
 
