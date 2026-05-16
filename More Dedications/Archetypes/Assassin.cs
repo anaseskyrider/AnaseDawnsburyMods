@@ -62,6 +62,10 @@ public static class Assassin
                 });
         ModData.FeatNames.AssassinDedication = assassinDedication.FeatName;
         yield return assassinDedication;
+        
+        // Knights of Lastwall: (4) Angel of Vindication
+        
+        // Knights of Lastwall: (4) Eclipsed Vitality
 
         // Expert Backstabber
         yield return new TrueFeat(
@@ -292,6 +296,8 @@ public static class Assassin
         
         /* Higher level feats
          * @12 Assassinate
+         * @12 Deadly Poison Weapon (Against the Scarlet Triad)
+         * * https://2e.aonprd.com/Feats.aspx?ID=1151
          */
     }
 
