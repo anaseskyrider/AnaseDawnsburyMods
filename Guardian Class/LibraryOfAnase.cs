@@ -50,7 +50,7 @@ namespace Dawnsbury.Mods.GuardianClass;
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
-/// <value>v1.9</value>
+/// <value>v2.0</value>
 public static class LibraryOfAnase
 {
     #region Extensions
