@@ -90,7 +90,6 @@ public static class ModData
         #region Archer
         
         public static readonly FeatName FighterPartingShot = ModManager.RegisterFeatName(IdPrepend+"Class.Fighter.PartingShot", "Parting Shot");
-        public static readonly FeatName ArchersAim = ModManager.RegisterFeatName(IdPrepend+"Archetype.Archer.ArchersAim", "Archer's Aim");
         
         #endregion
         
