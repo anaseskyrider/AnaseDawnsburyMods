@@ -33,35 +33,30 @@ public static class Archer
             FeatName.QuickDraw, Trait.Archer, 4);
         
         // Crossbow Terror
-        yield return new TrueFeat(
-                ModData.FeatNames.CrossbowTerror,
-                6,
-                "You are a dynamo with the crossbow.",
-                "You gain a +2 circumstance bonus to damage with crossbows. If the crossbow is a simple weapon, also increase the damage die size for your attacks made with that crossbow by one step. As normal, this damage die increase can't be combined with other abilities that alter the weapon damage die (such as the ranger feat Crossbow Ace).",
-                [])
-            .WithAvailableAsArchetypeFeat(Trait.Archer)
-            .WithPermanentQEffect(
-                "+2 circumstance bonus to Crossbow damage, increment Simple Crossbow die.",
-                qfFeat =>
+        // DEPRECATED (remaster)
+        // Improve existing feat. Add damage die stacking prevention, shorten stat block description.
+        TrueFeat cbTerror = (AllFeats.GetFeatByFeatName(FeatName.CrossbowTerror) as TrueFeat)!;
+        cbTerror.RulesText += " As normal, this damage die increase can't be combined with other abilities that alter the weapon damage die (such as the ranger feat Crossbow Ace).";
+        cbTerror.WithOnCreature(self =>
+        {
+            QEffect? qfTerror = self.QEffects.FirstOrDefault(qf =>
+                (qf.Name?.Contains("Crossbow Terror") ?? false)
+                && qf.IncreaseItemDamageDie is not null);
+            qfTerror?.Description = "You have a +2 circumstance bonus to damage with crossbows, and increment the damage die of simple crossbows by one step.";
+            qfTerror?.IncreaseItemDamageDie = (qfThis, item) =>
+            {
+                if (!item.HasTrait(Trait.Crossbow) || !item.HasTrait(Trait.Simple))
+                    return false;
+                    
+                foreach (QEffect qfInLoop in qfThis.Owner.QEffects)
                 {
-                    qfFeat.IncreaseItemDamageDie = (_, item) =>
-                    {
-                        if (!item.HasTrait(Trait.Crossbow) || !item.HasTrait(Trait.Simple))
-                            return false;
-                        
-                        foreach (QEffect qfInLoop in qfFeat.Owner.QEffects)
-                        {
-                            if (qfInLoop != qfFeat && qfInLoop.IncreaseItemDamageDie != null)
-                                return false;
-                        }
-                        return true;
-
-                    };
-                    qfFeat.BonusToDamage = (_, action, _) =>
-                        action.HasTrait(Trait.Crossbow) ?
-                        new Bonus(2, BonusType.Circumstance, "Crossbow Terror") :
-                        null;
-                });
+                    if (qfInLoop != qfThis
+                        && qfInLoop.IncreaseItemDamageDie?.Invoke(qfInLoop, item) == true)
+                        return false;
+                }
+                return true;
+            };
+        });
         
         // Parting Shot
         yield return new TrueFeat(
