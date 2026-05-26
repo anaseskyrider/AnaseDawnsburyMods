@@ -152,11 +152,16 @@ public static class Ready
                 
                 return;
 
+                // TODO: Test going from 100% blocked to 100% open with no in-between
                 bool HasCoverOrShield(Creature me, Creature cr)
                 {
-                    return cr.Defenses.DetermineDefenseBonuses(
+                    return
+                        me.HasLineOfEffectTo(cr) > CoverKind.None
+                        || cr.Defenses.DetermineDefenseBonuses(
                         me,
-                        me.PrimaryWeapon is not null ? me.CreateStrike(me.PrimaryWeapon) : null,
+                        me.PrimaryWeapon is not null
+                            ? me.CreateStrike(me.PrimaryWeapon)
+                            : null,
                         Defense.AC,
                         cr)
                         .Any(bonus =>
