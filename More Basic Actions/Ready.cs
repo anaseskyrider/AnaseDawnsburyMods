@@ -369,8 +369,7 @@ public static class Ready
                                      .ToList())
                         {
                              if (cr.IsFlatfootedToBecause(self, null) == null
-                                && !cr.QEffects.Any(qf =>
-                                    qf.Id == QEffectId.FlankedBy && qf.Source == self))
+                                 && !cr.Cache.FlankedBy.Contains(self))
                             {
                                 provokeQueue.Remove(cr);
                                 continue;
@@ -395,8 +394,7 @@ public static class Ready
                         .Where(cr =>
                             !cr.FriendOf(caster)
                             && cr.IsFlatfootedToBecause(caster, null) == null
-                            && !cr.QEffects.Any(qf =>
-                                qf.Id == QEffectId.FlankedBy && qf.Source == caster))
+                            && !cr.Cache.FlankedBy.Contains(caster))
                         .ToList(), // Creatures who've been made off-guard since last reaction-prompt
                 };
                 caster.AddQEffect(readiedSeize);
