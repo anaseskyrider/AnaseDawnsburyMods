@@ -50,7 +50,13 @@ public static class Reposition
                 ModData.Illustrations.Reposition,
                 "Reposition",
                 [Trait.Basic, ModData.Traits.ModName, Trait.Attack, Trait.AttackDoesNotTargetAC],
-                "{i}You forcefully relocate a creature.{/i}\n\n{b}Requirements{/b} You have a free hand, are holding the target or have a grapple weapon, and the target isn't more than one size larger than you.\n\nMake an Athletics check against the target's Fortitude DC."
+                """
+                {i}You forcefully relocate a creature.{/i}
+
+                {b}Requirements{/b} You have a free hand, are holding the target or have a grapple weapon, and the target isn't more than one size larger than you.
+
+                Make an Athletics check against the target's Fortitude DC.
+                """
                 + S.FourDegreesOfSuccess("You move the creature up to 10 feet along any unobstructed path, staying within your reach.",
                 "As critical success, but you move the creature 5 feet.",
                 null,
@@ -95,7 +101,7 @@ public static class Reposition
                 }
                 CheckBreakdown result = CombatActionExecution.BreakdownAttackForTooltip(action, target);
                 if (improve is not null)
-                    improve.ExpiresAt = ExpirationCondition.Immediately;
+                    action.Owner.RemoveAllQEffects(qf => qf == improve);
                 return result.TooltipDescription;
             })
             .WithPrologueEffectOnChosenTargetsBeforeRolls(async (action, self, targets) =>
