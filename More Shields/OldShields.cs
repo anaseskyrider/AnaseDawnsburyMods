@@ -193,7 +193,7 @@ public static class OldShields
         });
         
         // Reflexive Shield (More Dedications, Bastion Dedication, modded)
-        Feat? reflexiveShield = null;
+        /*Feat? reflexiveShield = null;
         AdjustFeatByName("Reflexive Shield", feat =>
         {
             reflexiveShield = feat;
@@ -264,7 +264,7 @@ public static class OldShields
                         };
                     }
                 });
-        });
+        });*/
 
         AdjustFeatByEnum(FeatName.EmergencyTarge, eTarge =>
         {
@@ -345,9 +345,9 @@ public static class OldShields
                                 threshold = breakdown.DetermineCircumstanceBonusThresholdNeededToUpgrade();
                             // But if it's only because of Reflexive Shield, then the shield spell can't
                             // actually block it, so remove it as a legal option.
-                            else if (reflexiveShield is not null
-                                     && defender.HasFeat(reflexiveShield.FeatName)
-                                     && CommonShieldRules.DoesReflexiveShieldApply(action))
+                            else if (CommonShieldRules.DoesReflexiveShieldApply(action)
+                                     && (defender.PersistentCharacterSheet?.Calculated.AllFeatNames
+                                         .Any(fn => fn.ToStringOrTechnical().Contains("ReflexiveShield")) ?? false))
                             {
                                 threshold = breakdown.DetermineCircumstanceBonusThresholdNeededToUpgrade();
                                 if (shieldSpell is not null)
