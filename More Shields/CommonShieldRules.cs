@@ -67,6 +67,20 @@ public static class CommonShieldRules
             .WhereNotNull()
             .ToList();
     }
+    
+    /// <summary>
+    /// Gets a list of shields that are legally usable for Shield Block.
+    /// </summary>
+    public static List<Item> GetBlockableShields(Creature owner)
+    {
+        List<Item> blockables = GetRaisedShields(owner);
+        if (owner.HasEffect(QEffectId.ShieldBlock))
+            return blockables;
+        else
+            return blockables.Where(shield =>
+                shield.HasTrait(Trait.AlwaysOfferShieldBlock))
+                .ToList();
+    }
 
     #endregion
     
@@ -338,22 +352,22 @@ public static class CommonShieldRules
         Creature blocker,
         Func<Item,bool>? shieldFilter)
     {
-        List<Item> raisedShields = GetRaisedShields(blocker);
+        List<Item> blockableShields = GetBlockableShields(blocker);
         if (shieldFilter is not null)
-            raisedShields = raisedShields
+            blockableShields = blockableShields
                 .Where(shieldFilter.Invoke)
                 .ToList();
 
         // Do nothing if no shield options are found
-        if (raisedShields.Count == 0)
+        if (blockableShields.Count == 0)
             return null;
         
         int? chosenItem = await blocker.Battle.AskToUseReaction(
             blocker,
-            $"{{b}}Shield Block{{/b}} {{icon:Reaction}}\n{(blocker == defender ? "You are" : defender + " is")} about to be dealt {dStuff.Amount} damage by {{Blue}}{dStuff.Power?.Name}{{/Blue}}.\nBlock with {(raisedShields.Count > 1 ? "one of your shields" : "your shield")}?",
+            $"{{b}}Shield Block{{/b}} {{icon:Reaction}}\n{(blocker == defender ? "You are" : defender + " is")} about to be dealt {dStuff.Amount} damage by {{Blue}}{dStuff.Power?.Name}{{/Blue}}.\nBlock with {(blockableShields.Count > 1 ? "one of your shields" : "your shield")}?",
             ModData.Illustrations.ShieldBlock,
             [Trait.ShieldBlock],
-            raisedShields
+            blockableShields
                 .Select(shield =>
                 {
                     string icon = shield.Illustration.IllustrationAsIconString;
@@ -367,7 +381,7 @@ public static class CommonShieldRules
         if (chosenItem is null)
             return null;
         
-        Item shield = raisedShields[(int)chosenItem];
+        Item shield = blockableShields[(int)chosenItem];
         int hardness = shield.Hardness + CommonShieldRules.GetShieldBlockHardnessBonuses(attacker, dStuff, defender, blocker);
         int preventHowMuch = Math.Min(hardness, dStuff.Amount);
 
