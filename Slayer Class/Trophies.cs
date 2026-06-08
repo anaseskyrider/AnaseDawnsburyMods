@@ -130,6 +130,17 @@ public static class Trophies
         public const string CREATURE_ID = "crid*";
 
         /// <summary>
+        /// The underscore character.
+        /// </summary>
+        /// <remarks>This character is checked in a creature ID string and substituted for <see cref="UNDERSCORE_SUBSTITUTE"/>.</remarks>
+        public const string UNDERSCORE = "_";
+
+        /// <summary>
+        /// The character that underscores in creature IDs are substituted for during serialization.
+        /// </summary>
+        public const string UNDERSCORE_SUBSTITUTE = "%";
+        
+        /// <summary>
         /// The list of the trophy's traits.
         /// </summary>
         public const string TRAITS = "traits*";
@@ -639,7 +650,10 @@ public static class Trophies
         data.Add(finalName);
         
         // Creature Id
-        string finalId = DataConstants.CREATURE_ID + id.ToStringOrTechnical();
+        string finalId = (DataConstants.CREATURE_ID + id.ToStringOrTechnical())
+            .Replace(
+                DataConstants.UNDERSCORE,
+                DataConstants.UNDERSCORE_SUBSTITUTE);
         data.Add(finalId);
         
         // Traits
@@ -713,7 +727,13 @@ public static class Trophies
             " ");*/
         string finalName = GetString(DataConstants.CREATURE_NAME) ?? "Unknown";
         
-        CreatureId finalId = Enum.Parse<CreatureId>(GetString(DataConstants.CREATURE_ID) ?? "None");
+        CreatureId finalId = ModManager.TryParse(
+            GetString(DataConstants.CREATURE_ID)
+                ?.Replace(DataConstants.UNDERSCORE_SUBSTITUTE, DataConstants.UNDERSCORE)
+            ?? "None",
+            out CreatureId iId)
+                ? iId
+                : CreatureId.None;
 
         List<Trait>? finalTraits = GetString(DataConstants.TRAITS)
             ?.Split(DataConstants.ITEM_SEPARATOR)
