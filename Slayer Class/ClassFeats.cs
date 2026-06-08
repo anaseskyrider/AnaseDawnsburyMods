@@ -278,7 +278,7 @@ public static class ClassFeats
                             return null;
                         
                         if (HuntingTools.GetTool(qfThis.Owner, HuntingTools.ToolId.RepellingShield) is not { } shield
-                            || CommonShieldRules.GetRaisedShields(qfThis.Owner).FirstOrDefault(shield.IsMyTool)
+                            || CommonShieldRules.GetBlockableShields(qfThis.Owner).FirstOrDefault(shield.IsMyTool)
                                 is not {} iShield
                             || Trophies.GetTrophy(iShield) is not {} trophy
                             || Trophies.GetTrophyData(trophy)?.Kinds is not { } kinds
