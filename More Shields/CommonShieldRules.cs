@@ -10,7 +10,6 @@ using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
-using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Text;
@@ -102,7 +101,7 @@ public static class CommonShieldRules
     /// Adds an invisible QEffect which doesn't expire that adds a Bonus to hardness to Shield Block reaction events.
     /// </summary>
     /// <param name="shouldApply">A lambda function which takes in the ATTACKER, the DAMAGESTUFF, the TARGET of the damage, and the one BLOCKING it. It returns the bonus to apply to the shield block event.</param>
-    public static QEffect BonusToShieldHardness(Func<Creature,DamageStuff,Creature,Creature,Bonus?> shouldApply)
+    public static QEffect BonusToShieldHardness(Func<Creature,DamageEvent,Creature,Creature,Bonus?> shouldApply)
     {
         return new QEffect()
         {
@@ -115,21 +114,21 @@ public static class CommonShieldRules
     /// Gets the total bonuses to hardness for Shield Block events.
     /// </summary>
     /// <param name="attacker"></param>
-    /// <param name="dStuff"></param>
+    /// <param name="dEvent"></param>
     /// <param name="target"></param>
     /// <param name="blocker"></param>
     /// <returns></returns>
     public static int GetShieldBlockHardnessBonuses(
         Creature attacker,
-        DamageStuff dStuff,
+        DamageEvent dEvent,
         Creature target,
         Creature blocker)
     {
         List<Bonus?> bonuses = [];
         foreach (QEffect qf in blocker.QEffects.Where(qf => qf.Id == ModData.QEffectIds.BonusToHardness))
         {
-            if (qf.Tag is Func<Creature, DamageStuff, Creature, Creature, Bonus?> bonusToHardness)
-                bonuses.Add(bonusToHardness.Invoke(attacker, dStuff, target, blocker));
+            if (qf.Tag is Func<Creature, DamageEvent, Creature, Creature, Bonus?> bonusToHardness)
+                bonuses.Add(bonusToHardness.Invoke(attacker, dEvent, target, blocker));
         }
 
         return Bonus.Sum(bonuses, false).BonusTotal;
@@ -168,52 +167,13 @@ public static class CommonShieldRules
     {
         return magus.HasEffect(QEffectId.SparklingTarge)
                && magus.HasEffect(QEffectId.ArcaneCascade)
-               && power != null
-               && (power.CountsAsMagical || power.HasTrait(Trait.Magical));
+               && power is { CountsAsMagical: true };
     }
 
     #endregion
 
     // These functions relate to raising a shield.
     #region Raising a Shield
-
-    /// <summary>
-    /// Updated version of the local function contained in <see cref="Fighter.CreateRaiseShield"/>. Provides a simple CombatAction for applying <see cref="QEffect.RaisingAShield"/>. Applying the Shield Block functionality requires the patched <see cref="QEffect.ShieldBlock"/> QEffect, which checks when your shield is raised to add the YouAreDealtDamage logic.
-    /// <seealso cref="ShieldPatches.PatchShieldBlock"/>
-    /// </summary>
-    /// <param name="self">The creature raising a shield.</param>
-    /// <param name="shield">The shield being raised.</param>
-    /// <param name="hasShieldBlock">(nullable) If you don't pass an override, this is calculated the same way the base CreateRaiseShield does it.</param>
-    public static CombatAction CreateRaiseShieldCore(Creature self, Item shield, bool? hasShieldBlock)
-    {
-        hasShieldBlock ??= self.HasEffect(QEffectId.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
-        int acBonus = (int)GetAC(shield)!; // Suppress. Only gets called on an item that is a shield.
-        return new CombatAction(
-                self,
-                shield.Illustration,
-                $"Raise {shield.BaseHumanName.ToLower()}",
-                [Trait.Basic, Trait.DoNotShowOverheadOfActionName, ModData.Traits.ModName],
-                null!,
-                Target.Self((_,ai) => ai.GainBonusToAC(acBonus))
-                    .WithAdditionalRestriction(self2 =>
-                        self2.QEffects.Any(qf =>
-                            qf.Id is QEffectId.RaisingAShield
-                            && qf.Tag == shield)
-                        ? "Already raised"
-                        : null))
-            .WithDescription(
-                "You position your shield to protect yourself.",
-                $"Until the start of your next turn, you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC{((bool)hasShieldBlock ? " and can Shield Block {icon:Reaction}  with this shield" : null)}.")
-            .WithItem(shield)
-            .WithActionCost(shield.HasTrait(ModData.Traits.Hefty14) && self.Abilities.Strength < 2 ? 2 : 1)
-            .WithActionId(ActionId.RaiseShield)
-            .WithSoundEffect(SfxName.RaiseShield)
-            .WithEffectOnEachTarget(async (action, caster, target, _) =>
-            {
-                bool isDevotedGuardian = action.Target is not SelfTarget;
-                Fighter.RaiseShield(caster, shield, target, isDevotedGuardian);
-            });
-    }
 
     /// <summary>Gets your current possibilities and looks for any action with <see cref="ActionId.RaiseShield"/> and offers it as an option (if multiple are present).</summary>
     /// <param name="self">The Creature raising the shield.</param>
@@ -273,10 +233,10 @@ public static class CommonShieldRules
             damageEvent.CombatAction,
             damageEvent.KindedDamages.First().DamageKind);
 
-        int hardness = shield.Hardness + CommonShieldRules.GetShieldBlockHardnessBonuses(damageEvent.Source, damageStuff, targetedCreature, blockingCreature);
+        int hardness = shield.Hardness + CommonShieldRules.GetShieldBlockHardnessBonuses(damageEvent.Source, damageEvent, targetedCreature, blockingCreature);
         int preventHowMuch = Math.Min(hardness, damageStuff.Amount);
 
-        CombatAction displayReaction = ShieldBlockAction(blockingCreature, shield, hardness);
+        CombatAction displayReaction = ShieldBlockAction(damageEvent, targetedCreature, blockingCreature, shield, hardness, preventHowMuch);
         string whatDamage = DoesSparklingTargeShieldBlockApply(damageStuff.Power, blockingCreature)
             ? "{Blue}magical{/Blue} damage"
             : "damage";
@@ -316,13 +276,13 @@ public static class CommonShieldRules
     /// <summary>
     /// Creates a Shield Block combat action used for display purposes only. The optional parameters let you specify the effects of a specific event.
     /// </summary>
-    public static CombatAction ShieldBlockAction(Creature blocker, Item? shield, int? hardness)
+    public static CombatAction ShieldBlockAction(DamageEvent dEvent, Creature target, Creature blocker, Item? shield,  int? hardness, int preventHowMuch)
     {
-        return new CombatAction(
+        CombatAction shieldBlock = new CombatAction(
                 blocker,
                 ModData.Illustrations.ShieldBlock,
                 "Shield Block" + (shield is not null ? " ("  + shield.Name + ")" : ""),
-                [ModData.Traits.ModName, Trait.General, Trait.ShieldBlock],
+                [ModData.ModTrait, Trait.General, Trait.ShieldBlock],
                 $$"""
                   {i}You snap your shield in place to ward off a blow.{/i}
 
@@ -331,94 +291,34 @@ public static class CommonShieldRules
                   Your {{(shield is not null ? shield.Illustration.IllustrationAsIconString + " " + shield.Name.WithColor("Blue") : "shield")}} prevents you from taking up to {{hardness?.WithColor("Blue") ?? "the shield's hardness in"}} damage. You take any remaining damage.
                   """,
                 Target.Self())
-            .WithActionCost(0);
-    }
+            .WithActionCost(-2)
+            // Adds an impact sound
+            .WithSoundEffect(ModData.SfxNames.ShieldBlockWooodenImpact)
+            // Track the triggering damage event
+            .WithTag(dEvent)
+            .WithItem(shield!)
+            .WithEffectOnSelf(async (action, self) =>
+            {
+                foreach (QEffect qf in blocker.QEffects.ToList())
+                    await qf.WhenYouUseShieldBlock.InvokeIfNotNull(qf, dEvent.Source, target,
+                        preventHowMuch);
 
-    [Obsolete("Use QEffect.YouAreDealtDamageReaction and CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2.")]
-    public static async Task<DamageModification?> OfferAndMakeShieldBlock(
-        Creature attacker,
-        Creature defender,
-        DamageStuff dStuff,
-        Creature blocker)
-    {
-        return await OfferAndMakeShieldBlock(attacker, defender, dStuff, blocker, null);
-    }
+                // Touched up overhead:
+                // - add reaction symbol to overhead
+                // - add CombatAction-like description
+                /*blockingCreature.Overhead(
+                    "Shield Block {icon:Reaction}", // Don't include the item name
+                    Color.White,
+                    $"{blockingCreature} uses {{b}}Shield Block{{/b}} {{icon:Reaction}} to mitigate {{b}}{preventHowMuch}{{/b}} damage.",
+                    action.Name + " {icon:Reaction}",
+                    action.Description,
+                    action.Traits);*/
 
-    [Obsolete("Use QEffect.YouAreDealtDamageReaction and CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2.")]
-    public static async Task<DamageModification?> OfferAndMakeShieldBlock(
-        Creature attacker,
-        Creature defender,
-        DamageStuff dStuff,
-        Creature blocker,
-        Func<Item,bool>? shieldFilter)
-    {
-        List<Item> blockableShields = GetBlockableShields(blocker);
-        if (shieldFilter is not null)
-            blockableShields = blockableShields
-                .Where(shieldFilter.Invoke)
-                .ToList();
-
-        // Do nothing if no shield options are found
-        if (blockableShields.Count == 0)
-            return null;
-        
-        int? chosenItem = await blocker.Battle.AskToUseReaction(
-            blocker,
-            $"{{b}}Shield Block{{/b}} {{icon:Reaction}}\n{(blocker == defender ? "You are" : defender + " is")} about to be dealt {dStuff.Amount} damage by {{Blue}}{dStuff.Power?.Name}{{/Blue}}.\nBlock with {(blockableShields.Count > 1 ? "one of your shields" : "your shield")}?",
-            ModData.Illustrations.ShieldBlock,
-            [Trait.ShieldBlock],
-            blockableShields
-                .Select(shield =>
-                {
-                    string icon = shield.Illustration.IllustrationAsIconString;
-                    int hardness = shield.Hardness + CommonShieldRules.GetShieldBlockHardnessBonuses(attacker, dStuff, defender, blocker);
-                    int preventHowMuch = Math.Min(hardness, dStuff.Amount);
-                    
-                    return $"{icon} {shield.BaseHumanName} ({hardness.WithColor(preventHowMuch == dStuff.Amount ? "Green" : "Blue")})";
-                })
-                .ToArray());
-
-        if (chosenItem is null)
-            return null;
-        
-        Item shield = blockableShields[(int)chosenItem];
-        int hardness = shield.Hardness + CommonShieldRules.GetShieldBlockHardnessBonuses(attacker, dStuff, defender, blocker);
-        int preventHowMuch = Math.Min(hardness, dStuff.Amount);
-
-        return await ShieldBlockYouAreDealtDamage(attacker, defender, blocker, shield.Name, hardness, preventHowMuch);
-    }
-
-    /// <summary>
-    /// Performs a Shield Block logic execution, returning a damage modification. Unlike <see cref="Fighter.ShieldBlockYouAreDealtDamage"/>, this DOES NOT ASK TO USE YOUR REACTION. It simply executes Shield Block logic.
-    /// </summary>
-    /// <param name="attacker">The creature doing the damage stuff.</param>
-    /// <param name="defender">The creature being targeted, who could be defended.</param>
-    /// <param name="blocker">The creature doing the blocking.</param>
-    /// <param name="shieldName">Usually the <see cref="Item.Name"/> of the shield.</param>
-    /// <param name="finalHardness">The shield's final hardness, after bonuses have been added up.</param>
-    /// <param name="preventHowMuch">The amount of damage actually prevented (the final hardness, but only up to the actual damage dealt).</param>
-    /// <returns></returns>
-    [Obsolete("Use QEffect.YouAreDealtDamageReaction and CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2.")]
-    public static async Task<DamageModification?> ShieldBlockYouAreDealtDamage(
-        Creature attacker,
-        Creature defender,
-        Creature blocker,
-        string shieldName,
-        int finalHardness,
-        int preventHowMuch)
-    {
-        foreach (QEffect qf in blocker.QEffects.ToList())
-            await qf.WhenYouUseShieldBlock.InvokeIfNotNull(qf, attacker, defender, preventHowMuch);
-        
-        // Enhanced overhead log information
-        blocker.Overhead(
-            "shield block", Color.White,
-            blocker + " uses {b}Shield Block{/b} {icon:Reaction} to mitigate {b}" + preventHowMuch + "{/b} damage.",
-            "Shield block {icon:Reaction}" + " (" + shieldName + ")",
-            "{i}You snap your shield in place to ward off a blow.{/i}\n\n{b}Trigger{/b} While you have your shield raised, you would take damage from a physical attack.\n\nYour {Blue}" + shieldName + "{/Blue} prevents you from taking up to {Blue}" + finalHardness + "{/Blue} damage. You take any remaining damage.",
-            new Traits([Trait.General]));
-        
-        return new ReduceDamageModification(preventHowMuch, "Shield block");
+                dEvent.ReduceBy(preventHowMuch, "Shield block");
+            });
+        if (shield is not null)
+            shieldBlock.WithItem(shield);
+        return shieldBlock;
     }
 
     #endregion

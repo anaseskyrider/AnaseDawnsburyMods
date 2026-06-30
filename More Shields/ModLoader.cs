@@ -15,9 +15,7 @@ public class ModLoader
         
         ModData.LoadData();
         ShieldModifications.LoadModifications();
-        OldShields.ModifyOldFeats();
-        OldShields.ModifyOldShields();
-        OldShields.UpdateDescriptions();
+        OldShields.Load();
         NewShields.LoadShields();
 
         // Update the items shop

@@ -1,7 +1,9 @@
+using System.Reflection;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
@@ -15,15 +17,6 @@ namespace Dawnsbury.Mods.MoreShields;
 
 public static class NewShields
 {
-    public static List<ItemName> AllNewShields = [
-        ModData.ItemNames.Buckler,
-        ModData.ItemNames.CastersTarge,
-        ModData.ItemNames.HeavyRondache,
-        ModData.ItemNames.MeteorShield,
-        ModData.ItemNames.FortressShield,
-        ModData.ItemNames.CastersTarge,
-    ];
-    
     /// <summary>Load new shields into Dawnsbury Days. Called by <see cref="ModLoader"/>.</summary>
     public static void LoadShields()
     {
@@ -35,11 +28,12 @@ public static class NewShields
                     ModData.Illustrations.Buckler,
                     "buckler",
                     0, 1,
-                    ModData.Traits.ModName, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield)
+                    ModData.ModTrait, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield)
                 .WithMainTrait(ModData.Traits.Buckler)
                 .WithDescription("This very small shield is a favorite of duelists and quick, lightly armored warriors. It's typically made of steel and strapped to your forearm.", "")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning))
-                .WithShieldProperties(3));
+                .WithShieldProperties(3)
+                .WithWornShieldLogic());
         ModData.ItemNames.FortressShield = ModManager.RegisterNewItemIntoTheShop(
             "FortressShield",
             iName => new Item(
@@ -47,7 +41,7 @@ public static class NewShields
                     ModData.Illustrations.FortressShield,
                     "fortress shield",
                     1, 20,
-                    ModData.Traits.ModName, Trait.Shield, Trait.Martial, ModData.Traits.HeavyShield, ModData.Traits.CoverShield, ModData.Traits.Hefty14)
+                    ModData.ModTrait, Trait.Shield, Trait.Martial, ModData.Traits.HeavyShield, ModData.Traits.CoverShield, ModData.Traits.Hefty14)
                 .WithMainTrait(ModData.Traits.FortressShield)
                 .WithDescription("Also known as portable walls, these thick and heavy shields are slightly larger than tower shields. Like tower shields, they're typically made from wood reinforced with metal, but many are made from larger amounts of metal or even stone.", "")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning))
@@ -59,7 +53,7 @@ public static class NewShields
                     ModData.Illustrations.MeteorShield,
                     "meteor shield",
                     0, 4,
-                    ModData.Traits.ModName, Trait.Shield, Trait.Martial, Trait.Thrown30Feet, ModData.Traits.MediumShield)
+                    ModData.ModTrait, Trait.Shield, Trait.Martial, Trait.Thrown30Feet, ModData.Traits.MediumShield)
                 .WithMainTrait(ModData.Traits.MeteorShield)
                 .WithDescription("Meteor shields are specifically designed with throwing in mind. A meteor shield is made from thin steel and has quick-release straps, allowing for easy, long-distance throws.", "")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning)
@@ -74,11 +68,12 @@ public static class NewShields
                     ModData.Illustrations.HeavyRondache,
                     "heavy rondache",
                     1, 5,
-                    ModData.Traits.ModName, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield)
+                    ModData.ModTrait, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield)
                 .WithMainTrait(ModData.Traits.HeavyRondache)
                 .WithDescription("Similar in size to a buckler, this shield is intended to absorb blows instead of deflecting attacks. It features multiple layers of metal and is reinforced with additional wood.", "")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning))
-                .WithShieldProperties(5));
+                .WithShieldProperties(5)
+                .WithWornShieldLogic());
         ModData.ItemNames.CastersTarge = ModManager.RegisterNewItemIntoTheShop(
             "CastersTarge",
             iName =>
@@ -98,7 +93,7 @@ public static class NewShields
                         ModData.Illustrations.CastersTarge,
                         "caster's targe",
                         level, price,
-                        ModData.Traits.ModName, Trait.Shield, Trait.Martial, Trait.NonMetallic,
+                        ModData.ModTrait, Trait.Shield, Trait.Martial, Trait.NonMetallic,
                         ac)
                     .WithMainTrait(ModData.Traits.CastersTarge)
                     .WithDescription(
@@ -193,6 +188,45 @@ public static class NewShields
                 };
                 return targe;
             });
+    }
+
+    private static Item WithWornShieldLogic(this Item shield)
+    {
+        shield.WithPermanentQEffectWhenWorn((qfThis, shield2) =>
+        {
+            // Strike
+            // PETR: Possibility location manipulation
+            if (shield.HasTrait(Trait.Weapon) && shield.HasTrait(Trait.Melee))
+            {
+                // TODO: Remove CreateItemStrikePossibility reflection.
+                Type poss = typeof(Possibilities);
+                MethodInfo? createStrike = poss.GetMethod(
+                    "CreateItemStrikePossibility",
+                    BindingFlags.NonPublic | BindingFlags.Static);
+                qfThis.ProvideMainAction = qfThis2 =>
+                {
+                    if (qfThis2.Owner.HasFreeHand
+                        || qfThis2.Owner.HeldItems.Any(item =>
+                            !(item.HasTrait(Trait.Weapon) || item.HasTrait(Trait.Grapplee))))
+                        return createStrike?.Invoke(poss, [qfThis2.Owner, shield]) is { } strike
+                            ? (Possibility)strike
+                            : null;
+                    return null;
+                };
+            }
+
+            // Raise shield
+            // PETR: Possibility location manipulation
+            qfThis.ProvideActionIntoPossibilitySection = (qfThis2, section) =>
+            {
+                if (section.PossibilitySectionId is not PossibilitySectionId.ItemActions)
+                    return null;
+                if (qfThis2.Owner.HasEffect(QEffectId.RaisingAShield))
+                    return null;
+                return Fighter.CreateRaiseShield(qfThis.Owner, shield);
+            };
+        });
+        return shield;
     }
 
     public static Possibility ScrollPossibility(Creature self, Item scroll)

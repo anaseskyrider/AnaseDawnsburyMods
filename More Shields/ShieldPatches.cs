@@ -1,14 +1,15 @@
 using System.Reflection;
-using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
+using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
@@ -17,6 +18,7 @@ using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.StatBlocks.Monsters.L5;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
+using Dawnsbury.Display.Text;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
 
@@ -27,121 +29,81 @@ namespace Dawnsbury.Mods.MoreShields;
 /// </summary>
 public static class ShieldPatches
 {
-    /// <summary>Possibilities now includes the ability to get a worn shield, not just a held shield.</summary>
-    [HarmonyPatch(
-        typeof(Possibilities),
-        nameof(Possibilities.Create),
-        [typeof(Creature), typeof(PossibilitiesRegenerationSpecifics)])]
-    internal static class PatchPossibilitiesCreation
+    /// <summary>The Raise a Shield CombatAction is improved to work with AC bonuses other than +2, to work with the Hefty trait, removes the action ID for the Devoted Guardian activity, to only disallow the action when the specific shield is already raised instead of any shield, and to enhance the action description.</summary>
+    [HarmonyPatch(typeof(Fighter), nameof(Fighter.CreateRaiseShieldCore))]
+    internal static class PatchCreateRaiseShieldCore
     {
-        internal static void Postfix(Creature self, Possibilities __instance, ref Possibilities __result)
-        {
-            // TODO: Reorder list if possible.
-            PossibilitySection? mainActions = __result.Sections.FirstOrDefault(sect =>
-                sect.PossibilitySectionId == PossibilitySectionId.MainActions);
-            PossibilitySection? itemActions = __result.Sections.FirstOrDefault(sect =>
-                sect.PossibilitySectionId == PossibilitySectionId.ItemActions);
-
-            Traverse TravPoss = Traverse.Create(typeof(Possibilities));
-            
-            foreach (Item shield in CommonShieldRules.GetWieldedShields(self))
-            {
-                // Handle worn shields
-                if (shield.HasTrait(Trait.Worn))
-                {
-                    // Shield bash
-                    Traverse? CreateStrike = TravPoss.Method(
-                        "CreateItemStrikePossibility",
-                        new Type[] { typeof(Creature), typeof(Item) });
-                    if (shield.HasTrait(Trait.Weapon)
-                        && shield.HasTrait(Trait.Melee)
-                        && (self.HasFreeHand
-                            || self.HeldItems.Any(item =>
-                                !(item.HasTrait(Trait.Weapon) || item.HasTrait(Trait.Grapplee)))))
-                    {
-                        Possibility shieldBash = (Possibility)CreateStrike.GetValue(self, shield);
-                        mainActions?.AddPossibility(shieldBash);
-                        mainActions?.CollapseReadyPossibilities();
-                    }
-                
-                    // Raise shield
-                    // Hide only if this specific shield is being raised
-                    if (self.QEffects.Any(qf =>
-                            qf.Id is QEffectId.RaisingAShield
-                            && qf.Tag == shield))
-                        continue;
-                    Possibility raiseShield = Fighter.CreateRaiseShield(self, shield);
-                    itemActions?.AddPossibility(raiseShield);
-                    itemActions?.CollapseReadyPossibilities();
-                    var AddCustom = TravPoss.Method(
-                        "AddIntoCustomSections",
-                        new Type[] { typeof(List<PossibilitySection>), typeof(Creature) });
-                    if (raiseShield is SubmenuPossibility shieldMenu)
-                        AddCustom.GetValue(shieldMenu.Subsections, self);
-                }
-                // Readd shields back to the UI for the ones specifically not being raised
-                else
-                {
-                    // Add raise shield only if shields are raised but not this specific shield
-                    if (self.QEffects
-                            .Where(qf => qf.Id is QEffectId.RaisingAShield)
-                            .ToList()
-                            is not { Count: > 0 } raisedShields
-                        || raisedShields.Any(qf => qf.Tag == shield))
-                        continue;
-                    
-                    Possibility raiseShield = Fighter.CreateRaiseShield(self, shield);
-                    itemActions?.AddPossibility(raiseShield);
-                    itemActions?.CollapseReadyPossibilities();
-                    var AddCustom = TravPoss.Method(
-                        "AddIntoCustomSections",
-                        new Type[] { typeof(List<PossibilitySection>), typeof(Creature) });
-                    if (raiseShield is SubmenuPossibility shieldMenu)
-                        AddCustom.GetValue(shieldMenu.Subsections, self);
-                }
-            }
-        }
-    }
-    
-    /// <summary>Raise a Shield is now a dramatically simpler action that flexibly becomes a submenu with the <see cref="ModData.Traits.ShieldActionFeat"/> trait.</summary>
-    [HarmonyPatch(typeof(Fighter), nameof(Fighter.CreateRaiseShield))]
-    internal static class PatchCreateRaiseShield
-    {
-        internal static bool Prefix(Creature self, Item shield, ref Possibility __result)
+        internal static void Postfix(Creature self, Item shield, bool devotedGuardian, ref CombatAction __result)
         {
             bool hasShieldBlock = self.HasEffect(QEffectId.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
+            int acBonus = (int)CommonShieldRules.GetAC(shield)!; // Suppress. Only gets called on an item that is a shield.
+            bool isCoverable = shield.HasTrait(ModData.Traits.CoverShield);
+            bool isRaised = self.QEffects.Any(qf =>
+                qf.Id is QEffectId.RaisingAShield && qf.Tag == shield);
+            int theirBonus = isCoverable ? 2 : 1;
+
+            // Add mod trait
+            __result.Traits = new Traits([ModData.ModTrait, ..__result.Traits], __result);
             
-            // Create action
-            CombatAction raiseShield = CommonShieldRules.CreateRaiseShieldCore(self, shield, hasShieldBlock);
-            Possibility possibleShield = new ActionPossibility(raiseShield)
-                .WithPossibilityGroup(Constants.POSSIBILITY_GROUP_ITEM_IN_HAND);
+            // Address hefty trait
+            if (shield.HasTrait(ModData.Traits.Hefty14))
+            {
+                __result.ActionCost++;
+                __result.Traits.Add(ModData.Traits.Hefty14);
+            }
             
-            // Return possibility of action
-            // Create submenu if any feat has ShieldActionFeat trait (those feats are now responsible for inserting their actions into the submenu).
-            if (self.PersistentCharacterSheet?.Calculated.AllFeats.Any(ft => ft.HasTrait(ModData.Traits.ShieldActionFeat)) ?? false)
-                __result = new SubmenuPossibility(shield.Illustration, "Raise shield")
-                {
-                    SpellIfAny = raiseShield,
-                    Subsections = [
-                        new PossibilitySection("Raise shield")
-                        {
-                            Possibilities = [possibleShield]
-                        }
-                    ],
-                    PossibilityGroup = Constants.POSSIBILITY_GROUP_ITEM_IN_HAND,
-                };
-            else
-                __result = possibleShield;
+            // Remove ActionId if Devoted Guardian.
+            // It's so that you can't use this when offered to raise a shield.
+            if (devotedGuardian)
+                __result.ActionId = ActionId.None;
             
-            // Always overwrite the function.
-            return false;
+            // Enhance targeting.
+            // Account for different possible AC bonuses in AI goodness.
+            // Add "must not already be raised" requirement.
+            __result.Target = devotedGuardian
+                ? Target.AdjacentFriend()
+                : Target.Self((_, ai) => ai.GainBonusToAC(acBonus))
+                    .WithAdditionalRestriction(self2 =>
+                        self2.QEffects.Any(qf =>
+                            qf.Id is QEffectId.RaisingAShield
+                            && qf.Tag == shield)
+                            ? "Already raised"
+                            : null);
+            
+            // Update description.
+            // Flavor text is more dynamic.
+            // Uses cover shield trait instead of tower shield reference.
+            // Refers to actual shield AC instead of +2 assumption.
+            // Other wording tweaks.
+            string flavor = devotedGuardian
+                ? "{i}You adopt a wide stance, ready to defend both yourself and your chosen ward.{/i}"
+                : $"{{i}}You raise the {shield.Name} you're wielding, readying it to deflect blows.{{/i}}";
+            string rules = devotedGuardian
+                ? "Choose an adjacent ally. Until the start of your next turn, "
+                  + (isRaised
+                      ? $"your ally gains a {{Blue}}+{theirBonus}{{/Blue}} circumstance bonus to AC"
+                      : acBonus != theirBonus
+                          ? $"you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC and the ally gains a {{Blue}}+{theirBonus}{{/Blue}} circumstance bonus to AC"
+                          : $"both of you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC")
+                  + (hasShieldBlock && !isRaised
+                      ? ", and can Shield Block {icon:Reaction} with this shield"
+                      : null)
+                  + ".\n\nYour ally loses the bonus if they're no longer adjacent to you."
+                  + (isRaised
+                      ? "\n\n{icon:Action} {Green}(Last action was to Raise this Shield){/Green}"
+                      : null)
+                : $"Until the start of your next turn, you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC{(hasShieldBlock
+                    ? " and can Shield Block {icon:Reaction} with this shield"
+                    : "")}.";
+            __result.Description = $"{flavor}\n\n{rules}";
         }
     }
 
     /// <summary>
-    /// This function has been altered to track which shield is associated with this effect, plus minor cosmetic improvements; and handling for <see cref="ModData.Traits.CoverShield"/>, not just tower shields.
+    /// This function has been altered to work for different bonus shields, plus minor cosmetic improvements; and handling for <see cref="ModData.Traits.CoverShield"/>, not just tower shields.
     /// </summary>
     /// <para>Devoted Guardian's effect tooltip gained some textual enhancements, has CountAsABuff set to true, and works with any cover shield instead of just tower shields.</para>
+    /// <para>Shield Warden's reaction prompt is also changed in caption to be Shield Warden.</para>
     /// <seealso cref="PatchShieldBlock"/>
     [HarmonyPatch(typeof(Fighter), nameof(Fighter.RaiseShield))]
     internal static class PatchRaiseShieldExecution
@@ -157,20 +119,20 @@ public static class ShieldPatches
             
             bool shieldBlock = caster.HasEffect(QEffectId.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
             
-            QEffect qfRaised = QEffect.RaisingAShield(shieldBlock)
+            QEffect qfRaised = QEffect.RaisingAShield(shieldBlock, shield)
                 .WithName("Shield raised (" + shield.Name + ")")
                 .With(qfThis =>
                 {
-                    // Closely associate this effect with a shield.
-                    qfThis.Tag = shield;
                     // Update the description to reflect this shield.
                     qfThis.Description = qfThis.Description?.Replace("+2", "+" + acBonus);
-                    // Replace state check to end this specific effect when we no longer possess this specific shield.
+                    // Update the StateCheck to handle worn shields.
+                    Action<QEffect>? oldSC = qfThis.StateCheck;
                     qfThis.StateCheck = qfThis2 =>
                     {
-                        if (qfThis2.Tag is not Item tagShield ||
-                            !CommonShieldRules.IsShieldWielded(qfThis2.Owner, tagShield))
-                            qfThis2.ExpiresAt = ExpirationCondition.Immediately;
+                        // If the shield is worn (always false for non-wearables), don't end
+                        if (qfThis2.Tag is Item { IsWorn: true })
+                            return;
+                        oldSC?.Invoke(qfThis2);
                     };
                     // Associates defensive bonuses to the raised shield
                     qfThis.BonusToDefenses = (qfThis2, attackAction, targetDefense) =>
@@ -180,7 +142,10 @@ public static class ShieldPatches
                             && (!qfThis2.Owner.HasEffect(QEffectId.SparklingTarge)
                                 || !qfThis2.Owner.HasEffect(QEffectId.ArcaneCascade)
                                 || !targetDefense.IsSavingThrow()
+                                || attackAction is not { CountsAsMagical: true })
+                            && (!qfThis2.Owner.HasEffect(QEffectId.NecromanticDeflection)
                                 || attackAction == null
+                                || !attackAction.HasTrait(Trait.Necromancy)
                                 || !attackAction.HasTrait(Trait.Spell)))
                             return null;
                     
@@ -196,23 +161,31 @@ public static class ShieldPatches
                     };
                     // If you can block with this shield for any reason, add this reduction reaction
                     if (shieldBlock)
-                        qfThis.YouAreDealtDamageReaction = (qfThis2, dEvent) =>
-                        {
-                            DamageStuff damageStuff = new DamageStuff(
-                                dEvent.TotalResolvedDamage,
-                                dEvent.CombatAction,
-                                dEvent.KindedDamages.First().DamageKind);
-                            
-                            // Uses normal triggers for Shield Block
-                            if (!CommonShieldRules.DoesShieldBlockApply(qfThis2.Owner, damageStuff))
-                                return null;
-                            
-                            // Use new function
-                            return CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2(dEvent, dEvent.TargetCreature, qfThis2.Owner, shield);
-                        };
+                    {
+                        if (caster.HasFeat(FeatName.ShieldWarden))
+                            qfThis.AddGrantingOfTechnical(
+                                ally =>
+                                    ally.FriendOfAndNotSelf(caster) && ally.IsAdjacentTo(caster),
+                                qfAlly => qfAlly.YouAreDealtDamageReaction = (qfWard, damageEvent) =>
+                                {
+                                    ReactionOptions? returns = Fighter.ShieldBlockYouAreDealtDamageReaction(
+                                        damageEvent, qfWard.Owner, caster, shield);
+                                    // Shield Warden has a new caption.
+                                    if (returns?.FirstOrDefault() is { } block)
+                                        block.Caption = block.Caption.Replace("Shield Block", "Shield Warden");
+                                    return returns;
+                                });
+                        
+                        // Unchanged from base.
+                        qfThis.YouAreDealtDamageReaction = (qEffect, damageEvent) =>
+                            Fighter.ShieldBlockYouAreDealtDamageReaction(
+                                damageEvent, qEffect.Owner, qEffect.Owner, shield);
+                    }
                 });
             
-            // Adds devoted guardian to the target
+            // Adds devoted guardian to the target.
+            // Bonus amount is accounted for.
+            // Guardian caster's name is now blue.
             if (devotedGuardian)
             {
                 bool isCoverShield = shield.HasAnyTraits([ModData.Traits.CoverShield, Trait.TowerShield]);
@@ -246,6 +219,66 @@ public static class ShieldPatches
             return false;
         }
     }
+    
+    /// <summary>The Shield Block reaction now keys into an executed CombatAction, with prettier UI prompting and stat block displays.</summary>
+    [HarmonyPatch(typeof(Fighter), nameof(Fighter.ShieldBlockYouAreDealtDamageReaction))]
+    internal static class PatchShieldBlockDamageReaction
+    {
+        internal static void Postfix(
+            DamageEvent damageEvent,
+            Creature targetedCreature,
+            Creature blockingCreature,
+            Item shield,
+            ref ReactionOptions? __result)
+        {
+            if (__result?.FirstOrDefault() is not { } block)
+                return;
+            
+            string preventWhat;
+            int preventHowMuch;
+            if (block.EffectSummary?.Contains("all") ?? false)
+            {
+                preventWhat = "{b}all{/b}";
+                preventHowMuch = damageEvent.TotalResolvedDamage;
+            }
+            else
+            {
+                // Get bonus hardness from modded content and add it on top
+                int bonus = CommonShieldRules.GetShieldBlockHardnessBonuses(
+                    damageEvent.Source,
+                    damageEvent,
+                    targetedCreature,
+                    blockingCreature);
+                string prevent = block.EffectSummary?
+                    .Replace("Prevent ", "")
+                    .Replace("{b}", "")
+                    .Replace("{/b}", "")
+                    .Replace(" of this damage.", "") ?? "0";
+                preventHowMuch = int.TryParse(prevent, out int result) ? (result + bonus) : 0;
+                preventWhat = S.AllOrNumber(preventHowMuch, damageEvent.TotalResolvedDamage);
+            }
+
+            CombatAction displayReaction = CommonShieldRules.ShieldBlockAction(
+                damageEvent,
+                targetedCreature,
+                blockingCreature,
+                shield,
+                shield.Hardness,
+                preventHowMuch);
+            
+            // If Targe response, then add in a note about triggering Targe's benefits.
+            string whatDamage = CommonShieldRules.DoesSparklingTargeShieldBlockApply(damageEvent.CombatAction, blockingCreature)
+                ? "{Blue}magical{/Blue} damage"
+                : "damage";
+
+            // Replace with a combat action display instead, for UEX.
+            ReactionOption reaction = ReactionOption.WrapFullcast(
+                    displayReaction,
+                    $"{shield.Illustration.IllustrationAsIconString} Prevent {preventWhat} of this {whatDamage}.");
+            
+            __result = reaction;
+        }
+    }
 
     /// <summary>
     /// The ShieldBlock ability now has a stat block description.
@@ -260,7 +293,7 @@ public static class ShieldPatches
     }
 
     /// <summary>
-    /// Improves the behavior of Reactive Shield. Now allows you to specify which shield to raise if you have more than one option. Includes enhanced log information.
+    /// Reactive Shield now allows you to specify which shield to raise if you have more than one option. Includes enhanced log information.
     /// </summary>
     [HarmonyPatch(typeof(QEffect), nameof(QEffect.ReactiveShield))]
     internal static class PatchReactiveShield
@@ -301,7 +334,7 @@ public static class ShieldPatches
                 if (action.Owner == defender.Battle.Pseudocreature)
                     question += "You're about to be hit by ";
                 else
-                    question += "{Blue}" + action.Owner + "{/Blue} is about to hit you with ";
+                    question += $"{action.Owner.ToColoredName()} is about to hit you with ";
                 question += "{Blue}" + action.Name + "{/Blue}.\nRaise a Shield";
                 if (canBeDowngraded)
                     question += $" and downgrade the {breakdownResult.CheckResult.Greenify()} into a {(breakdownResult.CheckResult - 1).Greenify()}?";
@@ -333,13 +366,14 @@ public static class ShieldPatches
                     Color.Lime,
                     defender + " uses {b}Reactive Shield{/b}.",
                     "Reactive Shield {icon:Reaction}",
-                    "{i}You can snap your shield into place just as you would take a blow, avoiding the hit at the last second.{/i}\n\nIf you'd be hit by a melee Strike, you immediately Raise a Shield as a reaction.",
+                    """
+                    {i}You can snap your shield into place just as you would take a blow, avoiding the hit at the last second.{/i}
+
+                    If you'd be hit by a melee Strike, you immediately Raise a Shield as a reaction.
+                    """,
                     new Traits([..AllFeats.GetFeatByFeatName(FeatName.ReactiveShield).Traits, ModData.Traits.ReactiveAction]));
                 
                 Fighter.RaiseShield(defender, chosenShield, defender, false);
-                /*await CommonShieldRules.OfferToRaiseAShield(
-                    qfThis.Owner,
-                    raiseAction => raiseAction.Item == chosenShield)*/;
                 
                 return true;
             };
@@ -347,84 +381,85 @@ public static class ShieldPatches
     }
 
     /// <summary>
-    /// Aggressive Block now only works if the creature is your size or smaller.
+    /// Aggressive Block now uses AfterYouTakeActionReaction on the expectation that there is a Shield Block CombatAction that is being executed (change made by this mod).
     /// </summary>
+    /// <remarks>
+    /// This change also completely avoids using <see cref="Doorwarden.CreateAggressiveBlockTemporaryQEffect"/>.
+    /// </remarks>
     [HarmonyPatch(typeof(Doorwarden), nameof(Doorwarden.CreateAggressiveBlock))]
     internal static class PatchAggressiveBlockPopup
     {
         internal static void Postfix(ref QEffect __result)
         {
-            __result.Description = __result.Description!.Replace(
-                "adjacent enemy",
-                "adjacent enemy of your size or smaller");
-            __result.WhenYouUseShieldBlock = async (qfThis, attacker, target, amount) =>
+            __result.WhenYouUseShieldBlock = null;
+            
+            __result.AfterYouTakeActionReaction = (qfThis, action) =>
             {
-                if (!qfThis.Owner.IsAdjacentTo(attacker)
-                    || attacker.Space.Size > qfThis.Owner.Space.Size)
-                    return;
-                attacker.AddQEffect(Doorwarden.CreateAggressiveBlockTemporaryQEffect(attacker, qfThis.Owner));
-            };
-        }
-    }
+                if (!action.HasTrait(Trait.ShieldBlock)
+                    || action.Tag is not DamageEvent dEvent
+                    || action.Item is not {} shield)
+                    return null;
 
-    /// <summary>Adjusts Aggressive Block to use a Shove subordinate action, provide a shove sound effect, a prettier prompt, and combat logging.</summary>
-    [HarmonyPatch(typeof(Doorwarden), nameof(Doorwarden.CreateAggressiveBlockTemporaryQEffect))]
-    internal static class PatchAggressiveBlockAction
-    {
-        internal static void Postfix(Creature attacker, Creature defender, ref QEffect __result)
-        {
-            __result.AfterYouTakeAction = async (qfThis, action) =>
-            {
-                if (CommonShieldRules.GetRaisedShields(defender).FirstOrDefault() is not {} shield)
-                    return;
+                Creature defender = action.Owner;
+                Creature attacker = dEvent.Source;
                 
-                // Pretties the reaction prompt
-                if (!await defender.Battle.AskForConfirmation(
+                if (attacker.Space.Size > defender.Space.Size
+                    || !defender.IsAdjacentTo(attacker))
+                    return null;
+                
+                CombatAction shoveAct = new CombatAction(
                         defender,
-                        IllustrationName.SteelShield,
-                        $"{{b}}Aggressive Block{{/b}} {{icon:FreeAction}}\nYou just used Shield Block. Automatically Shove {{Blue}}{attacker}{{/Blue}} 5 feet away from you? {{i}}(They could become flat-footed if they cannot be moved.){{/i}}", // Pretties the prompt
-                        "Push"))
-                    return;
-                
-                // Adds some combat logging for this ability
-                defender.Overhead(
-                    "Aggressive Block",
-                    Color.Black,
-                    "{DarkBlue}{b}" + defender + "{/b}{/DarkBlue} uses {b}Aggressive Block{/b} {icon:FreeAction} against {DarkBlue}{b}" + attacker + "{/b}{/DarkBlue}",
-                    "Aggressive Block {icon:FreeAction}",
-                    """
-                    {i}You push back as you block the attack, knocking your foe away or off balance.{/i}
+                        IllustrationName.Shove,
+                        "Aggressive Block",
+                        [ModData.ModTrait, Trait.Fighter],
+                        """
+                        {i}You push back as you block the attack, knocking your foe away or off balance.{/i}
 
-                    When you use the Shield Block reaction against an attack of an adjacent enemy of your size or smaller, you can choose to automatically Shove that enemy 5 feet. If it can't be pushed away, it's instead flat-footed until the start of your next turn.
-                    """,
-                    new Traits([ModData.Traits.ModName, ..AllFeats.GetFeatByFeatName(FeatName.AggressiveBlock).Traits, ModData.Traits.ReactiveAction]));
-                
-                Tile previousPosition = attacker.Space.TopLeftTile;
-                
-                Sfxs.Play(SfxName.Shove); // Adds shove sound
-                
-                /*await defender.PushCreature(attacker, 1);*/
-
-                CombatAction shove = CombatManeuverPossibilities
-                    .CreateShoveAction(defender, shield)
+                        When you use the Shield Block reaction against an attack of an adjacent enemy of your size or smaller, you can choose to automatically Shove that enemy 5 feet. If it can't be pushed away, it's instead flat-footed until the start of your next turn.
+                        """,
+                        Target.Self())
                     .WithActionCost(0)
-                    .WithActiveRollSpecification(null)
-                    .With(ca =>
+                    .WithEffectOnEachTarget(async (aggroAct, caster, _, _) =>
                     {
-                        // Remove free hand requirement
-                        ca.Target = Target.Reach(shield)
-                            .WithAdditionalConditionOnTargetCreature(
-                                new TargetMustNotBeTwoSizesAboveYouCreatureTargetingRequirement());
-                        // Automatic success result
-                        var oldEffect = ca.EffectOnOneTarget;
-                        ca.EffectOnOneTarget = async (shove, caster, target, _) =>
-                            await oldEffect?.Invoke(shove, caster, target, CheckResult.Success)!;
-                    });
-                await defender.Battle.GameLoop.FullCast(shove, ChosenTargets.CreateSingleTarget(attacker));
+                        // Delay shove until after damage is taken.
+                        attacker.AddQEffect(new QEffect(ExpirationCondition.EphemeralAtEndOfImmediateAction)
+                        {
+                            AfterYouTakeAction = async (_, _) =>
+                            {
+                                Tile previousPosition = attacker.Space.TopLeftTile;
+
+                                CombatAction shove = CombatManeuverPossibilities
+                                    .CreateShoveAction(defender, shield)
+                                    .WithActionCost(0)
+                                    .WithActiveRollSpecification(null)
+                                    .With(ca =>
+                                    {
+                                        // Remove free hand requirement
+                                        ca.Target = Target.Reach(shield)
+                                            .WithAdditionalConditionOnTargetCreature(
+                                                new TargetMustNotBeTwoSizesAboveYouCreatureTargetingRequirement());
+                                
+                                        // Automatic success result
+                                        var oldEffect = ca.EffectOnOneTarget;
+                                        ca.EffectOnOneTarget = async (shove, caster2, target2, _) =>
+                                            await oldEffect?.Invoke(shove, caster2, target2, CheckResult.Success)!;
+                                    });
+                                await caster.Battle.GameLoop.FullCast(shove, ChosenTargets.CreateSingleTarget(attacker));
                 
-                if (ReferenceEquals(previousPosition, attacker.Space.TopLeftTile))
-                    attacker.AddQEffect(QEffect.FlatFooted("Aggressive Block")
-                        .WithExpirationAtStartOfSourcesTurn(defender, 1));
+                                if (ReferenceEquals(previousPosition, attacker.Space.TopLeftTile))
+                                    attacker.AddQEffect(QEffect.FlatFooted("Aggressive Block")
+                                        .WithExpirationAtStartOfSourcesTurn(caster, 1));
+                            }
+                        });
+                    });
+
+                ReactionOption reactOpt = ReactionOption.WrapFullcastWithChosenTargets(
+                        shoveAct,
+                        ChosenTargets.CreateSingleTarget(attacker),
+                        $"Shove {attacker.ToColoredName()} 5 feet away (automatic success), or knock flat-footed if they can't be moved.")
+                    .WithIsFreeAction();
+
+                return reactOpt;
             };
         }
     }

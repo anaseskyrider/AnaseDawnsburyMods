@@ -27,6 +27,26 @@ namespace Dawnsbury.Mods.MoreShields;
 
 public static class OldShields
 {
+    public static void Load()
+    {
+        ModifyBaseActions();
+        ModifyOldFeats();
+        ModifyOldShields();
+        UpdateDescriptions();
+    }
+
+    public static void ModifyBaseActions()
+    {
+        /*ModManager.RegisterActionOnEachActionPossibility(ca =>
+        {
+            if (ca.ActionId is ActionId.RaiseShield
+                && !ca.Name.ToLower().Contains("devoted guardian"))
+            {
+                
+            }
+        });*/
+    }
+    
     public static void ModifyOldFeats()
     {
         // Aggressive Block
@@ -44,7 +64,7 @@ public static class OldShields
         
         // Shield Warden
         // The feat now independently handles defending allies.
-        AdjustFeatByEnum(FeatName.ShieldWarden, shieldWarden =>
+        /*AdjustFeatByEnum(FeatName.ShieldWarden, shieldWarden =>
         {
             shieldWarden.OnCreature = null;
             shieldWarden.WithPermanentQEffect(
@@ -85,78 +105,50 @@ public static class OldShields
                             });
                     };
                 });
-        });
+        });*/
         
         // Devoted Guardian
         // The feat now independently inserts its own action, and (homebrew) works with a Fortress Shield too. Description is also much more dynamic.
         AdjustFeatByEnum(Champion.DevotedGuardianFeatName, devGuard =>
         {
             devGuard.RulesText = devGuard.RulesText.Replace("was a tower shield", "has the Cover Shield trait");
-            devGuard.Traits.Add(ModData.Traits.ShieldActionFeat);
             devGuard.OnCreature = null;
             devGuard.WithPermanentQEffect(
                 "You can raise your shield so that it grants an AC bonus also to an adjacent ally.",
                 qfFeat =>
                 {
                     qfFeat.Id = QEffectId.DevotedGuardian;
+                    // The 2-action submenu option.
+                    // Unchanged from base game.
+                    qfFeat.ProvideBonusRaiseShieldPossibility = (qfThis, shield) =>
+                    {
+                        CombatAction guardAction = Fighter.CreateRaiseShieldCore(qfThis.Owner, shield, true);
+                        return new ActionPossibility(guardAction)
+                        {
+                            Caption = "Devoted Guardian"
+                        };
+                    };
+                    // The 1-action option you can take just after raising it.
                     qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
                     {
+                        if (section.PossibilitySectionId != PossibilitySectionId.ItemActions)
+                            return null; 
+                        
                         Item? shield = null;
-                        bool isRaised = false;
-                        // If this section is found, then this shield isn't raised
-                        if (section.Name == "Raise shield")
+                        // Create this action only for the last shield that was raised with my last action
+                        if (qfThis.Owner.HasEffect(QEffectId.RaisingAShield)
+                            && qfThis.Owner.Actions.ActionHistoryThisTurn.LastOrDefault() is
+                                { ActionId: ActionId.RaiseShield } raise
+                            && !raise.Name.ToLower().Contains("devoted guardian"))
                         {
-                            var options = section.Filter(actPoss =>
-                                actPoss.CombatAction.ActionId is ActionId.RaiseShield);
-                            if ((options?.Possibilities.FirstOrDefault() as ActionPossibility) is { } raise)
-                                shield = raise.CombatAction.Item;
-                        }
-                        // Provide the action directly to the item section, outside the submenu.
-                        else if (section.PossibilitySectionId == PossibilitySectionId.ItemActions)
-                        {
-                            // Create this action only for the last shield that was raised with my last action
-                            if (qfThis.Owner.HasEffect(QEffectId.RaisingAShield)
-                                && qfThis.Owner.Actions.ActionHistoryThisTurn.LastOrDefault() is
-                                    { ActionId: ActionId.RaiseShield } raise
-                                && !raise.Name.ToLower().Contains("devoted guardian"))
-                            {
-                                shield = raise.Item;
-                                isRaised = true;
-                            }
+                            shield = raise.Item;
                         }
 
-                        if (shield is null
-                            || CommonShieldRules.GetAC(shield) is not { } acBonus )
+                        if (shield is null)
                             return null;
 
-                        int theirBonus = shield.HasTrait(ModData.Traits.CoverShield) ? 2 : 1;
-                        bool hasShieldBlock = qfThis.Owner.HasEffect(QEffectId.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
-
-                        CombatAction raiseGuardian = CommonShieldRules
-                            .CreateRaiseShieldCore(qfThis.Owner, shield, hasShieldBlock)
-                            .With(ca =>
-                            {
-                                // Will apply Fighter.RaiseShield as Devoted Guardian on ally.
-                                ca.Target = Target.AdjacentFriend();
-                            })
-                            .WithName("Devoted Guardian (" + shield.Name.ToLower().Capitalize() + ")")
-                            .WithDescription(
-                                "You adopt a wide stance, ready to defend both yourself and your chosen ward.",
-                                "Choose an adjacent ally. Until the start of your next turn, "
-                                + (isRaised
-                                    ? $"your ally gains a {{Blue}}+{theirBonus}{{/Blue}} circumstance bonus to AC"
-                                    : acBonus != theirBonus
-                                        ? $"you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC and the ally gains a {{Blue}}+{theirBonus}{{/Blue}} circumstance bonus to AC"
-                                        : $"both of you gain a {{Blue}}+{acBonus}{{/Blue}} circumstance bonus to AC")
-                                + (hasShieldBlock && !isRaised
-                                    ? ", and you can use the Shield Block {icon:Reaction} reaction"
-                                    : null)
-                                + ".\n\nYour ally loses the bonus if they're no longer adjacent to you."
-                                + (isRaised
-                                    ? "\n\n{icon:Action} {Green}(Last action was to Raise this Shield){/Green}"
-                                    : null))
-                            .WithActionCost(isRaised ? 1 : 2)
-                            .WithActionId(ActionId.None); // So that you can't use this when offered to raise a shield
+                        CombatAction raiseGuardian = Fighter.CreateRaiseShieldCore(qfThis.Owner, shield, true);
+                        raiseGuardian.ActionCost = Math.Max(1, raiseGuardian.ActionCost-1); // Reduce by 1
 
                         return new ActionPossibility(raiseGuardian);
                     };
@@ -165,13 +157,13 @@ public static class OldShields
         
         // Shield Ally
         // The feat now adds a bonus to hardness that the game can broadly detect.
-        AdjustFeatByEnum(Champion.ShieldAllyFeatName, shieldAlly =>
+        /*AdjustFeatByEnum(Champion.ShieldAllyFeatName, shieldAlly =>
         {
             shieldAlly.WithOnCreature(self =>
             {
                 self.AddQEffect(CommonShieldRules.BonusToShieldHardness(2, "Shield ally"));
             });
-        });
+        });*/
         
         // Sparkling Targe
         // The subclass now adds a bonus to hardness that the game can broadly detect.
@@ -182,10 +174,12 @@ public static class OldShields
             {
                 self.AddQEffect(CommonShieldRules.BonusToShieldHardness((_, stuff, _, blocker) =>
                 {
-                    if (!CommonShieldRules.DoesSparklingTargeShieldBlockApply(stuff.Power, blocker))
+                    if (!CommonShieldRules.DoesSparklingTargeShieldBlockApply(stuff.CombatAction, blocker))
                         return null;
                     return new Bonus(
-                        blocker.Level >= 15 ? 3 : blocker.Level >= 7 ? 2 : 1,
+                        // PETR: Bonus is adding the missing higher level +1 from tabletop
+                        blocker.Level >= 15 ? 1 : 0,
+                        /*blocker.Level >= 15 ? 3 : blocker.Level >= 7 ? 2 : 1,*/
                         BonusType.Untyped,
                         "Sparkling targe");
                 }));
@@ -434,8 +428,7 @@ public static class OldShields
         AdjustFeatByName("Defensive Advance", defAdv =>
         {
             Illustration defAdvIcon = new ModdedIllustration("RDAssets/Advance.png");
-            defAdv.Traits.Insert(0, ModData.Traits.ModName);
-            defAdv.Traits.Add(ModData.Traits.ShieldActionFeat);
+            defAdv.Traits.Insert(0, ModData.ModTrait);
             defAdv.OnCreature = null;
             defAdv.WithPermanentQEffect(
                 null,
@@ -443,85 +436,65 @@ public static class OldShields
                 {
                     qfFeat.WithDisplayActionInOffenseSection("Defensive Advance", "Raise a Shield, Stride, then make a melee Strike.", 2);
                     // Dones as Action*S* to avoid collision with the above ^
-                    qfFeat.ProvideActionsIntoPossibilitySection += (qfThis, section) =>
+                    qfFeat.ProvideBonusRaiseShieldPossibility += (qfThis, shield) =>
                     {
-                        Item? shield = null;
-                        
-                        // If this section is found, then this shield isn't raised
-                        if (section.Name == "Raise shield")
-                        {
-                            var options = section.Filter(actPoss =>
-                                actPoss.CombatAction.ActionId is ActionId.RaiseShield);
-                            if ((options?.Possibilities.FirstOrDefault() as ActionPossibility) is { } raise)
-                                shield = raise.CombatAction.Item;
-                        }
-
-                        if (shield is null)
-                            return [];
-                        
-                        bool hasShieldBlock = qfThis.Owner.HasEffect(QEffectId.ShieldBlock) || shield.HasTrait(Trait.AlwaysOfferShieldBlock);
-                        
-                        return
-                        [
-                            new ActionPossibility(CommonShieldRules
-                                .CreateRaiseShieldCore(qfThis.Owner, shield, hasShieldBlock)
-                                .With(ca =>
+                        return new ActionPossibility(Fighter.CreateRaiseShieldCore(qfThis.Owner, shield, false)
+                            .With(ca =>
+                            {
+                                // Art path for Defensive Advance mod
+                                ca.Illustration = defAdvIcon;
+                                var oldRestriction = (ca.Target as SelfTarget)?.AdditionalRestriction;
+                                ca.Target = Target.Self().WithAdditionalRestriction(self =>
                                 {
-                                    // Art path for Defensive Advance mod
-                                    ca.Illustration = defAdvIcon;
-                                    var oldRestriction = (ca.Target as SelfTarget)?.AdditionalRestriction;
-                                    ca.Target = Target.Self().WithAdditionalRestriction(self =>
-                                    {
-                                        // Make sure you're allowed to move
-                                        CombatAction move = CombatAction.CreateSimple(
-                                            self, "[DEFENSIVE ADVANCE, TEST MOVE]", Trait.Move);
-                                        string? moveReason = null;
-                                        foreach (QEffect qf in self.QEffects)
-                                            if ((moveReason = qf.PreventTakingAction?.Invoke(move)) != null)
-                                                break;
-                                        if (moveReason is not null)
-                                            return moveReason;
+                                    // Make sure you're allowed to move
+                                    CombatAction move = CombatAction.CreateSimple(
+                                        self, "[DEFENSIVE ADVANCE, TEST MOVE]", Trait.Move);
+                                    string? moveReason = null;
+                                    foreach (QEffect qf in self.QEffects)
+                                        if ((moveReason = qf.PreventTakingAction?.Invoke(move)) != null)
+                                            break;
+                                    if (moveReason is not null)
+                                        return moveReason;
 
-                                        // Make sure you're allowed to strike
-                                        CombatAction attack = CombatAction.CreateSimple(
-                                            self, "[DEFENSIVE ADVANCE, TEST STRIKE]", Trait.Attack, Trait.Strike);
-                                        string? strikeReason = null;
-                                        foreach (QEffect qf in self.QEffects)
-                                            if ((strikeReason = qf.PreventTakingAction?.Invoke(attack)) != null)
-                                                break;
-                                        if (strikeReason is not null)
-                                            return strikeReason;
+                                    // Make sure you're allowed to strike
+                                    CombatAction attack = CombatAction.CreateSimple(
+                                        self, "[DEFENSIVE ADVANCE, TEST STRIKE]", Trait.Attack, Trait.Strike);
+                                    string? strikeReason = null;
+                                    foreach (QEffect qf in self.QEffects)
+                                        if ((strikeReason = qf.PreventTakingAction?.Invoke(attack)) != null)
+                                            break;
+                                    if (strikeReason is not null)
+                                        return strikeReason;
 
-                                        return oldRestriction?.Invoke(self);
-                                    });
-                                })
-                                .WithName("Defensive Advance (" + shield.Name.ToLower().Capitalize() + ")")
-                                .WithDescription("You Raise your Shield and Stride. If you end your movement within melee reach of at least one enemy, you can make a melee Strike against that enemy.")
-                                .WithActionCost(2)
-                                .WithActionId(ActionId.None) // So that you can't use this when offered to raise a shield
-                                .WithExtraTrait(Trait.Flourish)
-                                .WithEffectOnEachTarget(async (action, caster, _, _) =>
+                                    return oldRestriction?.Invoke(self);
+                                });
+                            })
+                            .WithName("Defensive Advance (" + shield.Name.ToLower().Capitalize() + ")")
+                            .WithDescription("You Raise your Shield and Stride. If you end your movement within melee reach of at least one enemy, you can make a melee Strike against that enemy.")
+                            .WithActionCost(2)
+                            .WithActionId(ActionId.None) // So that you can't use this when offered to raise a shield
+                            .WithExtraTrait(Trait.Flourish)
+                            .WithEffectOnEachTarget(async (action, caster, _, _) =>
+                            {
+                                Sfxs.Play(SfxName.Footsteps);
+                                if (!await caster.StrideAsync(
+                                        "Choose where to Stride with Defensive Advance. You should end your movement within melee reach of an enemy.",
+                                        allowCancel: true))
                                 {
-                                    Sfxs.Play(SfxName.Footsteps);
-                                    if (!await caster.StrideAsync(
-                                            "Choose where to Stride with Defensive Advance. You should end your movement within melee reach of an enemy.",
-                                            allowCancel: true))
-                                    {
-                                        action.RevertRequested = true;
-                                        caster.RemoveAllQEffects(qf =>
-                                            qf.Id == QEffectId.RaisingAShield && qf.Tag == shield);
-                                    }
-                                    else
-                                        await CommonCombatActions.StrikeAdjacentCreature(caster, null);
-                                }))
-                        ];
+                                    action.RevertRequested = true;
+                                    caster.RemoveAllQEffects(qf =>
+                                        qf.Id == QEffectId.RaisingAShield && qf.Tag == shield);
+                                }
+                                else
+                                    await CommonCombatActions.StrikeAdjacentCreature(caster, null);
+                            }));
                     };
                 });
         });
 
         // Emblazon Shield
         // The feat now adds a bonus to hardness that the game can broadly detect.
-        AdjustFeatByEnum(FeatName.EmblazonShield, emblazonShield =>
+        /*AdjustFeatByEnum(FeatName.EmblazonShield, emblazonShield =>
         {
             emblazonShield.WithOnCreature(self =>
             {
@@ -530,7 +503,7 @@ public static class OldShields
                 emblazonQf.Description = "Your Shield Block with a physical shield prevents 1 more damage."; // Original description
                 self.AddQEffect(emblazonQf);
             });
-        });
+        });*/
 
         return;
 
@@ -549,7 +522,7 @@ public static class OldShields
 
         void AdjustFeat(Feat feat, Action<Feat> adjustFeat)
         {
-            feat.Traits.Insert(0, ModData.Traits.ModName);
+            feat.Traits.Insert(0, ModData.ModTrait);
             adjustFeat(feat);
         }
     }

@@ -14,9 +14,13 @@ namespace Dawnsbury.Mods.MoreShields;
 public static class ModData
 {
     public const string IdPrepend = "MoreShields.";
+
+    public static Trait ModTrait;
     
     public static void LoadData()
     {
+        ModTrait = ModManager.ModBeingLoadedTrait!.Value; // Cannot be null at this time
+        
         // Trait Modification //
         TraitProperties tShieldProperties = Trait.TowerShield.GetTraitProperties();
         TraitExtensions.TraitProperties[Trait.TowerShield] = new TraitProperties(
@@ -134,11 +138,6 @@ public static class ModData
     
     public static class Traits
     {
-        /// Name of the mod.
-        public static readonly Trait ModName = ModManager.RegisterModNameTrait(
-            "MoreShields",
-            "More Shields");
-        
         /// Hidden technical trait. A <see cref="CombatAction"/> with an ActionCost of 0 is treated as a reaction for the purposes of granting additional reactions.
         public static readonly Trait ReactiveAction = ModManager.RegisterTrait("ReactiveAction",
             new TraitProperties("Reactive Action", false));
@@ -172,6 +171,7 @@ public static class ModData
         /// <summary>
         /// Hidden technical trait. A feat with this trait tells the action possibility generator to make a menu for Raise a Shield instead of just generating the action directly, allowing items to be added to the "Raise shield" menu.
         /// </summary>
+        [Obsolete("Use QEffect.ProvideBonusRaiseShieldPossibility instead.")]
         public static readonly Trait ShieldActionFeat = ModManager.RegisterTrait("Shield Action Feat",
             new TraitProperties("Shield Action Feat", false));
             

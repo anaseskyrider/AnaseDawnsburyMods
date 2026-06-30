@@ -92,7 +92,7 @@ public static class ShieldModifications
                 "shield plating (" + tier + ")",
                 level,
                 price,
-                [ModData.Traits.ModName, Trait.Runestone, ..traits])
+                [ModData.ModTrait, Trait.Runestone, ..traits])
             .WithRuneProperties(new RuneProperties(
                     tier + " plated",
                     ModData.RuneKinds.ShieldPlating,
@@ -145,7 +145,7 @@ public static class ShieldModifications
                     "shield augmentation ("+variantName+")",
                     0,
                     1,
-                    [ModData.Traits.ModName, Trait.Runestone])
+                    [ModData.ModTrait, Trait.Runestone])
                 .WithRuneProperties(new RuneProperties(
                         "augmented",
                         ModData.RuneKinds.ShieldAugmentation,

@@ -326,7 +326,10 @@ public static class LibraryOfAnase
         public static void AddFeat(Feat newFeat, Trait modName)
         {
             ModManager.AddFeat(newFeat);
+#pragma warning disable CS0618 // Type or member is obsolete
+            // TODO: MoreShields Trait.Mod
             newFeat.Traits.Remove(Trait.Mod);
+#pragma warning restore CS0618 // Type or member is obsolete
             newFeat.Traits.Insert(0, modName);
         }
         
