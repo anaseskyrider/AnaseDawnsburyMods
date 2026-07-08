@@ -48,7 +48,8 @@ public static class ShieldPatches
             // Address hefty trait
             if (shield.HasTrait(ModData.Traits.Hefty14))
             {
-                __result.ActionCost++;
+                if (self.Abilities.Strength < 2)
+                    __result.ActionCost++;
                 __result.Traits.Add(ModData.Traits.Hefty14);
             }
             
