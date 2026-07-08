@@ -8,6 +8,8 @@ namespace Dawnsbury.Mods.RunesmithPlaytest;
 
 public static class ModLoader
 {
+    public static bool MoreShieldsIsLoaded { get; set; }
+
     [DawnsburyDaysModMainMethod]
     public static void LoadMod()
     {
@@ -65,6 +67,11 @@ public static class ModLoader
                         .Replace(className, "{SandyBrown}"+className+"{/SandyBrown}");
                 }
             }*/
+
+            MoreShieldsIsLoaded = AppDomain.CurrentDomain
+                .GetAssemblies()
+                .Any(a =>
+                    a.GetName().Name?.Contains("MoreShields") ?? false);
         };
     }
 }

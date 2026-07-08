@@ -251,7 +251,7 @@ public static class CommonRuneRules
         
         // Determine traits
         Trait[] traits = [
-                ModData.Traits.ModName,
+                ModData.ModTrait,
                 ..rune.Traits,
                 Trait.Magical,
                 Trait.Spell // <- Should apply magic immunity.
@@ -435,7 +435,8 @@ public static class CommonRuneRules
             ])
             .ToList();
         traits.Sort((x, y) => string.Compare(x.ToStringOrTechnical(), y.ToStringOrTechnical(), StringComparison.Ordinal));
-        traits.Insert(0, ModData.Traits.ModName);
+        if (!traits.Contains(ModData.ModTrait))
+            traits.Insert(0, ModData.ModTrait);
         /*Trait[] traits = rune.Traits.ToArray().Concat(
             [
                 ModData.Traits.Invocation,

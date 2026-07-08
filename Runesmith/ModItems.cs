@@ -13,7 +13,7 @@ public static class ModItems
             "RunesmithPlaytest.ArtisansHammer",
             iName =>
                 new Item(iName, ModData.Illustrations.ArtisansHammer, "Artisan's Hammer", 1, 4,
-                        [ModData.Traits.CountsAsRunesmithFreeHand, Trait.Hammer, Trait.Homebrew, /*Trait.Martial,*/ Trait.Mod, /*Trait.Melee,*/ Trait.Razing, ModData.Traits.Runesmith, Trait.TwoHand1d12, Trait.Uncommon])
+                        [ModData.Traits.CountsAsRunesmithFreeHand, Trait.Hammer, Trait.Homebrew, /*Trait.Martial,*/ ModData.ModTrait, /*Trait.Melee,*/ Trait.Razing, ModData.Traits.Runesmith, Trait.TwoHand1d12, Trait.Uncommon])
                     .WithMainTrait(ModData.Traits.ArtisansHammer)
                     .WithWeaponProperties(new WeaponProperties("1d8", DamageKind.Bludgeoning))
                     .WithDescription(

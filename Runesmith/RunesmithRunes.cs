@@ -141,7 +141,7 @@ public static class RunesmithRunes
             .WithDetrimentalPassiveTechnical()
             .WithDamagingInvocationTechnical()
             .WithFortitudeSaveInvocationTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneAtryl", runeAtryl);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneAtryl", runeAtryl);
 
         // BUG: Add ignores concealment to the invocation... or should I?
         // BUG: Invoking the rune doesn't remove the rune if it misses due to concealment.
@@ -333,7 +333,7 @@ public static class RunesmithRunes
             .WithDamagingInvocationTechnical()
             .WithFortitudeSaveInvocationTechnical()
             .WithTargetDoesNotSaveTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneEsvadir", runeEsvadir);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneEsvadir", runeEsvadir);
 
         Rune runeHoltrik = new Rune(
                 "Holtrik, Rune of Dwarven Ramparts",
@@ -474,7 +474,7 @@ public static class RunesmithRunes
                 CommonRuneRules.ApplyImmunity(target, thisRune);
             })
             .WithDrawnOnShieldTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneHoltrik", runeHoltrik);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneHoltrik", runeHoltrik);
 
         // BUG: Gunslinger's Fakeout triggers splash damage.
         Rune runeMarssyl = new Rune(
@@ -722,7 +722,7 @@ public static class RunesmithRunes
                 CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
                 CommonRuneRules.ApplyImmunity(target, thisRune);
             });
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneMarssyl", runeMarssyl);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneMarssyl", runeMarssyl);
 
         Rune runeOljinex = new Rune(
                 "Oljinex, Rune of Cowards' Bane",
@@ -1044,7 +1044,7 @@ public static class RunesmithRunes
                 CommonRuneRules.RemoveDrawnRune(invokedRune, thisRune);
             })
             .WithDrawnOnShieldTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneOljinex", runeOljinex);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneOljinex", runeOljinex);
 
         Rune runePluuna = new Rune(
                 "Pluuna, Rune of Illumination",
@@ -1151,7 +1151,7 @@ public static class RunesmithRunes
             })
             //.WithTargetDoesNotSaveTechnical() // Debatable. The target does save, but so does everyone else.
             .WithFortitudeSaveInvocationTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RunePluuna", runePluuna);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RunePluuna", runePluuna);
 
         // BUG: Much like how Jurroz retroactively tracks damage taken, this should retroactively track moves made.
         Rune runeRanshu = new Rune(
@@ -1234,7 +1234,7 @@ public static class RunesmithRunes
             .WithDetrimentalPassiveTechnical()
             .WithDamagingInvocationTechnical()
             .WithFortitudeSaveInvocationTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneRanshu", runeRanshu);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneRanshu", runeRanshu);
 
         Rune runeSunDiacritic = new Rune(
                 "Sun-, Diacritic Rune of Preservation",
@@ -1341,7 +1341,7 @@ public static class RunesmithRunes
                 return CreateSunPassive(targetRune);
             })
             .WithDrawnOnRuneTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneSunDiacritic", runeSunDiacritic);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneSunDiacritic", runeSunDiacritic);
 
         Rune runeUrDiacritic = new Rune(
                 "Ur-, Diacritic Rune of Intensity",
@@ -1456,7 +1456,7 @@ public static class RunesmithRunes
                 return CreateUrPassive(targetRune);
             })
             .WithDrawnOnRuneTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneUrDiacritic", runeUrDiacritic);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneUrDiacritic", runeUrDiacritic);
 
         Rune runeZohk = new Rune(
                 "Zohk, Rune of Homecoming",
@@ -1597,7 +1597,7 @@ public static class RunesmithRunes
                 CommonRuneRules.ApplyImmunity(target, thisRune);
             })
             .WithWillSaveInvocationTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneZohk", runeZohk);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneZohk", runeZohk);
 
         #endregion
 
@@ -1706,7 +1706,7 @@ public static class RunesmithRunes
                 }
             })
             .WithDrawnOnRuneTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneEnDiacritic", runeEnDiacritic);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneEnDiacritic", runeEnDiacritic);
         
         Rune runeFeikris = new Rune(
                 "Feikris, Rune of Gravity",
@@ -1790,7 +1790,7 @@ public static class RunesmithRunes
                     sourceAction.RevertRequested = true;
             })
             .WithFortitudeSaveInvocationTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneFeikris", runeFeikris);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneFeikris", runeFeikris);
 
         Rune runeIchelsu = new Rune(
                 "Ichelsu, Rune of Observation",
@@ -1867,7 +1867,7 @@ public static class RunesmithRunes
                 else
                     sourceAction.RevertRequested = true;
             });
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneIchelsu", runeIchelsu);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneIchelsu", runeIchelsu);
         
         // "the target takes 1d4 persistent fire damage" has some ambiguity between Esvadir's invocation and Pluuna's invocation.
         // DOC: Wording changed to specify that the rune-bearer takes the persistent damage.
@@ -2039,7 +2039,7 @@ public static class RunesmithRunes
                 }
             })
             .WithDrawnOnRuneTechnical();
-        RuneFeat inthFeat = AddRuneAsRuneFeat(ModData.IdPrepend+"RuneInthDiacritic", runeInthDiacritic);
+        RuneFeat inthFeat = AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneInthDiacritic", runeInthDiacritic);
         inthFeat.RulesText += "\n\n" + ModData.Illustrations.DdSun.IllustrationAsIconString + " {b}Compatibility{/b} For the purposes of being holy, creatures with weakness to evil damage are considered holy, and this diacritic's persistent damage uses the better of fire or evil damage.";
 
         Rune runeJurroz = new Rune(
@@ -2067,7 +2067,7 @@ public static class RunesmithRunes
                             
                         QEffect jurrozFooted = QEffect.FlatFooted("Jurroz, Rune of Dragon Fury")
                             .WithExpirationAtStartOfSourcesTurn(action.Owner, 1);
-                        jurrozFooted.Key = ModData.IdPrepend+"JurrozPassive";
+                        jurrozFooted.Key = ModData.ID_PREPEND+"JurrozPassive";
                         action.Owner.AddQEffect(jurrozFooted);
                     },
                 };
@@ -2153,7 +2153,7 @@ public static class RunesmithRunes
                             {
                                 QEffect jurrozFooted = QEffect.FlatFooted("Jurroz, Rune of Dragon Fury")
                                     .WithExpirationAtEndOfSourcesNextTurn(target, true);
-                                jurrozFooted.Key = ModData.IdPrepend+"JurrozInvocation";
+                                jurrozFooted.Key = ModData.ID_PREPEND+"JurrozInvocation";
                                 chosenCreature.AddQEffect(jurrozFooted);
                             }
                             CommonRuneRules.ApplyImmunity(target, thisRune);
@@ -2167,7 +2167,7 @@ public static class RunesmithRunes
                 }
             })
             .WithOnlyEtchedTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneJurroz", runeJurroz)
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneJurroz", runeJurroz)
             .WithPermanentQEffect(
                 null,
                 qfFeat =>
@@ -2339,7 +2339,7 @@ public static class RunesmithRunes
             .WithDamagingAreaInvocationTechnical()
             .WithReflexSaveInvocationTechnical()
             .WithTargetDoesNotSaveTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneKojastri", runeKojastri);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneKojastri", runeKojastri);
 
         // Faction alignment is treated as "enemies to the runesmith", regardless of the rune-bearer's faction.
         // DOC: Changed to a 10-foot size, but always works.
@@ -2418,7 +2418,7 @@ public static class RunesmithRunes
                     sourceAction.RevertRequested = true;
             })
             .WithWillSaveInvocationTechnical();
-        AddRuneAsRuneFeat(ModData.IdPrepend+"RuneTrolistri", runeTrolistri);
+        AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneTrolistri", runeTrolistri);
 
         #endregion
         
@@ -2454,7 +2454,7 @@ public static class RunesmithRunes
         if (!AllRunes.Contains(rune))
             AllRunes.Add(rune);
         AllRuneFeats.Add(runeFeat);
-        ModManager.AddFeat(runeFeat, ModData.Traits.ModName);
+        ModManager.AddFeat(runeFeat);
         return runeFeat;
     }
 }

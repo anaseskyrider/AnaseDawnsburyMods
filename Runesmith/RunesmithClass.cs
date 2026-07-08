@@ -35,10 +35,10 @@ public static class RunesmithClass
     {
         // Class Features
         foreach (Feat ft in CreateFeatures())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
         
         // Class
-        ModManager.AddFeat(CreateClass(), ModData.Traits.ModName);
+        ModManager.AddFeat(CreateClass());
     }
 
     public static Feat CreateClass()
@@ -555,7 +555,7 @@ public static class RunesmithClass
             .WithOnSheet(values =>
             {
                 values.AddSelectionOption(new SingleFeatSelectionOption(
-                        ModData.IdPrepend+"AssuredRunicCrafter",
+                        ModData.ID_PREPEND+"AssuredRunicCrafter",
                         "Assured Runic Crafter",
                         SelectionOption.PRECOMBAT_PREPARATIONS_LEVEL,
                         ft => ft.Tag is "Assured Runic Crafter")
@@ -855,12 +855,6 @@ public static class RunesmithClass
                 self.Actions.NextStrideIsFree = false;
                 return false;
             }
-            selectedOption = null;
-        }
-        else
-        {
-            self.Actions.NextStrideIsFree = false;
-            return true;
         }
 
         self.Actions.NextStrideIsFree = false;
