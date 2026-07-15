@@ -1381,10 +1381,8 @@ public static class GuardianFeats
             })
             .WithEquivalent(values => values.AllFeats.Any(ft => ft.BaseName is "Attack of Opportunity" or "Reactive Strike" or "Opportunist"));
         
-        // Reflexive Shield, More Dedications, Lv 6
-        if (ModManager.TryParse("MoreDedications.Class.Fighter.ReflexiveShield", out FeatName refShield))
-            (AllFeats.GetFeatByFeatName(refShield) as TrueFeat)!
-                .WithAllowsForAdditionalClassTrait(ModData.Traits.Guardian);
+        // Reflexive Shield, modded feat, Lv 6
+        // Added in ModLoader as a post action load.
         
         // Retaliating Rescue
         yield return new TrueFeat(
