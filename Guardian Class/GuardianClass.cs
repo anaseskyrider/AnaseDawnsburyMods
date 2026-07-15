@@ -581,9 +581,10 @@ public static class GuardianClass
                         .WithActionCost(0);
 
                     ReactionOption alive = ReactionOption.CreateFromCombatActionCustom(
-                        ttk,
-                        $"Reduce your dying {dEvent.Dying.Value} to dying 2 and remain alive.",
-                        async () => StayingAlive(dEvent, ttk));
+                            ttk,
+                            $"Reduce your dying {dEvent.Dying.Value} to dying 2 and remain alive.",
+                            async () => StayingAlive(dEvent, ttk))
+                        .WithDoesNotCountAsYourTriggerResponse();
 
                     return alive;
                 };
