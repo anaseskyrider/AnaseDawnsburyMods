@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- See the template Directory.Builds.props for additional information -->
+  
+  <PropertyGroup>
+    <!--Modify This For Each Project-->
+    <ProjectName>MoreArchetypes</ProjectName>
+    
+    <AssetsFolder>$(ProjectName)Assets</AssetsFolder>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Dawnsbury.Mods.MoreShields">
+        <HintPath>..\[Exports]\MoreShields\CustomModsV3\Dawnsbury.Mods.MoreShields.dll</HintPath>
+    </Reference> <!--3538575665-->
+  </ItemGroup>
+  
+  <!-- Asset Folders -->
+  <ItemGroup>
+    <Assets Include="$(AssetsFolder)\**\*.*"/>
+    <Assets Include="asset attributions (none).txt" />
+  </ItemGroup>
+  
+  <Target Name="CopyToGameModsFolder" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DawnsburyInstall)\CustomMods"/>
+    <Copy SourceFiles="@(Assets)" DestinationFolder="$(DawnsburyInstall)\CustomMods\$(AssetsFolder)\%(RecursiveDir)"/>
+    
+    <Message Text="Copied to game mod folder." />
+  </Target>
+  
+  <Target Name="CopyToWorkshopUploadable" AfterTargets="Build" Condition=" '$(Configuration)'=='Release' ">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopExport)\$(ProjectName)\CustomModsV3"/>
+    <Copy SourceFiles="ORC copyright notice.html" DestinationFolder="$(WorkshopExport)\$(ProjectName)" ContinueOnError="true"/>
+	<Copy SourceFiles="optional-dependencies.txt" DestinationFolder="$(WorkshopExport)\$(ProjectName)" ContinueOnError="true"/>
+    <Copy SourceFiles="@(Assets)" DestinationFolder="$(WorkshopExport)\$(ProjectName)\CustomModsV3\$(AssetsFolder)\%(RecursiveDir)"/>
+    
+    <Message Text="Copied to mod publishing folder." />
+  </Target>
+  
+</Project>
