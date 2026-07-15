@@ -522,16 +522,22 @@ public static class GuardianFeats
                 2,
                 "By banging loudly on your shield, you get the attention of even the most stubborn of foes.",
                 $"Raise a Shield, and then {ModData.FeatNames.Taunt.ToLink("Taunt")} a creature. Your Taunt gains the auditory trait.",
-                [Trait.Flourish, ModData.Traits.Guardian, MoreShields.ModData.Traits.ShieldActionFeat])
+                [Trait.Flourish, ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
             {
                 qfFeat.AddToDefenseBlock = qfThis =>
                     qfThis.Name!.WithTag("b") + " [flourish] Raise a Shield and make an auditory Taunt.";
+                qfFeat.ProvideBonusRaiseShieldPossibility = (qfThis, shield) =>
+                {
+                    CombatAction shieldTaunt = CreateShieldingTauntAction(qfThis.Owner, shield)
+                        .WithExtraTrait(Trait.DoNotShowInContextMenu);
+
+                    return (ActionPossibility)shieldTaunt;
+                };
                 qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
-                    if (section.Name != "Raise shield"
-                        && section.PossibilitySectionId != ModData.PossibilitySectionIds.TauntActivities)
+                    if (section.PossibilitySectionId != ModData.PossibilitySectionIds.TauntActivities)
                         return null;
                     
                     Creature guardian = qfFeat.Owner;
@@ -543,6 +549,15 @@ public static class GuardianFeats
                     if (shields.MaxBy(MoreShields.CommonShieldRules.GetAC) is not { } shield)
                         return null;
                     
+                    CombatAction shieldTaunt = CreateShieldingTauntAction(guardian, shield);
+
+                    return (ActionPossibility)shieldTaunt;
+                };
+                
+                return;
+
+                CombatAction CreateShieldingTauntAction(Creature guardian, Item shield)
+                {
                     // Used for targeting logic
                     CombatAction aTaunt = GuardianClass.CreateTaunt(guardian, true, Trait.Auditory)
                         .WithActionCost(0);
@@ -551,14 +566,21 @@ public static class GuardianFeats
                             qfFeat.Owner,
                             new SideBySideIllustration(shield.Illustration, ModData.Illustrations.Taunt_1),
                             "Shielding Taunt",
-                            "{i}By banging loudly on your shield, you get the attention of even the most stubborn of foes.{/i}\n\nRaise a Shield, and then Taunt a creature. Your Taunt gains the auditory trait.",
                             [ModData.ModTrait, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment, Trait.Flourish, ModData.Traits.Guardian],
+                            """
+                            {i}By banging loudly on your shield, you get the attention of even the most stubborn of foes.{/i}
+
+                            Raise a Shield, and then Taunt a creature. Your Taunt gains the auditory trait.
+                            """,
                             aTaunt.Target)
                         .WithActionCost(1)
                         .WithEffectOnEachTarget(async (action, caster, target, result) =>
                         {
                             // Raise a shield
-                            await MoreShields.CommonShieldRules.OfferToRaiseAShield(caster);
+                            //await MoreShields.CommonShieldRules.OfferToRaiseAShield(caster);
+                            CombatAction raiseShield = Fighter.CreateRaiseShieldCore(caster, shield, false)
+                                .WithActionCost(0);
+                            await caster.Battle.GameLoop.FullCast(raiseShield);
                             
                             // Used for actual execution
                             // Not doing it twice results in usage errors
@@ -566,12 +588,9 @@ public static class GuardianFeats
                                 .WithActionCost(0);
                             await caster.Battle.GameLoop.FullCast(aTaunt2, ChosenTargets.CreateSingleTarget(target));
                         });
-                    
-                    if (section.Name == "Raise shield")
-                        shieldTaunt.Traits.Add(Trait.DoNotShowInContextMenu);
 
-                    return (ActionPossibility)shieldTaunt;
-                };
+                    return shieldTaunt;
+                }
             });
         
         // Taunting Strike
@@ -984,36 +1003,24 @@ public static class GuardianFeats
 
                 Raise your Shield, then Stride up to half your Speed. This movement triggers enemies' reactions as normal. Each enemy who reacted to your movement is unable to react to your allies' movement until the start of your next turn (even if they've since regained their reaction).
                 """,
-                [ModData.Traits.Guardian, MoreShields.ModData.Traits.ShieldActionFeat])
+                [ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
             {
                 qfFeat.AddToDefenseBlock = qfThis =>
                     qfThis.Name!.WithTag("b") +
                     " Raise a Shield, Stride half your speed, and deny reactions to your allies' movement until the start of your next turn.";
-                qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                qfFeat.ProvideBonusRaiseShieldPossibility = (qfThis, shield) =>
                 {
-                    if (section.Name != "Raise shield")
-                        return null;
-                    
-                    Item? shield = MoreShields.CommonShieldRules
-                        .GetWieldedShields(qfThis.Owner)
-                        .FirstOrDefault();
-                    
                     CombatAction shieldedAttrition = new CombatAction(
                             qfThis.Owner,
                             new SideBySideIllustration(
-                                shield?.Illustration ?? IllustrationName.SteelShield,
+                                shield.Illustration,
                                 IllustrationName.FleetStep),
                             "Shielded Attrition",
                             [ModData.ModTrait, ModData.Traits.Guardian],
                             null!,
-                            Target.Self()
-                                // In strict hypothesis, this restriction should never get called
-                                .WithAdditionalRestriction(_ =>
-                                    shield is null
-                                        ? "Must be wielding a shield"
-                                        : null))
+                            Target.Self())
                         .WithDescription(
                             "You provoke attacks from foes that might otherwise stop your allies from moving.",
                             "Raise your Shield, then Stride up to half your Speed. This movement triggers enemies' reactions as normal. Each enemy who reacted to your movement is unable to react to your allies' movement until the start of your next turn (even if they've since regained their reaction).")
@@ -1025,7 +1032,10 @@ public static class GuardianFeats
                             pathStride.EffectOnChosenTargets = null;
                             pathStride.WithEffectOnChosenTargets(async (action2, self2, targets) =>
                             {
-                                await MoreShields.CommonShieldRules.OfferToRaiseAShield(self2);
+                                //await MoreShields.CommonShieldRules.OfferToRaiseAShield(self2);
+                                CombatAction raiseShield = Fighter.CreateRaiseShieldCore(self2, shield, false)
+                                    .WithActionCost(0);
+                                await self2.Battle.GameLoop.FullCast(raiseShield);
                                 await self2.MoveToUsingStepByStepPath(
                                     targets.ChosenTiles,
                                     action2,
@@ -1174,32 +1184,24 @@ public static class GuardianFeats
                 6,
                 "You slowly advance on the battlefield, taking utmost caution.",
                 "You Raise a Shield and Step twice.",
-                [ModData.Traits.Guardian, MoreShields.ModData.Traits.ShieldActionFeat])
+                [ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
             {
                 qfFeat.AddToDefenseBlock = qfThis =>
                     qfThis.Name!.WithTag("b") + " Raise a Shield and Step twice.";
-                qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                qfFeat.ProvideBonusRaiseShieldPossibility = (qfThis, shield) =>
                 {
-                    if (section.Name != "Raise shield")
-                        return null;
-                    
-                    Creature guardian = qfFeat.Owner;
-
-                    if (MoreShields.CommonShieldRules.GetWieldedShields(guardian) is not { } shields)
-                        return null;
-                    if (shields.Count == 0)
-                        return null;
-                    if (shields.MaxBy(MoreShields.CommonShieldRules.GetAC) is not { } shield)
-                        return null;
-                    
                     CombatAction guardAdvance = new CombatAction(
                             qfFeat.Owner,
                             new SideBySideIllustration(shield.Illustration, IllustrationName.FleetStep),
                             "Guarded Advance",
-                            [Trait.DoNotShowOverheadOfActionName, ModData.Traits.ModName, ModData.Traits.Guardian],
-                            "{i}You slowly advance on the battlefield, taking utmost caution.{/i}\n\nYou Raise a Shield and Step twice.",
+                            [Trait.DoNotShowOverheadOfActionName, ModData.ModTrait, ModData.Traits.Guardian],
+                            """
+                            {i}You slowly advance on the battlefield, taking utmost caution.{/i}
+
+                            You Raise a Shield and Step twice.
+                            """,
                             Target.Self()
                                 .WithAdditionalRestriction(cr =>
                                 {
@@ -1224,7 +1226,9 @@ public static class GuardianFeats
                         .WithEffectOnEachTarget(async (action, caster, target, result) =>
                         {
                             // Raise a shield
-                            await MoreShields.CommonShieldRules.OfferToRaiseAShield(caster);
+                            //await MoreShields.CommonShieldRules.OfferToRaiseAShield(caster);
+                            CombatAction raiseShield = Fighter.CreateRaiseShieldCore(caster, shield, false);
+                            await caster.Battle.GameLoop.FullCast(raiseShield);
                             
                             await caster.StepAsync(
                                 "Choose where to Step with Guarded Advance, or right-click to cancel. (1/2)",
