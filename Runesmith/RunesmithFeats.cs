@@ -1212,9 +1212,10 @@ public static class RunesmithFeats
                             });
                         
                         ReactionOption reactOpt = ReactionOption.WrapFullcastWithChosenTargets(
-                            reprisalAction,
-                            ChosenTargets.CreateSingleTarget(dEvent.Source),
-                            $"{ModData.Illustrations.InvokeRune.IllustrationAsIconString} Invoke {{Blue}}{reprisalDr.Rune.Name}{{/Blue}} from your shield against {dEvent.Source.ToColoredName()}.");
+                                reprisalAction,
+                                ChosenTargets.CreateSingleTarget(dEvent.Source),
+                                $"{ModData.Illustrations.InvokeRune.IllustrationAsIconString} Invoke {{Blue}}{reprisalDr.Rune.Name}{{/Blue}} from your shield against {dEvent.Source.ToColoredName()}.")
+                            .WithDoesNotCountAsYourTriggerResponse();
                         
                         return reactOpt;
                     };
