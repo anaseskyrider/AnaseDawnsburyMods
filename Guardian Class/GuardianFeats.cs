@@ -2066,7 +2066,7 @@ public static class GuardianFeats
                 qfFeat.AddToOffenseBlock = qfThis =>
                     qfThis.Name!.WithTag("b")
                     + " After Intercepting a melee Strike from an adjacent attacker, Strike and visually Taunt them.";
-                qfFeat.AfterYouTakeAction = async (qfThis, action) =>
+                qfFeat.AfterYouTakeActionReaction = (qfThis, action) =>
                 {
                     if (action.ActionId != ModData.ActionIds.InterceptAttack
                         || action.Tag is not DamageEvent dEvent
@@ -2074,56 +2074,59 @@ public static class GuardianFeats
                         || !dEvent.CombatAction.Traits.Contains(Trait.Strike)
                         || !dEvent.CombatAction.Traits.Contains(Trait.Melee)
                         || !qfThis.Owner.IsAdjacentTo(attacker))
-                        return;
+                        return null;
 
                     bool immuneToVisual = attacker.IsImmuneTo(Trait.Visual);
-
-                    if (!await qfThis.Owner.AskForConfirmation(
-                            ModData.Illustrations.ArmoredCounterattack,
-                            $$"""
-                            {b}Armored Counterattack{/b} {icon:FreeAction}
-                            You're adjacent to {Blue}{{attacker.Name}}{/Blue} and Intercepted their melee Strike. Strike and visually Taunt them if you hit?{{(immuneToVisual ? " {Red}{i}(They are immune to visual effects){/i}{/Red}" : null)}}
-                            """,
-                            "{icon:FreeAction} Yes"))
-                        return;
-
-                    QEffect tauntAfterStrike = new QEffect()
-                    {
-                        Name = "[ARMORED COUNTERATTACK POST-STRIKE TAUNT]",
-                        ExpiresAt = ExpirationCondition.ExpiresAtStartOfYourTurn,
-                        AfterYouTakeAction = async (qfACatk, myStrike) =>
-                        {
-                            if (myStrike.HasTrait(Trait.Strike)
-                                && myStrike.ChosenTargets.ChosenCreature == attacker
-                                && myStrike.CheckResult > CheckResult.Failure)
-                            {
-                                qfACatk.ExpiresAt = ExpirationCondition.Immediately;
-                                if (immuneToVisual)
-                                    qfACatk.Owner.Battle.Log("Target is immune to visual Taunts.");
-                                else
-                                {
-                                    CombatAction taunt = GuardianClass
-                                        .CreateTaunt(qfACatk.Owner, true, Trait.Visual)
-                                        .WithActionCost(0);
-                                    await qfACatk.Owner.Battle.GameLoop.FullCast(taunt,
-                                        ChosenTargets.CreateSingleTarget(attacker));
-                                }
-                            }
-                        } 
-                    };
-                    qfThis.Owner.AddQEffect(tauntAfterStrike);
-
-                    int cached = qfThis.Owner.Actions.AttackedThisManyTimesThisTurn;
                     
-                    if (!await CommonCombatActions.StrikeCreature(
+                    CombatAction armedCount = new CombatAction(
                             qfThis.Owner,
-                            cr => cr == dEvent.CombatAction.Owner,
-                            true,
-                            "Pass",
-                            false))
-                        tauntAfterStrike.ExpiresAt = ExpirationCondition.Immediately;
+                            ModData.Illustrations.ArmoredCounterattack,
+                            "Armored Counterattack",
+                            [ModData.ModTrait, ModData.Traits.Guardian],
+                            """
+                            {i}With the might of your armor behind you, you hit back at a foe who would dare try to hurt your allies.{/i}
+
+                            {b}Trigger{/b} You use Intercept Attack against a melee Strike and are adjacent to the creature that made the Strike.
+
+                            After Intercepting the Attack, make your own Strike against the triggering enemy. If your Strike hits, you Taunt the target; this Taunt gains the visual trait.
+                            """,
+                            Target.Self())
+                        .WithActionCost(0)
+                        .WithEffectOnEachTarget(async (armedCount, _, _, _) =>
+                        {
+                            // Custom overload
+                            if (!await CommonCombatActions.StrikeCreature(
+                                    qfThis.Owner,
+                                    //isValidStrike
+                                    strike => strike.HasTrait(Trait.Melee),
+                                    //adjustStrike
+                                    strike => strike
+                                        .WithEffectOnEachTarget(async (_, striker, target2, result) =>
+                                        {
+                                            if (result > CheckResult.Failure)
+                                                if (immuneToVisual)
+                                                    striker.Battle.Log("Target is immune to visual Taunts.");
+                                                else
+                                                    await striker.Battle.GameLoop.FullCast(
+                                                        GuardianClass
+                                                            .CreateTaunt(striker, true, Trait.Visual)
+                                                            .WithActionCost(0),
+                                                        ChosenTargets.CreateSingleTarget(target2));
+                                        })
+                                        .WithExtraTrait(Trait.ReactiveAttack),
+                                    // isValidTarget
+                                    cr => cr == attacker,
+                                    null, null, true, null))
+                                armedCount.RevertRequested = true;
+                        });
                     
-                    qfThis.Owner.Actions.AttackedThisManyTimesThisTurn = cached;
+                    ReactionOption reactOpt = ReactionOption.WrapFullcast(
+                            armedCount,
+                            $"Strike {attacker.ToColoredName()}, then {(immuneToVisual ? ("visually Taunt".WithTag("s") + " {Red}(immune to visual effects){/Red}") : "visually Taunt")} them on a hit.")
+                        .WithIsFreeAction()
+                        .WithTriggerReason(qfThis.Owner.ToColoredBoldedName() + " used Intercept Attack from an adjacent enemy's melee Strike.");
+
+                    return reactOpt;
                 };
             })
             .WithPrerequisite(
