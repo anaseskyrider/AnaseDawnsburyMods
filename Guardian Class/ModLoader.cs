@@ -23,8 +23,8 @@ public static class ModLoader
         ModData.LoadData();
         ParryLogic.Load(
             "GuardianClass",
-            new ModdedIllustration(ModData.Illustrations.ModFolder+"ParryT7.png"),
-            new ModdedIllustration(ModData.Illustrations.ModFolder+"ParryT6.png"));
+            new ModdedIllustration(ModData.Illustrations.MOD_FOLDER+"ParryT7.png"),
+            new ModdedIllustration(ModData.Illustrations.MOD_FOLDER+"ParryT6.png"));
         GuardianClass.LoadClass();
         GuardianFeats.LoadFeats();
         GuardianArchetype.LoadArchetype();
