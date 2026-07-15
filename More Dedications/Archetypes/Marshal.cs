@@ -145,7 +145,8 @@ public static class Marshal
                                     case >= CheckResult.Success:
                                     {
                                         // Increase the aura on a crit
-                                        if (result == CheckResult.CriticalSuccess && caster.FindQEffect(ModData.QEffectIds.MarshalsAuraProvider) is { } aura)
+                                        if (result == CheckResult.CriticalSuccess
+                                            && caster.FindQEffect(ModData.QEffectIds.MarshalsAuraProvider) is { } aura)
                                         {
                                             aura.Tag = 4;
                                             aura.AssociatedAura?.MoveTo(aura.Tag as int? ?? 0f);

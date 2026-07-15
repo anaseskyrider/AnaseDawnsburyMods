@@ -295,7 +295,6 @@ public static class Assassin
         // License Firebrands!
         
         /* Higher level feats
-         * @12 Assassinate
          * @12 Deadly Poison Weapon (Against the Scarlet Triad)
          * * https://2e.aonprd.com/Feats.aspx?ID=1151
          */

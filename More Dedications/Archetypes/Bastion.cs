@@ -50,6 +50,7 @@ public static class Bastion
     public static IEnumerable<Feat> CreateFeats()
     {
         // Dedication Feat
+        // DEPRECATED (remaster)
         Feat bastionDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.BastionArchetype,
                 "Some say that a good offense is the best defense, but you find such boasting smacks of overconfidence. In your experience, the best defense is a good, solid shield between you and your enemies.",
@@ -63,11 +64,13 @@ public static class Bastion
         yield return bastionDedication;
 
         // Add Agile Shield Grip to Bastion
+        // DEPRECATED (remaster)
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             Champion.AgileShieldGripFeatName, ModData.Traits.BastionArchetype, 4);
 
         // Disarming Block
         // PETR: Disarm the attacking item
+        // DEPRECATED (remaster)
         yield return new TrueFeat(
                 ModData.FeatNames.DisarmingBlock,
                 4,
@@ -228,6 +231,7 @@ public static class Bastion
         // https://2e.aonprd.com/Feats.aspx?ID=1088&ArchLevel=6
         
         // Nimble Shield Hand
+        // DEPRECATED (remaster)
         yield return new TrueFeat(
                 ModData.FeatNames.NimbleShieldHand,
                 6,

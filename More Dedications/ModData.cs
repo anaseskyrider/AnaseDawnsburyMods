@@ -56,7 +56,7 @@ public static class ModData
         public static void Initialize()
         {
             TigerSlash = SafelyRegister<ActionId>("TigerSlash");
-            TigerSlash = SafelyRegister<ActionId>("GrievousBlow");
+            GrievousBlow = SafelyRegister<ActionId>("GrievousBlow");
         }
     }
 
@@ -159,7 +159,7 @@ public static class ModData
         
         #endregion
 
-        #region Dual Weapon Warrior
+        #region Dual-Weapon Warrior
 
         public static FeatName DualWeaponWarriorDedication;
         public static readonly FeatName DualThrower = ModManager.RegisterFeatName(IdPrepend+"Archetype.DualWeaponWarrior.DualThrower", "Dual Thrower");
