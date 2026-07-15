@@ -103,7 +103,7 @@ public static class GuardianArchetype
                 {
                     if (action.ActionId != ModData.ActionIds.InterceptAttack)
                         return;
-                    qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.GuardiansIntercept);
+                    qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.GUARDIANS_INTERCEPT);
                     qfThis.Owner.AddQEffect(new QEffect()
                     {
                         Name = "[GUARDIAN'S INTERCEPT LIMIT]", // Identifier

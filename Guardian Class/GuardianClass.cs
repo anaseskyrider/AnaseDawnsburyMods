@@ -249,7 +249,7 @@ public static class GuardianClass
                         "Taunt")
                     {
                         SubmenuId = ModData.SubmenuIds.Taunt,
-                        PossibilityGroup = ModData.PossibilityGroups.TauntActions,
+                        PossibilityGroup = ModData.PossibilityGroups.TAUNT_ACTIONS,
                         SpellIfAny = CreateTaunt(qfThis.Owner),
                         Subsections = [
                             new PossibilitySection("Taunt")
@@ -390,7 +390,7 @@ public static class GuardianClass
                     }
                     desc += ".";
                     return title + (frequency + desc).WithTag(qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains(
-                        ModData.PersistentActions.GuardiansIntercept)
+                        ModData.PersistentActions.GUARDIANS_INTERCEPT)
                         ? "strike"
                         : null);
                 };
@@ -554,7 +554,7 @@ public static class GuardianClass
                 qfFeat.AddToDefenseBlock = _ => "{b}Tough to Kill.{/b} " + description;
                 
                 // Update description if already used
-                if (qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.ToughToKill))
+                if (qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.TOUGH_TO_KILL))
                     UseUpDescription();
                 
                 // Change from tabletop: Only triggers when you'd actually die.
@@ -564,7 +564,7 @@ public static class GuardianClass
                     if (dEvent.Dying.Value < 3
                         || DeathRules.GetMaximumDying(qfThis.Owner) < 3
                         || qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions
-                            .ToughToKill))
+                            .TOUGH_TO_KILL))
                         return null;
 
                     CombatAction ttk = new CombatAction(
@@ -594,7 +594,7 @@ public static class GuardianClass
                     dEvent.Dying.Value = 2;
                     dEvent.PreventDeath = true;
                     dEvent.Dying.Owner.PersistentUsedUpResources.UsedUpActions
-                        .Add(ModData.PersistentActions.ToughToKill);
+                        .Add(ModData.PersistentActions.TOUGH_TO_KILL);
                     dEvent.Dying.Owner.Overhead(
                         "Tough to Kill!!",
                         Color.Lime,
@@ -629,7 +629,7 @@ public static class GuardianClass
                             Trait.AttackOfOpportunity,
                             Trait.ShieldBlock,
                         ]) || questionText.ToLower().Contains("reactive shield")
-                            ? ModData.CommonReactionKeys.ReactionTime
+                            ? ModData.CommonReactionKeys.REACTION_TIME
                             : null;
                 });
         
@@ -853,7 +853,7 @@ public static class GuardianClass
             ModData.Illustrations.Taunt_1)
         {
             Id = ModData.QEffectIds.TauntTarget,
-            Key = ModData.CommonQfKeys.TauntedEnemy+taunter.Name, // Discard duplicates for each source
+            Key = ModData.CommonQfKeys.TAUNTED_ENEMY+taunter.Name, // Discard duplicates for each source
             CountsAsADebuff = true,
             BonusToAttackRolls = (qfThis, action, target) =>
             {
@@ -883,7 +883,7 @@ public static class GuardianClass
                 offguard.Description = "{i}You ignored {Blue}"+taunter.Name+"{/Blue}'s taunt.{/i}\n" + offguard.Description;
                 offguard.ExpiresAt = ExpirationCondition.ExpiresAtStartOfYourTurn;
                 offguard.Source = taunter;
-                offguard.Key = ModData.CommonQfKeys.OffGuardDueToTaunt+taunter;
+                offguard.Key = ModData.CommonQfKeys.OFF_GUARD_DUE_TO_TAUNT+taunter;
                 qfThis.Owner.AddQEffect(offguard);
                 
                 // PETR: Temporary fix until all CombatActions which have a SavingThrow will let you apply DC penalties.

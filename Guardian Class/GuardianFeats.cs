@@ -550,8 +550,8 @@ public static class GuardianFeats
                             qfFeat.Owner,
                             new SideBySideIllustration(shield.Illustration, ModData.Illustrations.Taunt_1),
                             "Shielding Taunt",
-                            [ModData.Traits.ModName, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment, Trait.Flourish, ModData.Traits.Guardian],
                             "{i}By banging loudly on your shield, you get the attention of even the most stubborn of foes.{/i}\n\nRaise a Shield, and then Taunt a creature. Your Taunt gains the auditory trait.",
+                            [ModData.ModTrait, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment, Trait.Flourish, ModData.Traits.Guardian],
                             aTaunt.Target)
                         .WithActionCost(1)
                         .WithEffectOnEachTarget(async (action, caster, target, result) =>
@@ -1062,7 +1062,7 @@ public static class GuardianFeats
                                     {
                                         RoundsLeft = 1,
                                         // Sometimes applies twice, idk why, this helps with that
-                                        Key = ModData.CommonQfKeys.ShieldedAttrition+self.Name,
+                                        Key = ModData.CommonQfKeys.SHIELDED_ATTRITION+self.Name,
                                     }
                                     .AddGrantingOfTechnical(
                                         self.FriendOfAndNotSelf,
@@ -2008,11 +2008,11 @@ public static class GuardianFeats
             {
                 qfFeat.AddToDefenseBlock = qfThis =>
                     qfThis.Name!.WithTag("b")
-                    + $" {"(Once per day) If you're at 1/2 max HP or less, gain that much temp HP".WithTag(qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.ToughCookie) ? "strike" : null)}.";
+                    + $" {"(Once per day) If you're at 1/2 max HP or less, gain that much temp HP".WithTag(qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.TOUGH_COOKIE) ? "strike" : null)}.";
                 qfFeat.ProvideMainAction = qfThis =>
                 {
                     if (qfThis.Owner.PersistentUsedUpResources.UsedUpActions
-                        .Contains(ModData.PersistentActions.ToughCookie))
+                        .Contains(ModData.PersistentActions.TOUGH_COOKIE))
                         return null;
 
                     return (ActionPossibility) new CombatAction(
@@ -2039,7 +2039,7 @@ public static class GuardianFeats
                         .WithEffectOnSelf(self =>
                         {
                             self.GainTemporaryHP(self.MaxHP / 2);
-                            self.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.ToughCookie);
+                            self.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.TOUGH_COOKIE);
                         });
                 };
             });
