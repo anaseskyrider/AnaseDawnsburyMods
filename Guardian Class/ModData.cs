@@ -20,6 +20,8 @@ namespace Dawnsbury.Mods.GuardianClass;
 public static class ModData
 {
     public const string IdPrepend = "GuardianClass.";
+
+    public static Trait ModTrait;
     
     /// <summary>
     /// Loads all mod data. This should typically be called by a mod before anything else.
@@ -38,6 +40,7 @@ public static class ModData
     /// </para>
     public static void LoadData()
     {
+        ModTrait = ModManager.ModBeingLoadedTrait!.Value; // Known not null at this stage
         ActionIds.Initialize();
         PossibilitySectionIds.Initialize();
         QEffectIds.Initialize();
@@ -417,8 +420,6 @@ public static class ModData
     
     public static class Traits
     {
-        public static readonly Trait ModName = ModManager.RegisterModNameTrait("GuardianClass", "Guardian Class");
-        
         /// <summary>Guardian class trait.</summary>
         public static readonly Trait Guardian = ModManager.RegisterTrait("Guardian", 
             new TraitProperties("Guardian", true) { IsClassTrait = true });

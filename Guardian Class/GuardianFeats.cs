@@ -41,7 +41,7 @@ public static class GuardianFeats
     {
         // Create Guardian feats
         foreach (Feat feat in CreateFeats())
-            ModManager.AddFeat(feat, ModData.Traits.ModName);
+            ModManager.AddFeat(feat);
     }
     
     public static IEnumerable<Feat> CreateFeats()
@@ -352,7 +352,7 @@ public static class GuardianFeats
 
                             applyTo?.AddQEffect(checkEffect);
                         });
-                    sCheck.Traits = new Traits([ModData.Traits.ModName, ..sCheck.Traits.ToList()], sCheck);
+                    sCheck.Traits = new Traits([ModData.ModTrait, ..sCheck.Traits.ToList()], sCheck);
                     sCheck.Description = StrikeRules.CreateBasicStrikeDescription4(
                         sCheck.StrikeModifiers,
                         additionalCriticalSuccessText: "The target is off-guard to your melee attacks until the end of your next turn",
@@ -399,7 +399,7 @@ public static class GuardianFeats
                                 qfThis.Owner,
                                 ModData.Illustrations.HamperingStance,
                                 "Hampering Stance",
-                                [ModData.Traits.ModName, Trait.Aura, ModData.Traits.Guardian, Trait.Stance],
+                                [ModData.ModTrait, Trait.Aura, ModData.Traits.Guardian, Trait.Stance],
                                 "",
                                 Target.Self()
                                     .WithAdditionalRestriction(self =>
@@ -717,7 +717,7 @@ public static class GuardianFeats
                             qfThis.Owner,
                             ModData.Illustrations.ArmoredCourage,
                             "Armored Courage",
-                            [Trait.Basic, ModData.Traits.ModName, ModData.Traits.Guardian],
+                            [Trait.Basic, ModData.ModTrait, ModData.Traits.Guardian],
                             $$"""
                               {i}You take comfort in the safety of your armor.{/i}
 
@@ -959,7 +959,7 @@ public static class GuardianFeats
                         //.WithExtraTrait(Trait.Basic)
                         .WithExtraTrait(Trait.Flourish)
                         .WithExtraTrait(ModData.Traits.Guardian);
-                    proudNail.Traits = new Traits([ModData.Traits.ModName, ..proudNail.Traits.ToList()],
+                    proudNail.Traits = new Traits([ModData.ModTrait, ..proudNail.Traits.ToList()],
                         proudNail);
                     proudNail.Illustration = new SideBySideIllustration(
                         proudNail.Illustration, IllustrationName.StarHit);
@@ -1005,7 +1005,7 @@ public static class GuardianFeats
                                 shield?.Illustration ?? IllustrationName.SteelShield,
                                 IllustrationName.FleetStep),
                             "Shielded Attrition",
-                            [ModData.Traits.ModName, ModData.Traits.Guardian],
+                            [ModData.ModTrait, ModData.Traits.Guardian],
                             null!,
                             Target.Self()
                                 // In strict hypothesis, this restriction should never get called
@@ -1344,7 +1344,7 @@ public static class GuardianFeats
                             };
                             caster.AddQEffect(lockDownRequirements);
                         });
-                    lockDown.Traits = new Traits([ModData.Traits.ModName, ..lockDown.Traits.ToList()], lockDown);
+                    lockDown.Traits = new Traits([ModData.ModTrait, ..lockDown.Traits.ToList()], lockDown);
                     lockDown.Illustration = new SideBySideIllustration(
                         item.Illustration, ModData.Illustrations.LockDown);
                     ((CreatureTarget)lockDown.Target).WithAdditionalConditionOnTargetCreature((a, d) =>
@@ -1403,7 +1403,7 @@ public static class GuardianFeats
                             qfFeat.Owner,
                             new SideBySideIllustration(IllustrationName.QuickenTime, IllustrationName.KineticRam),
                             "Retaliating Rescue",
-                            [ModData.Traits.ModName, ModData.Traits.Guardian],
+                            [ModData.ModTrait, ModData.Traits.Guardian],
                             """
                             {i}When an ally is in danger, you can hustle to reach them and punish the foe threatening them.{/i}
 
@@ -1603,7 +1603,7 @@ public static class GuardianFeats
                                     break;
                             }
                         });
-                    ringTheirBell.Traits = new Traits([ModData.Traits.ModName, ..ringTheirBell.Traits.ToList()], ringTheirBell);
+                    ringTheirBell.Traits = new Traits([ModData.ModTrait, ..ringTheirBell.Traits.ToList()], ringTheirBell);
                     ringTheirBell.Illustration = new SideBySideIllustration(
                         ringTheirBell.Illustration, IllustrationName.Stunned);
                     ((CreatureTarget)ringTheirBell.Target) // Strikes always make CreatureTargets
@@ -1638,7 +1638,7 @@ public static class GuardianFeats
                             qfThis.Owner,
                             ModData.Illustrations.StompGround,
                             "Stomp Ground",
-                            [ModData.Traits.ModName, ModData.Traits.Guardian],
+                            [ModData.ModTrait, ModData.Traits.Guardian],
                             """
                             {i}You bring your booted foot down on the ground with enough force to rattle your foes.{/i}
 
@@ -1720,7 +1720,7 @@ public static class GuardianFeats
                             qfThis.Owner,
                             new SideBySideIllustration(IllustrationName.FleetStep, IllustrationName.Grapple),
                             "Juggernaut Charge",
-                            [ModData.Traits.ModName, Trait.Flourish, ModData.Traits.Guardian],
+                            [ModData.ModTrait, Trait.Flourish, ModData.Traits.Guardian],
                             """
                             {i}As you move forward in a rush, you put the weight of your armor behind an attack that can drag a foe with you.{/i}
 
@@ -2019,7 +2019,7 @@ public static class GuardianFeats
                             qfThis.Owner,
                             ModData.Illustrations.ToughCookie,
                             "Tough Cookie",
-                            [ModData.Traits.ModName, ModData.Traits.Guardian, Trait.Basic],
+                            [ModData.ModTrait, ModData.Traits.Guardian, Trait.Basic],
                             null!,
                             Target.Self()
                                 .WithAdditionalRestriction(self =>
@@ -2157,7 +2157,7 @@ public static class GuardianFeats
                             qfThis.Owner,
                             ModData.Illustrations.ScatteringCharge,
                             "Scattering Charge",
-                            [ModData.Traits.ModName, Trait.Flourish, ModData.Traits.Guardian],
+                            [ModData.ModTrait, Trait.Flourish, ModData.Traits.Guardian],
                             null!,
                             Target.Self()
                                 .WithAdditionalRestriction(self =>
@@ -2265,7 +2265,7 @@ public static class GuardianFeats
                             qfThis.Owner,
                             ModData.Illustrations.WeakeningAssault,
                             "Weakening Assault",
-                            [ModData.Traits.ModName, ModData.Traits.Guardian],
+                            [ModData.ModTrait, ModData.Traits.Guardian],
                             null!,
                             Target.Self()
                                 .WithAdditionalRestriction(self =>

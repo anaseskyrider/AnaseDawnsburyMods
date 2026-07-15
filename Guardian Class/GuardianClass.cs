@@ -42,8 +42,8 @@ public static class GuardianClass
     public static void LoadClass()
     {
         foreach (Feat feat in CreateFeatures())
-            ModManager.AddFeat(feat, ModData.Traits.ModName);
-        ModManager.AddFeat(CreateClassFeat(), ModData.Traits.ModName);
+            ModManager.AddFeat(feat);
+        ModManager.AddFeat(CreateClassFeat());
     }
 
     /// <summary>Creates the Guardian class feat.</summary>
@@ -753,7 +753,7 @@ public static class GuardianClass
                 owner,
                 tauntIcon,
                 "Taunt",
-                [Trait.Basic, ModData.Traits.ModName, ModData.Traits.Guardian, Trait.Concentrate, Trait.DoNotShowOverheadOfActionName, ..extraTraits],
+                [Trait.Basic, ModData.ModTrait, ModData.Traits.Guardian, Trait.Concentrate, Trait.DoNotShowOverheadOfActionName, ..extraTraits],
                 $$"""
                   {i}With an attention-grabbing gesture, noise, cutting remark, or threatening shout, you attempt to draw an enemy to you instead of your allies. Even mindless creatures are drawn to your taunts.{/i}
                   
@@ -973,7 +973,7 @@ public static class GuardianClass
                 guardian_1, 
                 ModData.Illustrations.InterceptAttack, 
                 "Intercept Attack", 
-                [Trait.Basic, ModData.Traits.ModName, ModData.Traits.Guardian, Trait.UnaffectedByConcealment, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName], 
+                [Trait.Basic, ModData.ModTrait, ModData.Traits.Guardian, Trait.UnaffectedByConcealment, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName], 
                 """
                 {i}You fling yourself in the way of oncoming harm to protect an ally.{/i}
                 
