@@ -940,7 +940,10 @@ public static class AncestryFeats
                 });
         
         // Impaling Bone
-        // PETR: Level 17 feat. Missing Impaling Spike spell.
+        // PETR: Level 17 feat.
+        // Impaling Bone is now a baseline spell.
+        // Have to figure out how to make it not cold iron (easy),
+        // and how to make it immobilize incorporeals (not easy).
         
         // Legendary Laugh
         yield return new TrueFeat(
