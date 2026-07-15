@@ -1122,56 +1122,87 @@ public static class GuardianFeats
             {
                 qfFeat.AddToOffenseBlock = qfThis =>
                     qfThis.Name!.WithTag("b") + " When you Intercept a melee Attack, you can attempt to Disarm the attacker.";
-                qfFeat.AfterYouTakeAction = async (qfThis, action) =>
+                qfFeat.AfterYouTakeActionReaction = (qfThis, action) =>
                 {
-                    if (action.ActionId != ModData.ActionIds.InterceptAttack)
-                        return;
-
-                    if ((action.Tag as DamageEvent)?.CombatAction is not { } interceptedAttack)
-                        return;
+                    if (action.ActionId != ModData.ActionIds.InterceptAttack
+                        || (action.Tag as DamageEvent)?.CombatAction is not { } interceptedAttack)
+                        return null;
                         
                     // Has to be a melee strike with a disarmable item
                     if (!interceptedAttack.HasTrait(Trait.Melee) // Melee
                         || !interceptedAttack.HasTrait(Trait.Strike) // Strike
                         || interceptedAttack.Item is null // With a disarmable item
+                        || interceptedAttack.Item.HasTrait(Trait.Unarmed)
                         || !interceptedAttack.Owner.IsAdjacentTo(qfThis.Owner)) // Who's adjacent
-                        return;
-                    
-                    // Store MAP
-                    int oldMAP = qfThis.Owner.Actions.AttackedThisManyTimesThisTurn;
-                    qfThis.Owner.Actions.AttackedThisManyTimesThisTurn = 0;
+                        return null;
 
-                    // Use disarm weapon, or use free hand
-                    Item maneuverWeapon = qfThis.Owner.HeldItems.FirstOrDefault(item =>
-                        item.HasTrait(Trait.Disarm))
-                                          ?? qfThis.Owner.UnarmedStrike;
-                    CombatAction disarm = CombatManeuverPossibilities
-                        .CreateDisarmAction(qfThis.Owner, maneuverWeapon)
-                        .WithActionCost(0);
-                    // Remove free hand requirement by rebuilding targeting
-                    disarm.Target = Target.Reach(maneuverWeapon)
-                        .WithAdditionalConditionOnTargetCreature(new TargetWieldsAnItemCreatureTargetingRequirement());
-                    
-                    // Execute Disarm
-                    qfThis.Owner.AddQEffect(new QEffect()
-                    {
-                        BonusToSkillChecks = (skill, action2, target) =>
-                            skill is Skill.Athletics
-                            && action2 == disarm
-                            && action2.Owner.BaseArmor?.ArmorProperties?.ItemBonus is { } potency
-                                ? new Bonus(potency, BonusType.Item, "Armor potency")
-                                : null,
-                        AfterYouTakeAction = async (qfThis2, action2) =>
+                    CombatAction disarmingIntercept = new CombatAction(
+                            qfThis.Owner,
+                            new SideBySideIllustration(ModData.Illustrations.InterceptAttack, IllustrationName.Disarm),
+                            "Disarming Intercept",
+                            [ModData.Traits.Guardian],
+                            null!,
+                            Target.AdjacentCreature()
+                                .WithAdditionalConditionOnTargetCreature(new EnemyCreatureTargetingRequirement()))
+                        .WithDescription(
+                            "When you catch a weapon in your armor, you can move your body to wrench it from your foe's grasp.",
+                            $$"""
+                            {b}Trigger{/b} You Intercept an Attack that was made with a melee weapon by a creature you're adjacent to.
+
+                            After Intercepting the Attack, attempt to Disarm the weapon used for that attack. You don't need to have a hand free, and you gain an item bonus to the Athletics check equal to the value of your armor's potency rune.
+                            """)
+                        .WithActionCost(0)
+                        .WithEffectOnEachTarget(async (spell, caster, target, _) =>
                         {
-                            if (action2 == disarm)
-                                qfThis2.ExpiresAt = ExpirationCondition.Immediately;
-                        },
-                    });
-                    await qfThis.Owner.Battle.GameLoop.FullCast(disarm,
-                        ChosenTargets.CreateSingleTarget(interceptedAttack.Owner));
+                            // Move attacker back to their spot for better visuals
+                            await target.FictitiousSingleTileMoveBack();
+                            
+                            // Store MAP
+                            int oldMAP = qfThis.Owner.Actions.AttackedThisManyTimesThisTurn;
+                            qfThis.Owner.Actions.AttackedThisManyTimesThisTurn = 0;
+                            
+                            // Execute Disarm
+                            CombatAction disarm = Disarm();
+                            await qfThis.Owner.Battle.GameLoop.FullCast(disarm,
+                                ChosenTargets.CreateSingleTarget(target));
+                            
+                            // Restore MAP
+                            qfThis.Owner.Actions.AttackedThisManyTimesThisTurn = oldMAP;
+                        });
                     
-                    // Restore MAP
-                    qfThis.Owner.Actions.AttackedThisManyTimesThisTurn = oldMAP;
+                    CombatAction disarm = Disarm();
+                    disarmingIntercept.Description += "\n\n" + CombatActionExecution.BreakdownAttackForTooltip(disarm, interceptedAttack.Owner).TooltipDescription;
+
+                    ReactionOption reactOpt = ReactionOption.WrapFullcastWithChosenTargets(
+                            disarmingIntercept,
+                            ChosenTargets.CreateSingleTarget(interceptedAttack.Owner),
+                            $"Attempt to Disarm {interceptedAttack.Owner.ToColoredName()}.")
+                        .WithIsFreeAction()
+                        .WithTriggerReason(qfThis.Owner.ToColoredBoldedName() + " used Intercept Attack from an adjacent enemy using a melee weapon.");
+
+                    return reactOpt;
+
+                    CombatAction Disarm()
+                    {
+                        // Use disarm weapon, or use free hand
+                        Item maneuverWeapon = qfThis.Owner.HeldItems.FirstOrDefault(item =>
+                                                  item.HasTrait(Trait.Disarm))
+                                              ?? qfThis.Owner.UnarmedStrike;
+                        CombatAction disarm2 = CombatManeuverPossibilities
+                            .CreateDisarmAction(qfThis.Owner, maneuverWeapon)
+                            .WithActionCost(0);
+                        // Remove free hand requirement by rebuilding targeting
+                        disarm2.Target = Target.Reach(maneuverWeapon)
+                            .WithAdditionalConditionOnTargetCreature(new TargetWieldsAnItemCreatureTargetingRequirement());
+                        disarm2.WithActiveRollSpecification(new ActiveRollSpecification(
+                            disarm2.ActiveRollSpecification!.TaggedDetermineBonus
+                                .WithExtraBonus((_, attacker, _) =>
+                                    new Bonus(attacker.BaseArmor?.ArmorProperties?.ItemBonus ?? 0, BonusType.Item,
+                                    "Armor potency")),
+                            disarm2.ActiveRollSpecification!.TaggedDetermineDC));
+
+                        return disarm2;
+                    }
                 };
             })
             .WithPrerequisite(
