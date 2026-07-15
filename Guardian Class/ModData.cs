@@ -47,22 +47,6 @@ public static class ModData
         SubmenuIds.Initialize();
     }
 
-    /// <summary>
-    /// Registers the source enum to the game, or returns the original if it's already registered.
-    /// </summary>
-    /// <param name="technicalName">The technicalName string of the enum being registered.</param>
-    /// <param name="displayName">The human readable name of the enum, if the type supports a humanized name.</param>
-    /// <typeparam name="T">The enum being registered to.</typeparam>
-    /// <returns>The newly registered enum.</returns>
-    public static T SafelyRegister<T>(string technicalName, string? displayName = null) where T : struct, Enum
-    {
-        return (T)(ModManager.TryParse(technicalName, out T alreadyRegistered)
-            ? alreadyRegistered
-            : typeof(T) == typeof(FeatName)
-                ? (Enum)ModManager.RegisterFeatName(technicalName, displayName)
-                : ModManager.RegisterEnumMember<T>(technicalName));
-    }
-
     public static class ActionIds
     {
         public static ActionId Taunt;
@@ -70,8 +54,8 @@ public static class ModData
         
         public static void Initialize()
         {
-            Taunt = SafelyRegister<ActionId>("Taunt");
-            InterceptAttack = SafelyRegister<ActionId>("InterceptAttack");
+            Taunt = ModManager.SafelyRegisterEnumMember<ActionId>("Taunt");
+            InterceptAttack = ModManager.SafelyRegisterEnumMember<ActionId>("InterceptAttack");
         }
     }
 
@@ -377,9 +361,9 @@ public static class ModData
         
         public static void Initialize()
         {
-            BasicTaunts = SafelyRegister<PossibilitySectionId>("BasicTaunts");
-            TauntActivities = SafelyRegister<PossibilitySectionId>("TauntActivities");
-            InterceptAttackToggles = SafelyRegister<PossibilitySectionId>("InterceptAttackToggles");
+            BasicTaunts = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("BasicTaunts");
+            TauntActivities = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("TauntActivities");
+            InterceptAttackToggles = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("InterceptAttackToggles");
         }
     }
     
@@ -392,10 +376,10 @@ public static class ModData
         
         public static void Initialize()
         {
-            TauntTarget = SafelyRegister<QEffectId>("TauntTarget");
-            ReactionTime = SafelyRegister<QEffectId>("ReactionTime");
-            BodyguardCharge = SafelyRegister<QEffectId>("Bodyguard's Charge");
-            HamperingStance = SafelyRegister<QEffectId>("HamperingStance");
+            TauntTarget = ModManager.SafelyRegisterEnumMember<QEffectId>("TauntTarget");
+            ReactionTime = ModManager.SafelyRegisterEnumMember<QEffectId>("ReactionTime");
+            BodyguardCharge = ModManager.SafelyRegisterEnumMember<QEffectId>("Bodyguard's Charge");
+            HamperingStance = ModManager.SafelyRegisterEnumMember<QEffectId>("HamperingStance");
         }
     }
     
@@ -416,7 +400,7 @@ public static class ModData
         
         public static void Initialize()
         {
-            Taunt = SafelyRegister<SubmenuId>("Taunt");
+            Taunt = ModManager.SafelyRegisterEnumMember<SubmenuId>("Taunt");
         }
     }
     

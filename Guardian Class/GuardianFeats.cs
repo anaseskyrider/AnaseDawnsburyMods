@@ -2,6 +2,7 @@ using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations.Movement;
+using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
@@ -60,19 +61,19 @@ public static class GuardianFeats
                     [ModData.Traits.BodyguardCharge],
                     null)
                 .WithNameCreator(_ =>
-                    $"Choose {LibraryOfAnase.GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"} as your charge.")
+                    $"Choose {CharacterSheet.GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"} as your charge.")
                 .WithRulesTextCreator(_ =>
-                    $"Your Taunt's penalty will increase to -2 against {LibraryOfAnase.GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"}.")
+                    $"Your Taunt's penalty will increase to -2 against {CharacterSheet.GetCharacterSheetFromPartyMember(index)?.Name ?? "NULL"}.")
                 .WithIllustrationCreator(_ =>
-                    LibraryOfAnase.GetCharacterSheetFromPartyMember(index)?.Illustration ?? ModData.Illustrations.Taunt_1)
+                    CharacterSheet.GetCharacterSheetFromPartyMember(index)?.Illustration ?? ModData.Illustrations.Taunt_1)
                 .WithTag(i)
                 .WithPermanentQEffect(
-                    $"The penalty for Taunt increases to -2 against {{Blue}}{LibraryOfAnase.GetCharacterSheetFromPartyMember(index)?.Name ?? "a chosen ally"}{{/Blue}}.",
+                    $"The penalty for Taunt increases to -2 against {{Blue}}{CharacterSheet.GetCharacterSheetFromPartyMember(index)?.Name ?? "a chosen ally"}{{/Blue}}.",
                     qfFeat =>
                     {
                         qfFeat.StartOfCombat = async qfThis =>
                         {
-                            if (LibraryOfAnase.GetCharacterSheetFromPartyMember(index) is {} hero
+                            if (CharacterSheet.GetCharacterSheetFromPartyMember(index) is {} hero
                                 && qfThis.Owner.Battle.AllCreatures.FirstOrDefault(cr2 =>
                                     cr2 != qfThis.Owner &&
                                     cr2.PersistentCharacterSheet == hero) is { } chosenCreature)
@@ -91,7 +92,7 @@ public static class GuardianFeats
                         };
                     })
                 .WithPrerequisite(values => // Can't select yourself
-                    LibraryOfAnase.GetCharacterSheetFromPartyMember(index) != values.Sheet,
+                    CharacterSheet.GetCharacterSheetFromPartyMember(index) != values.Sheet,
                     "Can't select yourself");
             yield return chargeChoice;
         }
