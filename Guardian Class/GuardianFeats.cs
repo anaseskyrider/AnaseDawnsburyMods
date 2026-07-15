@@ -1954,33 +1954,56 @@ public static class GuardianFeats
                 "When you Intercept Attack, you can move the triggering ally up to 10 feet.",
                 qfFeat =>
                 {
-                    qfFeat.AfterYouTakeAction = async (qfThis, action) =>
+                    qfFeat.AfterYouTakeActionReaction = (qfThis, action) =>
                     {
                         if (action.ActionId != ModData.ActionIds.InterceptAttack)
-                            return;
-                        Creature ally = action.ChosenTargets.ChosenCreature!;
-                        if (await qfThis.Owner.Battle.AskToChooseATile(
+                            return null;
+
+                        CombatAction getBehindMe = new CombatAction(
                                 qfThis.Owner,
-                                qfThis.Owner.Battle.Map.AllTiles
-                                    .Where(tile =>
-                                        tile.LooksFreeTo(ally)
-                                        && tile.DistanceTo(qfThis.Owner) <= qfThis.Owner.Space.NaturalReach
-                                        && ally.DistanceTo(tile) <= 2),
                                 ModData.Illustrations.GetBehindMe,
-                                $"Choose a space to move {ally.ToColoredName()} to.",
-                                "Lorem ipsum.",
-                                true, true,
-                                ally)
-                            is not { } chosenTile)
-                            return;
-                        await ally.MoveTo(chosenTile, null, new MovementStyle()
-                        {
-                            ForcedMovement = true,
-                            IgnoresUnevenTerrain = true,
-                            MaximumSquares = 99,
-                            Shifting = true,
-                            ShortestPath = true,
-                        });
+                                "Get Behind Me!",
+                                [ModData.ModTrait, ModData.Traits.Guardian],
+                                """
+                                 {i}When saving your allies from harm, you push them behind you to better protect them.{/i}
+
+                                 When you use Intercept Attack to protect an ally, you can move that ally up to 10 feet to an unoccupied space that's within your reach. This movement doesn't trigger reactions.
+                                 """,
+                                Target.AdjacentFriend())
+                            .WithActionCost(0)
+                            .WithEffectOnEachTarget(async (spell, caster, target, _) =>
+                            {
+                                if (await caster.Battle.AskToChooseATile(
+                                        caster,
+                                        caster.Battle.Map.AllTiles
+                                            .Where(tile =>
+                                                tile.LooksFreeTo(target)
+                                                && tile.DistanceTo(caster) <= caster.Space.NaturalReach
+                                                && target.DistanceTo(tile) <= 2),
+                                        ModData.Illustrations.GetBehindMe,
+                                        $"Choose a space to move {target.ToColoredName()} to.",
+                                        "If you can see this, report this to the Guardian Class workshop page because I couldn't figure out what this does nor when this was visible during development.",
+                                        true, true,
+                                        target)
+                                    is not { } chosenTile)
+                                    return;
+                                await target.MoveTo(chosenTile, null, new MovementStyle()
+                                {
+                                    ForcedMovement = true,
+                                    IgnoresUnevenTerrain = true,
+                                    MaximumSquares = 99,
+                                    Shifting = true,
+                                    ShortestPath = true,
+                                });
+                            });
+
+                        ReactionOptions reactOpt = ReactionOption.WrapFullcastWithChosenTargets(
+                                getBehindMe,
+                                ChosenTargets.CreateSingleTarget(action.ChosenTargets.ChosenCreature!),
+                                "Safely move an ally up to 10 feet to a space within your reach.")
+                            .WithDoesNotCountAsYourTriggerResponse();
+
+                        return reactOpt;
                     };
                 });
         
