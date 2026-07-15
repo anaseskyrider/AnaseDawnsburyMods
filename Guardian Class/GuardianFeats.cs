@@ -443,11 +443,13 @@ public static class GuardianFeats
                 ModData.FeatNames.PhalanxFormation,
                 2,
                 "You know how to clear a line of fire for your allies.",
-                "Allies within 10 feet of you ignore lesser cover.",
-                [ModData.Traits.Guardian, Trait.Rebalanced])
+                "You don't provide lesser cover to enemies against your allies' attacks.",
+                [ModData.Traits.Guardian])
             .WithPermanentQEffectAndSameRulesText(qfFeat =>
             {
-                qfFeat.AddGrantingOfTechnical(
+                qfFeat.Owner.DoesNotProvideSoftCoverToEnemies = true;
+                
+                /*qfFeat.AddGrantingOfTechnical(
                     cr =>
                         cr.FriendOfAndNotSelf(qfFeat.Owner)
                         && cr.DistanceTo(qfFeat.Owner) <= 2,
@@ -488,7 +490,7 @@ public static class GuardianFeats
 
                             return new Bonus(1, BonusType.Untyped, "Phalanx formation");
                         };
-                    });
+                    });*/
             });
         
         // Raise Haft
