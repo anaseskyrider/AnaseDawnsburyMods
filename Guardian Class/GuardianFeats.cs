@@ -1899,19 +1899,43 @@ public static class GuardianFeats
                 qfFeat.AddToOffenseBlock = qfThis =>
                     qfThis.Name!.WithTag("b")
                     + " [flourish] Make a shield Strike that stupefies the target.";
+                // The actual action
                 qfFeat.ProvideStrikeModifier = item =>
+                    item.HasTrait(Trait.Shield)
+                        ? CreateShieldWallop(item, false)
+                        : null;
+                qfFeat.Owner.AddQEffect(new QEffect()
                 {
-                    if (!item.HasTrait(Trait.Shield))
-                        return null;
+                    Name = "[SHIELD WALLOP THROWN VARIANT GRANTER]",
+                    ProvideStrikeModifier = item =>
+                        item.WeaponProperties!.ForcedMelee && item.WeaponProperties!.Throwable
+                            ? CreateShieldWallop(item, true)
+                            : null
+                });
 
+                return;
+
+                CombatAction CreateShieldWallop(Item item, bool isThrown)
+                {
                     int baseValue = item.HasTrait(MoreShields.ModData.Traits.CoverShield)
                         ? 2
                         : 1;
                     
                     StrikeModifiers newMods = new StrikeModifiers() { };
-                    CombatAction wallop = qfFeat.Owner
-                        .CreateStrike(item, -1, newMods)
-                        .WithName("Shield Wallop")
+                    CombatAction wallop = StrikeRules
+                        .CreateStrike(
+                            qfFeat.Owner,
+                            item,
+                            isThrown || item.HasTrait(Trait.Ranged)
+                                ? RangeKind.Ranged
+                                : RangeKind.Melee,
+                            -1,
+                            isThrown,
+                            newMods)
+                        .WithName("Shield Wallop" + (isThrown ? " (Thrown)" : null))
+                        .WithIllustration(new SideBySideIllustration(
+                            item.Illustration,
+                            IllustrationName.BrainDrain))
                         .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
                             newMods,
                             additionalSuccessText: $"The target is stupefied {baseValue}.",
@@ -1927,13 +1951,10 @@ public static class GuardianFeats
                                     QEffect.Stupefied(action.CheckResult == CheckResult.CriticalSuccess ? baseValue+1 : baseValue)
                                         .WithExpirationAtStartOfSourcesTurn(caster, 1));
                         });
-                    wallop.Traits = new Traits([ModData.Traits.ModName, ..wallop.Traits.ToList()], wallop);
-                    wallop.Illustration = new SideBySideIllustration(
-                        item.Illustration,
-                        IllustrationName.BrainDrain);
+                    wallop.Traits = new Traits([ModData.ModTrait, ..wallop.Traits], wallop);
                     
                     return wallop;
-                };
+                }
             });
         
         #endregion
