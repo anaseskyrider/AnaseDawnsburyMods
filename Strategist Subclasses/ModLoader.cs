@@ -11,14 +11,13 @@ public class ModLoader
     [DawnsburyDaysModMainMethod]
     public static void LoadMod()
     {
-        ModManager.RegisterInlineTooltip("StrategistSubclasses.RecallWeakness", "Requires the {i}DawnniExpanded{/i} mod installed.");
+        ModData.LoadData();
         
-        AllFeats.GetFeatByFeatName(FeatName.Investigator)
-            .Subfeats = [
-                AlchemicalSciences.LoadSubclass(),
-                Empiricism.LoadSubclass(),
-                ForensicMedicine.LoadSubclass(),
-                Interrogation.LoadSubclass(),
-            ];
+        Feat strategist = AllFeats.GetFeatByFeatName(FeatName.Investigator);
+        strategist.Subfeats = [];
+        AlchemicalSciences.Load(strategist);
+        Empiricism.Load(strategist);
+        ForensicMedicine.Load(strategist);
+        Interrogation.Load(strategist);
     }
 }

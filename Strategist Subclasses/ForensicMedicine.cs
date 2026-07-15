@@ -1,6 +1,4 @@
 using Dawnsbury.Core.CharacterBuilder.Feats;
-using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
-using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
@@ -10,20 +8,25 @@ namespace Dawnsbury.Mods.StrategistSubclasses;
 
 public static class ForensicMedicine
 {
-    public static Feat LoadSubclass()
+    public static void Load(Feat strategist)
+    {
+        ModManager.AddFeat(CreateSubclass(strategist));
+    }
+    public static Feat CreateSubclass(Feat strategist)
     {
         Feat forensicMedicine = new Feat(
             ModData.FeatNames.ForensicMedicine,
             "You've learned that in most cases, especially murders, criminals tend to leave more evidence of the crime on the body than they'd like to believe. Information from bruising, bone fractures, blood spatters, and even the life cycle of carrion insects can provide valuable clues that help reconstruct the scene.",
-            "You're trained in Medicine and gain the Battle Medicine skill feat. When you use Battle Medicine, on a success, the target recovers additional Hit Points equal to your level, and the target is temporarily immune for the rest of combat instead of 1 day.",
-            [ModData.Traits.StrategistSubclasses],
+            $"You're trained in Medicine and gain the {FeatName.BattleMedicine.ToLink("Battle Medicine")} skill feat. When you use Battle Medicine, on a success, the target recovers additional Hit Points equal to your level, and the target is temporarily immune for the rest of combat instead of 1 day.",
+            [],
             null)
             .WithOnSheet(values =>
             {
                 values.GrantFeat(FeatName.Medicine);
                 values.GrantFeat(FeatName.BattleMedicine);
             })
-            .WithPermanentQEffect("Battle Medicine heals for more, and immunities to it only lasts for the encounter.",
+            .WithPermanentQEffect(
+                "Battle Medicine heals for more, and immunities to it only lasts for the encounter.",
                 qfFeat =>
                 {
                     qfFeat.YouBeginAction = async (qfThis, action) =>
@@ -69,7 +72,7 @@ public static class ForensicMedicine
                         action.ChosenTargets.ChosenCreature?.AddQEffect(temporaryImmunity);
                     };
                 });
-        ModManager.AddFeat(forensicMedicine);
+        strategist.Subfeats!.Add(forensicMedicine);
         return forensicMedicine;
     }
 }

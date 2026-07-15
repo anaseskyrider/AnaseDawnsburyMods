@@ -15,26 +15,19 @@ namespace Dawnsbury.Mods.StrategistSubclasses;
 
 public static class Empiricism
 {
-    public static Feat LoadSubclass()
+    public static void Load(Feat strategist)
     {
-        ModManager.RegisterActionOnEachActionPossibility(thisAction =>
-        {
-            if (!thisAction.Owner.HasEffect(ModData.QEffectIds.ExpeditiousInspection))
-                return;
-            
-            if (thisAction.ActionId == ActionId.Seek)
-                thisAction.ActionCost = 0;
-            
-            if (thisAction.Name.Contains("Recall Weakness"))
-                thisAction.ActionCost = 0;
-        });
-        
+        ModManager.AddFeat(CreateSubclass(strategist));
+    }
+    
+    public static Feat CreateSubclass(Feat strategist)
+    {
         Feat empiricism = new Feat(
                 ModData.FeatNames.Empiricism,
                 "Everything comes down to data. Calculating statistics, running numbers, and using inductive reasoning allows you to determine the most likely outcome of any scenario, and anything out of place draws your keen attention.",
-                "You are trained in one Intelligence-based skill of your choice. You gain the Improved Perception strategist feat, and you gain the Expeditious Inspection free action.",
-                [ModData.Traits.StrategistSubclasses],
-                [])
+                $"You are trained in one Intelligence-based skill of your choice. You gain the {FeatName.ImprovedPerception.ToLink("Improved Perception")} strategist feat, and you gain the Expeditious Inspection free action.",
+                [],
+                null)
             .WithOnSheet(values =>
             {
                 values.GrantFeat(FeatName.ImprovedPerception);
@@ -54,17 +47,25 @@ public static class Empiricism
                         qfThis.Owner,
                         ModData.Illustrations.ExpeditiousInspection,
                         "Expeditious Inspection",
-                        [Trait.Investigator],
-                        $"{{i}}You observe and assess your surroundings with great speed.{{/i}}\n\n{{b}}Frequency{{/b}} once per combat\n\nYour next Seek or {ModData.Tooltips.RecallWeakness("Recall Weakness")} is a {{icon:FreeAction}} free action.",
+                        [ModData.ModTrait, Trait.Investigator],
+                        $$"""
+                          {i}You observe and assess your surroundings with great speed.{/i}
+
+                          {b}Frequency{/b} once per combat
+
+                          Your next Seek or {{ModData.Tooltips.RecallWeakness("Recall Weakness")}} is a {icon:FreeAction} free action.
+                          """,
                         Target.Self())
                         .WithActionCost(0)
-                        .WithEffectOnSelf(async (thisAction, self) =>
+                        .WithShortDescription("(Once per combat) Seek or Recall Weakness as a free action.")
+                        .WithEffectOnSelf(async (_, self) =>
                         {
                             if (self.HasEffect(ModData.QEffectIds.ExpeditiousInspection))
                             {
                                 self.RemoveAllQEffects(qf => qf.Id == ModData.QEffectIds.ExpeditiousInspection);
                                 return;
-                            } // else
+                            }
+                            
                             self.AddQEffect(new QEffect(
                                 "Expeditious Inspection",
                                 "Your next Seek or Recall Weakness is a free action.",
@@ -73,10 +74,16 @@ public static class Empiricism
                                 ModData.Illustrations.ExpeditiousInspection)
                             {
                                 Id = ModData.QEffectIds.ExpeditiousInspection,
-                                AfterYouTakeAction = async (qfThis2, thisAction2) =>
+                                ModifyActionPossibility = (_, action) =>
                                 {
-                                    if (thisAction2.ActionId == ActionId.Seek
-                                        || thisAction2.Name.Contains("Recall Weakness"))
+                                    if (action.ActionId == ActionId.Seek
+                                        || action.Name.Contains("Recall Weakness"))
+                                        action.ActionCost = 0;
+                                },
+                                AfterYouTakeAction = async (qfThis2, action) =>
+                                {
+                                    if (action.ActionId == ActionId.Seek
+                                        || action.Name.Contains("Recall Weakness"))
                                     {
                                         qfThis2.ExpiresAt = ExpirationCondition.Immediately;
                                         qfThis.ExpiresAt = ExpirationCondition.Immediately;
@@ -93,13 +100,19 @@ public static class Empiricism
                     cr,
                     ModData.Illustrations.ExpeditiousInspection,
                     "Expeditious Inspection",
-                    [Trait.Investigator],
-                    $"{{i}}You observe and assess your surroundings with great speed.{{/i}}\n\n{{b}}Frequency{{/b}} once per combat\n\nYour next Seek or {ModData.Tooltips.RecallWeakness("Recall Weakness")} is a {{icon:FreeAction}} free action.",
+                    [ModData.ModTrait, Trait.Investigator],
+                    $$"""
+                      {i}You observe and assess your surroundings with great speed.{/i}
+
+                      {b}Frequency{/b} once per combat
+
+                      Your next Seek or {{ModData.Tooltips.RecallWeakness("Recall Weakness")}} is a {icon:FreeAction} free action.
+                      """,
                     Target.Self())
                     .WithActionCost(0);
                 return inspect;
             });
-        ModManager.AddFeat(empiricism);
+        strategist.Subfeats!.Add(empiricism);
         return empiricism;
     }
 }
