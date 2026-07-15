@@ -631,6 +631,9 @@ public static class GuardianFeats
                             -1,
                             isThrown)
                         .WithName("Taunting Strike" + (isThrown ? " (Thrown)" : null))
+                        .WithIllustration(new SideBySideIllustration(
+                            item.Illustration,
+                            ModData.Illustrations.Taunt_1))
                         .WithExtraTrait(Trait.Flourish)
                         .WithExtraTrait(ModData.Traits.Guardian)
                         //.WithExtraTrait(Trait.Basic)
@@ -640,10 +643,7 @@ public static class GuardianFeats
                                 .WithActionCost(0);
                             await caster.Battle.GameLoop.FullCast(taunt, ChosenTargets.CreateSingleTarget(target));
                         });
-                    tauntingStrike.Illustration = new SideBySideIllustration(
-                        item.Illustration,
-                        ModData.Illustrations.Taunt_1);
-                    tauntingStrike.Traits = new Traits([ModData.Traits.ModName, ..tauntingStrike.Traits.ToList()], tauntingStrike);
+                    tauntingStrike.Traits = new Traits([ModData.ModTrait, ..tauntingStrike.Traits.ToList()], tauntingStrike);
                     tauntingStrike.Description = StrikeRules.CreateBasicStrikeDescription4(
                         tauntingStrike.StrikeModifiers,
                         additionalAftertext: "Make a visual Taunt against the Strike's target.");
