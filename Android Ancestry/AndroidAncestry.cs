@@ -5,11 +5,15 @@ using Dawnsbury.Core.Animations.AuraAnimations;
 using Dawnsbury.Core.CharacterBuilder.AbilityScores;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
+using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Possibilities;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
@@ -33,7 +37,7 @@ public static class AndroidAncestry
 
                 Androids tend to be logical introverts, rational and contemplative. Insatiably curious, with an urge to understand themselves and the world around them, androids place great value on intellectual pursuits. They have difficulty interpreting and expressing emotions, both in themselves and in others, which makes them seem distant and uncaring. While androids can forge emotional bonds, they find it more difficult to connect with non-androids.
                 """,
-                [ModData.Traits.AndroidAncestry, Trait.Humanoid],
+                [ModData.Traits.Android, Trait.Humanoid],
                 8, 5,
                 [new EnforcedAbilityBoost(Ability.Dexterity), new EnforcedAbilityBoost(Ability.Intelligence), new FreeAbilityBoost()],
                 androidHeritages)
@@ -65,21 +69,21 @@ public static class AndroidAncestry
                 "Your synthetic body resists ailments better than those of purely biological organisms.",
                 "You gain a +1 circumstance bonus to saving throws against diseases and poisons." /* and radiation */,
                 [], null)
-            .WithPermanentQEffect(
-                "You have a +1 circumstance bonus to saving throws against diseases and poisons." /*and radiation*/,
-                qfFeat =>
+            .WithPermanentQEffect(null, qfFeat =>
+            {
+                qfFeat.AddToDefenseBlock = qfThis =>
+                    "{b}Constructed.{/b} You have a +1 circumstance bonus to saving throws against diseases and poisons." /*and radiation*/;
+                qfFeat.BonusToDefenses = (qfThis, action, def) =>
                 {
-                    qfFeat.BonusToDefenses = (qfThis, action, def) =>
-                    {
-                        if (def is not (Defense.Reflex or Defense.Fortitude or Defense.Will))
-                            return null;
+                    if (def is not (Defense.Reflex or Defense.Fortitude or Defense.Will))
+                        return null;
 
-                        if (action == null || !action.HasTrait(Trait.Disease) && !action.HasTrait(Trait.Poison))
-                            return null;
+                    if (action == null || !action.HasTrait(Trait.Disease) && !action.HasTrait(Trait.Poison))
+                        return null;
 
-                        return new Bonus(1, BonusType.Circumstance, "constructed");
-                    };
-                });
+                    return new Bonus(1, BonusType.Circumstance, "constructed");
+                };
+            });
 
         // Emotionally Unaware
         yield return new Feat(
@@ -125,13 +129,16 @@ public static class AndroidAncestry
                 $$"""
                 You become trained in Crafting (or another skill if you're already trained in Crafting).
 
-                {{ModData.Illustrations.DdSun.IllustrationAsIconString}} {b}Modding{/b} If the {i}DawnniExpanded{/i} mod is installed, you also gain its In-depth Weakness general feat, even if you don't meet the prerequisites.
+                {{ModData.Illustrations.DdSun.IllustrationAsIconString}} {b}Modding{/b} If the {i}Lores and Weaknesses{/i} mod is installed, you also gain its Dubious Knowledge skill feat.
                 """)
             .WithOnSheet(values =>
             {
                 values.TrainInThisOrSubstitute(Skill.Crafting);
-                if (AllFeats.All.FirstOrDefault(ft => ft.CustomName == "In-depth Weakness") is {} idWeakness)
-                    //if (ModManager.TryParse("In-depth Weakness", out FeatName idWeakness))
+                if (AllFeats.All.FirstOrDefault(ft => ft.ToTechnicalName().Contains("DubiousKnowledge")) is {} dubKnow)
+                {
+                    values.AddFeat(dubKnow, null);
+                }
+                else if (AllFeats.All.FirstOrDefault(ft => ft.CustomName == "In-depth Weakness") is {} idWeakness)
                 {
                     values.AddFeat(idWeakness, null);
                 }
@@ -141,7 +148,7 @@ public static class AndroidAncestry
         yield return new HeritageSelectionFeat(
                 ModData.FeatNames.DeceiverHeritage,
                 "Your body was augmented with processes and an appearance intended to manipulate humans more easily.",
-                "You become trained in Deception (or another skill if you're already trained in Deception), and you gain the {link:LengthyDiversion}Lengthy Diversion{/} skill feat.")
+                $"You become trained in Deception (or another skill if you're already trained in Deception), and you gain the {FeatName.LengthyDiversion.ToLink("Lengthy Diversion")} skill feat.")
             .WithOnSheet(values =>
             {
                 values.TrainInThisOrSubstitute(Skill.Deception);
@@ -192,59 +199,5 @@ public static class AndroidAncestry
                 values.SetProficiency(Trait.Simple, Proficiency.Trained);
                 values.SetProficiency(Trait.Martial, Proficiency.Trained);
             });
-    }
-
-    public static bool CanUseNanites(Creature cr)
-    {
-        return cr.QEffects.All(qf => (qf.Tag is QEffectId id ? id : QEffectId.Unspecified) != ModData.QEffectIds.NanitesUnusable);
-    }
-
-    /// <summary>
-    /// Ask to use Nanite Surge reaction.
-    /// </summary>
-    /// <param name="reactor">The creature taking the reaction.</param>
-    /// <param name="benefit">The QEffect to be applied if the reaction is successfully taken.</param>
-    /// <param name="aboutToRollWhat">The string which follows immediately after "You're about to make a ". Variables should be "SKILL_NAME check", "SAVE_NAME saving throw", or "Attack roll".</param>
-    /// <param name="gainWhatBenefit">The string which follows immediately after "Add a ". Variables should be something like "+2 status bonus".</param>
-    /// <returns></returns>
-    public static async Task<bool> AskToUseNanitesReaction(Creature reactor, QEffect benefit, string aboutToRollWhat, string gainWhatBenefit)
-    {
-        string question = $"{{b}}Nanite Surge {{icon:Reaction}}{{b}}\nYou're about to roll {aboutToRollWhat.WithIndefiniteArticle()}. Add a {gainWhatBenefit} to the roll?\n{{Red}}{{b}}Frequency{{/b}} once per combat.{{Red}}";
-
-        if (!CanUseNanites(reactor))
-            return false;
-        
-        if (!await reactor.Battle.AskToUseReaction(reactor, question, IllustrationName.ArcaneCascade)) 
-            return false;
-        
-        // Use hidden action with traits to provoke reactions.
-        CombatAction nanitePhantom = CombatAction.CreateSimple(reactor, "[Phantom nanite surge CombatAction]", ModData.Traits.AndroidAncestry, Trait.Concentrate, ModData.Traits.Nanites)
-            .WithActionCost(0)
-            .WithExtraTrait(Trait.DoNotShowInCombatLog)
-            .WithExtraTrait(Trait.DoNotShowOverheadOfActionName)
-            .WithExtraTrait(Trait.Basic)
-            .WithSoundEffect(SfxName.Guidance)
-            .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
-            {
-                // Automatically has Target.Self() from helper function.
-                caster.AddQEffect(benefit);
-                caster.AddQEffect(new QEffect() 
-                    { Id = ModData.QEffectIds.NaniteSurgeImmunity });
-                caster.AddQEffect(new QEffect(ExpirationCondition.ExpiresAtStartOfYourTurn)
-                    { 
-                        SpawnsAura = qfThis =>
-                        {
-                            if (PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.RemoveNaniteSurgeAura))
-                                return null;
-                            
-                            return new MagicCircleAuraAnimation(IllustrationName.AngelicHaloCircle, Color.Gold, 2f)
-                            {
-                                MaximumOpacity = 0.25f
-                            };
-                        }
-                    });
-            });
-        
-        return await reactor.Battle.GameLoop.FullCast(nanitePhantom);
     }
 }
