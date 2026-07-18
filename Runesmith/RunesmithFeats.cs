@@ -152,7 +152,7 @@ public static class RunesmithFeats
                             qfFeat.UsedThisTurn ? Usability.NotUsable("Already used this round") : Usability.Usable)
                         .WithAdditionalConditionOnTargetCreature( (a, _) => 
                             ModData.CommonRequirements.IsRunesmithHandFree(a));
-                    engravingStrike.Traits = new Traits([ModData.ModTrait, ..engravingStrike.Traits], engravingStrike);
+                    engravingStrike.Traits = new Traits([ModData.ModTrait, ..engravingStrike.Traits.ToList()], engravingStrike);
 
                     // Signal to the user that this action can provoke?
                     // Trait.ProvokesAfterActionCompletion
@@ -247,7 +247,7 @@ public static class RunesmithFeats
 
                         target.RemoveAllQEffects(qf => qf.Name == "Remote Detonation Critical Success");
                     });
-                    remoteDet.Traits = new Traits([ModData.ModTrait, ..remoteDet.Traits], remoteDet);
+                    remoteDet.Traits = new Traits([ModData.ModTrait, ..remoteDet.Traits.ToList()], remoteDet);
 
                     remoteDet = CommonRuneRules.WithImmediatelyRemovesImmunity(remoteDet);
 
