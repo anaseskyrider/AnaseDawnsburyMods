@@ -196,7 +196,7 @@ public class HuntingTool
     {
         this.Name = name;
         this.FeatName = ModManager.RegisterFeatName(
-            ModData.IdPrepend + "HuntingTool." + this.Name.Replace(" ", ""),
+            ModData.ID_PREPEND + "HuntingTool." + this.Name.Replace(" ", ""),
             this.Name);
         this.Id = id;
         this.Kind = kind;

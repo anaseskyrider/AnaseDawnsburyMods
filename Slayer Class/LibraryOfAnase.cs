@@ -7,6 +7,8 @@ using Dawnsbury.Core;
 using Dawnsbury.Core.Animations;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.Feats.Features;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Spellbook;
 using Dawnsbury.Core.CharacterBuilder.Library;
@@ -35,6 +37,13 @@ namespace Dawnsbury.Mods.SlayerClass;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
+/// <item>v2.4: Add Feat.WithLevelPrereq(int), TrueFeat.WithLevelPrereq(int), and TrueFeat.With()..</item>
+/// <item>v2.3: Add WithExtraTrait(int, Trait).</item>
+/// <item>v2.2: Remove Trait.Mod automations in deference to new base game architecture for mod identifiers. Remove WithDisplayActionInOffenseSection. Add CombatAction.WithIllustration.</item>
+/// <item>v2.1: Make GetCharacterSheetFromPartyMember into a static extension. Update unused SafelyRegisterEnumMember to newer versions of SafelyRegister from my individual projects, now called TryRegisterEnumMember.</item>
+/// <item>v2.0: Added ClassFeature.FromFeat().</item>
+/// <item>v1.9: SpellId.ToLink() now automatically lowercases and italicizes the caption. Added alternative Creature.HasEffect() overloads. Added QEffect.WithDescription().</item>
+/// <item>v1.8: Added int.WithColor() and int.WithTag(). Made all WithColor and WithTag functions optionally apply colors when null. Fix StrikeCreature overload to not return false if not providing a validity function.</item>
 /// <item>v1.7: Refactored string.ToColor, added string.WithTag() and string.WithLink(). Refactored some ToLink() functions and added more to various enums. Added Feat.With(). Added Defense.ToColor(). Add functions to filter valid Strike possibilities to CommonCombatActions.StrikeCreature() and .GetStrikePossibilities(). GetStrikePossibilities also now adds a thrown Strike for melee thrown weapons.</item>
 /// <item>v1.6: Added Trait extensions: IsTraditionTrait(), TraditionTraitToColor(). Added Feat.ToLink(caption). Added Item.With(). Converted various overloads into instance and static extension blocks. Added more flexible CommonCombatActions.StrikeCreature overload. Added CombatAction.CreatePass and a parameter to OfferOptions2 that uses it. Added FilterAnyPossibility2 functions to allow seeing SubmenuPossibilities.</item>
 /// <item>v1.5: Replaced error-prone params keywords with regular arrays. Added RefundReaction extensions. Added more robust PluralizeIf extension. Added ModManager extensions.</item>
@@ -44,10 +53,27 @@ namespace Dawnsbury.Mods.SlayerClass;
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
-/// <value>v1.7</value>
+/// <value>v2.4</value>
 public static class LibraryOfAnase
 {
-    #region Extensions
+    extension(Creature cr)
+    {
+        /// <summary>
+        /// Returns whether you have a QEffect of the given Id that meets the given condition. This is not as efficient as <see cref="Creature.HasEffect(QEffectId)"/>.
+        /// </summary>
+        public bool HasEffect(QEffectId id, Func<QEffect,bool> condition)
+        {
+            return cr.QEffects.Any(qf => qf.Id == id && condition(qf));
+        }
+        
+        /// <summary>
+        /// Returns whether you have a QEffect that meets the given condition. This is not as efficient as <see cref="Creature.HasEffect(QEffectId)"/>.
+        /// </summary>
+        public bool HasEffect(Func<QEffect,bool> condition)
+        {
+            return cr.QEffects.Any(condition);
+        }
+    }
 
     extension(CombatAction caThis)
     {
@@ -76,6 +102,26 @@ public static class LibraryOfAnase
         public CombatAction With(Action<CombatAction> changes)
         {
             changes.Invoke(caThis);
+            return caThis;
+        }
+
+        /// <summary>
+        /// Adds a trait at the specified position in the list.
+        /// </summary>
+        public CombatAction WithExtraTrait(int position, Trait trait)
+        {
+            List<Trait> traits = caThis.Traits.ToList();
+            traits.Insert(position, trait);
+            caThis.Traits = new Traits(traits, caThis);
+            return caThis;
+        }
+
+        /// <summary>
+        /// Sets the Illustration of the CombatAction.
+        /// </summary>
+        public CombatAction WithIllustration(Illustration icon)
+        {
+            caThis.Illustration = icon;
             return caThis;
         }
         
@@ -139,25 +185,10 @@ public static class LibraryOfAnase
             return qfThis;
         }
 
-        /// <summary>
-        /// Causes a QEffect to put an action in the Offense section of the creature stat block using the given action name, short description, and cost; but without listing any attack statistics. Useful for "metastrike" actions such as Power Attack, displaying them only once.
-        /// </summary>
-        public void WithDisplayActionInOffenseSection(string actionName, string shortDescription, int cost = 1)
+        public QEffect WithDescription(string newDescription)
         {
-            qfThis.ProvideActionIntoPossibilitySection += (qfThis1, section) =>
-            {
-                // Inserts into invisible section
-                if (section.PossibilitySectionId != PossibilitySectionId.InvisibleActions)
-                    return null;
-                CombatAction statBlockOnly = CombatAction.CreateSimple(
-                        qfThis1.Owner,
-                        actionName,
-                        [])
-                    .WithShortDescription(shortDescription)
-                    .WithActionCost(cost);
-                statBlockOnly.Illustration = IllustrationName.None;
-                return new ActionPossibility(statBlockOnly);
-            };
+            qfThis.Description = newDescription;
+            return qfThis;
         }
     }
 
@@ -289,6 +320,19 @@ public static class LibraryOfAnase
             changes.Invoke(feat);
             return feat;
         }
+
+        /// <summary>
+        /// Updates a feat to use a new level.
+        /// </summary>
+        /// <param name="level"></param>
+        /// <returns></returns>
+        public Feat WithLevelPrereq(int level)
+        {
+            feat.LevelIfAny = level;
+            feat.Prerequisites.RemoveAll(req => req is LevelPrerequisite);
+            feat.Prerequisites.Insert(0, new LevelPrerequisite(level));
+            return feat;
+        }
         
         /// <summary>
         /// Outputs a link to this feat.
@@ -297,6 +341,31 @@ public static class LibraryOfAnase
         public string ToLink(string caption)
         {
             return feat.FeatName.ToLink(caption);
+        }
+    }
+
+    extension(TrueFeat feat)
+    {
+        /// <summary>
+        /// Runs any modifications to the TrueFeat in one code block, similar to Zone.With().
+        /// </summary>
+        public TrueFeat With(Action<Feat> changes)
+        {
+            changes.Invoke(feat);
+            return feat;
+        }
+
+        /// <summary>
+        /// Updates a feat to use a new level.
+        /// </summary>
+        /// <param name="level"></param>
+        /// <returns></returns>
+        public TrueFeat WithLevelPrereq(int level)
+        {
+            feat.LevelIfAny = level;
+            feat.Prerequisites.RemoveAll(req => req is LevelPrerequisite);
+            feat.Prerequisites.Insert(0, new LevelPrerequisite(level));
+            return feat;
         }
     }
 
@@ -309,6 +378,24 @@ public static class LibraryOfAnase
         public string ToLink(string caption)
         {
             return caption.WithLink(featName.ToStringOrTechnical());
+        }
+    }
+
+    extension(ClassFeature)
+    {
+        /// <summary>
+        /// This creates a class feature whose caption links to a Feat link block, with no details. It grants the feat and subFeat (if any).
+        /// </summary>
+        public static ClassFeature FromFeat(FeatName featName, FeatName? subFeat = null, bool titleCase = true)
+        {
+            Feat feat = AllFeats.GetFeatByFeatName(featName);
+            string name = titleCase
+                ? feat.Name
+                : feat.Name.ToLower();
+            return new ClassFeature(featName.ToLink(name))
+            {
+                OnSheet = values => values.GrantFeat(featName, subFeat)
+            };
         }
     }
 
@@ -335,66 +422,53 @@ public static class LibraryOfAnase
     extension(ModManager)
     {
         /// <summary>
+        /// Attempts to register the source enum to the game.
+        /// </summary>
+        /// <param name="technicalName">The technicalName string of the enum being registered. If registering a trait, this is the displayName, according to the parameter specifications of <see cref="ModManager.RegisterTrait"/>.</param>
+        /// <param name="extraParams">An array of optional parameters. For a <see cref="FeatName"/>, the first parameter is a human-readable display name. For a <see cref="Trait"/>, the first parameter is a <see cref="TraitProperties"/>.</param>
+        /// <param name="enumValue">The enum member you registered, which might already exist for that name and type.</param>
+        /// <typeparam name="T">The enum type such as <see cref="SpellId"/>, <see cref="FeatName"/>, or <see cref="QEffectId"/>.</typeparam>
+        /// <returns>Whether the enum was already registered.</returns>
+        public static bool TryRegisterEnumMember<T>(string technicalName, object[]? extraParams, out T enumValue) where T : struct, Enum
+        {
+            bool alreadyRegistered = ModManager.TryParse(technicalName, out T oldRegistration);
+            if (alreadyRegistered)
+                enumValue = oldRegistration;
+            else
+            {
+                Type type = typeof(T);
+                if (type == typeof(FeatName))
+                    enumValue = (T)(Enum)ModManager.RegisterFeatName(technicalName, (string?)extraParams?[0]);
+                else if (type == typeof(Trait))
+                    enumValue = (T)(Enum)ModManager.RegisterTrait(technicalName, (TraitProperties?)extraParams?[0]);
+                else
+                    enumValue = ModManager.RegisterEnumMember<T>(technicalName);
+            }
+
+            return alreadyRegistered;
+        }
+
+        /// <summary>
         /// Registers the source enum to the game, or returns the original if it's already registered.
         /// </summary>
-        /// <param name="technicalName">The technicalName string of the enum being registered.</param>
-        /// <param name="displayName">The human-readable name of the enum, if the type supports a humanized name.</param>
-        /// <typeparam name="T">The enum being registered to.</typeparam>
+        /// <param name="technicalName">The technicalName string of the enum being registered. If registering a trait, this is the displayName, according to the parameter specifications of <see cref="ModManager.RegisterTrait"/>.</param>
+        /// <param name="extraParams">An array of optional parameters. For a <see cref="FeatName"/>, the first parameter is a human-readable display name. For a <see cref="Trait"/>, the first parameter is a <see cref="TraitProperties"/>.</param>
+        /// <typeparam name="T">The enum type such as <see cref="SpellId"/>, <see cref="FeatName"/>, or <see cref="QEffectId"/>.</typeparam>
         /// <returns>The newly registered enum.</returns>
-        public static T SafelyRegisterEnumMember<T>(string technicalName, string? displayName = null) where T : struct, Enum
+        public static T SafelyRegisterEnumMember<T>(string technicalName, object[]? extraParams = null) where T : struct, Enum
         {
-            if (ModManager.TryParse(technicalName, out T alreadyRegistered))
-                return alreadyRegistered;
+            bool alreadyRegistered = ModManager.TryParse(technicalName, out T oldRegistration);
+            
+            if (alreadyRegistered)
+                return oldRegistration;
+            
             Type type = typeof(T);
             if (type == typeof(FeatName))
-                return (T)(Enum)ModManager.RegisterFeatName(technicalName, displayName);
-            
-            return ModManager.RegisterEnumMember<T>(technicalName);
-        }
-        
-        /// <summary>
-        /// Creates a custom "Mod" trait which indicates which mod the traited content comes from. This trait is visible with a basic description that uses your humanized mod name.
-        /// </summary>
-        /// <param name="modTechnicalName">The technicalName of the mod such as "MoreDedications". The final technical name of this trait will be "Mod:MoreDedications".</param>
-        /// <param name="modName">The humanized name of the mod such as "More Dedications".</param>
-        public static Trait RegisterModNameTrait(string modTechnicalName, string modName)
-        {
-            return ModManager.RegisterTrait(
-                "Mod:" + modTechnicalName,
-                new TraitProperties(
-                    "Mod",
-                    true,
-                    "This content comes from or is modified by {b}" + modName + "{/b}.",
-                    false,
-                    Color.LightSteelBlue,
-                    false,
-                    false));
-        }
-        
-/// <summary>
-/// As <see cref="ModManager.AddFeat"/>, but it removes the Mod trait and adds your mod's specific trait.
-/// </summary>
-/// <param name="newFeat">The feat to register.</param>
-/// <param name="modName">The mod-source trait to replace the "Mod" trait with.</param>
-public static void AddFeat(Feat newFeat, Trait modName)
-{
-    ModManager.AddFeat(newFeat);
-    newFeat.Traits.Remove(Trait.Mod);
-    newFeat.Traits.Insert(0, modName);
-}
-        
-        /// <summary>
-        /// As <see cref="ModManager.AddFeat"/>, but it registers the given strings as a mod-source trait and replaces the "Mod" trait with the new trait.
-        /// </summary>
-        /// <seealso cref="AddFeat(Feat, Trait)"/>
-        /// <seealso cref="RegisterModNameTrait(string, string)"/>
-        /// <param name="newFeat"></param>
-        /// <param name="modTechnicalName"></param>
-        /// <param name="modName"></param>
-        public static void AddFeat(Feat newFeat, string modTechnicalName, string modName)
-        {
-            Trait modTrait = ModManager.RegisterModNameTrait(modTechnicalName, modName);
-            ModManager.AddFeat(newFeat, modTrait);
+                return (T)(Enum)ModManager.RegisterFeatName(technicalName, (string?)extraParams?[0]);
+            if (type == typeof(Trait))
+                return (T)(Enum)ModManager.RegisterTrait(technicalName, (TraitProperties?)extraParams?[0]);
+            else
+                return ModManager.RegisterEnumMember<T>(technicalName);
         }
     }
 
@@ -476,7 +550,7 @@ public static void AddFeat(Feat newFeat, Trait modName)
                 strike.WithActionCost(0);
                 if (strike.Item!.HasTrait(Trait.Ranged))
                     strike.WithSoundEffect(strike.SoundEffectName ?? SfxName.Bow);
-                if (isValidStrike?.Invoke(strike) is not true)
+                if (isValidStrike?.Invoke(strike) is false)
                     return;
                 adjustStrike?.Invoke(strike);
                 if (isValidTarget != null)
@@ -515,7 +589,7 @@ public static void AddFeat(Feat newFeat, Trait modName)
         public string ToLink(string caption, Trait? classOfOrigin, int? spellLevel)
         {
             string?[] parameters = [classOfOrigin?.ToStringOrTechnical(), spellLevel?.ToString()];
-            return caption.WithLink(id.ToStringOrTechnical(), parameters.WhereNotNull().ToArray());
+            return caption.ToLower().WithLink(id.ToStringOrTechnical(), parameters.WhereNotNull().ToArray()).WithTag("i");
         }
     }
 
@@ -724,19 +798,19 @@ public static void AddFeat(Feat newFeat, Trait modName)
         /// <summary>
         /// Surrounds a given string with color tags.
         /// </summary>
-        /// <param name="color">The color, formatted as "Green", to be added to the string.</param>
-        public string WithColor(string color)
+        /// <param name="color">The color, formatted as "Green", to be added to the string. If null, returns original string.</param>
+        public string WithColor(string? color)
         {
-            return text.WithTag(color.Capitalize());
+            return color is null ? text : text.WithTag(color.Capitalize());
         }
 
         /// <summary>
         /// Surrounds a string with any arbitrary tag. 
         /// </summary>
-        /// <param name="tag">The tag to be added to the string, such as "i".</param>
-        public string WithTag(string tag)
+        /// <param name="tag">The tag to be added to the string, such as "i". If null, returns original string.</param>
+        public string WithTag(string? tag)
         {
-            return "{"+tag+"}" + text + "{/"+tag+"}";
+            return tag is null ? text : "{" + tag + "}" + text + "{/" + tag + "}";
         }
 
         /// <summary>
@@ -767,31 +841,37 @@ public static void AddFeat(Feat newFeat, Trait modName)
         /// <summary>
         /// Adds color tags to the given integer.
         /// </summary>
-        /// <param name="color">The color, formatted as "Green", to be added to the string.</param>
+        /// <param name="color">The color, formatted as "Green", to be added to the string. If null, returns int as a string.</param>
         /// <returns></returns>
-        public string WithColor(string color)
+        public string WithColor(string? color)
         {
-            return number.ToString().WithColor(color);
+            return color is null ? number.ToString() : number.ToString().WithColor(color);
+        }
+
+        /// <summary>
+        /// Surrounds a string with any arbitrary tag. 
+        /// </summary>
+        /// <param name="tag">The tag to be added to the string, such as "i". If null, returns int as a string.</param>
+        public string WithTag(string? tag)
+        {
+            return tag is null ? number.ToString() : "{" + tag + "}" + number + "{/" + tag + "}";
         }
     }
 
-    #endregion
-
-    #region Statics
-
-    /// <summary>
-    /// If a character sheet is available at the execution time of this function, it will return a character sheet of a party member either during campaign play or in free encounter play.
-    /// </summary>
-    /// <param name="index">The 0th-indexed party member.</param>
-    public static CharacterSheet? GetCharacterSheetFromPartyMember(int index)
+    extension(CharacterSheet)
     {
-        CharacterSheet? hero = null;
-        if (CampaignState.Instance is { } campaign)
-            hero = campaign.Heroes[index].CharacterSheet;
-        else if (CharacterLibrary.Instance is { } library)
-            hero = library.SelectedRandomEncounterParty[index];
-        return hero;
+        /// <summary>
+        /// If a character sheet is available at the execution time of this function, it will return a character sheet of a party member either during campaign play or in free encounter play.
+        /// </summary>
+        /// <param name="index">The 0th-indexed party member.</param>
+        public static CharacterSheet? GetCharacterSheetFromPartyMember(int index)
+        {
+            CharacterSheet? hero = null;
+            if (CampaignState.Instance is { } campaign)
+                hero = campaign.Heroes[index].CharacterSheet;
+            else if (CharacterLibrary.Instance is { } library)
+                hero = library.SelectedRandomEncounterParty[index];
+            return hero;
+        }
     }
-
-    #endregion
 }

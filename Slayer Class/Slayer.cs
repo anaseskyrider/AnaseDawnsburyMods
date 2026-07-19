@@ -42,7 +42,7 @@ public static class Slayer
             true);
         
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
     }
     
     public static IEnumerable<Feat> CreateFeats()
@@ -59,15 +59,15 @@ public static class Slayer
         Feat onTheHunt = new Feat(
                 ModData.FeatNames.OnTheHunt,
                 "Whether you’re facing your quarry or not, your slayer's instincts let you seize on any advantage, chasing the thrill of battle to victory.",
-                """
+                $$"""
                 {b}Trigger{/b} You see your quarry be critically hit, or any creature within 60 feet be reduced to 0 Hit Points.
                 
-                You gain the quickened condition until the end of your next turn, and you can use the extra action only to Step, Stride, or use an action with the relentless trait.
+                You gain the quickened condition until the end of your next turn, and you can use the extra action only to Step, Stride, or use an action with the {{ModData.Tooltips.Relentless("relentless")}} trait.
                 """,
                 [],
                 null)
             .WithPermanentQEffect(
-                "When your quarry is crit or any creature within 60 feet is reduced to 0 HP, become quickened until the end of your next turn {i}(only to Step, Stride, or use relentless actions){/i}.",
+                $"When your quarry is crit or any creature within 60 feet is reduced to 0 HP, become quickened until the end of your next turn {{i}}(only to Step, Stride, or use {ModData.Tooltips.Relentless("relentless")} actions){{/i}}.",
                 qfFeat =>
                 {
                     // Quarry be critically hit
@@ -109,7 +109,7 @@ public static class Slayer
                                 qfFeat.Owner,
                                 $$"""
                                   {b}On The Hunt{/b} {icon:Reaction}
-                                  {{reason}}. Become quickened until the end of your next turn? {i}(Only to Step, Stride, or use relentless actions.){/i}
+                                  {{reason}}. Become quickened until the end of your next turn? {i}(Only to Step, Stride, or use {{ModData.Tooltips.Relentless("relentless")}} actions.){/i}
                                   """,
                                 ModData.Illustrations.OnTheHunt,
                                 [ModData.Traits.Slayer, ModData.Traits.Relentless]))
@@ -202,7 +202,7 @@ public static class Slayer
                 ModData.FeatNames.MarkQuarry,
                 "You are especially effective when you carefully research and track a worthy target.",
                 $"At the start of combat, mark a creature of your level or higher as your quarry. You can only have one quarry at a time. Against them, you gain a +2 circumstance bonus to {RecallWeakness.GetActionLink("Recall a Weakness {icon:Action}")} with Society and Monster Lore. You also gain additional benefits against your quarry from your other feats and features.",
-                [ModData.Traits.ModName, Trait.Concentrate],
+                [ModData.ModTrait, Trait.Concentrate],
                 null)
             .WithPermanentQEffect(
                 "At the start of combat, mark a creature of your level or higher as your quarry.",
@@ -300,7 +300,7 @@ public static class Slayer
                                         qfThis.Owner.Overhead("*no quarry*", Color.Red,
                                             qfThis.Owner + $" has no{(max > 1 ? (" " + 1.Ordinalize2() + " ") : " ")}quarry to mark.", "Mark Quarry {icon:FreeAction}",
                                             "{i}" + markQuarry.FlavorText + "{/i}\n\n" + markQuarry.RulesText,
-                                            new Traits([..markQuarry.Traits, ModData.Traits.Slayer]));
+                                            new Traits([..markQuarry.Traits.ToList(), ModData.Traits.Slayer]));
                                         return;
                                     }
                                     else if (options.Count <= max)
@@ -413,9 +413,9 @@ public static class Slayer
                 $$"""
                 {b}1. Monster Lore.{/b} {{monsterLore.RulesText}}
                 
-                {b}2. Mark Quarry.{/b} {icon:FreeAction} (concentrate, slayer) {{markQuarry.FlavorText}} {{markQuarry.RulesText}}
+                {b}2. Mark Quarry {icon:FreeAction}.{/b} (concentrate, slayer) {{markQuarry.FlavorText}} {{markQuarry.RulesText}}
                 
-                {b}3. On the Hunt{icon:Reaction}.{/b} (slayer) {{onTheHunt.FlavorText}} You gain the {{onTheHunt.ToLink("On the Hunt {icon:Reaction}")}} reaction.
+                {b}3. On the Hunt {icon:Reaction}.{/b} (slayer) {{onTheHunt.FlavorText}} You gain the {{onTheHunt.ToLink("On the Hunt {icon:Reaction}")}} reaction.
                 
                 {b}4. Claim Trophy.{/b} {{claimTrophy.FlavorText}} {{claimTrophy.RulesText}}
                 
@@ -568,7 +568,7 @@ public static class Slayer
                 slayer,
                 ModData.Illustrations.MarkQuarry,
                 "Mark Quarry",
-                [Trait.Concentrate, ModData.Traits.Slayer, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName],
+                [Trait.Concentrate, ModData.Traits.Slayer, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment],
                 null!,
                 new CreatureTarget(RangeKind.Ranged, reqs, (_, _, them) => them.Level))
             .WithDescription(markQuarry.FlavorText, markQuarry.RulesText)
@@ -607,6 +607,8 @@ public static class Slayer
         {
             Id = ModData.QEffectIds.MarkedQuarry,
             Traits = doNotClaimTrophy ? [ModData.Traits.DoNotClaimTrophy] : [],
+            // TODO: Grant trophies upon win, not upon kill, so that backing out or failing does not grant a trophy.
+            // QEffect.EndOfCombat supplies a bool that says whether you won or not
             WhenCreatureDiesAtStateCheckAsync = async qfThis =>
             {
                 if (qfThis.Traits.Contains(ModData.Traits.DoNotClaimTrophy))

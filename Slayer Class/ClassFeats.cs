@@ -1,4 +1,3 @@
-using System.Reflection;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
@@ -30,7 +29,7 @@ public static class ClassFeats
     public static void Load()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateFeats()
@@ -59,7 +58,7 @@ public static class ClassFeats
                 ModData.FeatNames.Bloodscent,
                 1,
                 "With a glance, you can judge how close your target is to falling.",
-                $"The {RecallWeakness.GetActionLink()} action gains the relentless trait for you. You can also use Recall Weakness as a {{icon:FreeAction}} free action if the target is your quarry or is taking persistent bleed damage.",
+                $"The {RecallWeakness.GetActionLink()} action gains the {ModData.Tooltips.Relentless("relentless")} trait for you. You can also use Recall Weakness as a {{icon:FreeAction}} free action if the target is your quarry or is taking persistent bleed damage.",
                 [ModData.Traits.Slayer])
             .WithPermanentQEffect(
                 "Recall Weakness is relentless, and can be used as a free action against your quarry or bleeding targets.",
@@ -99,22 +98,27 @@ public static class ClassFeats
                             freeActionTargets.Contains(d)
                                 ? Usability.Usable
                                 : Usability.NotUsableOnThisCreature("Not your quarry nor bleeding"));
-                        recall.Traits = new Traits([ModData.Traits.ModName, ..recall.Traits], recall);
+                        recall.Traits = new Traits([ModData.ModTrait, ..recall.Traits.ToList()], recall);
 
                         return new ActionPossibility(recall);
                     };
-                });
+                })
+            .WithInappropriateBecauseOfBadInventory((values, inventory) =>
+                values.FinalAbilityScores.TotalModifier(Ability.Intelligence) >= 2
+                || values.FinalAbilityScores.TotalModifier(Ability.Wisdom) >= 2
+                    ? null
+                    : "It's recommended you have an Intelligence or Wisdom modifier of at least +2 to use this feat reliably.");
         
         // Crossbow Slayer
         yield return new TrueFeat(
                 ModData.FeatNames.CrossbowSlayer,
                 1,
                 "You find that a crossbow's versatility is the perfect companion to your own, and you eagerly reload it to get back in the fight.",
-                """
-                Reloading gains the relentless trait for you.
-                
-                {b}Special{/b} If you have a consecrated panoply signature tool, you can load a hunting spike into a crossbow when you reload it. The next time you use Hunting Spike, its thrown trait uses the crossbow’s range increment.
-                """,
+                $$"""
+                  Reloading gains the {{ModData.Tooltips.Relentless("relentless")}} trait for you.
+                  
+                  {b}Special{/b} If you have a consecrated panoply signature tool, you can load a hunting spike into a crossbow when you reload it. The next time you use Hunting Spike, its thrown trait uses the crossbow’s range increment.
+                  """,
                 [ModData.Traits.Slayer])
             .WithPermanentQEffect(
                 "Reloading gains the relentless trait.",
@@ -197,7 +201,14 @@ public static class ClassFeats
                             }
                         }
                     };
-                });
+                })
+            .WithInappropriateBecauseOfBadInventory((values, inventory) =>
+                FeatInventoryRequirements.RequiresOne(
+                    inventory,
+                    item =>
+                        item.HasTrait(Trait.Ranged)
+                        && !item.HasTrait(Trait.Consumable)
+                        && (item.HasTrait(Trait.Reload1) || item.HasTrait(Trait.Reload2)), "a ranged weapon that requires reloading"));
         
         // Drink Adaptation Serums
         
@@ -222,8 +233,10 @@ public static class ClassFeats
                         : [];
                     string kindDescription = kinds?.Count > 0
                         ? S.ConstructOrList(
-                            kinds.Select(kind =>
-                                kind.ToStringOrTechnical().WithColor(kind.DamageKindToColor())),
+                            kinds
+                                .Where(kind => !kind.IsPhysical())
+                                .Select(kind =>
+                                    kind.ToStringOrTechnical().WithColor(kind.DamageKindToColor())),
                             "and")
                         : "any of the trophy's damage types";
                     return $$"""
@@ -248,52 +261,51 @@ public static class ClassFeats
             .WithOnSheet(values => values.GrantFeat(FeatName.ShieldBlock))
             .WithOnCreature(self =>
             {
+                (HuntingTool? repShield, Item? iShield, Item? trophy, var trophyData) =
+                    HuntingTools.GetFullHuntingToolData(self, HuntingTools.ToolId.RepellingShield);
+                if (repShield is null || iShield is null)
+                    return;
+                
                 QEffect repellQF = new QEffect()
                 {
                     // Debugging identifier
                     Name = "[HUNTING TOOL: REPELLING SHIELD]",
-                    BonusToDefenses = (qfThis, action, def) =>
-                        HuntingTools.GetTool(qfThis.Owner, HuntingTools.ToolId.RepellingShield) is {} shield
-                        && MoreShields.CommonShieldRules.GetRaisedShields(qfThis.Owner).Any(shield.IsMyTool)
-                        && action?.Owner is {} foe
-                        && Slayer.IsMyQuarry(qfThis.Owner, foe)
-                        && def is Defense.Reflex
-                        && (action.ChosenTargets.ChosenTile is not null || action.ChosenTargets.ChosenTiles.Count > 0)
-                            ? new Bonus(2, BonusType.Circumstance, "Repelling shield", true)
-                            : null,
-                    YouAreDealtDamageReaction = (qfThis, dEvent) =>
+                    ModifyActionPossibility = (qfThis, action) =>
                     {
-                        if (dEvent.CombatAction is not { } action
-                            || !action.HasTrait(Trait.Attack)
-                            || action.ActionId == ActionId.Trip)
-                            return null;
-                        
-                        DamageStuff dStuff = new DamageStuff(
-                            dEvent.TotalResolvedDamage,
-                            dEvent.CombatAction,
-                            dEvent.KindedDamages.First().DamageKind);
-                        
-                        // Use regular Shield Block for physical triggers
-                        if (CommonShieldRules.DoesShieldBlockApply(qfThis.Owner, dStuff))
-                            return null;
-                        
-                        if (HuntingTools.GetTool(qfThis.Owner, HuntingTools.ToolId.RepellingShield) is not { } shield
-                            || CommonShieldRules.GetBlockableShields(qfThis.Owner).FirstOrDefault(shield.IsMyTool)
-                                is not {} iShield
-                            || Trophies.GetTrophy(iShield) is not {} trophy
-                            || Trophies.GetTrophyData(trophy)?.Kinds is not { } kinds
-                            || !dEvent.KindedDamages.Any(kd => kinds.Contains(kd.DamageKind)))
-                            return null;
+                        if (action.ActionId != ActionId.RaiseShield
+                            || action.Item is null
+                            || !repShield.IsMyTool(action.Item))
+                            return;
 
-                        return CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2(
-                            dEvent,
-                            dEvent.TargetCreature,
-                            qfThis.Owner,
-                            iShield);
-                    }
+                        action.Description += "\n\n{b}Repelling Shield{/b} You also gain a +2 circumstance bonus to Reflex saving throws against area effects created by your quarry.".WithColor("Blue");
+
+                        if (trophyData?.Kinds is null || trophyData.Value.Kinds.Count == 0)
+                            return;
+                        
+                        action.Description += $"\n\n{{b}}Reinforced{{/b}} You can Shield Block with your repelling shield in response to any attack that deals {S.ConstructOrList(trophyData.Value.Kinds.Select(dk => dk.ToStringOrTechnical()))} damage.".WithColor("Blue");
+                    },
+                    BonusToDefenses = (qfThis, action, def) =>
+                        def is Defense.Reflex
+                        && (action?.ChosenTargets.ChosenTile is not null || action?.ChosenTargets.ChosenTiles.Count > 0)
+                        && MoreShields.CommonShieldRules.GetRaisedShields(qfThis.Owner).Contains(iShield)
+                        && Slayer.IsMyQuarry(qfThis.Owner, action.Owner)
+                            ? new Bonus(2, BonusType.Circumstance, "Repelling shield", true)
+                            : null
                 };
+
+                if (trophy is null || trophyData?.Kinds is null)
+                    return;
+
+                repellQF.YourShieldBlockWorksAlsoAgainst = (qfThis, dEvent) =>
+                    dEvent.CombatAction is { } action
+                    && action.HasTrait(Trait.Attack)
+                    && action.ActionId != ActionId.Trip
+                    && CommonShieldRules.GetBlockableShields(qfThis.Owner).Contains(iShield)
+                    && dEvent.KindedDamages.Any(kd => trophyData.Value.Kinds.Contains(kd.DamageKind));
+                
                 self.AddQEffect(repellQF);
-            });
+            })
+            .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
         
         // Spiked Surcoat
         
@@ -335,7 +347,16 @@ public static class ClassFeats
 
                     qfFeat.IncreaseItemDamageDie = (qfThis, item) =>
                         blade.IsMyTool(item) && item.HasTrait(Trait.Simple);
-                });
+                })
+            .WithInappropriateBecauseOfBadInventory((values, inventory) =>
+            {
+                return FeatInventoryRequirements.RequiresOne(
+                    inventory,
+                    item =>
+                        (item.HasTrait(Trait.Simple) && item.WeaponProperties?.DamageDieSize < 12)
+                        || item.HasTrait(Trait.Advanced),
+                    "a simple weapon with a damage die no bigger than a d10, or an advanced weapon");
+            });
 
         #endregion
 
@@ -346,19 +367,19 @@ public static class ClassFeats
                 ModData.FeatNames.InstantEnmity,
                 2,
                 "You focus your hunt on an unexpected but loathsome foe.",
-                """
-                {b}Frequency{/b} once per day
-                {b}Trigger{/b} You see a creature of your level or higher take a hostile action against you or one of your allies.
+                $$"""
+                  {b}Frequency{/b} Once per day.
+                  {b}Trigger{/b} You see a creature of your level or higher take a hostile action against you or one of your allies.
 
-                The triggering creature becomes your quarry for the rest of the encounter, replacing any quarry you currently have (if any) until it dies. {Red}You can't Claim a Trophy{/Red} from a quarry you mark this way.
-                """,
+                  The triggering creature becomes your {{markQuarry.ToLink("quarry")}} for the rest of the encounter, replacing any quarry you currently have (if any) until it dies. {Red}You can't Claim a Trophy{/Red} from a quarry you mark this way.
+                  """,
                 [ModData.Traits.Slayer])
             .WithActionCost(-2)
             .WithPermanentQEffect(
                 "{Green}Once per day{/Green}, you can mark a creature taking hostile actions against your party as your quarry, replacing any existing quarry. You can't Claim their Trophy.",
                 qfFeat =>
                 {
-                    if (qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.InstantEnmity))
+                    if (qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.INSTANT_ENMITY))
                         qfFeat.Description = qfFeat.Description!.Replace(
                             "{Green}Once per day{/Green}",
                             "{Red}Once per day{/Red}");
@@ -373,7 +394,7 @@ public static class ClassFeats
                             {
                                 // Only trigger against allies
                                 if (!target.FriendOf(qfFeat.Owner)
-                                    || qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.InstantEnmity))
+                                    || qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.INSTANT_ENMITY))
                                     return;
                                 
                                 if (!await qfFeat.Owner.Battle.AskToUseReaction(
@@ -388,7 +409,7 @@ public static class ClassFeats
                                     return;
                                 
                                 // Use up limited usage
-                                qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.InstantEnmity);
+                                qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.INSTANT_ENMITY);
                                 qfFeat.Description = qfFeat.Description!.Replace(
                                     "{Green}Once per day{/Green}",
                                     "{Red}Once per day{/Red}");
@@ -425,7 +446,7 @@ public static class ClassFeats
                                     $"{{Blue}}{qfFeat.Owner}'s{{/Blue}} uses {{b}}Instant Enmity{{/b}} {{icon:Reaction}} to treat {qfEnmity2.Owner} as their quarry.",
                                     "Instant Enmity {icon:Reaction}",
                                     "{i}" + instantEnmity.FlavorText + "{/i}\n\n" + instantEnmity.RulesText,
-                                    new Traits([..instantEnmity.Traits]));
+                                    new Traits([..instantEnmity.Traits.ToList()]));
                             };
                         });
                 });
@@ -439,7 +460,7 @@ public static class ClassFeats
                 [ModData.Traits.Slayer])
             .WithPermanentQEffect(
                 "You can mark lower-level groups of 3+ as your quarry.",
-                qfFeat => { });
+                _ => { });
         
         // Personalized Gear
         
@@ -471,81 +492,79 @@ public static class ClassFeats
                 """,
                 [Trait.Flourish, Trait.Rebalanced, ModData.Traits.Slayer])
             .WithActionCost(1)
-            .WithPermanentQEffect(
-                null,
-                qfFeat =>
+            .WithPermanentQEffect(qfFeat =>
+            {
+                int levelTemp = qfFeat.Owner.Level;
+                
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + $" [flourish] Strike a foe who critically hit you since your last turn. On a hit, gain {{Blue}}{levelTemp}{{/Blue}} temp HP.";
+
+                qfFeat.Tag = new List<Creature>();
+                qfFeat.AfterYouTakeDamage = async (qfThis, amount, _, action, isCritical) =>
                 {
-                    int levelTemp = qfFeat.Owner.Level;
-                    
-                    qfFeat.WithDisplayActionInOffenseSection(
-                        "Blood for Blood",
-                        $"[flourish] Strike a foe who critically hit you last round. If you hit, you gain {{Blue}}{levelTemp}{{/Blue}} temp HP.");
+                    if (!isCritical
+                        || action is not { Owner: {} foe }
+                        || !action.HasTrait(Trait.Attack)
+                        || !foe.EnemyOf(qfThis.Owner)
+                        || foe == qfThis.Owner.Battle.Pseudocreature)
+                        return;
 
-                    qfFeat.Tag = new List<Creature>();
-                    qfFeat.AfterYouTakeDamage = async (qfThis, amount, _, action, isCritical) =>
-                    {
-                        if (!isCritical
-                            || action is not { Owner: {} foe }
-                            || !action.HasTrait(Trait.Attack)
-                            || !foe.EnemyOf(qfThis.Owner)
-                            || foe == qfThis.Owner.Battle.Pseudocreature)
-                            return;
+                    List<Creature> crits = (List<Creature>)qfThis.Tag!;
+                    crits.Add(foe);
+                    qfThis.Owner.Battle.Log($"{qfThis.Owner} can use {{b}}Blood for Blood {{icon:Action}}{{/b}} against {action.Owner}.");
+                };
+                qfFeat.EndOfYourTurnDetrimentalEffect = async (qfThis, _) =>
+                {
+                    List<Creature> crits = (List<Creature>)qfThis.Tag!;
+                    crits.Clear();
+                };
+                qfFeat.ProvideContextualAction = qfThis =>
+                {
+                    List<Creature> crits = (List<Creature>)qfThis.Tag!;
+                    if (crits.Count == 0)
+                        return null;
 
-                        List<Creature> crits = (List<Creature>)qfThis.Tag!;
-                        crits.Add(foe);
-                    };
-                    qfFeat.EndOfYourTurnDetrimentalEffect = async (qfThis, _) =>
-                    {
-                        List<Creature> crits = (List<Creature>)qfThis.Tag!;
-                        crits.Clear();
-                    };
-                    qfFeat.ProvideContextualAction = qfThis =>
-                    {
-                        List<Creature> crits = (List<Creature>)qfThis.Tag!;
-                        if (crits.Count == 0)
-                            return null;
+                    CombatAction bloodReply = new CombatAction(
+                            qfThis.Owner,
+                            new SideBySideIllustration(
+                                IllustrationName.DeflectCriticalHit,
+                                IllustrationName.Shortsword),
+                            "Blood for Blood",
+                            [ModData.ModTrait, Trait.Flourish, ModData.Traits.Slayer, Trait.Basic],
+                            null!,
+                            Target.Self())
+                        .WithDescription(
+                            "You viciously return your foe’s attack, reinvigorating yourself with your vengeance.",
+                            $$"""
+                              {b}Requirements{/b} A creature critically hit you with an attack since the end of your previous turn.
 
-                        CombatAction bloodReply = new CombatAction(
-                                qfThis.Owner,
-                                new SideBySideIllustration(
-                                    IllustrationName.DeflectCriticalHit,
-                                    IllustrationName.Shortsword),
-                                "Blood for Blood",
-                                [ModData.Traits.ModName, Trait.Flourish, ModData.Traits.Slayer, Trait.Basic],
-                                null!,
-                                Target.Self())
-                            .WithDescription(
-                                "You viciously return your foe’s attack, reinvigorating yourself with your vengeance.",
-                                $$"""
-                                  {b}Requirements{/b} A creature critically hit you with an attack since the end of your previous turn.
-
-                                  Strike the required creature. On a hit, you gain {Blue}{{levelTemp}}{/Blue} temporary Hit Points.
-                                  """)
-                            .WithEffectOnSelf(async (action, caster) =>
+                              Strike the required creature. On a hit, you gain {Blue}{{levelTemp}}{/Blue} temporary Hit Points.
+                              """)
+                        .WithEffectOnSelf(async (action, caster) =>
+                        {
+                            if (!await CommonCombatActions.StrikeCreature(
+                                    caster,
+                                    null,
+                                    strike =>
+                                        strike.WithEffectOnEachTarget(async (_, _, _, result) =>
+                                        {
+                                            if (result < CheckResult.Success)
+                                                return;
+                                            caster.GainTemporaryHP(levelTemp);
+                                        }),
+                                    crits.Contains,
+                                    action.Illustration,
+                                    null,
+                                    true,
+                                    "Pass"))
                             {
-                                if (!await CommonCombatActions.StrikeCreature(
-                                        caster,
-                                        crits.Contains,
-                                        strike =>
-                                            strike.WithEffectOnEachTarget(async (_, _, _, result) =>
-                                            {
-                                                if (result < CheckResult.Success)
-                                                    return;
-                                                caster.GainTemporaryHP(levelTemp);
-                                            }),
-                                        action.Illustration,
-                                        null,
-                                        true,
-                                        "Pass",
-                                        false))
-                                {
-                                    action.RevertRequested = true;
-                                }
-                            });
+                                action.RevertRequested = true;
+                            }
+                        });
 
-                        return new ActionPossibility(bloodReply);
-                    };
-                });
+                    return new ActionPossibility(bloodReply);
+                };
+            });
         
         // Blood Rush
         yield return new TrueFeat(
@@ -673,7 +692,7 @@ public static class ClassFeats
                                     IllustrationName.Swipe,
                                     IllustrationName.Heal),
                                 "Final Flourish",
-                                [ModData.Traits.ModName, Trait.Flourish, ModData.Traits.Slayer],
+                                [ModData.ModTrait, Trait.Flourish, ModData.Traits.Slayer],
                                 null!,
                                 Target.Self())
                             .WithDescription(
@@ -762,11 +781,11 @@ public static class ClassFeats
                 ModData.FeatNames.DefensiveHunt,
                 8,
                 "Even in a moment of danger, you turn weakness into opportunity.",
-                """
-                {b}Trigger{/b} You are critically hit by your quarry.
+                $$"""
+                  {b}Trigger{/b} You are critically hit by your quarry.
 
-                You go On the Hunt as a {icon:FreeAction} free action.
-                """,
+                  You go {{onTheHunt.ToLink("On the Hunt")}} as a {icon:FreeAction} free action.
+                  """,
                 [ModData.Traits.Slayer])
             .WithActionCost(-2)
             .WithPermanentQEffect(
@@ -802,7 +821,7 @@ public static class ClassFeats
                 ModData.FeatNames.EagerHunter,
                 10,
                 "You are so eager to reach your prey that every opening propels you forward.",
-                "When you go On the Hunt, you can Step toward the nearest enemy as a free action.",
+                $"When you go {onTheHunt.ToLink("On the Hunt")}, you can Step toward the nearest enemy as a {{icon:FreeAction}} free action.",
                 [ModData.Traits.Slayer])
             .WithPermanentQEffect(
                 "You can Step after you go On the Hunt.",
@@ -863,10 +882,10 @@ public static class ClassFeats
                 ModData.FeatNames.OpenWound,
                 14,
                 "Your weapons can always find your prey's wounds, guiding your hands.",
-                "Creatures that are taking persistent bleed damage are off-guard to you.",
+                "Creatures that are taking persistent bleed damage are {r:flat-footed}off-guard{/r} to you.",
                 [ModData.Traits.Slayer])
             .WithPermanentQEffect(
-                "Creatures who are persistently bleeding are off-guard to you.",
+                "Creatures who are persistently bleeding are {r:flat-footed}off-guard{/r} to you.",
                 qfFeat =>
                 {
                     qfFeat.AddGrantingOfTechnical(

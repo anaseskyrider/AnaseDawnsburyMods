@@ -10,6 +10,7 @@ using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
+using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Damage;
@@ -26,7 +27,6 @@ using Dawnsbury.Display.Controls;
 using Dawnsbury.Display.Controls.Statblocks;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
-using Dawnsbury.IO;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 using SpiritDamage;
@@ -212,13 +212,13 @@ public static class HuntingTools
             "")*/
 
         ConsecratedPanoply = ModManager.RegisterNewItemIntoTheShop(
-            ModData.IdPrepend + "ConsecratedPanoply",
+            ModData.ID_PREPEND + "ConsecratedPanoply",
             iName => new Item(
                     iName,
                     ModData.Illustrations.ConsecratedPanoply,
                     "consecrated panoply",
                     0, 0,
-                    [ModData.Traits.ModName, ModData.Traits.Slayer, Trait.Worn])
+                    [ModData.ModTrait, ModData.Traits.Slayer, Trait.Worn])
                 .WithDescription(
                     "This harness or coat contains a seemingly endless array of charms and consecrated weapons, whether worn openly or in hidden pockets, and their blessings protect you and skewer your prey in equal measure.",
                     "A slayer can designate this item as their consecrated panoply signature tool and reinforce it with trophies.")
@@ -298,7 +298,7 @@ public static class HuntingTools
         
         // All hunting tools
         foreach (Feat ft in CreateSignatureTools())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateSignatureTools()
@@ -311,7 +311,7 @@ public static class HuntingTools
             RuneProperties runeProperties = itemTemplate.RuneProperties!;
             yield return new Feat(
                     ModManager.RegisterFeatName(
-                        ModData.IdPrepend + "BloodseekingBladePropertyRune." + itemTemplate.Name,
+                        ModData.ID_PREPEND + "BloodseekingBladePropertyRune." + itemTemplate.Name,
                         $"{{i}}{runeProperties.Prefix.Capitalize()}{{/i}} property rune"),
                     runeProperties.FlavorText,
                     $"At the start of an encounter, your bloodseeking blade gains the effects of the {rune.ToLink(runeProperties.Prefix).WithTag("i")} property rune. This doesn't count against the number of property runes the weapon may have.",
@@ -348,7 +348,7 @@ public static class HuntingTools
                     return $$"""
                              {b}Bloody Fuller{/b} Against your quarry, you ignore {{(ignoreAmount is null ? "an amount" : ignoreAmount + " points")}} of {{(isSpecialized ? "{Blue}any{/Blue}" : "physical")}} resistance to this tool's damage{{(ignoreAmount is null ? " equal to 1 + the number of weapon damage dice" : null)}}.
                              {b}Reinforced{/b} Your first Strike with this tool deals {Blue}{{(self.Level >= 19 ? 3 : self.Level >= 11 ? 2 : 1)}}d6{/Blue} additional{{damageType}}damage.{{(chosenDk is null ? " The type is chosen from the reinforcing trophy." : null)}}
-                             {b}Honed Strike {icon:TwoActions}{/b} [concentrate, relentless] Strike using this tool with a +2 circumstance bonus and ignore the Concealed condition.
+                             {b}Honed Strike {icon:TwoActions}{/b} [concentrate, {{ModData.Tooltips.Relentless("relentless")}}] Strike using this tool with a +2 circumstance bonus and ignore the Concealed condition.
                              """
                            + (isSpecialized
                                ? $"\n{{b}}Specialized{{/b}} This tool has {{tooltip:criteffect}}critical specialization effects{{/}}, and gains the effects of a {(self.PersistentCharacterSheet?.Calculated.GetTagOrNull<ItemName>(BLOODSEEKING_BLADE_RUNESTONE_KEY) is {} rune ? ("{i}" + Items.GetItemTemplate(rune).RuneProperties!.Prefix + "{/i} property rune").WithColor("Blue") : "property rune you choose when you Reinforce your Arsenal")}."
@@ -363,7 +363,7 @@ public static class HuntingTools
                 "You can designate a simple or martial weapon as a bloodseeking blade when you Reinforce your Arsenal, gaining the following benefits.",
                 "{b}Bloody Fuller{/b} If your quarry is resistant to physical damage dealt by this tool, you ignore an amount of that resistance equal to 1 + the number of weapon damage dice.",
                 "Your first Strike with this tool each turn deals 1d6 additional damage of one of the trophy’s damage types, chosen when you Reinforce your Arsenal. The extra damage increases to 2d6 at 11th level and to 3d6 at 19th level.",
-                "{b}Honed Strike {icon:TwoActions}{/b} (concentrate, relentless) You center yourself and calm your breathing, then strike. Make a Strike with your bloodseeking blade signature tool. You gain a +2 circumstance bonus to your attack roll and ignore the target’s Concealed condition (but not the Hidden condition).",
+                $"{{b}}Honed Strike {{icon:TwoActions}}{{/b}} (concentrate, {ModData.Tooltips.Relentless("relentless")}) You center yourself and calm your breathing, then strike. Make a Strike with your bloodseeking blade signature tool. You gain a +2 circumstance bonus to your attack roll and ignore the target’s Concealed condition (but not the Hidden condition).",
                 "You gain {tooltip:criteffect}critical specialization effects{/tooltip} with this tool. Bloody Fuller's ignored-resistances applies to all damage from this tool. You also gain an extra {i}fearsome{/i}, {i}returning{/i}, or {i}shifting{/i} rune, chosen when you Reinforce your Arsenal.")
             .WithOnSheet(values =>
             {
@@ -383,6 +383,11 @@ public static class HuntingTools
             })
             .WithOnCreature(self =>
             {
+                (HuntingTool? bloodBlade, Item? iBlade, Item? trophy, var trophyData) =
+                    HuntingTools.GetFullHuntingToolData(self, HuntingTools.ToolId.BloodseekingBlade);
+                if (bloodBlade is null || iBlade is null)
+                    return;
+                
                 QEffect bladeQf = new QEffect()
                 {
                     // Debugging identifier
@@ -402,13 +407,11 @@ public static class HuntingTools
                         if (!action.HasTrait(Trait.Strike)
                             || action.Item is null
                             || !Slayer.IsMyQuarry(qfBlade.Owner, defender)
-                            || HuntingTools.GetTool(qfBlade.Owner, ToolId.BloodseekingBlade)
-                                is not { } blade
-                            || !blade.IsMyTool(action.Item))
+                            || iBlade == action.Item)
                             return 0;
                         
                         // Must be physical if you don't have the specialized benefit
-                        if (!blade.AccessSpecialized && !dk.IsPhysical())
+                        if (!bloodBlade.AccessSpecialized && !dk.IsPhysical())
                             return 0;
 
                         // The amount I want to bypass
@@ -430,66 +433,28 @@ public static class HuntingTools
                         
                         return bypass;
                     },
-                    // Reinforced benefit
-                    StartOfYourPrimaryTurn = async (qfBlade, me) =>
-                    {
-                        if (HuntingTools.GetTool(qfBlade.Owner, ToolId.BloodseekingBlade)
-                            is not { } blade)
-                            return;
-                        int numDice = self.Level >= 19 ? 3 : self.Level >= 11 ? 2 : 1;
-                        me.AddQEffect(new QEffect(
-                            "Reinforced Fuller",
-                            $"The first Strike with your bloodseeking blade deals an extra {numDice + "d6"} damage.",
-                            ExpirationCondition.ExpiresAtStartOfYourTurn,
-                            me,
-                            ModData.Illustrations.BloodseekingBlade)
-                        {
-                            AddExtraKindedDamageOnStrike = (action, target) =>
-                            {
-                                if (action.Item is null
-                                    || !blade.IsMyTool(action.Item))
-                                    return null;
-                                if (Trophies.GetTrophy(action.Item) is not { } trophy)
-                                {
-                                    action.Owner.Overhead("*no trophy*", Color.Red, "Trophy not found on your bloodseeking blade.");
-                                    return null;
-                                }
-                                if (Trophies.GetChosenDamageKind(trophy) is not { } chosenKind)
-                                {
-                                    action.Owner.Overhead("*no trophy*", Color.Red, "No reinforced damage found on your bloodseeking blade's trophy.");
-                                    return null;
-                                }
-                                return new KindedDamage(DiceFormula.FromText(numDice + "d6", "Bloody fuller—Reinforced trophy"), chosenKind);
-                            },
-                            AfterYouTakeAction = async (qfFuller, action) =>
-                            {
-                                if (action.HasTrait(Trait.Strike)
-                                    && action.Item is not null
-                                    && blade.IsMyTool(action.Item))
-                                    qfFuller.ExpiresAt = ExpirationCondition.Immediately;
-                            } 
-                        });
-                    },
                     // Slaying technique
                     ProvideStrikeModifier = item =>
                     {
-                        if (!GetTool(self, ToolId.BloodseekingBlade)?.IsMyTool(item) ?? false)
+                        if (item != iBlade)
                             return null;
 
                         CombatAction honedStrike = self.CreateStrike(item)
                             .WithActionCost(2)
+                            .WithIllustration(new SideBySideIllustration(
+                                ModData.Illustrations.BloodseekingBlade,
+                                IllustrationName.TargetSheet))
                             .WithExtraTrait(Trait.Basic)
                             .WithExtraTrait(Trait.Concentrate)
                             .WithExtraTrait(ModData.Traits.Relentless)
                             .With(ca =>
                             {
-                                ca.Illustration = new SideBySideIllustration(ModData.Illustrations.BloodseekingBlade, IllustrationName.TargetSheet);
                                 ca.Description = StrikeRules.CreateBasicStrikeDescription2(ca.StrikeModifiers, "You gain a +2 circumstance bonus to the attack roll and ignore your target's Concealed condition (but not the Hidden condition).");
                                 ca.StrikeModifiers.HuntersAim = true;
                                 ca.StrikeModifiers.AdditionalBonusesToAttackRoll = [
                                     new Bonus(2, BonusType.Circumstance, "Honed strike")
                                 ];
-                                ca.Traits = new Traits([ModData.Traits.ModName, ..ca.Traits], ca);
+                                ca.Traits = new Traits([ModData.ModTrait, ..ca.Traits.ToList()], ca);
                             });
                         honedStrike.WithFullRename("Honed Strike");
                         honedStrike.ShortDescription += ", and ignore the Concealed condition";
@@ -520,6 +485,49 @@ public static class HuntingTools
                             }
                         }
                     }
+                };
+
+                if (trophy is null || trophyData?.Kinds is null)
+                    return;
+
+                if (Trophies.GetChosenDamageKind(trophy) is not { } chosenKind)
+                {
+                    string toolName = bloodBlade.Id.GetNameFromToolId();
+                    self.AddQEffect(HuntingTools.ToolWarning(
+                        false,
+                        "TROPHY DAMAGE TYPE",
+                        $"""
+                         Your {toolName.WithTag("b")} has a trophy reinforcing it, but no damage type was chosen.
+
+                         This might have been an accident. Ensure that you have reinforced the tool with a damage type. To do so, while in the inventory screen, right-click the designated item with an attached trophy, and click the damage type you want to gain its reinforced benefits for.
+                         """));
+                    return;
+                }
+
+                // Reinforced benefit
+                bladeQf.StartOfYourPrimaryTurn = async (qfBlade, me) =>
+                {
+                    int numDice = self.Level >= 19 ? 3 : self.Level >= 11 ? 2 : 1;
+                    me.AddQEffect(new QEffect(
+                        "Reinforced Fuller",
+                        $"The first Strike with your bloodseeking blade deals an extra {numDice + "d6"} damage.",
+                        ExpirationCondition.ExpiresAtStartOfYourTurn,
+                        me,
+                        ModData.Illustrations.BloodseekingBlade)
+                    {
+                        AddExtraKindedDamageOnStrike = (action, target) =>
+                        {
+                            if (action.Item is null || iBlade != action.Item)
+                                return null;
+                            return new KindedDamage(DiceFormula.FromText(numDice + "d6", "Bloody fuller—Reinforced trophy"), chosenKind);
+                        },
+                        AfterYouTakeAction = async (qfFuller, action) =>
+                        {
+                            if (action.HasTrait(Trait.Strike)
+                                && iBlade == action.Item)
+                                qfFuller.ExpiresAt = ExpirationCondition.Immediately;
+                        } 
+                    });
                 };
 
                 self.AddQEffect(bladeQf);
@@ -555,7 +563,7 @@ public static class HuntingTools
             string traitName = trait.ToStringOrTechnical();
             yield return new Feat(
                     ModManager.RegisterFeatName(
-                        ModData.IdPrepend + "HuntingSpikeConsecration." + traitName,
+                        ModData.ID_PREPEND + "HuntingSpikeConsecration." + traitName,
                         traitName),
                     null,
                     $"Your hunting spikes gain the {traitName.ToLower()} trait.",
@@ -578,7 +586,7 @@ public static class HuntingTools
             RuneProperties runeProperties = itemTemplate.RuneProperties!;
             yield return new Feat(
                     ModManager.RegisterFeatName(
-                        ModData.IdPrepend + "HuntingSpikeMaterial." + itemTemplate.Name,
+                        ModData.ID_PREPEND + "HuntingSpikeMaterial." + itemTemplate.Name,
                         $"{{i}}{runeProperties.Prefix.Capitalize()}{{/i}} material"),
                     runeProperties.FlavorText,
                     $"Whenever you draw a hunting spike from your consecrated panoply, it gains the effects of the {material.ToLink(runeProperties.Prefix).WithTag("i")} material.",
@@ -684,7 +692,7 @@ public static class HuntingTools
                 "You gain an item you can designate as your consecrated panoply when you Reinforce your Arsenal, gaining the following benefits while worn.",
                 "{b}Safeguard Charms{/b} While wearing this signature tool, the consecrated charms within protect you from harm. You gain a +1 status bonus to saving throws against your quarry.",
                 "You also gain this bonus against creatures with any of the trophy's traits and against spells of any of the trophy's traditions. This increases to +2 against your quarry.",
-                $"{{b}}Hunting Spike {{icon:Action}}{{/b}} (manipulate, relentless) {{b}}Requirements{{/b}} You have a free hand; {{b}}Effect{{/b}} You draw and Strike with one of your endless {ModData.Illustrations.HuntingSpike.IllustrationAsIconString} hunting spikes (these function as {ItemName.Dagger.ToLink("daggers")}). Your hunting spikes have either the holy or unholy trait, chosen when you Reinforce your Arsenal. Your panoply imbues the effects of the best fundamental runes for your level onto your spikes.",
+                $"{{b}}Hunting Spike {{icon:Action}}{{/b}} (manipulate, {ModData.Tooltips.Relentless("relentless")}) {{b}}Requirements{{/b}} You have a free hand; {{b}}Effect{{/b}} You draw and Strike with one of your endless {ModData.Illustrations.HuntingSpike.IllustrationAsIconString} hunting spikes (these function as {ItemName.Dagger.ToLink("daggers")}). Your hunting spikes have either the holy or unholy trait, chosen when you Reinforce your Arsenal. Your panoply imbues the effects of the best fundamental runes for your level onto your spikes.",
                 $"Your hunting spikes deal an additional 1 persistent {"bleed".WithColor(DamageKind.Bleed.DamageKindToColor())} damage per weapon damage die. In addition, they are treated as either cold iron or silver, chosen when you Reinforce your Arsenal. At 13th level, your spikes deal 1 additional {"spirit".WithColor(DamageSpirit.Spirit.DamageKindToColor())} damage per weapon damage die, and you can choose adamantine instead of cold iron or silver. At 19th level, you can draw and Strike twice when you use the Hunting Spike activity.")
             .WithExtraTrait(Trait.Rebalanced)
             .WithFreeInventoryItem(ConsecratedPanoply)
@@ -715,11 +723,9 @@ public static class HuntingTools
             })
             .WithOnCreature(self =>
             {
-                // Determination can be made on load since the item can't move anywhere after combat starts
-                if (HuntingTools.GetTool(self, ToolId.ConsecratedPanoply) is not { } panoplyTool
-                    || self.CarriedItems.FirstOrDefault(panoplyTool.IsMyTool) is not {} panoplyItem
-                    || Trophies.GetTrophy(panoplyItem) is not {} trophy
-                    || Trophies.GetTrophyData(trophy) is not {} data)
+                (HuntingTool? panop, Item? iPanop, Item? trophy, var trophyData) =
+                    HuntingTools.GetFullHuntingToolData(self, HuntingTools.ToolId.ConsecratedPanoply);
+                if (panop is null || iPanop is null)
                     return;
                 
                 QEffect panoplyQf = new QEffect()
@@ -744,8 +750,11 @@ public static class HuntingTools
                         }
                         
                         // Reinforced Benefit
-                        if (action.Owner.Traits.ContainsOneOf([..data.Traits, ..data.Traditions])
-                            || (action.HasTrait(Trait.Spell) && data.Traditions.Contains(action.SpellcastingSource!.SpellcastingTradition)))
+                        if (trophyData?.Traits is not null
+                            && trophyData?.Traditions is not null
+                            && action.Owner.Traits.ContainsOneOf([..trophyData.Value.Traits, ..trophyData.Value.Traditions])
+                            || (action.HasTrait(Trait.Spell) &&
+                                (trophyData?.Traditions?.Contains(action.SpellcastingSource!.SpellcastingTradition) ?? false)))
                         {
                             bonus++;
                             if (subtitle is not "")
@@ -763,7 +772,7 @@ public static class HuntingTools
                             .GetTagOrNull<Trait>(HUNTING_SPIKE_CONSECRATION_KEY);
                         Trait? material = self.PersistentCharacterSheet?.Calculated
                             .GetTagOrNull<Trait>(HUNTING_SPIKE_MATERIAL_KEY);
-                        Item displaySpike = CreateHuntingSpike(qfThis.Owner, ItemName.Dagger, consecration, material, panoplyTool.AccessSpecialized);
+                        Item displaySpike = CreateHuntingSpike(qfThis.Owner, ItemName.Dagger, consecration, material, panop.AccessSpecialized);
                         string? striking = displaySpike.WeaponProperties!.DamageDieCount switch
                         {
                             >= 4 => "major striking",
@@ -813,11 +822,11 @@ public static class HuntingTools
                                     qfThis.Owner,
                                     ModData.Illustrations.HuntingSpike,
                                     "Hunting Spike" + (subtitle is not null ? " (" + subtitle + ")" : null),
-                                    [ModData.Traits.ModName, Trait.Manipulate, ModData.Traits.Relentless, Trait.Basic],
+                                    [ModData.ModTrait, Trait.Manipulate, ModData.Traits.Relentless, Trait.Basic],
                                     $$"""
                                     {b}Requirements{/b} You have a free hand
 
-                                    You draw and Strike with one of your{{runeDescription}}hunting spikes{{traitDescription}}.{{(panoplyTool.AccessSpecialized && self.Level >= 19 ? " {Blue}You can do this twice.{/Blue}" : null)}}{{itemDescription}}
+                                    You draw and Strike with one of your{{runeDescription}}hunting spikes{{traitDescription}}.{{(panop.AccessSpecialized && self.Level >= 19 ? " {Blue}You can do this twice.{/Blue}" : null)}}{{itemDescription}}
                                     """,
                                     Target.Self()
                                         .WithAdditionalRestriction(self2 =>
@@ -837,14 +846,14 @@ public static class HuntingTools
 
                                     await DoActivity();
                                     
-                                    if (panoplyTool.AccessSpecialized && self.Level >= 19)
+                                    if (panop.AccessSpecialized && self.Level >= 19)
                                         await DoActivity();
 
                                     return;
                                     
                                     async Task DoActivity()
                                     {
-                                        Item huntingSpike = CreateHuntingSpike(self2, weapon.Value, consecration, material, panoplyTool.AccessSpecialized);
+                                        Item huntingSpike = CreateHuntingSpike(self2, weapon.Value, consecration, material, panop.AccessSpecialized);
                                         
                                         // Increase its thrown range, if any
                                         if (self2.FindQEffect(ModData.QEffectIds.CrossbowSlayer) is var xbs
@@ -938,7 +947,7 @@ public static class HuntingTools
                     
                     // Slaying Technique
                     string slayTech =
-                        "{b}Armored Shelter {icon:Action}{/b} [relentless] Position your worn warded mail to gain a +2 circumstance bonus to AC as well as Reflex against area effects. Lasts until the end of your next turn, you move, or you make an attack.";
+                        $"{{b}}Armored Shelter {{icon:Action}}{{/b}} [{ModData.Tooltips.Relentless("relentless")}] Position your worn warded mail to gain a +2 circumstance bonus to AC as well as Reflex against area effects. Lasts until the end of your next turn, you move, or you make an attack.";
                     
                     // Specialized Arsenal
                     Trait? armorCat = mail?.Traits.FirstOrDefault(trait =>
@@ -966,7 +975,7 @@ public static class HuntingTools
                 "You become trained in heavy armor, and its proficiency increases when your proficiency with medium armor does. You can designate a suit of armor as your warded mail when you Reinforce your Arsenal, gaining the following benefits.",
                 "{b}Fortified Plate{/b} While wearing this signature tool, you gain resistance to physical damage dealt by your quarry equal to 2 + the value of the armor's potency rune.",
                 "You also gain resistance equal to 1 + half your level to one of the trophy’s damage types, chosen when you Reinforce your Arsenal.",
-                "{b}Armored Shelter {icon:Action}{/b} (relentless) {b}Requirements{/b} You are wearing your warded mail; {b}Effect{/b} You position your armor to better protect you. You gain a +2 circumstance bonus to your AC and to Reflex saves against area effects until the end of your next turn or until you move from your current space or use an attack action, whichever comes first.",
+                $"{{b}}Armored Shelter {{icon:Action}}{{/b}} ({ModData.Tooltips.Relentless("relentless")}) {{b}}Requirements{{/b}} You are wearing your warded mail; {{b}}Effect{{/b}} You position your armor to better protect you. You gain a +2 circumstance bonus to your AC and to Reflex saves against area effects until the end of your next turn or until you move from your current space or use an attack action, whichever comes first.",
                 "You gain access to the {tooltip:armoreffect}armor specialization effects{/} of this signature tool, and the initial benefit grants resistance to all damage dealt by your quarry.")
             .WithOnSheet(values =>
             {
@@ -980,6 +989,27 @@ public static class HuntingTools
             })
             .WithOnCreature(self =>
             {
+                (HuntingTool? mail, Item? iMail, Item? trophy, var trophyData) =
+                    HuntingTools.GetFullHuntingToolData(self, HuntingTools.ToolId.ConsecratedPanoply);
+                if (mail is null || iMail is null)
+                    return;
+
+                DamageKind? chosenKind = null;
+                if (trophy is not null)
+                    chosenKind = Trophies.GetChosenDamageKind(trophy);
+                if (trophy is null || chosenKind is null)
+                {
+                    string toolName = mail.Id.GetNameFromToolId();
+                    self.AddQEffect(HuntingTools.ToolWarning(
+                        false,
+                        "TROPHY DAMAGE TYPE",
+                        $"""
+                         Your {toolName.WithTag("b")} has a trophy reinforcing it, but no damage type was chosen.
+
+                         This might have been an accident. Ensure that you have reinforced the tool with a damage type. To do so, while in the inventory screen, right-click the designated item with an attached trophy, and click the damage type you want to gain its reinforced benefits for.
+                         """));
+                }
+                
                 QEffect mailQf = new QEffect()
                 {
                     // Debugging identifier
@@ -987,10 +1017,8 @@ public static class HuntingTools
                     // Resistances; Initial Benefit, Reinforced, Specialized Arsenal
                     StateCheck = qfThis =>
                     {
-                        if (GetTool(qfThis.Owner, ToolId.WardedMail)
-                            is not { } mail
-                            || qfThis.Owner.Armor.Item is not { } armor
-                            || !mail.IsMyTool(armor))
+                        if (qfThis.Owner.Armor.Item is not { } armor
+                            || iMail != armor)
                             return;
                         
                         // Initial Benefit, Specialized Arsenal
@@ -1040,21 +1068,18 @@ public static class HuntingTools
                                     qfThis.Owner));
                         
                         // Reinforced 
-                        if (Trophies.GetTrophy(armor) is { } trophy
-                            && Trophies.GetChosenDamageKind(trophy) is { } chosenKind)
+                        if (trophy is not null && chosenKind is not null)
                         {
                             int reinfAmount = 1 + (qfThis.Owner.Level / 2);
-                            qfThis.Owner.WeaknessAndResistance.AddResistance(chosenKind, reinfAmount);
+                            qfThis.Owner.WeaknessAndResistance.AddResistance(chosenKind.Value, reinfAmount);
                         }
                     },
                     // Slaying Technique
                     ProvideActionIntoPossibilitySection = (qfThis, section) =>
                     {
                         if (section.PossibilitySectionId != PossibilitySectionId.ItemActions
-                            || GetTool(qfThis.Owner, ToolId.WardedMail)
-                                is not { } mail
                             || qfThis.Owner.Armor.Item is not { } armor
-                            || !mail.IsMyTool(armor)
+                            || armor != iMail
                             || qfThis.Owner.HasEffect(ModData.QEffectIds.ArmoredShelter))
                             return null;
                         
@@ -1062,7 +1087,7 @@ public static class HuntingTools
                                 qfThis.Owner,
                                 ModData.Illustrations.WardedMail,
                                 "Armored Shelter",
-                                [Trait.Basic, ModData.Traits.ModName, ModData.Traits.Relentless],
+                                [ModData.ModTrait, ModData.Traits.Relentless],
                                 """
                                 {i}You position your armor to better protect you.{/i}
 
@@ -1190,5 +1215,147 @@ public static class HuntingTools
     {
         toolFeat.Traits.Add(trait);
         return toolFeat;
+    }
+
+    /// <summary>
+    /// Returns a Hunting Tool, its associated Item, and its reinforced Trophy data on a slayer Creature.
+    /// </summary>
+    /// <remarks>
+    /// If the tool isn't found, a QEffect is added to the creature which triggers at the start of combat. When triggered, it prints a warning to the log.
+    /// </remarks>
+    public static (
+        HuntingTool? Tool,
+        Item? iTool,
+        Item? trophy,
+        (string? Name, CreatureId? Id, List<Trait>? Traits, List<DamageKind>? Kinds, List<Trait>? Traditions, List<string>? Tags)? TrophyData)
+        GetFullHuntingToolData(Creature slayer, ToolId toolId)
+    {
+        string toolName = toolId.GetNameFromToolId();
+        
+        HuntingTool? tool = HuntingTools.GetTool(slayer, toolId);
+        if (tool is null)
+        {
+            slayer.AddQEffect(ToolWarning(
+                true,
+                toolName,
+                $"""
+                 Your {toolName.WithTag("b")} Hunting Tool was not found on your character sheet.
+
+                 This error means that even though you have the signature tool choice or the class feat that grants this tool, it's not being properly saved and wasn't found.
+                 
+                 This isn't supposed to be possible. If you see this error, please report it immediately.
+                 """));
+            return (null, null, null, null);
+        }
+
+        Item? iTool = slayer.AllItems.FirstOrDefault(item =>
+            tool.IsMyTool(item));
+        if (iTool is null)
+        {
+            slayer.AddQEffect(ToolWarning(
+                false,
+                toolName,
+                $"""
+                 The Item designated as your {toolName.WithTag("b")} was not found in your hands or in your inventory at the start of combat.
+
+                 This might have been an accident. You can designate a tool by right-clicking an item that is appropriate to the tool, then clicking the designate option.
+                 """));
+            return (tool, null, null, null);
+        }
+
+        Item? trophy = Trophies.GetTrophy(iTool);
+        if (trophy is null)
+        {
+            slayer.AddQEffect(ToolWarning(
+                false,
+                "TROPHY",
+                $"""
+                 Your {toolName.WithTag("b")} Item does not have a Trophy Item reinforcing it at the start of combat.
+
+                 This might have been an accident. Ensure you have a trophy attached to the item which is designated as your {toolName.WithTag("b")}. You can reinforce your hunting tool (attach a trophy to it) by clicking and dragging a trophy onto the item.
+                 
+                 If your hunting tool requires you to make certain choices (such as choosing a damage type from the trophy), be sure to right-click the item after attaching it to do so.
+                 """));
+            return (tool, iTool, null, null);
+        }
+        
+        var data = Trophies.GetTrophyData(trophy);
+        if (data is null)
+        {
+            slayer.AddQEffect(ToolWarning(
+                true,
+                "TROPHY DATA",
+                $"""
+                 The Item representing your {toolName.WithTag("b")} Hunting Tool has a Trophy ({trophy.Name}) Item attached, but no trophy data was found.
+
+                 This isn't supposed to be possible. If you see this error, please report it immediately.
+                 """));
+            return (tool, iTool, trophy, null);
+        }
+        
+        if (data.Value.Kinds is null || data.Value.Kinds.Count == 0)
+        {
+            slayer.AddQEffect(HuntingTools.ToolWarning(
+                true,
+                "TROPHY DAMAGE TYPE",
+                $"""
+                 Your {toolName.WithTag("b")} has a trophy reinforcing it, but the trophy contains no damage types.
+
+                 This isn't supposed to be possible, as any creature incapable of dealing any damage shouldn't be a valid creature to mark (because it would be something like an inanimate object or hazard); and if it can deal any damage, it should have been found. If you see this error, please report it immediately.
+                 """));
+            return (tool, iTool, trophy, null);
+        }
+        
+        if (data.Value.Traits is null || data.Value.Traits.Count == 0)
+        {
+            slayer.AddQEffect(HuntingTools.ToolWarning(
+                true,
+                "TROPHY TRAITS",
+                $"""
+                 Your {toolName.WithTag("b")} has a trophy reinforcing it, but the trophy contains no traits.
+
+                 This isn't supposed to be possible, as it's virtually impossible for a creature to not have a single valid trait. If you see this error, please report it immediately.
+                 """));
+            return (tool, iTool, trophy, null);
+        }
+        
+        if (data.Value.Traditions is null || data.Value.Traditions.Count == 0)
+        {
+            slayer.AddQEffect(HuntingTools.ToolWarning(
+                true,
+                "TROPHY TRADITIONS",
+                $"""
+                 Your {toolName.WithTag("b")} has a trophy reinforcing it, but the trophy contains no traditions.
+
+                 This isn't supposed to be possible, as the default tradition is Occult. If you see this error, please report it immediately.
+                 """));
+            return (tool, iTool, trophy, null);
+        }
+        
+        return (tool, iTool, trophy, data);
+    }
+
+    /// <summary>
+    /// This QEffect triggers a logged overhead message at the start of combat. Add this to a slayer when something isn't found during the character-building process that should be there for proper function of the class.
+    /// </summary>
+    /// <param name="isError">Whether the warning is actually an error for a situation that shouldn't occur.</param>
+    /// <param name="notFoundWhat">A brief title of what wasn't found. This fills in the blank part of: the "*__ NOT FOUND*" overhead, the "ERROR/WARNING: __ not found on [character name]." log description, and the "ERROR/WARNING: __ NOT FOUND" log title.</param>
+    /// <param name="details">A full description of the warning. If this is an error, you might want to include a paragraph at the end that reads, "This isn't supposed to be possible. If you see this error, please report it immediately."</param>
+    /// <returns></returns>
+    public static QEffect ToolWarning(bool isError, string notFoundWhat, string details)
+    {
+        return new QEffect()
+        {
+            StartOfCombat = async qfThis =>
+            {
+                qfThis.Owner.Overhead(
+                    $"*{notFoundWhat.Capitalize()} NOT FOUND*",
+                    Color.Red,
+                    $"{(isError ? "ERROR".WithColor("Red") : "WARNING".WithColor("Orange"))}: {notFoundWhat.WithTag("b")} not found on {qfThis.Owner.ToColoredName()}.",
+                    $"{(isError ? "ERROR" : "WARNING")}: {notFoundWhat.Capitalize()} NOT FOUND",
+                    details);
+                qfThis.ExpiresAt = ExpirationCondition.Immediately;
+            }
+        };
     }
 }

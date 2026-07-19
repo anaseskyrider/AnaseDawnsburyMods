@@ -68,7 +68,9 @@ public static class Trophies
         Trait.Male,
         Trait.MetalArmor,
         Trait.MetalArmorInvisible,
+        #pragma warning disable CS0618 // Type or member is obsolete
         Trait.Mod,
+        #pragma warning restore CS0618 // Type or member is obsolete
         Trait.MustSurvive,
         Trait.NativeOutsider,
         Trait.NeedNotSurvive,
@@ -77,7 +79,6 @@ public static class Trophies
         Trait.NoDeathScream,
         Trait.NoPhysicalUnarmedAttack,
         Trait.Object,
-        Trait.Outsider,
         Trait.PossessedChild,
         Trait.Pseudocreature,
         Trait.ThirdParty,
@@ -179,13 +180,13 @@ public static class Trophies
     public static void Load()
     {
         TrophyCase = ModManager.RegisterNewItemIntoTheShop(
-            ModData.IdPrepend + "TrophyCase",
+            ModData.ID_PREPEND + "TrophyCase",
             iN => new Item(
                     iN, 
                     ModData.Illustrations.TrophyCase,
                     "trophy case",
                     0, 0,
-                    ModData.Traits.ModName, ModData.Traits.Slayer, Trait.CannotBeHeldInHands)
+                    ModData.ModTrait, ModData.Traits.Slayer, Trait.CannotBeHeldInHands)
                 .WithDescription(
                     "This case of light bulk is used by slayers to hold their unused trophies.",
                     """
@@ -205,13 +206,13 @@ public static class Trophies
                 }));
         
         TrophyItem = ModManager.RegisterNewItemIntoTheShop(
-            ModData.IdPrepend + "Trophy",
+            ModData.ID_PREPEND + "Trophy",
             iN => new Item(
                     iN,
                     ModData.Illustrations.Trophy,
                     "trophy",
                     0, 0,
-                    ModData.Traits.ModName, ModData.Traits.Trophy, Trait.DoNotAddToShop, Trait.CannotBeHeldInHands)
+                    ModData.ModTrait, ModData.Traits.Trophy, Trait.DoNotAddToShop, Trait.CannotBeHeldInHands)
                 /*.WithDescription(
                     "The nature of your trophies varies depending on your quarry, but each has certain common characteristics, determined by the creature from which it was claimed.",
                     "You can Reinforce your Arsenal by dragging-and-dropping this trophy onto one of your hunting tools. Other slayer abilities refer to the following properties when determining the effects of being reinforced with this trophy:")*/
