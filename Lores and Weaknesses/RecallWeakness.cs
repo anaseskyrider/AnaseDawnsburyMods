@@ -309,11 +309,10 @@ public static class RecallWeakness
                 $"Make a melee Strike. On a hit, you can immediately attempt a check to {GetActionLink("Recall a Weakness {icon:FreeAction}")} on the target. On a critical hit, you gain a +2 circumstance bonus to the check. The target is then immune to Combat Assessment.",
                 [Trait.Fighter])
             .WithActionCost(1)
-            .WithPermanentQEffect(null, qfFeat =>
+            .WithPermanentQEffect(qfFeat =>
             {
-                qfFeat.WithDisplayActionInOffenseSection(
-                    "Combat Assessment",
-                    "Make a melee Strike. On a hit, you Recall their Weakness (you gain a +2 bonus on a crit).");
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " Make a melee Strike. On a hit, you Recall their Weakness (you gain a +2 bonus on a crit).";
                 
                 qfFeat.ProvideStrikeModifier = item =>
                 {
