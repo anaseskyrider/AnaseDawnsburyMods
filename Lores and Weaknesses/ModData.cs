@@ -8,32 +8,35 @@ namespace Dawnsbury.Mods.LoresAndWeaknesses;
 
 public static class ModData
 {
-    public const string IdPrepend = "LoresAndWeaknesses.";
+    public const string ID_PREPEND = "LoresAndWeaknesses.";
 
-    /// <summary>
-    /// Registers the source enum to the game, or returns the original if it's already registered.
+    public static Trait ModTrait;
+    
+        /// <summary>
+    /// Loads all mod data. This should typically be called by a mod before anything else.
     /// </summary>
-    /// <param name="technicalName">The technicalName string of the enum being registered.</param>
-    /// <param name="displayName">The human readable name of the enum, if the type supports a humanized name.</param>
-    /// <typeparam name="T">The enum being registered to.</typeparam>
-    /// <returns>The newly registered enum.</returns>
-    public static T SafelyRegister<T>(string technicalName, string? displayName = null) where T : struct, Enum
+    /// <para>
+    /// When registering mod data, certain data must be called through the execution of lines of code, rather than assigned in their initialization. The Initializer skips these data until they're first called, which can result in errors due to out of order registration calls (especially when another mod isn't using <see cref="ModManager.TryParse"/>).
+    /// </para>
+    /// <para>The following data forms are typically safe due to the way Dawnsbury Days loads mods (or because their initialization nearly always gets called before errors could arise): <see cref="FeatName"/>, <see cref="Illustration"/>, <see cref="Trait"/>, <see cref="SfxNames"/>, <see cref="SpellId"/>. Tooltips from <see cref="ModManager.RegisterInlineTooltip(string, string)"/> likely aren't safe to assign as part of the initializer, but they typically shouldn't be shared between mods either.
+    /// </para>
+    /// <para>
+    /// In general, trigger the initializer by separating declaration and assignment for the following data forms:
+    /// <list type="bullet">
+    /// <item>All other enums (e.g. <see cref="ActionId"/>, <see cref="QEffectId"/>)</item>
+    /// <item>Mod settings registered with <see cref="ModManager.RegisterBooleanSettingsOption"/></item>
+    /// </list>
+    /// </para>
+    public static void LoadData()
     {
-        return (T)(ModManager.TryParse(technicalName, out T alreadyRegistered)
-            ? alreadyRegistered
-            : typeof(T) == typeof(FeatName)
-                ? (Enum)ModManager.RegisterFeatName(technicalName, displayName)
-                : ModManager.RegisterEnumMember<T>(technicalName));
+        ModTrait = ModManager.ModBeingLoadedTrait!.Value; // Known not null at this stage
     }
 
     public static class Traits
     {
-        public static readonly Trait ModName = ModManager.RegisterModNameTrait(
-            "LoresAndWeaknesses",
-            "Lores and Weaknesses");
 
         public static readonly Trait Lore = ModManager.RegisterTrait(
-            IdPrepend + "Lore",
+            ID_PREPEND + "Lore",
             new TraitProperties(
                 "Lore",
                 true,

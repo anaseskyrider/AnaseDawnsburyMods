@@ -25,7 +25,7 @@ public static class NewSpells
                 return Spells.CreateModern(
                         IllustrationName.TrueSeeing,
                         "Hypercognition",
-                        [ModData.Traits.ModName, Trait.Concentrate, Trait.Divination, Trait.Occult, Trait.VerbalOnly, Trait.DoesNotRequireAttackRollOrSavingThrow],
+                        [ModData.ModTrait, Trait.Concentrate, Trait.Divination, Trait.Occult, Trait.VerbalOnly, Trait.DoesNotRequireAttackRollOrSavingThrow],
                         "You rapidly catalog and collate information relevant to your current situation.",
                         $"You can instantly use up to 6 {RecallWeakness.GetActionLink()} actions as part of Casting this Spell. For these actions, you can't use any special abilities, reactions, or free actions that trigger when you Recall a Weakness.",
                         Target.Self()

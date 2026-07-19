@@ -146,20 +146,20 @@ public static class RecallWeakness
     
     public static void Load()
     {
-        RecallWeaknessEffect = ModData.SafelyRegister<QEffectId>("RecallWeaknessEffect");
-        RecallWeaknessAttempts = ModData.SafelyRegister<QEffectId>("IncreasedRecallWeaknessDC");
-        CombatAssessmentBonus = ModData.SafelyRegister<QEffectId>("CombatAssessmentBonus");
-        AutomaticKnowledge = ModData.SafelyRegister<QEffectId>("AutomaticKnowledge");
-        RWActionId = ModData.SafelyRegister<ActionId>("RecallWeaknessActionID"); // Backwards compatible ID
-        CombatAssessment = ModData.SafelyRegister<ActionId>("Combat Assessment"); // Backwards compatible ID
-        FNAdditionalLore = ModData.SafelyRegister<FeatName>(ModData.IdPrepend + "AdditionalLore", "Additional Lore");
-        FNRecallWeakness = ModData.SafelyRegister<FeatName>(ModData.IdPrepend + "RecallWeakness", "Recall Weakness {icon:Action}");
-        FNDubiousKnowledge = ModData.SafelyRegister<FeatName>(ModData.IdPrepend + "DubiousKnowledge", "Dubious Knowledge");
-        FNCombatAssessment = ModData.SafelyRegister<FeatName>("CombatAssessment", "Combat Assessment");
-        FNAutomaticKnowledge = ModData.SafelyRegister<FeatName>(ModData.IdPrepend + "AutomaticKnowledge", "Automatic Knowledge");
+        RecallWeaknessEffect = ModManager.SafelyRegisterEnumMember<QEffectId>("RecallWeaknessEffect");
+        RecallWeaknessAttempts = ModManager.SafelyRegisterEnumMember<QEffectId>("IncreasedRecallWeaknessDC");
+        CombatAssessmentBonus = ModManager.SafelyRegisterEnumMember<QEffectId>("CombatAssessmentBonus");
+        AutomaticKnowledge = ModManager.SafelyRegisterEnumMember<QEffectId>("AutomaticKnowledge");
+        RWActionId = ModManager.SafelyRegisterEnumMember<ActionId>("RecallWeaknessActionID"); // Backwards compatible ID
+        CombatAssessment = ModManager.SafelyRegisterEnumMember<ActionId>("Combat Assessment"); // Backwards compatible ID
+        FNAdditionalLore = ModManager.SafelyRegisterEnumMember<FeatName>(ModData.ID_PREPEND + "AdditionalLore", ["Additional Lore"]);
+        FNRecallWeakness = ModManager.SafelyRegisterEnumMember<FeatName>(ModData.ID_PREPEND + "RecallWeakness", ["Recall Weakness {icon:Action}"]);
+        FNDubiousKnowledge = ModManager.SafelyRegisterEnumMember<FeatName>(ModData.ID_PREPEND + "DubiousKnowledge", ["Dubious Knowledge"]);
+        FNCombatAssessment = ModManager.SafelyRegisterEnumMember<FeatName>("CombatAssessment", ["Combat Assessment"]);
+        FNAutomaticKnowledge = ModManager.SafelyRegisterEnumMember<FeatName>(ModData.ID_PREPEND + "AutomaticKnowledge", ["Automatic Knowledge"]);
         
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
         
         // Replace DawnniExpanded's Recall Weakness
         ModManager.RegisterActionOnEachCreature(cr =>
@@ -378,6 +378,7 @@ public static class RecallWeakness
                     comAssess.Illustration = new SideBySideIllustration(
                         comAssess.Illustration,
                         IllustrationName.NarratorBook);
+                    comAssess.Traits = new Traits([ModData.ModTrait, ..comAssess.Traits.ToList()], comAssess);
 
                     return comAssess;
                 };
@@ -429,7 +430,7 @@ public static class RecallWeakness
                 owner,
                 IllustrationName.NarratorBook,
                 "Recall Weakness",
-                [Trait.Basic, ModData.Traits.ModName, Trait.Homebrew, Trait.Concentrate, Trait.Skill, Trait.UnaffectedByConcealment, Trait.DoesNotBreakStealth],
+                [Trait.Basic, ModData.ModTrait, Trait.Homebrew, Trait.Concentrate, Trait.Skill, Trait.UnaffectedByConcealment, Trait.DoesNotBreakStealth],
                 $$"""
                 {i}You attempt to spot or remember a foe's weakness to use to your advantage.{/i}
                 

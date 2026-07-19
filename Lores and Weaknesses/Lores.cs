@@ -58,7 +58,7 @@ public static class Lores
             "Legendary Lores");*/
         
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
         RegisterLores();
         AdjustFeatsAndFeatures();
         
@@ -197,7 +197,7 @@ public static class Lores
                 });
             });
         outwit.RulesText = outwit.RulesText.Replace("Stealth checks", $"Stealth checks; as well as {RecallWeakness.GetActionLink()} checks;");
-        outwit.Traits.Insert(0, ModData.Traits.ModName);
+        outwit.Traits.Insert(0, ModData.ModTrait);
 
         // Update the skill-training feats.
         LoadOrder.WhenFeatsBecomeLoaded += () =>
@@ -432,12 +432,14 @@ public static class Lores
         // If it already existed, tag it as now being modified by LoresAndWeaknesses
         if (AllFeats.AlreadyExists(skillFeat.FeatName))
         {
-            skillFeat.Traits.Insert(0, ModData.Traits.ModName);
+            skillFeat.Traits.Insert(0, ModData.ModTrait);
+            #pragma warning disable CS0618 // Type or member is obsolete
             skillFeat.Traits.Remove(Trait.Mod);
+            #pragma warning restore CS0618 // Type or member is obsolete
         }
         else
         {
-            ModManager.AddFeat(skillFeat, ModData.Traits.ModName);
+            ModManager.AddFeat(skillFeat);
             /*if (!lore.IsHidden)
                 if (prof == Proficiency.Trained)
                     AllFeats.GetFeatByFeatName(Lores.TrainedLoreCategory).Subfeats!.Add(skillFeat);
@@ -474,10 +476,10 @@ public static class Lores
     internal static Feat RegisterAdditionalLoreSubfeat(Lore lore)
     {
         Feat additionalSubFeat = new Feat(
-                ModManager.TryParse(ModData.IdPrepend + "AdditionalLore." + lore.Name, out FeatName addLore)
+                ModManager.TryParse(ModData.ID_PREPEND + "AdditionalLore." + lore.Name, out FeatName addLore)
                     ? addLore
                     : ModManager.RegisterFeatName(
-                        ModData.IdPrepend + "AdditionalLore." + lore.Name,
+                        ModData.ID_PREPEND + "AdditionalLore." + lore.Name,
                         DisplayOffset + lore.Name),
                 "", "", [], null)
             .WithIllustration(IllustrationName.NarratorBook)
@@ -521,7 +523,7 @@ public static class Lores
         // Enforce DisplayOffset behavior even if the FeatName was already registered
         additionalSubFeat.CustomName = DisplayOffset + lore.Name;
         
-        ModManager.AddFeat(additionalSubFeat, ModData.Traits.ModName);
+        ModManager.AddFeat(additionalSubFeat);
         AllFeats.GetFeatByFeatName(RecallWeakness.FNAdditionalLore)
             .Subfeats
             !.Add(additionalSubFeat);

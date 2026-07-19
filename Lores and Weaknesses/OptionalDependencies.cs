@@ -112,7 +112,7 @@ public static class OptionalDependencies
                     };
                 });
         autoKnow.CanSelectMultipleTimes = true;
-        ModManager.AddFeat(autoKnow, ModData.Traits.ModName);
+        ModManager.AddFeat(autoKnow);
         
         LoadOrder.WhenFeatsBecomeLoaded += () =>
         {
@@ -120,7 +120,7 @@ public static class OptionalDependencies
             {
                 Feat subKnow = CreateAutomaticKnowledgeSubfeat(skill);
                 autoKnow.Subfeats!.Add(subKnow);
-                ModManager.AddFeat(subKnow, ModData.Traits.ModName);
+                ModManager.AddFeat(subKnow);
             }
             
             foreach (Lore lore in Lores.AllLores.OrderBy(lore => lore.Skill.ToStringOrTechnical()))
@@ -137,7 +137,7 @@ public static class OptionalDependencies
                 // Automatic Knowledge
                 Feat subKnow = CreateAutomaticKnowledgeSubfeat(lore.Skill, true);
                 autoKnow.Subfeats!.Add(subKnow);
-                ModManager.AddFeat(subKnow, ModData.Traits.ModName);
+                ModManager.AddFeat(subKnow);
             }
             
             /*New_Skill_Feats_and_Items.SkillFeats.Assurance?.Subfeats = New_Skill_Feats_and_Items.SkillFeats.Assurance!
@@ -158,7 +158,7 @@ public static class OptionalDependencies
     {
         Feat autoKnow = new Feat(
                 ModManager.RegisterFeatName(
-                    ModData.IdPrepend + "AutomaticKnowledge." + skill.ToStringOrTechnical(),
+                    ModData.ID_PREPEND + "AutomaticKnowledge." + skill.ToStringOrTechnical(),
                     (isLore is true ? (Lores.DisplayOffset + "{icon:NarratorBook} ") : null) + skill.ToStringOrTechnical()),
                 "You know basic facts off the top of your head.",
                 "You can use " + skill.ToStringOrTechnical() + " with Automatic Knowledge {icon:FreeAction}.",

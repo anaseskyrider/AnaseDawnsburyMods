@@ -10,6 +10,7 @@ public static class ModLoader
         Harmony loresHarmony = new Harmony("LoresAndWeaknesses");
         loresHarmony.PatchAll();
         
+        ModData.LoadData();
         RecallWeakness.Load();
         Lores.Load();
         NewSpells.Load();
