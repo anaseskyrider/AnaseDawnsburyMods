@@ -24,14 +24,15 @@ public static class DualWeaponWarrior
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
     }
     
     public static IEnumerable<Feat> CreateFeats()
     {
         // Archetype
+        // MORE ARCHETYPES: This has been deprecated.
         Feat dwwArchetype = ArchetypeFeats.CreateAgnosticArchetypeDedication(
-                ModData.Traits.DualWeaponWarriorArchetype,
+                ModData.Traits.DualWeaponWarrior,
                 "You're exceptional in your use of two weapons.",
                 "You gain the Double Slice fighter feat.")
             .WithRulesBlockForCombatAction(cr =>
@@ -55,13 +56,14 @@ public static class DualWeaponWarrior
         yield return dwwArchetype;
         
         // Dual Thrower
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
                 ModData.FeatNames.DualThrower,
                 4,
                 "You know how to throw two weapons as easily as strike with them.",
                 "Whenever a dual-weapon warrior feat allows you to make a melee Strike, you can instead make a ranged Strike with a thrown weapon or a one-handed ranged weapon you are wielding. Any effects from these feats that apply to one-handed melee weapons or melee Strikes also apply to one-handed ranged weapons and ranged Strikes.",
                 [])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.DualWeaponWarriorArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.DualWeaponWarrior)
             .WithPermanentQEffect(
                 "You can use double slice and other Dual-Weapon Warrior actions with ranged weapons.",
                 qfFeat =>
@@ -93,7 +95,7 @@ public static class DualWeaponWarrior
                                     IllustrationName.Throw,
                                     IllustrationName.Throw),
                                 "Double Slice (throw)",
-                                [Trait.Basic, Trait.AlwaysHits, Trait.IsHostile, ModData.Traits.ModName, Trait.Archetype, Trait.Fighter],
+                                [Trait.Basic, Trait.AlwaysHits, Trait.IsHostile, ModData.ModTrait, Trait.Archetype, Trait.Fighter],
                                 null!,
                                 (strike1 as CreatureTarget)!
                                 .WithAdditionalConditionOnTargetCreature((a, d) =>
@@ -162,11 +164,13 @@ public static class DualWeaponWarrior
                 });
 
         // Twin Parry
+        // MORE ARCHETYPES: This has been deprecated.
         if (ModManager.TryParse("Twin Parry", out FeatName twinParry))
             yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-                twinParry, ModData.Traits.DualWeaponWarriorArchetype, 6);
+                twinParry, ModData.Traits.DualWeaponWarrior, 6);
         
         // Flensing Slice
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
                 ModData.FeatNames.FlensingSlice,
                 8,
@@ -179,7 +183,7 @@ public static class DualWeaponWarrior
                 The target also becomes flat-footed and reduces its physical damage resistances (if any) by 5 until the start of your next turn.
                 """,
                 [])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.DualWeaponWarriorArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.DualWeaponWarrior)
             .WithActionCost(1)
             .WithPermanentQEffect(
                 null,
@@ -228,7 +232,7 @@ public static class DualWeaponWarrior
                                 qfThis.Owner,
                                 ModData.Illustrations.FlensingSlice,
                                 "Flensing Slice",
-                                [Trait.Basic, ModData.Traits.ModName, Trait.Archetype],
+                                [Trait.Basic, ModData.ModTrait, Trait.Archetype],
                                 $$"""
                                   {b}Requirements{/b} Your last action was a Double Slice, and both attacks hit the target.
 
@@ -263,14 +267,5 @@ public static class DualWeaponWarrior
                             .WithPossibilityGroup("Abilities"); 
                     };
                 });
-        
-        /* Higher Level Feats
-         * @10 Dual-Weapon Blitz
-         * @12 (really: 10) Twin Riposte
-         * @14 Dual Onslaught
-         * @16 (really: 14) Improved Twin Riposte
-         * @16 (really: 14) Two-Weapon Flurry
-         * @18 (really: 16) Twinned Defense
-         */
     }
 }

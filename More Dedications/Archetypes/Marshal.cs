@@ -32,15 +32,20 @@ public static class Marshal
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateFeats()
     {
+        // MORE ARCHETYPES: This has been deprecated.
         Feat marshalDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
-                ModData.Traits.MarshalArchetype,
+                ModData.Traits.Marshal,
                 "Marshals are leaders, first and foremost. Marshals can come from any class or background, though they all share a willingness to sacrifice their own glory for the greater good of the team.",
-                "Choose Diplomacy or Intimidation. You become trained in that skill or become an expert if you were already trained in it.\n\nIn addition, you're surrounded by a marshal's aura in a 10-foot emanation. Your aura has the emotion, mental, and visual traits and grants you and allies within the aura a +1 status bonus to saving throws against fear.")
+                """
+                Choose Diplomacy or Intimidation. You become trained in that skill or become an expert if you were already trained in it.
+
+                In addition, you're surrounded by a marshal's aura in a 10-foot emanation. Your aura has the emotion, mental, and visual traits and grants you and allies within the aura a +1 status bonus to saving throws against fear.
+                """)
             .WithOnSheet(values =>
             {
                 List<FeatName> options =
@@ -95,6 +100,7 @@ public static class Marshal
         // License Firebrands!!!
         
         // Dread Marshal Stance
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
                 ModData.FeatNames.DreadMarshalStance,
                 4,
@@ -106,7 +112,7 @@ public static class Marshal
                     "You fail to enter the stance and can't take this action again for the rest of the encounter."),
                 [Trait.Open, Trait.Stance])
             .WithActionCost(1)
-            .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Marshal)
             .WithPermanentQEffect(
                 "Enter a stance where your allies deal bonus damage and can frighten enemies with their Strikes.",
                 qfFeat =>
@@ -120,7 +126,7 @@ public static class Marshal
                                 qfThis.Owner,
                                 ModData.Illustrations.DreadMarshalStance,
                                 "Dread Marshal Stance",
-                                [ModData.Traits.ModName, Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
+                                [ModData.ModTrait, Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
                                 $$"""
                                   {i}Putting on a grim face for the battle ahead, you encourage your allies to strike fear into their foes with vicious attacks.{/i}
 
@@ -182,7 +188,7 @@ public static class Marshal
                                                         };
                                                     qfTech.StateCheckLayer = 1;
                                                 });
-                                        dmStance.WhenExpires = async qfThis2 =>
+                                        dmStance.WhenExpires = qfThis2 =>
                                         {
                                             if (caster.FindQEffect(ModData.QEffectIds.MarshalsAuraProvider) is not
                                                 { } aura2) return;
@@ -207,6 +213,7 @@ public static class Marshal
                 "Must be trained in Intimidation");
         
         // Inspiring Marshal Stance
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
                 ModData.FeatNames.InspiringMarshalStance,
                 4,
@@ -218,7 +225,7 @@ public static class Marshal
                     "You fail to enter the stance and can't take this action again for the rest of the encounter."),
                 [Trait.Open, Trait.Stance])
             .WithActionCost(1)
-            .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Marshal)
             .WithPermanentQEffect(
                 "Enter a stance where your allies deal bonus damage and can frighten enemies with their Strikes.",
                 qfFeat =>
@@ -232,7 +239,7 @@ public static class Marshal
                                 qfThis.Owner,
                                 ModData.Illustrations.InspiringMarshalStance,
                                 "Inspiring Marshal Stance",
-                                [ModData.Traits.ModName, Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
+                                [ModData.ModTrait, Trait.Archetype, Trait.Open, Trait.Stance, Trait.Basic],
                                 $$"""
                                   {i}You become a brilliant example of dedication and poise in battle, encouraging your allies to follow suit.{/i}
 
@@ -285,7 +292,7 @@ public static class Marshal
                                                             : null;
                                                     qfTech.StateCheckLayer = 1;
                                                 });
-                                        dmStance.WhenExpires = async qfThis2 =>
+                                        dmStance.WhenExpires = qfThis2 =>
                                         {
                                             if (caster.FindQEffect(ModData.QEffectIds.MarshalsAuraProvider) is not
                                                 { } aura2) return;
@@ -309,10 +316,11 @@ public static class Marshal
                 values => values.HasFeat(FeatName.Diplomacy),
                 "Must be trained in Diplomacy");
         
-        // TODO: Snap Out of It! (Marshal) @lv4
-        // Can this even be implemented?
+        // Snap Out of It! (Marshal) @lv4
+        // MORE ARCHETYPES: This might be implemented there.
         
         // Steel Yourself!
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
                 ModData.FeatNames.SteelYourself,
                 4,
@@ -320,7 +328,7 @@ public static class Marshal
                 "Choose one ally within your marshal's aura. The ally gains temporary Hit Points equal to your Charisma modifier, as well as a +2 circumstance bonus to Fortitude saves which lasts until the start of your next turn."/*"The ally gains temporary Hit Points equal to your Charisma modifier and a +2 circumstance bonus to Fortitude saves. Both benefits last until the start of your next turn."*/, // PETR: Temp HP rework?
                 [Trait.Auditory, Trait.Emotion, Trait.Mental])
             .WithActionCost(1)
-            .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Marshal)
             .WithPermanentQEffect(
                 "You give temporary HP and bonuses to Fortitude saves to an ally in your marshal's aura.",
                 qfFeat =>
@@ -331,7 +339,7 @@ public static class Marshal
                                 qfThis.Owner,
                                 ModData.Illustrations.SteelYourself,
                                 "Steel Yourself",
-                                [ModData.Traits.ModName, Trait.Auditory, Trait.Emotion, Trait.Mental, Trait.Basic],
+                                [ModData.ModTrait, Trait.Auditory, Trait.Emotion, Trait.Mental, Trait.Basic],
                                 $$"""
                                   {i}You encourage an ally to toughen up, giving them a fighting chance.{/i}
 
@@ -363,11 +371,12 @@ public static class Marshal
                     };
                 });
         
-        // TODO: Cadence Call @lv6
-        // Can this even be implemented?
+        // Cadence Call @lv6
+        // MORE ARCHETYPES: This has been implemented.
         
         // Rallying Charge
         // Difference from tabletop: No expiration on temp HP.
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
                 ModData.FeatNames.RallyingCharge,
                 6,
@@ -375,7 +384,7 @@ public static class Marshal
                 "You Stride up to your Speed and make a melee Strike. If your Strike hits and damages an enemy, each ally within 60 feet"+/*" who saw you hit"+*/" gains temporary Hit Points equal to your Charisma modifier."/*+" These temporary Hit Points last until the start of your next turn."*/,
                 [Trait.Open, Trait.Visual])
             .WithActionCost(2)
-            .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Marshal)
             .WithPermanentQEffect(
                 "Stride and then make a melee Strike, granting temp HP to allies within 60 feet.",
                 qfFeat =>
@@ -386,7 +395,7 @@ public static class Marshal
                                 qfThis.Owner,
                                 ModData.Illustrations.RallyingCharge,
                                 "Rallying Charge",
-                                [ModData.Traits.ModName, Trait.Open, Trait.Visual, Trait.Basic],
+                                [ModData.ModTrait, Trait.Open, Trait.Visual, Trait.Basic],
                                 // TODO: Line of sight requirement
                                 // "If your Strike hits and damages an enemy, each ally within 60 feet who saw you hit gains {b}+{qfThis.Owner.Abilities.Charisma}{/b} temporary Hit Points."
                                 $$"""
@@ -439,19 +448,23 @@ public static class Marshal
                 });
         
         // Attack of Opportunity
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-                FeatName.AttackOfOpportunity, ModData.Traits.MarshalArchetype, 8)
+        // MORE ARCHETYPES: This has been deprecated.
+        Feat aooForMarshal = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+                FeatName.AttackOfOpportunity, ModData.Traits.Marshal, 8)
             .WithEquivalent(values => values.HasFeat(FeatName.Fighter));
+        ModData.FeatNames.AttackOfOpportunityForMarshal = aooForMarshal.FeatName;
+        yield return aooForMarshal;
 
         // Back to Back
         // Special thanks to SilchasRuin
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
                 ModData.FeatNames.BackToBack,
                 8,
                 "You excel at watching your allies' backs and helping them watch yours.",
                 "You gain the following benefits: You cannot be flat-footed due to flanking while none of your adjacent allies are flanked.\n\nYour adjacent allies gain the following benefits: You cannot be flat-footed due to flanking while the marshal with this feat isn't flanked.",
                 [])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Marshal)
             .WithPermanentQEffect(
                 "You and your adjacent allies can't be flanked unless both you and another adjacent ally are flanked.",
                 qfFeat =>
@@ -499,6 +512,7 @@ public static class Marshal
                 });
 
         // To Battle!
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
                 ModData.FeatNames.ToBattle,
                 8,
@@ -506,7 +520,7 @@ public static class Marshal
                 "Choose one ally within your marshal's aura who has a reaction available. If you spend {icon:Action} 1 action, that ally can use their {icon:Reaction} reaction to immediately Stride. If you spend {icon:TwoActions} 2 actions, that ally can use their {icon:Reaction} reaction to immediately Strike.",
                 [Trait.Auditory, Trait.Flourish])
             .WithActionCost(-3)
-            .WithAvailableAsArchetypeFeat(ModData.Traits.MarshalArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Marshal)
             .WithPermanentQEffect(
                 "Choose an ally, who will use their reaction to Stride or Strike.", 
                 qfFeat =>
@@ -517,7 +531,7 @@ public static class Marshal
                                 qfThis.Owner,
                                 ModData.Illustrations.ToBattle,
                                 "To Battle!",
-                                [ModData.Traits.ModName, Trait.Auditory, Trait.Flourish, Trait.Basic],
+                                [ModData.ModTrait, Trait.Auditory, Trait.Flourish, Trait.Basic],
                                 "{i}With a resounding cry, you rally your ally to the offensive.{/i}\n\nChoose one ally within your marshal's aura who has a reaction available. If you spend 1 action, that ally can use their reaction to immediately Stride. If you spend 2 actions, that ally can use their reaction to immediately Strike.",
                                 Target.DependsOnActionsSpent(
                                     BasicTargeting()
@@ -601,15 +615,6 @@ public static class Marshal
                         }
                     };
                 });
-        
-        /* Higher Level Feats
-         * @10 (ORC) Form Up!
-         * @10 Topple Foe
-         * @12 Coordinated Charge
-         * @12 (ORC) General's Gambit
-         * @14 Tactical Cadence
-         * @14 Target of Opportunity
-         */
     }
 
     public static int GetMarshalAuraRange(Creature marshal)

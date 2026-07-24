@@ -1,5 +1,4 @@
-﻿using Dawnsbury.Core.Mechanics;
-using Dawnsbury.Modding;
+﻿using Dawnsbury.Modding;
 using Dawnsbury.Mods.MoreDedications.Archetypes;
 
 namespace Dawnsbury.Mods.MoreDedications;
@@ -14,6 +13,7 @@ public static class ModLoader
         // Updated Archetypes //
         ////////////////////////
         Archer.LoadArchetype();
+        MartialArtist.LoadArchetype();
         Medic.LoadArchetype();
         Wrestler.LoadArchetype();
         // TODO: Update Sentinel to add the resting-armor feat.
@@ -23,7 +23,6 @@ public static class ModLoader
         ////////////////////
         Mauler.LoadArchetype();
         Bastion.LoadArchetype();
-        MartialArtist.LoadArchetype();
         Marshal.LoadArchetype();
         BlessedOne.LoadArchetype();
         Scout.LoadArchetype();
@@ -42,5 +41,10 @@ public static class ModLoader
         // TODO: Mind Smith
         // TODO: Pistol Phenom
         // TODO: Shadowcaster
+        
+        //////////////////////////////////
+        // Replace Old FeatName Strings //
+        //////////////////////////////////
+        ModData.FeatNames.ReplaceOldFeatNames();
     }
 }

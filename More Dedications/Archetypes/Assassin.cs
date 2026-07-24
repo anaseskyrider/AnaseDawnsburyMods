@@ -28,14 +28,15 @@ public static class Assassin
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateFeats()
     {
         // Dedication
+        // MORE ARCHETYPES: This has been deprecated.
         Feat assassinDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
-                ModData.Traits.AssassinArchetype,
+                ModData.Traits.Assassin,
                 "Targeted killing through stealth and subterfuge is the expertise of an assassin. While assassins are skilled in ending lives and many are evil, some live by a moral code, preying on the wicked, the cruel, or those who revel in unchecked aggression or power.",
                 "You gain the Mark for Death activity, which you can use as a {icon:FreeAction} free action at the start of combat.")
             .WithRulesBlockForCombatAction(CreateMarkForDeathAction)
@@ -63,38 +64,43 @@ public static class Assassin
         ModData.FeatNames.AssassinDedication = assassinDedication.FeatName;
         yield return assassinDedication;
         
-        // Knights of Lastwall: (4) Angel of Vindication
+        // Lv4: Angel of Vindication
+        // Knights of Lastwall
         
-        // Knights of Lastwall: (4) Eclipsed Vitality
+        // Lv4: Eclipsed Vitality
+        // Knights of Lastwall
 
         // Expert Backstabber
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
                 ModData.FeatNames.ExpertBackstabber,
                 4,
                 null,
                 "Double the amount of damage dealt by the backstabber weapon trait.",
                 [])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.AssassinArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Assassin)
             .WithPermanentQEffectAndSameRulesText(qfFeat =>
             {
                 qfFeat.Id = ModData.QEffectIds.ExpertBackstabber;
             });
         
         // Poison Resistance
-        Feat poisonResistance = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            FeatName.PoisonResistanceDruid, ModData.Traits.AssassinArchetype, 4);
-        poisonResistance.FlavorText = "Your body has become fortified against toxins.";
-        ModData.FeatNames.PoisonResistance = poisonResistance.FeatName;
-        yield return poisonResistance;
+        // MORE ARCHETYPES: This has been deprecated.
+        Feat pResForAssassin = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.PoisonResistanceDruid, ModData.Traits.Assassin, 4);
+        pResForAssassin.FlavorText = "Your body has become fortified against toxins.";
+        ModData.FeatNames.PoisonResistanceForAssassin = pResForAssassin.FeatName;
+        yield return pResForAssassin;
 
         // Surprise Attack
+        // MORE ARCHETYPES: This has been deprecated.
         Feat surpriseAttack = new TrueFeat(
                 ModData.FeatNames.SurpriseAttack,
                 4,
                 "You act before foes can react.",
                 "On the first round of combat, creatures that haven't acted yet are flat-footed to you.",
                 [])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.AssassinArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Assassin)
             .WithEquivalent(values =>
                 values.Class?.ClassTrait is Trait.Rogue
                 || values.AdditionalClassTraits.Contains(Trait.Rogue))
@@ -103,6 +109,7 @@ public static class Assassin
         yield return surpriseAttack;
 
         // Poison Weapon
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
                 ModData.FeatNames.PoisonWeapon,
                 4,
@@ -148,7 +155,7 @@ public static class Assassin
                                 qfThis.Owner,
                                 IllustrationName.AlchemicalPoison,
                                 "Poison weapon (simple injury poison)",
-                                [ModData.Traits.ModName, Trait.Basic, Trait.Manipulate],
+                                [ModData.ModTrait, Trait.Basic, Trait.Manipulate],
                                 $$"""
                                   {b}Prepared Poisons{/b} {{remainingCharges}}/{{maxCharges}}
                                   
@@ -263,15 +270,20 @@ public static class Assassin
                             .WithPossibilityGroup("Use item");
                     };
                 });
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.PoisonWeapon, ModData.Traits.AssassinArchetype, 6);
+        // Poison Weapon for Assassin
+        TrueFeat pWepForAssassin = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            ModData.FeatNames.PoisonWeapon, ModData.Traits.Assassin, 6);
+        ModData.FeatNames.PoisonWeaponForAssassin = pWepForAssassin.FeatName;
+        yield return pWepForAssassin;
 
-        // Sneak Attacker
-        Feat sneakAttacker = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            FeatName.SneakAttacker, ModData.Traits.AssassinArchetype, 4);
+        // Sneak Attacker for Assassin
+        TrueFeat sneakAttacker = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.SneakAttacker, ModData.Traits.Assassin, 4);
+        ModData.FeatNames.SneakAttackerForAssassin = sneakAttacker.FeatName;
         yield return sneakAttacker;
         
         // Improved Poison Weapon
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
                 ModData.FeatNames.ImprovedPoisonWeapon,
                 8,
@@ -288,12 +300,16 @@ public static class Assassin
             {
                 values.GrantFeat(FeatName.StickyPoison);
             });
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.ImprovedPoisonWeapon, ModData.Traits.AssassinArchetype, 10);
-        
+        // Improved Poison Weapon for Assassin
+        // MORE ARCHETYPES: This has been deprecated.
+        TrueFeat impPWeaponForAssassin = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            ModData.FeatNames.ImprovedPoisonWeapon, ModData.Traits.Assassin, 10);
+        ModData.FeatNames.ImprovedPoisonWeaponForAssassin = impPWeaponForAssassin.FeatName;
+        yield return impPWeaponForAssassin;
+
         // TODO: Lv8: Public Execution?
         // License Firebrands!
-        
+
         /* Higher level feats
          * @12 Deadly Poison Weapon (Against the Scarlet Triad)
          * * https://2e.aonprd.com/Feats.aspx?ID=1151

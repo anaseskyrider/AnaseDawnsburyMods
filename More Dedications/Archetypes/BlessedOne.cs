@@ -22,15 +22,15 @@ public static class BlessedOne
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateFeats()
     {
         Feat blessedOneDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
-                ModData.Traits.BlessedOneArchetype,
+                ModData.Traits.BlessedOne,
                 "Through luck or deed, heritage or heroics, you carry the blessing of a deity. This blessing manifests as the ability to heal wounds and remove harmful conditions, and exists independent of worship.",
-                "You learn the " + AllSpells.CreateSpellLink(ChampionFocusSpells.LayOnHands, ModData.Traits.BlessedOneArchetype) + " champion focus spell. This feat grants a focus pool of 1 Focus Point, or an additional Focus Point if you already had one."/*+" Your focus spells from the blessed one archetype are divine spells."*/)
+                $"You learn the {AllSpells.CreateSpellLink(ChampionFocusSpells.LayOnHands, ModData.Traits.BlessedOne)} champion focus spell. This feat grants a focus pool of 1 Focus Point, or an additional Focus Point if you already had one." /*+" Your focus spells from the blessed one archetype are divine spells."*/)
             .WithOnSheet(values =>
             {
                 values.SetProficiency(Trait.Spell, Proficiency.Trained);
@@ -67,7 +67,7 @@ public static class BlessedOne
                 return Spells.CreateModern(
                     ModData.Illustrations.ProtectorsSacrifice,
                     "Protector's Sacrifice",
-                    [ModData.Traits.ModName, Trait.Uncommon, Trait.Cleric, Trait.Focus, Trait.SomaticOnly],
+                    [ModData.ModTrait, Trait.Uncommon, Trait.Cleric, Trait.Focus, Trait.SomaticOnly],
                     "You protect your ally by suffering in their stead.",
                     description/*
                         + S.HeightenText(spellLevel, 1, inCombat, "{b}Heightened (+1){/b} The damage you redirect increases by 3.")*/,
@@ -141,7 +141,7 @@ public static class BlessedOne
                 null,
                 $"You gain the {AllSpells.CreateSpellLink(ModData.SpellIds.ProtectorsSacrifice, Trait.Champion)} domain spell as a devotion spell. Increase the number of Focus Points in your focus pool by 1.",
                 [])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.BlessedOneArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.BlessedOne)
             .WithOnSheet(values =>
             {
                 // DD code safeguards allow you to learn a focus spell multiple times, so...
@@ -155,17 +155,19 @@ public static class BlessedOne
             });
         
         // Accelerating Touch
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            Champion.AcceleratingTouchFeatName, ModData.Traits.BlessedOneArchetype, 6);
-        
+        TrueFeat aTouchForBlessedOne = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            Champion.AcceleratingTouchFeatName, ModData.Traits.BlessedOne, 6);
+        ModData.FeatNames.AcceleratingTouchForBlessedOne = aTouchForBlessedOne.FeatName;
+        yield return aTouchForBlessedOne;
+
         // NO MERCY??? :sob:
-        
+
         // Blessed Spell
-        
+
         // Invigorating Mercy
-        
+
         // Greater Mercy (out of scope, but I'd probably have to add that too since it's lv8 for Champs)
-        
+
         /* Higher Level Feats
          * @12 Blessed Denial
          * @12 (really: 10) Elucidating Mercy

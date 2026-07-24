@@ -21,7 +21,7 @@ public static class Scout
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateFeats()
@@ -46,7 +46,7 @@ public static class Scout
                             ally.AddQEffect(new QEffect()
                             {
                                 Name = "Scout's Warning",
-                                BonusToInitiative = qfThis2 =>
+                                BonusToInitiative = _ =>
                                     new Bonus(1, BonusType.Circumstance, "Scout's warning"),
                             });
                         }
@@ -58,9 +58,13 @@ public static class Scout
             return;*/
 
         Feat scoutDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
-                ModData.Traits.ScoutArchetype,
+                ModData.Traits.Scout,
                 "You're an expert in espionage and reconnaissance, able to skulk silently through the wilderness to gather intelligence, sneak through enemy lines to report to your comrades, or suddenly and decisively strike your foes. Your skills ease the difficulty of travel for you and your companions and keep you all on guard when you're approaching danger.",
-                "You gain the Scout's Warning ranger feat.\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " {b}Modding{/b} If the {i}"+explorationModName+"{/i} mod is installed, you gain the following benefit: When you're using the Scout exploration activity, you grant your allies a +2 circumstance bonus to their initiative rolls instead of a +1 circumstance bonus.")
+                $$"""
+                  You gain the Scout's Warning ranger feat.
+
+                  {{ModData.Illustrations.DawnsburySun.IllustrationAsIconString}} {b}Modding{/b} If the {i}{{explorationModName}}{/i} mod is installed, you gain the following benefit: When you're using the Scout exploration activity, you grant your allies a +2 circumstance bonus to their initiative rolls instead of a +1 circumstance bonus.
+                  """)
             .WithPrerequisite(values =>
                 values.HasFeat(FeatName.Stealth) && values.HasFeat(FeatName.Survival),
                 "Must be trained in Stealth and Survival")
@@ -83,52 +87,51 @@ public static class Scout
                 "Choose one enemy. Stride, Feint against that opponent, and then make a Strike against it. For your Feint, you can attempt a Stealth check instead of the Deception check that's usually required, using the terrain around you to surprise your foe.",
                 [Trait.Flourish])
             .WithActionCost(2)
-            .WithAvailableAsArchetypeFeat(ModData.Traits.ScoutArchetype)
-            .WithPermanentQEffect(
-                "Choose an enemy. Stride, Feint, and Strike them.",
-                qfFeat =>
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Scout)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.ProvideMainAction = qfThis =>
                 {
-                    qfFeat.ProvideMainAction = qfThis =>
-                    {
-                        CombatAction chargeAction = new CombatAction(
-                                qfThis.Owner,
-                                new SideBySideIllustration(IllustrationName.FleetStep, IllustrationName.Feint),
-                                "Scout's Charge",
-                                [ModData.Traits.ModName, Trait.Basic, Trait.Archetype, Trait.Flourish],
-                                """
-                                {i}You meander around unpredictably, and then ambush your opponents without warning.{/i}
+                    CombatAction chargeAction = new CombatAction(
+                            qfThis.Owner,
+                            new SideBySideIllustration(IllustrationName.FleetStep, IllustrationName.Feint),
+                            "Scout's Charge",
+                            [ModData.ModTrait, Trait.Archetype, Trait.Flourish],
+                            """
+                            {i}You meander around unpredictably, and then ambush your opponents without warning.{/i}
 
-                                Choose one enemy. Stride, Feint against that opponent, and then make a Strike against it. For your Feint, you can attempt a Stealth check instead of the Deception check that's usually required, using the terrain around you to surprise your foe.
-                                """,
-                                Target.Self())
-                            .WithActionCost(2)
-                            .WithEffectOnSelf(async (thisAction, self) =>
+                            Choose one enemy. Stride, Feint against that opponent, and then make a Strike against it. For your Feint, you can attempt a Stealth check instead of the Deception check that's usually required, using the terrain around you to surprise your foe.
+                            """,
+                            Target.Self())
+                        .WithActionCost(2)
+                        .WithShortDescription("Choose an enemy. Stride, Feint, and Strike them.")
+                        .WithEffectOnSelf(async (thisAction, self) =>
+                        {
+                            if (await self.StrideAsync(
+                                    "Choose where to Stride with Scout's Charge or right-click to cancel. You should end your movement adjacent to an enemy.",
+                                    allowCancel: true, allowPass: true))
                             {
-                                if (await self.StrideAsync(
-                                        "Choose where to Stride with Scout's Charge or right-click to cancel. You should end your movement adjacent to an enemy.",
-                                        allowCancel: true, allowPass: true))
-                                {
-                                    CombatAction feint = CombatManeuverPossibilities.CreateFeintAction(self)
-                                        .WithActionCost(0)
-                                        .WithActiveRollSpecification(new ActiveRollSpecification(
-                                            TaggedChecks.SkillCheck(Skill.Stealth),
-                                            TaggedChecks.DefenseDC(Defense.Perception)));
-                                    if (await self.Battle.GameLoop.FullCast(feint))
-                                        await CommonCombatActions.StrikeAdjacentCreature(self, cr => cr == feint.ChosenTargets.ChosenCreature, true);
-                                    else
-                                    {
-                                        self.Battle.Log("Scout's Charge was converted to a simple Stride.");
-                                        thisAction.SpentActions = 1;
-                                        thisAction.RevertRequested = true;
-                                    }
-                                }
+                                CombatAction feint = CombatManeuverPossibilities.CreateFeintAction(self)
+                                    .WithActionCost(0)
+                                    .WithActiveRollSpecification(new ActiveRollSpecification(
+                                        TaggedChecks.SkillCheck(Skill.Stealth),
+                                        TaggedChecks.DefenseDC(Defense.Perception)));
+                                if (await self.Battle.GameLoop.FullCast(feint))
+                                    await CommonCombatActions.StrikeAdjacentCreature(self, cr => cr == feint.ChosenTargets.ChosenCreature, true);
                                 else
+                                {
+                                    self.Battle.Log("Scout's Charge was converted to a simple Stride.");
+                                    thisAction.SpentActions = 1;
                                     thisAction.RevertRequested = true;
-                            });
-                        
-                        return new ActionPossibility(chargeAction);
-                    };
-                });
+                                }
+                            }
+                            else
+                                thisAction.RevertRequested = true;
+                        });
+                    
+                    return new ActionPossibility(chargeAction);
+                };
+            });
 
         // Lv4: Terrain Scout (probably no)
 
@@ -140,7 +143,7 @@ public static class Scout
                 "You Hide, then Sneak twice.",
                 [Trait.Flourish])
             .WithActionCost(2)
-            .WithAvailableAsArchetypeFeat(ModData.Traits.ScoutArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Scout)
             .WithPermanentQEffect(
                 "Hide, then Sneak twice.",
                 qfFeat =>
@@ -151,7 +154,7 @@ public static class Scout
                                 qfThis.Owner,
                                 new SideBySideIllustration(IllustrationName.Hide, IllustrationName.Sneak64),
                                 "Fleeting Shadow",
-                                [ModData.Traits.ModName, Trait.Basic, Trait.Archetype, Trait.Flourish, Trait.DoesNotBreakStealth],
+                                [ModData.ModTrait, Trait.Basic, Trait.Archetype, Trait.Flourish, Trait.DoesNotBreakStealth],
                                 """
                                 {i}You're able to quickly disappear and then move about without drawing the attention of your enemies.{/i}
 
@@ -201,7 +204,7 @@ public static class Scout
                 "You move faster, allowing you to scout ahead and report back without slowing your allies.",
                 "You gain a +10-foot status bonus to your Speed.",
                 [])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.ScoutArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Scout)
             .WithPermanentQEffect(
                 "Gain a +10-foot status bonus to your Speed.",
                 qfFeat =>

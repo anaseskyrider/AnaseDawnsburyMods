@@ -3,19 +3,13 @@ using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
-using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Specific;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Mechanics;
-using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
-using Dawnsbury.Core.Mechanics.Treasure;
-using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
-
-//using Dawnsbury.Mods.DawnniExpanded;
 
 namespace Dawnsbury.Mods.MoreDedications.Archetypes;
 
@@ -24,19 +18,21 @@ public static class Archer
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateFeats()
     {
         // Quick Shot: Add Quick Draw to Archer Dedication
         // DEPRECATED (remaster)
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        TrueFeat qDrawForArcher = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             FeatName.QuickDraw, Trait.Archer, 4);
+        ModData.FeatNames.QuickDrawForArcher = qDrawForArcher.FeatName;
+        yield return qDrawForArcher;
         
         // Crossbow Terror
-        // DEPRECATED (remaster)
         // Improve existing feat. Add damage die stacking prevention, shorten stat block description.
+        // MORE ARCHETYPES: Duplicate feat with a new name.
         TrueFeat cbTerror = (AllFeats.GetFeatByFeatName(FeatName.CrossbowTerror) as TrueFeat)!;
         cbTerror.RulesText += " As normal, this damage die increase can't be combined with other abilities that alter the weapon damage die (such as the ranger feat Crossbow Ace).";
         cbTerror.WithOnCreature(self =>
@@ -61,9 +57,9 @@ public static class Archer
         });
         
         // Parting Shot
-        // DEPRECATED (remaster)
+        // MORE ARCHETYPES: Deprecated this feat.
         yield return new TrueFeat(
-                ModData.FeatNames.FighterPartingShot,
+                ModData.FeatNames.PartingShot,
                 4,
                 "You jump back and fire a quick shot that catches your opponent off guard.",
                 """
@@ -90,7 +86,7 @@ public static class Archer
                                 qfFeat.Owner,
                                 new SideBySideIllustration(IllustrationName.Walk, item.Illustration),
                                 "Parting Shot",
-                                [ModData.Traits.ModName, Trait.Fighter, Trait.Basic],
+                                [ModData.ModTrait, Trait.Fighter, Trait.Basic],
                                 StrikeRules.CreateBasicStrikeDescription3(basicStrike.StrikeModifiers, additionalAttackRollText: "You Step before you Strike. Your target is flat-footed against the attack."),
                                 Target.Self())
                             .WithActionCost(2)
@@ -119,8 +115,10 @@ public static class Archer
                         return partingShot;
                     };
                 });
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.FighterPartingShot, Trait.Archer, 6);
+        TrueFeat pShotForArcher = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            ModData.FeatNames.PartingShot, Trait.Archer, 6);
+        ModData.FeatNames.PartingShotForArcher = pShotForArcher.FeatName;
+        yield return pShotForArcher;
         
         // TODO: Staggering Fire (lv6)
     }

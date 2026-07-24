@@ -19,8 +19,6 @@ using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
-//using Dawnsbury.Mods.DawnniExpanded;
-
 namespace Dawnsbury.Mods.MoreDedications.Archetypes;
 
 public static class Bastion
@@ -28,7 +26,7 @@ public static class Bastion
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
         
         ModManager.RegisterActionOnEachActionPossibility(ca =>
         {
@@ -50,9 +48,9 @@ public static class Bastion
     public static IEnumerable<Feat> CreateFeats()
     {
         // Dedication Feat
-        // DEPRECATED (remaster)
+        // MORE ARCHETYPES: This has been deprecated.
         Feat bastionDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
-                ModData.Traits.BastionArchetype,
+                ModData.Traits.Bastion,
                 "Some say that a good offense is the best defense, but you find such boasting smacks of overconfidence. In your experience, the best defense is a good, solid shield between you and your enemies.",
                 "You gain the Reactive Shield {icon:Reaction} fighter feat.")
             .WithPrerequisite(FeatName.ShieldBlock, "Shield Block")
@@ -64,13 +62,15 @@ public static class Bastion
         yield return bastionDedication;
 
         // Add Agile Shield Grip to Bastion
-        // DEPRECATED (remaster)
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            Champion.AgileShieldGripFeatName, ModData.Traits.BastionArchetype, 4);
+        // MORE ARCHETYPES: This has been deprecated.
+        TrueFeat gripForBastion = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            Champion.AgileShieldGripFeatName, ModData.Traits.Bastion, 4);
+        ModData.FeatNames.AgileShieldGripForBastion = gripForBastion.FeatName;
+        yield return gripForBastion;
 
         // Disarming Block
         // PETR: Disarm the attacking item
-        // DEPRECATED (remaster)
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
                 ModData.FeatNames.DisarmingBlock,
                 4,
@@ -84,7 +84,7 @@ public static class Bastion
                   """,
                 [])
             .WithActionCost(0)
-            .WithAvailableAsArchetypeFeat(ModData.Traits.BastionArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Bastion)
             .WithPrerequisite(
                 FeatName.Athletics,
                 "Trained in Athletics")
@@ -116,7 +116,7 @@ public static class Bastion
                                 defender,
                                 new SideBySideIllustration(action.Illustration, IllustrationName.Disarm),
                                 "Disarming Block",
-                                [ModData.Traits.ModName, Trait.Archetype],
+                                [ModData.ModTrait, Trait.Archetype],
                                 """
                                 {b}Trigger{/b} You Shield Block a melee Strike made with a held weapon.
 
@@ -231,7 +231,7 @@ public static class Bastion
         // https://2e.aonprd.com/Feats.aspx?ID=1088&ArchLevel=6
         
         // Nimble Shield Hand
-        // DEPRECATED (remaster)
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
                 ModData.FeatNames.NimbleShieldHand,
                 6,
@@ -242,7 +242,7 @@ public static class Bastion
                 This benefit doesn't apply to tower shields, which are still too cumbersome.
                 """,
                 [])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.BastionArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Bastion)
             .WithPermanentQEffect(
                 "You can Draw, Pick Up, or Replace a shield as a {icon:FreeAction} free action. Except for tower shields.",
                 qfFeat => qfFeat.Id = ModData.QEffectIds.NimbleShieldHand);
@@ -252,8 +252,9 @@ public static class Bastion
         // https://2e.aonprd.com/Feats.aspx?ID=3617
 
         // Shielded Stride
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
-                ModData.FeatNames.FighterShieldedStride,
+                ModData.FeatNames.ShieldedStride,
                 4,
                 "When your shield is up, your enemies' blows can't touch you.",
                 "When you have your shield raised, you can Stride to move half your Speed without triggering reactions that are triggered by your movement.",
@@ -270,12 +271,15 @@ public static class Bastion
                         }
                     };
                 });
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.FighterShieldedStride, ModData.Traits.BastionArchetype, 6);
+        TrueFeat sStrideForBastion = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            ModData.FeatNames.ShieldedStride, ModData.Traits.Bastion, 6);
+        ModData.FeatNames.ShieldedStrideForBastion = sStrideForBastion.FeatName;
+        yield return sStrideForBastion;
 
         // Reflexive Shield
+        // MORE ARCHETYPES: This has been deprecated.
         yield return new TrueFeat(
-                ModData.FeatNames.FighterReflexiveShield,
+                ModData.FeatNames.ReflexiveShield,
                 6,
                 "You can use your shield to fend off the worst of area effects and other damage.",
                 "When you Raise your Shield, you gain your shield's circumstance bonus to Reflex saves. If you have the Shield Block reaction, damage you take as a result of a Reflex save can trigger that reaction, even if the damage isn't physical damage.",
@@ -426,25 +430,25 @@ public static class Bastion
                         return null;
                     }
                 });
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.FighterReflexiveShield, ModData.Traits.BastionArchetype, 8);
+        TrueFeat refShieldForBastion = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            ModData.FeatNames.ReflexiveShield, ModData.Traits.Bastion, 8);
+        ModData.FeatNames.ReflexiveShieldForBastion = refShieldForBastion.FeatName;
+        yield return refShieldForBastion;
 
         // Add Shield Warden to Bastion
-        TrueFeat bastionShieldWarden = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            FeatName.ShieldWarden, ModData.Traits.BastionArchetype, 8);
+        // MORE ARCHETYPES: This has been deprecated.
+        TrueFeat sWardForBastion = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.ShieldWarden, ModData.Traits.Bastion, 8);
         // Removes the requirement, "You must be a Fighter, or you must have Shield Ally as your divine ally." .
-        bastionShieldWarden.Prerequisites.RemoveAll(req =>
+        sWardForBastion.Prerequisites.RemoveAll(req =>
             req.Description.Contains("must have Shield Ally") || req.Description.Contains("must be a Fighter,"));
-        yield return bastionShieldWarden;
+        ModData.FeatNames.ShieldWardenForBastion = sWardForBastion.FeatName;
+        yield return sWardForBastion;
         
         // Add Quick Shield Block to Bastion
+        // MORE ARCHETYPES: This has been deprecated.
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            FeatName.QuickShieldBlock, ModData.Traits.BastionArchetype, 10);
-        
-        /* Higher Level Feats
-         * @10 Destructive Block
-         * @12 (really: 10) Mirror Shield
-         */
+            FeatName.QuickShieldBlock, ModData.Traits.Bastion, 10);
     }
 
     public static void ApplyDelayedShieldBlockEvent(Creature attacker, Func<CombatAction, Task> doWhat)

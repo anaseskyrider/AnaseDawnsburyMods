@@ -20,12 +20,13 @@ public static class Medic
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateFeats()
     {
-        // Make skill feat variant of Treat Condition.
+        // Lv4: Treat Condition
+        // (Skill feat variant)
         Feat treatCondition = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
                 FeatName.TreatCondition, Trait.Medic, 4)
             .WithEquivalent(values => values.HasFeat(FeatName.TreatCondition));
@@ -35,7 +36,7 @@ public static class Medic
         ModData.FeatNames.TreatConditionSkillVariant = treatCondition.FeatName;
         yield return treatCondition;
 
-        // Level 4: Doctor's Visitation
+        // Lv4: Doctor's Visitation
         yield return new TrueFeat(
                 ModData.FeatNames.DoctorsVisitation,
                 4,
@@ -185,7 +186,8 @@ public static class Medic
                     };
                 });
         
-        // Make skill feat variant of Holistic Care.
+        // Lv4: Holistic Care
+        // (Skill feat variant)
         Feat holisticCare = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
                 FeatName.HolisticCare, Trait.Medic, 6)
             .WithEquivalent(values => values.HasFeat(FeatName.HolisticCare));
@@ -195,7 +197,7 @@ public static class Medic
         ModData.FeatNames.HolisticCareSkillVariant = holisticCare.FeatName;
         yield return holisticCare;
         
-        // TODO: Lv8. Preventative Treatment
+        // TODO: Lv8: Preventative Treatment
         // Can this even be done? Is it even any good?
         
         /* Higher Level Feats

@@ -2,11 +2,13 @@ using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
@@ -19,14 +21,14 @@ public static class Mauler
     public static void LoadArchetype()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateFeats()
     {
         // Dedication Feat
         Feat maulerDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
-                ModData.Traits.MaulerArchetype,
+                ModData.Traits.Mauler,
                 "You shove your way through legions of foes, knock enemies on all sides to the ground, and deal massive blows to anyone or anything that comes near.",
                 """
                 You become trained in all simple and martial melee weapons that require two hands to wield or that have the two-hand trait.
@@ -80,12 +82,16 @@ public static class Mauler
         yield return maulerDedication;
         
         // Add Knockdown to Mauler
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            FeatName.Knockdown, ModData.Traits.MaulerArchetype, 4);
+        TrueFeat knockdownForMauler = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.Knockdown, ModData.Traits.Mauler, 4);
+        ModData.FeatNames.KnockdownForMauler = knockdownForMauler.FeatName;
+        yield return knockdownForMauler;
 
         // Add Power Attack to Mauler
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            FeatName.PowerAttack, ModData.Traits.MaulerArchetype, 4);
+        TrueFeat powerAttackForMauler = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.PowerAttack, ModData.Traits.Mauler, 4);
+        ModData.FeatNames.PowerAttackForMauler = powerAttackForMauler.FeatName;
+        yield return powerAttackForMauler;
 
         // Clear the Way
         yield return new TrueFeat(
@@ -101,7 +107,7 @@ public static class Mauler
                 """,
                 [])
             .WithActionCost(2)
-            .WithAvailableAsArchetypeFeat(ModData.Traits.MaulerArchetype)
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Mauler)
             .WithPermanentQEffect(
                 null,
                 qfFeat =>
@@ -118,7 +124,7 @@ public static class Mauler
                                 qfFeat.Owner,
                                 new SideBySideIllustration(primaryItem.Illustration, IllustrationName.Shove),
                                 "Clear the Way",
-                                [ModData.Traits.ModName, Trait.Basic, Trait.IsHostile, Trait.AlwaysHits, Trait.Attack, Trait.AttackDoesNotIncreaseMultipleAttackPenalty],
+                                [ModData.ModTrait, Trait.Basic, Trait.IsHostile, Trait.AlwaysHits, Trait.Attack, Trait.AttackDoesNotIncreaseMultipleAttackPenalty],
                                 """
                                 {i}You put your body behind your massive weapon and swing, shoving enemies to clear a wide path.{/i}
                                 
@@ -180,59 +186,78 @@ public static class Mauler
                 """,
                 [])
             .WithActionCost(-2)
-            .WithAvailableAsArchetypeFeat(ModData.Traits.MaulerArchetype)
-            .WithPermanentQEffect(
-                "After a creature within your reach leaves a square during its move action, you can spend a reaction to Shove it.",
-                qfThis =>
+            .WithAvailableAsArchetypeFeat(ModData.Traits.Mauler)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " When a creature within your reach leaves a square during its move action, you can Shove it.";
+                
+                qfFeat.Id = QEffectId.AttackOfOpportunity;
+                qfFeat.WhenProvokedReactions = (qfThis, provokingAction) =>
                 {
-                    qfThis.Id = QEffectId.AttackOfOpportunity;
-                    qfThis.WhenProvoked = async (attackOfOpportunityQEffect, provokingAction) =>
+                    // Only specific triggers:
+                    // - Must be using a move action,
+                    // - Must be in the process of moving through spaces
+                    if (!provokingAction.HasTrait(Trait.Move)
+                        || provokingAction.Owner.AnimationData.LongMovement?.Path is not { Count: > 0 })
+                        return null;
+
+                    ReactionOptions shoves = [];
+                    foreach (Item weapon in qfThis.Owner.MeleeWeapons
+                                 .Where(weapon => weapon.WieldedInTwoHands))
                     {
-                        Creature owner = attackOfOpportunityQEffect.Owner;
-                        Item? primaryWeapon = owner.PrimaryWeapon;
-                        if (primaryWeapon != null && primaryWeapon.HasTrait(Trait.TwoHanded) &&
-                            primaryWeapon.HasTrait(Trait.Melee)
-                            && provokingAction.HasTrait(Trait.Move) && provokingAction.TilesMoved > 0)
-                        {
-                            bool hadShoveTrait = primaryWeapon.HasTrait(Trait.Shove);
-                            int storeItemBonus = primaryWeapon.WeaponProperties!.ItemBonus;
-                            if (!hadShoveTrait)
-                            {
-                                primaryWeapon.Traits.Add(Trait.Shove);
-                                primaryWeapon.WeaponProperties.ItemBonus = 0;
-                            }
+                        CombatAction shoveAction = CombatManeuverPossibilities
+                                .CreateShoveAction(qfThis.Owner, weapon)
+                                .WithActionCost(0)
+                                .WithExtraTrait(Trait.AttackDoesNotIncreaseMultipleAttackPenalty);
+                    
+                            // Remove free hand requirement
+                            if (((CreatureTarget)shoveAction.Target).CreatureTargetingRequirements.FirstOrDefault(req =>
+                                    req.Satisfied(qfThis.Owner, provokingAction.Owner) == Usability.CommonReasons.NoFreeHandForManeuver)
+                                is { } freeHandReq)
+                                ((CreatureTarget)shoveAction.Target).CreatureTargetingRequirements.Remove(freeHandReq);
 
-                            CombatAction shoveAction = CombatManeuverPossibilities
-                                .CreateShoveAction(owner, primaryWeapon)
-                                .WithActionCost(0);
-                            shoveAction.Traits.Add(Trait
-                                .AttackDoesNotIncreaseMultipleAttackPenalty); // Might not be necessary.
+                            if (!shoveAction.CanBeginToUse(qfThis.Owner))
+                                return null;
 
-                            if (shoveAction.CanBeginToUse(owner))
-                            {
-                                if (await owner.Battle.AskToUseReaction(owner,
-                                        "A creature within your reach just left a square. Use {i}Shoving Sweep{/i} to Shove it?"))
-                                {
-                                    await owner.Battle.GameLoop.FullCast(shoveAction,
-                                        ChosenTargets.CreateSingleTarget(provokingAction.Owner));
-                                }
-                            }
+                            CombatAction shovingSweep = new CombatAction(
+                                    qfThis.Owner,
+                                    shoveAction.Illustration,
+                                    "Shoving Sweep",
+                                    [ModData.ModTrait, Trait.Archetype],
+                                    null!,
+                                    Target.Self())
+                                .WithActionCost(-2)
+                                .WithDescription(
+                                    "You swing your weapon at a fleeing foe, rebuffing them back.",
+                                    """
+                                    {b}Requirements{/b} You're wielding a melee weapon in two hands.
 
-                            if (!hadShoveTrait)
-                            {
-                                primaryWeapon.Traits.Remove(Trait.Shove);
-                                primaryWeapon.WeaponProperties.ItemBonus = storeItemBonus;
-                            }
-                        }
-                    };
-                })
+                                    When a creature within your reach leaves a square during a move action it's using, you can spend a {icon:Reaction} reaction to attempt to Shove the triggering creature, ignoring the requirement that you have a hand free. {i}({Red}NYI:{/Red} The creature continues its movement after the Shove.){/i}
+                                    """)
+                                .WithEffectOnEachTarget(async (_, _, _, _) =>
+                                    await shoveAction.Fullcast(provokingAction.Owner));
+
+                            ReactionOption reactOpt = ReactionOption.WrapFullcastWithChosenTargets(
+                                shovingSweep,
+                                ChosenTargets.CreateSingleTarget(provokingAction.Owner),
+                                $"Shove {provokingAction.Owner.ToColoredName()} with your {weapon.ShortName}.");
+
+                            shoves.Add(reactOpt);
+                    }
+
+                    return shoves;
+                };
+            })
             .WithPrerequisite(
                 values => values.GetProficiency(Trait.Athletics) >= Proficiency.Expert,
                 "You must be expert in Athletics.");
 
         // Add Improved Knockdown to Mauler
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            FeatName.ImprovedKnockdown, ModData.Traits.MaulerArchetype, 12);
+        TrueFeat improvedKnockdownForMauler = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            FeatName.ImprovedKnockdown, ModData.Traits.Mauler, 12);
+        ModData.FeatNames.ImprovedKnockdownForMauler = improvedKnockdownForMauler.FeatName;
+        yield return improvedKnockdownForMauler;
         
         /* Higher Level Feats
          * @14 (really: 12) Brutal Finish
