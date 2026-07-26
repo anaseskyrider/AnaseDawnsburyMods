@@ -8,6 +8,7 @@ using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
+using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
@@ -17,6 +18,7 @@ using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
+using Dawnsbury.Core.Mechanics.Zoning;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
@@ -32,7 +34,7 @@ public static class AncestryFeats
     public static void LoadFeats()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft, ModData.Traits.ModName);
+            ModManager.AddFeat(ft);
     }
     
     public static IEnumerable<Feat> CreateFeats()
@@ -41,69 +43,80 @@ public static class AncestryFeats
         
         // Ask The Bones
         yield return new TrueFeat(
-                ModData.FeatNames.AskTheBones,
-                1,
+                ModData.FeatNames.AskTheBones, 1,
                 "You keep the bones of a knowledgeable ancestor or friend to call upon for advice.",
                 $$"""
-                  {b}Frequency{/b} once per day
+                  {b}Frequency{/b} Once per day.
 
                   Attempt to {{RecallWeakness.GetActionLink()}} with a +1 circumstance bonus to your check.
                   """,
                 [ModData.Traits.Kholo])
             .WithActionCost(0)
-            .WithPermanentQEffect(
-                "Recall Weakness with a +1 circumstance bonus to your check.",
-                qfFeat =>
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " " + "(Once per day) Recall Weakness with a +1 circumstance bonus to your check.".WithTag(qfThis.UsedUpPermanently ? "strike" : null);
+                
+                if (qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.AskTheBones))
                 {
-                    qfFeat.ProvideMainAction = qfThis =>
-                    {
-                        if (qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.AskTheBones))
-                            return null;
-                        
-                        CombatAction ask = new CombatAction(
-                                qfThis.Owner,
-                                IllustrationName.ArmorOfBones,
-                                "Ask the Bones",
-                                [ModData.Traits.ModName, Trait.Basic, ModData.Traits.Kholo, Trait.DoesNotBreakStealth, Trait.UnaffectedByConcealment],
-                                """
-                                {i}You keep the bones of a knowledgeable ancestor or friend to call upon for advice.{/i}
+                    qfFeat.UsedUpPermanently = true;
+                    return;
+                }
+                
+                qfFeat.ProvideMainAction = qfThis =>
+                {
+                    CombatAction ask = new CombatAction(
+                            qfThis.Owner,
+                            IllustrationName.ArmorOfBones,
+                            "Ask the Bones",
+                            [ModData.ModTrait, Trait.Basic, ModData.Traits.Kholo, Trait.DoesNotBreakStealth, Trait.UnaffectedByConcealment],
+                            """
+                            {i}You keep the bones of a knowledgeable ancestor or friend to call upon for advice.{/i}
 
-                                {b}Frequency{/b} once per day
+                            {b}Frequency{/b} Once per day.
 
-                                Attempt to Recall Weakness with a +1 circumstance bonus to your check.
-                                """,
-                                Target.Self())
-                            .WithActionCost(0)
-                            .WithEffectOnEachTarget(async (action, caster, target, result) =>
+                            Attempt to Recall Weakness with a +1 circumstance bonus to your check.
+                            """,
+                            Target.Self())
+                        .WithActionCost(0)
+                        .WithEffectOnEachTarget(async (action, caster, _, _) =>
+                        {
+                            CombatAction recall = RecallWeakness.CreateRecallWeaknessAction(caster);
+                            QEffect bonesBonus = new QEffect()
                             {
-                                CombatAction recall = RecallWeakness.CreateRecallWeaknessAction(caster);
-                                QEffect bonesBonus = new QEffect()
-                                {
-                                    Name = "[ASK THE BONES]",
-                                    BonusToAttackRolls = (_, combatAction, _) =>
-                                        combatAction == recall
-                                            ? new Bonus(1, BonusType.Circumstance, "Ask the bones")
-                                            : null,
-                                };
-                                caster.AddQEffect(bonesBonus);
-                                if (await caster.Battle.GameLoop.FullCast(recall))
-                                    qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.AskTheBones);
-                                else
-                                    action.RevertRequested = true;
-                                bonesBonus.ExpiresAt = ExpirationCondition.Immediately;
-                            });
-                        
-                        return (ActionPossibility)ask;
-                    };
-                });
+                                Name = "[ASK THE BONES]",
+                                BonusToAttackRolls = (_, combatAction, _) =>
+                                    combatAction == recall
+                                        ? new Bonus(1, BonusType.Circumstance, "Ask the bones")
+                                        : null,
+                            };
+                            caster.AddQEffect(bonesBonus);
+                            if (await caster.Battle.GameLoop.FullCast(recall))
+                            {
+                                qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.AskTheBones); // Use up
+                                qfFeat.UsedUpPermanently = true; // Update stat block description
+                                qfThis.ProvideMainAction = null; // Stop generating
+                            }
+                            else
+                                action.RevertRequested = true;
+                            bonesBonus.ExpiresAt = ExpirationCondition.Immediately;
+                        });
+                    
+                    return (ActionPossibility)ask;
+                };
+            })
+            .WithInappropriateBecauseOfBadInventory((values, _) =>
+                values.FinalAbilityScores.TotalModifier(Ability.Intelligence) >= 2
+                || values.FinalAbilityScores.TotalModifier(Ability.Wisdom) >= 2
+                    ? null
+                    : "It's recommended you have an Intelligence or Wisdom modifier of at least +2 to use this feat reliably.");
         
         // Crunch
         // TODO: See if I can implement extra held grapples anyway.
         yield return new TrueFeat(
-            ModData.FeatNames.Crunch,
-            1,
+            ModData.FeatNames.Crunch, 1,
             "Your jaws can crush bone and bite through armor.",
-            "Your jaws unarmed attack deals 1d8 piercing damage instead of 1d6 and gains the versatile B trait.",
+            "Your jaws unarmed attack deals 1d8 piercing damage instead of 1d6 and gains the razing and versatile B trait.",
             [ModData.Traits.Kholo]);
         
         // Scent (familiar ability)
@@ -123,8 +136,7 @@ public static class AncestryFeats
         
         // Hyena Familiar
         yield return new TrueFeat(
-                ModData.FeatNames.HyenaFamiliar,
-                1,
+                ModData.FeatNames.HyenaFamiliar, 1,
                 "Hyenas serve kholo as pets and trackers. Some kholos, such as yourself, draw the attention of smaller hyenas that are vessels for magical spirits.",
                 $"You gain a hyena as a {FeatName.ClassFamiliar.ToLink("combat familiar")}. It always has the {ModData.FeatNames.FamiliarScent.ToLink("scent")} ability prepared, which counts against the number of familiar abilities it has.",
                 [ModData.Traits.Kholo, ModData.Traits.DeployableFamiliarFeat])
@@ -195,8 +207,7 @@ public static class AncestryFeats
 
         // Kholo Lore
         yield return new TrueFeat(
-                ModData.FeatNames.KholoLore,
-                1,
+                ModData.FeatNames.KholoLore, 1,
                 "You paid close attention to the senior hunters in your clan to learn their tricks.",
                 $"""
                 You gain the trained proficiency rank in Stealth and Survival. If you would automatically become trained in one of those skills (from your background or class, for example), you instead become trained in a skill of your choice.
@@ -216,10 +227,13 @@ public static class AncestryFeats
 
         // Kholo Weapon Familiarity
         yield return new TrueFeat(
-                ModData.FeatNames.KholoWeaponFamiliarity,
-                1,
+                ModData.FeatNames.KholoWeaponFamiliarity, 1,
                 "You gain greater access to weapons specific to your cultural lineage.",
-                $"You have familiarity with {ModData.Tooltips.KholoWeapon("kholo weapons")} — for the purpose of proficiency, you use your proficiency with any simple weapon for simple kholo weapons, and you treat any of these that are martial weapons as simple weapons and any that are advanced weapons as martial weapons.\n\nAt 5th level, whenever you get a critical hit with one of these weapons, you get its {{tooltip:criteffect}}critical specialization effect{{/}}.",
+                $$"""
+                  You have {{ModData.Tooltips.CommonWeaponFamiliarity("familiarity")}} with {{ModData.Tooltips.KholoWeapon("kholo weapons")}}.
+
+                  At 5th level, whenever you get a critical hit with one of these weapons, you get its {tooltip:criteffect}critical specialization effect{/}.
+                  """,
                 [ModData.Traits.Kholo])
             .WithOnSheet(values =>
             {
@@ -240,7 +254,7 @@ public static class AncestryFeats
                     Trait.Martial);
             })
             .WithPermanentQEffect(
-                $"You have familiarity with {ModData.Tooltips.KholoWeapon("kholo weapons")}",
+                $"You have {ModData.Tooltips.CommonWeaponFamiliarity("familiarity")} with {ModData.Tooltips.KholoWeapon("kholo weapons")}",
                 qfFeat =>
                 {
                     if (qfFeat.Owner.Level < 5)
@@ -256,8 +270,7 @@ public static class AncestryFeats
         // Pack Hunter
         // TODO: Ensure that a Gunslinger who uses Fake Out to aid the Pack Hunter gets a bonus.
         yield return new TrueFeat(
-                ModData.FeatNames.PackHunter,
-                1,
+                ModData.FeatNames.PackHunter, 1,
                 "You were taught how to hunt as part of a pack.",
                 $$"""
                   You gain a +2 circumstance bonus to checks to Aid, and your allies gain a +2 circumstance bonus to checks to Aid you.
@@ -297,8 +310,7 @@ public static class AncestryFeats
         
         // Sensitive Nose
         yield return new TrueFeat(
-                ModData.FeatNames.SensitiveNose,
-                1,
+                ModData.FeatNames.SensitiveNose, 1,
                 "Your large black nose isn't just for show. You can pick up on the faintest scents near you and track them down.",
                 "You gain imprecise scent with a range of 30 feet, which means that creatures can't be undetected within the area while you are conscious.",
                 [ModData.Traits.Kholo])
@@ -317,82 +329,120 @@ public static class AncestryFeats
         
         // Absorb Strength
         yield return new TrueFeat(
-                ModData.FeatNames.AbsorbStrength,
-                5,
+                ModData.FeatNames.AbsorbStrength, 5,
                 "You consume a piece of your enemy, absorbing their strength.",
                 $$"""
-                  {b}Frequency{/b} once per encounter
+                  {b}Frequency{/b} Once per encounter.
                   {b}Requirements{/b} You are adjacent to an enemy's {{ModData.Illustrations.AbsorbStrengthMeatBigger.IllustrationAsIconString}} corpse.
 
                   You gain temporary Hit Points equal to the enemy's level (minimum of 1).
 
-                  {{ModData.Illustrations.AbsorbStrengthMeatBigger.IllustrationAsIconString}} {b}Corpses{/b} This feat leaves behind a piece of an enemy on death. These corpses don't occupy their space nor block line of sight, and can't be targeted in any way. Undead and constructs {Red}do not{/Red} leave behind a consumable corpse.
+                  {{ModData.Illustrations.AbsorbStrengthMeatBigger.IllustrationAsIconString}} {b}Corpses{/b} On death, enemies leave a corpse behind. This doesn't occupy any spaces nor block line of sight, and can't be targeted. Undead and constructs {Red}do not{/Red} leave a corpse.
                   """,
                 [ModData.Traits.Kholo])
             .WithActionCost(1)
-            .WithPermanentQEffect(
-                "Eat a piece of an enemy corpse to gain temp HP.",
-                qfFeat =>
-                {
-                    qfFeat.AddGrantingOfTechnical(
-                        cr => 
-                            cr.EnemyOf(qfFeat.Owner) 
-                            && !(cr.HasTrait(Trait.Construct) || cr.HasTrait(Trait.Undead) || cr.HasTrait(Trait.Object)),
-                        qfTech =>
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToDefenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " " + "(Once per combat) Eat a piece of an enemy corpse to gain temp HP.".WithTag(qfThis.Owner.HasEffect(ModData.QEffectIds.AbsorbStrengthImmunity) ? "strike" : null);
+                
+                // Drop corpse on death
+                qfFeat.AddGrantingOfTechnical(
+                    cr =>
+                        !cr.HasEffect(ModData.QEffectIds.AbsorbStrengthImmunity)
+                        && cr.EnemyOf(qfFeat.Owner) 
+                        && !(cr.HasTrait(Trait.Construct)
+                             || cr.HasTrait(Trait.Undead)
+                             || cr.HasTrait(Trait.Object)),
+                    qfTech =>
+                    {
+                        qfTech.Key = "KholoAbsorbStrength"; // Apply only once
+                        qfTech.WhenCreatureDiesAtStateCheckAsync = async qfDie =>
                         {
-                            qfTech.Key = "KholoAbsorbStrength"; // Apply only once
-                            qfTech.WhenCreatureDiesAtStateCheckAsync = async qfDie =>
-                            {
-                                // When a monster dies, place a tile effect that grants a state check ephemeral action to Kholos near the corpse.
-                                Tile here = qfDie.Owner.Space.TopLeftTile;
-                                int level = Math.Max(qfDie.Owner.Level, 1);
-                                here.AddQEffect(new TileQEffect(here)
+                            int level = Math.Max(qfDie.Owner.Level, 1);
+
+                            // When a monster dies, place a zone for their space.
+                            // Each tile in the zone has a tile effect that grants
+                            // a StateCheck ephemeral action to Kholos near the corpse.
+                            Zone.SpawnStaticAndApply(
+                                qfFeat.Owner.Battle.Pseudocreature,
+                                qfDie.Owner.Space.Tiles.ToList(),
+                                zone =>
                                 {
-                                    Illustration = ModData.Illustrations.AbsorbStrengthMeat,
-                                    StateCheck = qfCorpse =>
+                                    zone.ControllerQEffect.Name = "AbsorbStrengthZone";
+                                    zone.TileEffectCreator = tile =>
                                     {
-                                        foreach (Creature cr in qfCorpse.Owner.Neighbours
-                                                     .CreaturesPlusCreatureOnSelf
-                                                     .Where(cr => cr.HasFeat(ModData.FeatNames.AbsorbStrength)))
+                                        return new TileQEffect(tile)
                                         {
-                                            cr.AddQEffect(new QEffect(ExpirationCondition.Ephemeral)
+                                            Illustration = ModData.Illustrations.AbsorbStrengthMeat,
+                                            TileQEffectId = ModData.TileQfIds.AbsorbStrengthCorpse,
+                                            StateCheck = qfCorpse =>
                                             {
-                                                ProvideContextualAction = qfEat =>
+                                                foreach (Creature cr in qfCorpse.Owner.Neighbours
+                                                             .CreaturesPlusCreatureOnSelf
+                                                             .Where(cr =>
+                                                                 cr.HasFeat(ModData.FeatNames.AbsorbStrength)
+                                                                 && !cr.HasEffect(ModData.QEffectIds.AbsorbStrengthImmunity))
+                                                             .ToList())
                                                 {
-                                                    CombatAction absorb = new CombatAction(
-                                                            qfEat.Owner,
-                                                            IllustrationName.Jaws,
-                                                            "Absorb Strength",
-                                                            [ModData.Traits.Kholo],
-                                                            "{i}You consume a piece of your enemy, absorbing their strength.{/i}\n\n{b}Frequency{/b} once per encounter\n{b}Requirements{/b} You are adjacent to an enemy's corpse.\n\nYou gain temporary Hit Points equal to the enemy's level.",
-                                                            Target.Self()
-                                                                .WithAdditionalRestriction(self =>
-                                                                    self.HasEffect(ModData.QEffectIds.AbsorbStrengthImmunity) ? "Already used this encounter" : null))
-                                                        .WithActionCost(1)
-                                                        .WithSoundEffect(SfxName.GluttonBite)
-                                                        .WithEffectOnSelf(async self =>
+                                                    cr.AddQEffect(new QEffect(ExpirationCondition.Ephemeral)
+                                                    {
+                                                        Key = "KholoAbsorbStrength:" + qfDie.Owner.Name, // Apply only once each
+                                                        ProvideContextualAction = qfEat =>
                                                         {
-                                                            self.GainTemporaryHP(level);
-                                                            self.AddQEffect(new QEffect()
-                                                            {
-                                                                Id = ModData.QEffectIds.AbsorbStrengthImmunity,
-                                                            });
-                                                            qfCorpse.ExpiresAt = ExpirationCondition.Immediately;
-                                                        });
-                                                    return (ActionPossibility)absorb;
-                                                },
-                                            });
-                                        }
-                                    }
+                                                            CombatAction absorb = new CombatAction(
+                                                                    qfEat.Owner,
+                                                                    ModData.Illustrations.AbsorbStrengthMeatBigger,
+                                                                    "Absorb Strength",
+                                                                    [ModData.Traits.Kholo],
+                                                                    $$"""
+                                                                      {i}You consume a piece of {{qfDie.Owner.ToColoredBoldedName()}}, absorbing their strength.{/i}
+
+                                                                      {b}Frequency{/b} Once per encounter.
+                                                                      {b}Requirements{/b} You are adjacent to an enemy's corpse.
+
+                                                                      You gain {{level.WithColor("Blue")}} temporary Hit Points.
+                                                                      """,
+                                                                    Target.Self()
+                                                                        .WithAdditionalRestriction(self =>
+                                                                            self.HasEffect(ModData.QEffectIds.AbsorbStrengthImmunity)
+                                                                                ? "Already used this encounter"
+                                                                                : null))
+                                                                .WithActionCost(1)
+                                                                .WithSoundEffect(SfxName.GluttonBite)
+                                                                .WithEffectOnSelf(async self =>
+                                                                {
+                                                                    self.GainTemporaryHP(level);
+                                                                    self.AddQEffect(new QEffect()
+                                                                    {
+                                                                        Id = ModData.QEffectIds.AbsorbStrengthImmunity,
+                                                                    });
+                                                                    
+                                                                    // Remove all zones if nobody is left who can eat them
+                                                                    if (self.Battle.AllCreatures.All(eaters =>
+                                                                            !eaters.HasFeat(ModData.FeatNames.AbsorbStrength)
+                                                                            || eaters.HasEffect(ModData.QEffectIds.AbsorbStrengthImmunity)))
+                                                                    {
+                                                                        self.Battle.Pseudocreature.RemoveAllQEffects(qf =>
+                                                                                    qf.Name == "AbsorbStrengthZone");
+                                                                    }
+                                                                });
+                                                            return new ActionPossibility(absorb)
+                                                                .WithPossibilityGroup("Absorb Strength");
+                                                        },
+                                                    });
+                                                }
+                                            }
+                                        };
+                                    };
                                 });
-                            };
-                        });
-                });
+                        };
+                    });
+            });
 
         // Affliction Resistance
         yield return new TrueFeat(
-                ModData.FeatNames.AfflictionResistance,
-                5,
+                ModData.FeatNames.AfflictionResistance, 5,
                 "Your diet has strengthened you against diseases and poisons.",
                 "You gain a +1 circumstance bonus to saving throws against diseases and poisons. If you roll a success on a saving throw against a disease or poison, you get a critical success instead. If you have the {i}Juggernaut{/i} class feature, if you roll a critical failure on the save you get a failure instead.",
                 // If you have a class feature such as {i}Juggernaut{/i} that would improve the save in this way,
@@ -426,8 +476,7 @@ public static class AncestryFeats
 
         // Distant Cackle
         yield return new TrueFeat(
-                ModData.FeatNames.DistantCackle,
-                5,
+                ModData.FeatNames.DistantCackle, 5,
                 "It takes a very brave person to enter the laughter-haunted forest where you dwell.",
                 $"You can cast {SpellId.Fear.ToLink("fear", ModData.Traits.Kholo, 1).WithTag("i")} once per day as a 1st-rank occult innate spell.",
                 [ModData.Traits.Kholo])
@@ -447,111 +496,123 @@ public static class AncestryFeats
 
         // Left-hand Blood
         yield return new TrueFeat(
-                ModData.FeatNames.LefthandBlood,
-                5,
+                ModData.FeatNames.LefthandBlood, 5,
                 "It's said that the flesh of the left side of a hyena is deadly and poisonous.",
                 """
-                {b}Frequency{/b} once per combat
+                {b}Frequency{/b} Once per encounter.
 
                 You deal 1 slashing damage to yourself to poison a weapon you are holding. If you hit with the weapon and deal damage, the target also takes 1d4 persistent poison damage. The poison on your weapon becomes inert after you hit, or at the end of your next turn, whichever comes first.
                 """,
                 [ModData.Traits.Kholo])
             .WithActionCost(1)
-            .WithPermanentQEffect(
-                "Once per combat, take 1 slashing damage to poison your next weapon hit this turn.",
-                qfFeat =>
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " " + "(Once per combat) Take 1 slashing damage to poison a weapon this turn. Its next hit deals 1d4 persistent poison damage.".WithTag(qfFeat.UsedUpPermanently ? "strike" : null);
+                
+                qfFeat.UsedUpPermanently = false;
+                qfFeat.ProvideMainAction = qfThis =>
                 {
-                    qfFeat.Tag = false;
-                    qfFeat.ProvideMainAction = qfThis =>
-                    {
-                        if (qfThis.Tag is true)
-                            return null;
-                        return (ActionPossibility)new CombatAction(
-                                qfThis.Owner,
-                                IllustrationName.BloodVendetta,
-                                "Left-hand Blood",
-                                [ModData.Traits.Kholo],
-                                null!,
-                                Target.Self()
-                                    .WithAdditionalRestriction(self =>
-                                        self.HeldItems.Any(item => item.HasTrait(Trait.Weapon))
-                                            ? null : "Must hold a weapon"))
-                            .WithDescription(
-                                "It's said that the flesh of the left side of a hyena is deadly and poisonous.",
-                                "{b}Frequency{/b} once per combat\n\nYou deal 1 slashing damage to yourself to poison a weapon you are holding. If you hit with the weapon and deal damage, the target also takes 1d4 persistent poison damage. The poison on your weapon becomes inert after you hit, or at the end of your next turn, whichever comes first.")
-                            .WithActionCost(1)
-                            .WithEffectOnEachTarget(async (action, caster, _, _) =>
-                            {
-                                // Take damage
-                                Sfxs.Play(SfxName.ImpactFlesh);
-                                await CommonSpellEffects.DealDirectDamage(
-                                    action,
-                                    DiceFormula.FromText("1", "Left-hand blood"),
-                                    caster,
-                                    CheckResult.Success,
-                                    DamageKind.Slashing);
-                                
-                                // Pick a weapon
-                                Item poisonedWeapon;
-                                switch (caster.HeldItems.Count(IsValidTarget))
-                                {
-                                    case 0:
-                                        return;
-                                    case 1:
-                                        poisonedWeapon = caster.HeldItems.First(IsValidTarget);
-                                        break;
-                                    default:
-                                        poisonedWeapon = await caster.Battle.AskForConfirmation(
-                                            caster,
-                                            IllustrationName.AlchemicalPoison,
-                                            "Which weapon would you like to poison?",
-                                            caster.HeldItems[0].Name,
-                                            caster.HeldItems[1].Name)
-                                            ? caster.HeldItems[0]
-                                            : caster.HeldItems[1];
-                                        break;
-                                }
-
-                                QEffect lhbQf = new QEffect(
-                                        "Left-hand Blood",
-                                        "The next time you hit and deal damage with " + poisonedWeapon.Name +
-                                        ", the target takes 1d4 persistent poison damage.",
-                                        ExpirationCondition.ExpiresAtEndOfYourTurn,
-                                        caster,
-                                        IllustrationName.AlchemicalPoison)
-                                    {
-                                        CountsAsABuff = true,
-                                    }
-                                    .WithExpirationAtEndOfOwnersNextTurn();
-                                // Not part of constructor due to lack of expiration reference
-                                lhbQf.AfterYouDealDamage = async (_, action2, defender) =>
-                                {
-                                    if (action2.Item == poisonedWeapon
-                                        && action2.CheckResult >= CheckResult.Success
-                                        && action2.HasTrait(Trait.Strike))
-                                    {
-                                        lhbQf.ExpiresAt = ExpirationCondition.Immediately;
-                                        defender.AddQEffect(QEffect.PersistentDamage("1d4", DamageKind.Poison));
-                                    }
-                                };
-                                caster.AddQEffect(lhbQf);
-
-                                qfThis.Tag = true;
-                            });
-                    };
+                    if (qfThis.UsedUpPermanently)
+                        return null;
                     
-                    return;
+                    return new ActionPossibility(new CombatAction(
+                            qfThis.Owner,
+                            IllustrationName.BloodVendetta,
+                            "Left-hand Blood",
+                            [ModData.ModTrait, ModData.Traits.Kholo],
+                            null!,
+                            Target.Self()
+                                .WithAdditionalRestriction(self =>
+                                    self.HeldItems.Any(IsValidTarget)
+                                        ? null
+                                        : "Must hold a weapon"))
+                        .WithDescription(
+                            "It's said that the flesh of the left side of a hyena is deadly and poisonous.",
+                            """
+                            {b}Frequency{/b} Once per combat.
 
-                    bool IsValidTarget(Item item)
-                    {
-                        return item.HasTrait(Trait.Weapon);
-                    }
-                });
+                            You deal 1 slashing damage to yourself to poison a weapon you are holding. If you hit with the weapon and deal damage, the target also takes 1d4 persistent poison damage. The poison on your weapon becomes inert after you hit, or at the end of your next turn, whichever comes first.
+                            """)
+                        .WithActionCost(1)
+                        .WithEffectOnEachTarget(async (action, caster, _, _) =>
+                        {
+                            // Take damage
+                            Sfxs.Play(SfxName.ImpactFlesh);
+                            await CommonSpellEffects.DealDirectDamage(
+                                action,
+                                DiceFormula.FromText("1", "Left-hand blood"),
+                                caster,
+                                CheckResult.Success,
+                                DamageKind.Slashing);
+
+                            // Pick a weapon
+                            Item poisonedWeapon;
+                            switch (caster.HeldItems.Count(IsValidTarget))
+                            {
+                                case 0:
+                                    return;
+                                case 1:
+                                    poisonedWeapon = caster.HeldItems.First(IsValidTarget);
+                                    break;
+                                default:
+                                    poisonedWeapon = await caster.Battle.AskForConfirmation(
+                                        caster,
+                                        IllustrationName.AlchemicalPoison,
+                                        "Which weapon would you like to poison?",
+                                        caster.HeldItems[0].Illustration.IllustrationAsIconString + " " +
+                                        caster.HeldItems[0].Name,
+                                        caster.HeldItems[1].Illustration.IllustrationAsIconString + " " +
+                                        caster.HeldItems[1].Name)
+                                        ? caster.HeldItems[0]
+                                        : caster.HeldItems[1];
+                                    break;
+                            }
+
+                            QEffect lhbQf = new QEffect(
+                                    "Left-hand Blood",
+                                    "The next time you hit and deal damage with " + poisonedWeapon.Name +
+                                    ", the target takes 1d4 persistent poison damage.",
+                                    ExpirationCondition.ExpiresAtEndOfYourTurn,
+                                    caster,
+                                    IllustrationName.AlchemicalPoison)
+                                {
+                                    CountsAsABuff = true,
+                                }
+                                .WithExpirationAtEndOfOwnersNextTurn();
+                            // Not part of constructor due to lack of expiration reference
+                            lhbQf.AfterYouDealDamage = async (_, action2, defender) =>
+                            {
+                                if (action2.Item == poisonedWeapon
+                                    && action2.CheckResult >= CheckResult.Success
+                                    && action2.HasTrait(Trait.Strike))
+                                {
+                                    lhbQf.ExpiresAt = ExpirationCondition.Immediately;
+                                    defender.AddQEffect(QEffect.PersistentDamage("1d4", DamageKind.Poison));
+                                }
+                            };
+                            caster.AddQEffect(lhbQf);
+
+                            qfThis.UsedUpPermanently = true;
+                        }));
+                };
+                
+                return;
+
+                bool IsValidTarget(Item item)
+                {
+                    return item.HasTrait(Trait.Weapon);
+                }
+            })
+            .WithInappropriateBecauseOfBadInventory((_, inventory) =>
+                FeatInventoryRequirements.RequiresOne(
+                    inventory,
+                    item => item.HasTrait(Trait.Weapon),
+                    "a weapon"));
 
         // Pack Stalker
         yield return new TrueFeat(
-                ModData.FeatNames.PackStalker,
-                5,
+                ModData.FeatNames.PackStalker, 5,
                 "Ambushes are an honored kholo tradition.",
                 $$"""
                   {b}Requirements{/b} {{ModData.Illustrations.DawnsburySun.IllustrationAsIconString}} You have the {i}Exploration Activities{/i} mod installed.
@@ -576,8 +637,7 @@ public static class AncestryFeats
 
         // Rabid Sprint
         yield return new TrueFeat(
-                ModData.FeatNames.RabidSprint,
-                5,
+                ModData.FeatNames.RabidSprint, 5,
                 "You run on all fours as fast as you can.",
                 """
                 {b}Requirements{/b} You have both your hands free.
@@ -586,88 +646,112 @@ public static class AncestryFeats
                 """,
                 [ModData.Traits.Kholo])
             .WithActionCost(2)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.ProvideMainAction = qfThis =>
+                {
+                    return (ActionPossibility)new CombatAction(
+                            qfThis.Owner,
+                            IllustrationName.WarpStep,
+                            "Rabid Sprint",
+                            [ModData.ModTrait, Trait.Flourish, ModData.Traits.Kholo],
+                            null!,
+                            Target.Self()
+                                .WithAdditionalRestriction(self =>
+                                    self.HeldItems.Count == 0
+                                        ? null : "Hands must be empty"))
+                        .WithDescription(
+                            "You run on all fours as fast as you can.",
+                            "{b}Requirements{/b} You have both your hands free.\n\nStride three times.")
+                        .WithShortDescription("While your hands are free, Stride three times.")
+                        .WithActionCost(2)
+                        .WithEffectOnEachTarget(async (action, caster, _, _) =>
+                        {
+                            if (!await caster.StrideAsync("Choose where to Stride with Rabid Sprint. (1/3)", allowCancel: true))
+                                action.RevertRequested = true;
+                            else if (!await caster.StrideAsync("Choose where to Stride with Rabid Sprint. (2/3)", allowPass: true))
+                            {
+                                caster.Battle.Log("Rabid Sprint was converted to a simple Stride.");
+                                action.SpentActions = 1;
+                                action.RevertRequested = true;
+                            }
+                            else
+                                await caster.StrideAsync("Choose where to Stride with Rabid Sprint. (3/3)", allowPass: true);
+                        });
+                };
+            })
             .WithPrerequisite(
                 values => values.HasFeat(ModData.FeatNames.KholoDog),
-                "Must have the dog kholo heritage.")
-            .WithPermanentQEffect(
-                null,
-                qfFeat =>
-                {
-                    qfFeat.ProvideMainAction = qfThis =>
-                    {
-                        return (ActionPossibility)new CombatAction(
-                                qfThis.Owner,
-                                IllustrationName.WarpStep,
-                                "Rabid Sprint",
-                                [Trait.Flourish, ModData.Traits.Kholo],
-                                null!,
-                                Target.Self()
-                                    .WithAdditionalRestriction(self =>
-                                        self.HeldItems.Count == 0
-                                            ? null : "Hands must be empty"))
-                            .WithDescription(
-                                "You run on all fours as fast as you can.",
-                                "{b}Requirements{/b} You have both your hands free.\n\nStride three times.")
-                            .WithShortDescription("While your hands are free, Stride three times.")
-                            .WithActionCost(2)
-                            .WithEffectOnEachTarget(async (action, caster, _, _) =>
-                            {
-                                if (!await caster.StrideAsync("Choose where to Stride with Rabid Sprint. (1/3)", allowCancel: true))
-                                    action.RevertRequested = true;
-                                else if (!await caster.StrideAsync("Choose where to Stride with Rabid Sprint. (2/3)", allowPass: true))
-                                {
-                                    caster.Battle.Log("Rabid Sprint was converted to a simple Stride.");
-                                    action.SpentActions = 1;
-                                    action.RevertRequested = true;
-                                }
-                                else
-                                    await caster.StrideAsync("Choose where to Stride with Rabid Sprint. (3/3)", allowPass: true);
-                            });
-                    };
-                });
+                "Must have the dog kholo heritage.");
 
         // Right-hand Blood
         yield return new TrueFeat(
-                ModData.FeatNames.RighthandBlood,
-                5,
+                ModData.FeatNames.RighthandBlood, 5,
                 "It's said that the flesh of the right side of a hyena can heal diseases.",
                 "When you stabilize {icon:TwoActions} or staunch bleeding {icon:TwoActions}, you can deal 1 slashing damage to yourself to feed someone blood from your right side, gaining a +1 item bonus to your check.",
                 [ModData.Traits.Kholo])
-            .WithPermanentQEffect(
-                "You can damage yourself to give yourself an item bonus to stabilize or stop bleeding.",
-                qfFeat =>
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToDefenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " You can take 1 slashing damage to gain a +1 item bonus to stabilize or stop bleeding.";
+                
+                qfFeat.YouBeginActionReaction = (qfThis, action) =>
                 {
-                    qfFeat.YouBeginAction = async (qfThis, action) =>
-                    {
-                        if (action.Name is not ("Stabilize" or "Staunch bleeding")
-                            || (qfThis.Owner.HP + qfThis.Owner.TemporaryHP) <= 1
-                            || !await qfThis.Owner.AskForConfirmation(
-                                IllustrationName.BloodVendetta,
-                                "{b}Right-hand Blood{/b}\nYou're about to use {Blue}"+action.Name+"{/Blue}. Use blood from your right side to gain a +1 item bonus to this check?",
-                                "Take 1 slashing damage"))
-                            return;
-                        Sfxs.Play(SfxName.ImpactFlesh);
-                        await CommonSpellEffects.DealDirectDamage(
-                            null,
-                            DiceFormula.FromText("1", "Right-hand blood"),
+                    if (action.Name is not ("Stabilize" or "Staunch bleeding")
+                        || (qfThis.Owner.HP + qfThis.Owner.TemporaryHP) <= 1
+                        || (action.ActiveRollSpecification?.TaggedDetermineBonus.CalculatedNumberProducer(action, action.Owner, action.ChosenTargets.ChosenCreature)
+                            .Bonuses.Any(b =>
+                                b is { BonusType: BonusType.Item, Amount: > 0 }) ?? false))
+                        return null;
+
+                    CombatAction rightBlood = new CombatAction(
                             qfThis.Owner,
-                            CheckResult.Success,
-                            DamageKind.Slashing);
-                        qfThis.Owner.AddQEffect(new QEffect(ExpirationCondition.ExpiresAtEndOfYourTurn)
+                            IllustrationName.BloodVendetta,
+                            "Right-hand Blood",
+                            [ModData.ModTrait, ModData.Traits.Kholo],
+                            null!,
+                            Target.Self())
+                        .WithActionCost(0)
+                        .WithDescription(
+                            "It's said that the flesh of the right side of a hyena can heal diseases.",
+                            "When you stabilize {icon:TwoActions} or staunch bleeding {icon:TwoActions}, you can deal 1 slashing damage to yourself to feed someone blood from your right side, gaining a +1 item bonus to your check.")
+                        .WithSoundEffect(SfxName.ImpactFlesh)
+                        .WithEffectOnSelf(async (rightBlood, self) =>
                         {
-                            BonusToSkillChecks = (_, action2, _) => 
-                                action2 == action
-                                    ? new Bonus(1, BonusType.Item, "Right-hand blood")
-                                    : null,
-                            AfterYouTakeAction = async (qfThis2, action2) =>
+                            await CommonSpellEffects.DealDirectDamage(
+                                rightBlood,
+                                DiceFormula.FromText("1", "Right-hand blood"),
+                                self,
+                                CheckResult.Success,
+                                DamageKind.Slashing);
+                            self.AddQEffect(new QEffect(ExpirationCondition.ExpiresAtEndOfYourTurn)
                             {
-                                if (action2 != action)
-                                    return;
-                                qfThis2.ExpiresAt = ExpirationCondition.Immediately;
-                            }
+                                Name = "[RIGHT-HAND BLOOD BONUS]",
+                                BonusToSkillChecks = (_, action2, _) => 
+                                    action2 == rightBlood
+                                        ? new Bonus(1, BonusType.Item, "Right-hand blood")
+                                        : null,
+                                AfterYouTakeAction = async (qfThis2, action2) =>
+                                {
+                                    if (action2 != rightBlood)
+                                        return;
+                                    qfThis2.ExpiresAt = ExpirationCondition.Immediately;
+                                }
+                            });
                         });
-                    };
-                });
+
+                    ReactionOption reactOpt = ReactionOption.WrapFullcast(
+                            rightBlood,
+                            "Take 1 slashing damage to gain a +1 item bonus to your check.")
+                        .WithDoesNotCountAsYourTriggerResponse();
+
+                    return reactOpt;
+                };
+            })
+            .WithInappropriateBecauseOfBadInventory((_, inventory) => 
+                inventory.AllItems.Any(item => item.ItemName is ItemName.ExpandedHealersTools)
+                    ? "This feat only works if you don't already have a +1 item bonus to Medicine checks."
+                    : null);
 
         #endregion
 
@@ -675,8 +759,7 @@ public static class AncestryFeats
 
         // Ambush Hunter
         yield return new TrueFeat(
-                ModData.FeatNames.AmbushHunter,
-                9,
+                ModData.FeatNames.AmbushHunter, 9,
                 "You are always searching for the perfect opportunity to ambush your enemies.",
                 $$"""
                   {b}Requirements{/b} {{ModData.Illustrations.DawnsburySun.IllustrationAsIconString}} You have the {i}Exploration Activities{/i} mod installed.
@@ -706,8 +789,7 @@ public static class AncestryFeats
         // Breath Like Honey
         // TODO: Consider upgrading into free always Making an Impression
         yield return new TrueFeat(
-                ModData.FeatNames.BreathLikeHoney,
-                9,
+                ModData.FeatNames.BreathLikeHoney, 9,
                 "You smell of honey and savory things.",
                 $"You can cast {SpellId.Soothe.ToLink("soothe", ModData.Traits.Kholo, 3).WithTag("i")} once per day as an occult innate spell, heightened to 3rd-rank.",
                 [ModData.Traits.Kholo])
@@ -727,8 +809,7 @@ public static class AncestryFeats
 
         // Grandmother's Wisdom
         yield return new TrueFeat(
-                ModData.FeatNames.GrandmothersWisdom,
-                9,
+                ModData.FeatNames.GrandmothersWisdom, 9,
                 "You carry the bones of your ancestors with you, who in turn watch over you.",
                 $"You can cast {SpellId.DeflectCriticalHit.ToLink("deflect critical hit", ModData.Traits.Kholo, 3).WithTag("i")} once per day as a 3rd-rank occult innate spell.",
                 [ModData.Traits.Kholo])
@@ -745,8 +826,7 @@ public static class AncestryFeats
 
         // Laughing Kholo
         yield return new TrueFeat(
-                ModData.FeatNames.LaughingKholo,
-                9,
+                ModData.FeatNames.LaughingKholo, 9,
                 "Your sinister giggle is a sound of warning and threat.",
                 $"You gain the {FeatName.IntimidatingGlare.ToLink("Intimidating Glare")} and {FeatName.BattleCry.ToLink("Battle Cry")} skill feats.",
                 [ModData.Traits.Kholo])
@@ -778,8 +858,7 @@ public static class AncestryFeats
             spell.WithVariants(wolfFirst);
         });
         yield return new TrueFeat(
-                ModData.FeatNames.AncestorsRage,
-                13,
+                ModData.FeatNames.AncestorsRage, 13,
                 "You transform into an enormous, otherworldly hyena.",
                 $"You can cast {SpellId.AnimalForm.ToLink("animal form", ModData.Traits.Kholo, 5)} (canine form only) once per day as a 5th-rank occult innate spell.",
                 [ModData.Traits.Kholo])
@@ -817,8 +896,7 @@ public static class AncestryFeats
 
         // Bonekeeper's Bane
         yield return new TrueFeat(
-                ModData.FeatNames.BonekeepersBane,
-                13,
+                ModData.FeatNames.BonekeepersBane, 13,
                 null,
                 """
                 Whenever an enemy starts its turn adjacent to you, it must attempt a Will saving throw against your class DC or spell DC {i}(whichever is highest){/i}. On a failure, the enemy takes a –1 status penalty to attack rolls and skill checks. This effect ends when they are no longer adjacent to you.
@@ -827,7 +905,7 @@ public static class AncestryFeats
                 """,
                 [ModData.Traits.Kholo])
             .WithPermanentQEffect(
-                "",
+                "Enemies who start their turn adjacent to you must succeed on a Will save or gain a -1 status penalty to attack rolls and skill checks while adjacent to you.",
                 qfFeat =>
                 {
                     qfFeat.AddGrantingOfTechnical(
@@ -837,8 +915,10 @@ public static class AncestryFeats
                             qfTech.Id = ModData.QEffectIds.BonekeepersBaneStartOfTurn;
                             qfTech.StartOfYourPrimaryTurn = async (qfTech2, self) =>
                             {
-                                CombatAction boneBane = new CombatAction(qfFeat.Owner, IllustrationName.Bane,
-                                        "Bonekeeper's Bane", [ModData.Traits.ModName, ModData.Traits.Kholo],
+                                CombatAction boneBane = new CombatAction(
+                                        qfFeat.Owner, IllustrationName.Bane,
+                                        "Bonekeeper's Bane",
+                                        [ModData.ModTrait, ModData.Traits.Kholo],
                                         "Whenever an enemy starts its turn adjacent to you, it must attempt a Will saving throw against your class DC or spell DC {i}(whichever is highest){/i}. On a failure, the enemy takes a –1 status penalty to attack rolls and skill checks. This effect ends when they are no longer adjacent to you.\n\nRegardless of the result of its save, they are then immune to bonekeeper's bane.",
                                         Target.Self())
                                     .WithSavingThrow(new SavingThrow(Defense.Will, _ => qfFeat.Owner.ClassOrSpellDC()));
