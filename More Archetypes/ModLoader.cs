@@ -1,11 +1,14 @@
 ﻿using Dawnsbury.Auxiliary;
+using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Archetypes;
+using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Display;
+using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
@@ -29,6 +32,7 @@ public static class ModLoader
         DualWeaponWarrior.Load();
         FamiliarMaster.Load();
         Marshal.Load();
+        MartialArtist.Load();
         
         LoadOrder.WhenFeatsBecomeLoaded += () =>
         {
@@ -76,175 +80,255 @@ public static class ModLoader
                         break;
                 }
             }
-            
-            // TODO: (1) Inspect for mod of origin
-            List<Feat> allFeats = AllFeats.All
-                .Where(ft => ft.ModOfOrigin is not null)
-                .ToList();
-            
-            // TODO: (2) Test evaluation logic
-            // Remove old feats.
-            if (/*PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.RemoveOldFeats)*/ false)
-            {
-                List<Feat> moreDeds = AllFeats.All
-                    .Where(ft => ft.ModOfOrigin?.Contains("MoreDedications") ?? false)
-                    .ToList();
-                List<Feat> moreArchs = AllFeats.All
-                    .Where(ft => ft.ModOfOrigin?.Contains("MoreArchetypes") ?? false)
-                    .ToList();
-                // For each MoreDedications feat,
-                foreach (Feat ded in moreDeds)
-                {
-                    if (moreArchs.Any(arch => arch.BaseName == ded.BaseName))
-                    {
-                        // TODO: (3) Unlock deletion when sure this will work
-                        //AllFeats.All.Remove(ded);
-                    }
-                    // Blacklist
-                    if (ded.BaseName.Contains("Advanced Bow Training"))
-                    {
-                        // TODO: (3) Unlock deletion when sure this will work
-                        //AllFeats.All.Remove(ded);
-                    }
-                }
-            }
         };
     }
 
-    public static TrueFeat? GetDedication(Trait archetype)
+    extension(ModManager)
     {
-        return GetDedication(archetype.ToStringOrTechnical() + "Dedication");
-    }
-
-    public static TrueFeat? GetDedication(string featName)
-    {
-        return AllFeats.GetFeatByFeatNameOrStringOptional(null, featName) as TrueFeat;
-    }
-
-    internal static TrueFeat ReplaceDedicationBehavior(
-        this TrueFeat feat,
-        Trait archetype,
-        string? flavorText = null,
-        string? rulesText = null,
-        Action<CalculatedCharacterSheetValues>? onSheet = null,
-        Action<CalculatedCharacterSheetValues, Creature>? onCreature = null,
-        List<Prerequisite>? newPrereqs = null)
-    {
-        if (flavorText is not null)
-            feat.FlavorText = flavorText;
-
-        if (rulesText is not null)
-            feat.RulesText = rulesText + "\n\n" + DEDICATION_SPECIAL;
-        
-        if (onSheet is not null)
+        /// <summary>
+        /// Add a feat, or replace it if it was already added by More Dedications.
+        /// </summary>
+        internal static void AddAndReplaceFeat(Feat newFeat)
         {
-            feat.OnSheet = null;
-            feat.OnSheet += values =>
+            // If feat is new,
+            if (AllFeats.GetFeatByFeatNameOptional(newFeat.FeatName) is not {} oldFeat)
             {
-                values.SetProficiency(archetype, Proficiency.Trained);
-                values.AdditionalClassTraits.Add(archetype);
-                values.NumberOfFeatsForDedication.TryAdd(archetype, 0);
-            };
-            feat.OnSheet += onSheet;
-        }
-
-        if (onCreature is not null)
-        {
-            feat.OnCreature = null;
-            feat.OnCreature += (values, self) =>
-                self.Traits.Add(archetype);
-            feat.OnCreature += onCreature;
-        }
-
-        if (newPrereqs is not null)
-        {
-            // TrueFeat constructor
-            feat.Prerequisites =
-            [
-                new LevelPrerequisite(feat.Level)
-            ];
-
-            if (feat.Traits.Any(trait => trait.GetTraitProperties().IsAncestryTrait))
-            {
-                feat.Traits.Add(Trait.Ancestry);
-                List<Trait> ancestryTraits = feat.Traits
-                    .Where(trait => trait.GetTraitProperties().IsAncestryTrait)
-                    .ToList();
-                feat.Prerequisites.Add(new Prerequisite(
-                    sheet => sheet.Ancestries.ContainsOneOf(ancestryTraits),
-                    $"You must be {S.ConstructOrList(ancestryTraits.Select(ancestryTrait => ancestryTrait.HumanizeTitleCase2().WithIndefiniteArticle()))}."));
+                // Add it normally.
+                ModManager.AddFeat(newFeat);
+                return;
             }
-            if (feat.Traits.Contains(Trait.AllAncestries))
-                feat.Traits.Add(Trait.Ancestry);
-            if (feat.Traits.Any(trait => trait.GetTraitProperties().IsClassTrait))
-            {
-                feat.Traits.Add(Trait.ClassFeat);
-                feat.Prerequisites.Add(new ClassPrerequisite(feat.Traits.Where(trait => trait.GetTraitProperties().IsClassTrait).ToList()));
-            }
-            if (feat.Traits.Contains(Trait.Psyche))
-                feat.Prerequisites.Add(new TrueClassPrerequisite(Trait.Psychic));
-            
-            // CreateDedication additions
-            feat.WithPrerequisite(
-                    values => values.Class == null || values.Class.ClassTrait != archetype,
-                    $"You must not be {archetype.HumanizeLowerCase2().WithIndefiniteArticle()}.")
-                .WithPrerequisite(
-                    values =>
-                    {
-                        if (PlayerProfile.Instance.UnlimitedOpenArchetypes || !PlayerProfile.Instance.FreeArchetype)
-                            return true;
-                        int num2 = values.NumberOfFeatsForDedication.Count(ded =>
-                            ded.Value < 2 && ded.Key != archetype);
-                        bool flag = values.NumberOfFeatsForDedication.Any(ded =>
-                            ded.Value >= 2 && ded.Key == archetype);
-                        int num3 = (PlayerProfile.Instance.FreeArchetype ? 2 : 1) +
-                                   (values.HasFeat(FeatName.Multitalented) ? 1 : 0);
-                        return flag || num2 < num3;
-                    },
-                    "You already have two dedications open. You must finish a dedication by taking 2 archetype feats for that dedication before opening a third dedication.")
-                .WithPrerequisite(
-                    values =>
-                    {
-                        if (PlayerProfile.Instance.UnlimitedOpenArchetypes || PlayerProfile.Instance.FreeArchetype)
-                            return true;
-                        int num4 = values.NumberOfFeatsForDedication.Count(ded =>
-                            ded.Value < 2 && ded.Key != archetype);
-                        bool flag = values.NumberOfFeatsForDedication.Any(ded =>
-                            ded.Value >= 2 && ded.Key == archetype);
-                        int num5 = (PlayerProfile.Instance.FreeArchetype ? 2 : 1) +
-                                   (values.HasFeat(FeatName.Multitalented) ? 1 : 0);
-                        return flag || num4 < num5;
-                    },
-                    "You already have a dedication open. You must finish your dedication by taking 2 archetype feats for that dedication before opening a second dedication.");
-            
-            feat.Prerequisites.AddRange(newPrereqs);
+
+            // If added by More Dedications,
+            // (look for mod source trait)
+            if (oldFeat.Traits.Any(t =>
+                    t.ToStringOrTechnical() is { } name
+                    && name.Contains("Mod")
+                    && (name.Contains("MoreDedications") || name.Contains("More Dedications"))))
+                // Replace it.
+                AllFeats.ReplaceFeat(oldFeat, newFeat);
         }
-        
-        if (!feat.Traits.Contains(ModData.ModTrait))
-            feat.Traits.Insert(0, ModData.ModTrait);
-        
-        return feat;
     }
 
-    /// <summary>
-    /// Duplicates a feat for an archetype. If it already exists: add this mod's source trait and return null. If it doesn't exist: duplicate it and let loading procedures register it while <see cref="LibraryOfAnase.extension(ModManager).AddFeat(Feat, Trait)"/> adds the source trait.
-    /// </summary>
-    internal static Feat? SafelyDuplicateAsArchetype(FeatName originalFeat, Trait archetypeTrait, int newLevel)
+    extension(AllFeats)
     {
-        if (ModLoader.GetDuplicatedAsArchetype(originalFeat, archetypeTrait) is {} alreadyDuplicated)
+        /// <summary>
+        /// Replaces an old Feat with a new Feat. Only works if both feats share the same FeatName, and if the old Feat came from AllFeats.
+        /// </summary>
+        internal static void ReplaceFeat(Feat oldFeat, Feat newFeat)
         {
-            alreadyDuplicated.Traits.Insert(0, ModData.ModTrait);
-            return null;
+            if (oldFeat.FeatName != newFeat.FeatName)
+                return;
+            
+            if (!newFeat.Traits.Contains(ModData.ModTrait))
+                newFeat.Traits.Insert(0, ModData.ModTrait);
+            
+            AllFeats.All[AllFeats.All.IndexOf(oldFeat)] = newFeat;
         }
-        else
-            return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(originalFeat, archetypeTrait, newLevel);
     }
 
-    private static Feat? GetDuplicatedAsArchetype(FeatName? originalFeat, Trait archetypeTrait)
+    extension(ArchetypeFeats)
     {
-        if (originalFeat is null)
-            return null;
-        string duplicateTechnicalName = $"{originalFeat.Value.ToStringOrTechnical()}ForArchetype{archetypeTrait.ToStringOrTechnical()}";
-        return AllFeats.GetFeatByFeatNameOrStringOptional(null, duplicateTechnicalName);
+        /// <summary>
+        /// Creates a dedication if it doesn't exist, or resets its behavior if it does.
+        /// </summary>
+        /// <remarks>The following properties are also set to null: OnSheet, OnCreature, ActionCost, Illustration, RulesTextCreator, Tag, ShowRulesBlockFor fields, InappropriateBecauseOfBadInventory,</remarks>
+        /// <returns>The original feat after resetting a bunch of data, or a new dedication</returns>
+        internal static TrueFeat CreateOrUpdateDedication(
+            Trait archetype,
+            string flavorText, 
+            string rulesText, 
+            List<Feat>? subfeats = null,
+            Action<TrueFeat>? adjustIfExists = null)
+        {
+            TrueFeat dedication;
+            if (ArchetypeFeats.GetDedicationFromArchetypeTrait(archetype) is { } exists)
+            {
+                dedication = exists;
+                dedication.FlavorText = flavorText;
+                dedication.RulesText = rulesText + "\n\n" + DEDICATION_SPECIAL;
+                dedication.Subfeats = subfeats;
+                
+                // Null stuff
+                dedication.OnSheet = null;
+                dedication.OnSheet += values =>
+                {
+                    values.SetProficiency(archetype, Proficiency.Trained);
+                    values.AdditionalClassTraits.Add(archetype);
+                    values.NumberOfFeatsForDedication.TryAdd(archetype, 0);
+                };
+                dedication.OnCreature = null;
+                dedication.OnCreature += (values, self) =>
+                    self.Traits.Add(archetype);
+                dedication.ActionCost = null;
+                dedication.Illustration = IllustrationName.MulticlassFeat; // Default value
+                dedication.IllustrationCreator = null;
+                dedication.RulesTextCreator = null;
+                dedication.Tag = null;
+                dedication.ShowRulesBlockFor = SpellId.None;
+                dedication.ShowRulesBlockForClassOfOrigin = null;
+                dedication.ShowRulesBlockForSpellAtLevel = null;
+                dedication.ShowRulesBlockForCombatAction = null;
+                dedication.InappropriateBecauseOfBadInventory = null;
+                
+                // Adjust a dedication for anything not easily reset by the construction process,
+                // such as altered feat prerequisites which can't simply start from an empty slate
+                // due to the way that dedications start with a bunch of prereqs.
+                adjustIfExists?.Invoke(dedication);
+            }
+            else
+                dedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(archetype, flavorText, rulesText, subfeats);
+            
+            return dedication;
+        }
+        
+        /// <summary>
+        /// Update the functionality of a dedication feat.
+        /// </summary>
+        internal static TrueFeat UpdateExistingDedication(
+            Trait archetype,
+            string? flavorText = null,
+            string? rulesText = null,
+            Action<CalculatedCharacterSheetValues>? onSheet = null,
+            Action<CalculatedCharacterSheetValues, Creature>? onCreature = null,
+            List<Prerequisite>? newPrereqs = null)
+        {
+            TrueFeat? dedication = ArchetypeFeats.GetDedicationFromArchetypeTrait(archetype);
+            
+            if (dedication is null)
+                throw new ArgumentException($"No dedication feat found for archetype of trait \"{archetype.ToStringOrTechnical()}\".");
+            
+            if (flavorText is not null)
+                dedication.FlavorText = flavorText;
+
+            if (rulesText is not null)
+                dedication.RulesText = rulesText + "\n\n" + DEDICATION_SPECIAL;
+            
+            if (onSheet is not null)
+            {
+                dedication.OnSheet = null;
+                dedication.OnSheet += values =>
+                {
+                    values.SetProficiency(archetype, Proficiency.Trained);
+                    values.AdditionalClassTraits.Add(archetype);
+                    values.NumberOfFeatsForDedication.TryAdd(archetype, 0);
+                };
+                dedication.OnSheet += onSheet;
+            }
+
+            if (onCreature is not null)
+            {
+                dedication.OnCreature = null;
+                dedication.OnCreature += (values, self) =>
+                    self.Traits.Add(archetype);
+                dedication.OnCreature += onCreature;
+            }
+
+            if (newPrereqs is not null)
+            {
+                // TrueFeat constructor
+                dedication.Prerequisites =
+                [
+                    new LevelPrerequisite(dedication.Level)
+                ];
+
+                if (dedication.Traits.Any(trait => trait.GetTraitProperties().IsAncestryTrait))
+                {
+                    dedication.Traits.Add(Trait.Ancestry);
+                    List<Trait> ancestryTraits = dedication.Traits
+                        .Where(trait => trait.GetTraitProperties().IsAncestryTrait)
+                        .ToList();
+                    dedication.Prerequisites.Add(new Prerequisite(
+                        sheet => sheet.Ancestries.ContainsOneOf(ancestryTraits),
+                        $"You must be {S.ConstructOrList(ancestryTraits.Select(ancestryTrait => ancestryTrait.HumanizeTitleCase2().WithIndefiniteArticle()))}."));
+                }
+                if (dedication.Traits.Contains(Trait.AllAncestries))
+                    dedication.Traits.Add(Trait.Ancestry);
+                if (dedication.Traits.Any(trait => trait.GetTraitProperties().IsClassTrait))
+                {
+                    dedication.Traits.Add(Trait.ClassFeat);
+                    dedication.Prerequisites.Add(new ClassPrerequisite(dedication.Traits.Where(trait => trait.GetTraitProperties().IsClassTrait).ToList()));
+                }
+                if (dedication.Traits.Contains(Trait.Psyche))
+                    dedication.Prerequisites.Add(new TrueClassPrerequisite(Trait.Psychic));
+                
+                // CreateDedication additions
+                dedication.WithPrerequisite(
+                        values => values.Class == null || values.Class.ClassTrait != archetype,
+                        $"You must not be {archetype.HumanizeLowerCase2().WithIndefiniteArticle()}.")
+                    .WithPrerequisite(
+                        values =>
+                        {
+                            if (PlayerProfile.Instance.UnlimitedOpenArchetypes || !PlayerProfile.Instance.FreeArchetype)
+                                return true;
+                            int num2 = values.NumberOfFeatsForDedication.Count(ded =>
+                                ded.Value < 2 && ded.Key != archetype);
+                            bool flag = values.NumberOfFeatsForDedication.Any(ded =>
+                                ded.Value >= 2 && ded.Key == archetype);
+                            int num3 = (PlayerProfile.Instance.FreeArchetype ? 2 : 1) +
+                                       (values.HasFeat(FeatName.Multitalented) ? 1 : 0);
+                            return flag || num2 < num3;
+                        },
+                        "You already have two dedications open. You must finish a dedication by taking 2 archetype feats for that dedication before opening a third dedication.")
+                    .WithPrerequisite(
+                        values =>
+                        {
+                            if (PlayerProfile.Instance.UnlimitedOpenArchetypes || PlayerProfile.Instance.FreeArchetype)
+                                return true;
+                            int num4 = values.NumberOfFeatsForDedication.Count(ded =>
+                                ded.Value < 2 && ded.Key != archetype);
+                            bool flag = values.NumberOfFeatsForDedication.Any(ded =>
+                                ded.Value >= 2 && ded.Key == archetype);
+                            int num5 = (PlayerProfile.Instance.FreeArchetype ? 2 : 1) +
+                                       (values.HasFeat(FeatName.Multitalented) ? 1 : 0);
+                            return flag || num4 < num5;
+                        },
+                        "You already have a dedication open. You must finish your dedication by taking 2 archetype feats for that dedication before opening a second dedication.");
+                
+                dedication.Prerequisites.AddRange(newPrereqs);
+            }
+            
+            if (!dedication.Traits.Contains(ModData.ModTrait))
+                dedication.Traits.Insert(0, ModData.ModTrait);
+            
+            return dedication;
+        }
+        
+        /// <summary>
+        /// Retrieves the dedication for the archetype of a known Trait, if it exists.
+        /// </summary>
+        public static TrueFeat? GetDedicationFromArchetypeTrait(Trait archetype)
+        {
+            return AllFeats.GetFeatByFeatNameOrStringOptional(null, $"{archetype.ToStringOrTechnical()}Dedication") as TrueFeat;
+        }
+        
+        /// <summary>
+        /// Duplicates a feat for an archetype, without crashing due to registration errors if the feat already exists. To be coupled with ReplaceFeat().
+        /// </summary>
+        internal static TrueFeat SafelyDuplicateFeatAsArchetypeFeat(FeatName originalFeat, Trait archetypeTrait, int newLevel)
+        {
+            string duplicateTechnical = $"{originalFeat.ToStringOrTechnical()}ForArchetype{archetypeTrait.ToStringOrTechnical()}";
+            
+            // If not already added
+            if ((AllFeats.GetFeatByFeatNameOrStringOptional(null, duplicateTechnical)
+                as TrueFeat)
+                is not { } oldDuplicate)
+            {
+                // Then duplicate normally
+                return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(originalFeat, archetypeTrait, newLevel);
+            }
+            
+            // Duplicate again
+            TrueFeat newDuplicate = CommonFeatTemplates.CreateDuplicateFeat(
+                originalFeat,
+                oldDuplicate.FeatName, // Use name instead of registering
+                newLevel);
+            newDuplicate.Traits.RemoveAll(trait =>
+                trait.GetTraitProperties().IsClassTrait);
+            newDuplicate.Prerequisites.RemoveAll(prereq =>
+                prereq is ClassPrerequisite);
+            newDuplicate.WithAvailableAsArchetypeFeat(archetypeTrait);
+            
+            return newDuplicate;
+        }
     }
 }

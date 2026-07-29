@@ -30,17 +30,27 @@ public static class Assassin
     internal static void Load()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft/*, ModData.Traits.ModName*/);
+            ModManager.AddAndReplaceFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateFeats()
     {
-        // Rebuild Assassin.
-        // Users have to switch the dedication, not just individual archetype feats
-        Feat assDed = ArchetypeFeats.CreateAgnosticArchetypeDedication(
+        // Assassin Dedication
+        Feat assDed = ArchetypeFeats.CreateOrUpdateDedication(
                 ModData.Traits.Assassin,
                 "Targeted killing through stealth and subterfuge is the expertise of an assassin. While assassins are skilled in ending lives and many are evil, some live by a moral code, preying on the wicked, the cruel, or those who revel in unchecked aggression or power.",
-                "You gain the {b}Mark for Death {icon:ThreeActions}{/b} activity, which you can use as a {icon:FreeAction} free action at the start of combat.")
+                "You gain the {b}Mark for Death {icon:ThreeActions}{/b} activity, which you can use as a {icon:FreeAction} free action at the start of combat.",
+                null,
+                dedication =>
+                {
+                    foreach (Prerequisite req in dedication.Prerequisites
+                                 .Where(req =>
+                                     req.Description.Contains("Crafting")
+                                     || req.Description.Contains("Deception")
+                                     || req.Description.Contains("Stealth"))
+                                 .ToList())
+                        dedication.Prerequisites.Remove(req);
+                })
             .WithPermanentQEffect(qfFeat =>
             {
                 bool hasSneak = qfFeat.Owner.HasEffect(QEffectId.SneakAttack);
@@ -133,7 +143,7 @@ public static class Assassin
             });
         
         // Poison Resistance
-        Feat poisonResistance = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        Feat poisonResistance = ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.PoisonResistanceDruid, ModData.Traits.Assassin, 4);
         poisonResistance.FlavorText = "Your affinity for the natural world grants you protection against some of its dangers.";
         yield return poisonResistance;
@@ -153,7 +163,8 @@ public static class Assassin
         yield return surpriseAttack;
 
         // Poison Weapon
-        TrueFeat poisonWeapon;
+        
+        /*TrueFeat poisonWeapon;
         if (AllFeats.GetFeatByFeatNameOptional(ModData.FeatNames.PoisonWeapon) is {} moddedPoison)
         {
             poisonWeapon = (moddedPoison as TrueFeat)!;
@@ -211,7 +222,7 @@ public static class Assassin
                                 qfThis.Owner,
                                 IllustrationName.AlchemicalPoison,
                                 "Poison weapon (simple injury poison)",
-                                [/*ModData.Traits.ModName*/ ModData.ModTrait, Trait.Basic, Trait.Manipulate],
+                                [/*ModData.Traits.ModName#1# ModData.ModTrait, Trait.Basic, Trait.Manipulate],
                                 $$"""
                                   {b}Prepared Poisons{/b} {{remainingCharges}}/{{maxCharges}}
 
@@ -332,32 +343,195 @@ public static class Assassin
                         .WithPossibilityGroup("Use item");
                 };
             });
-        yield return poisonWeapon;
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        yield return poisonWeapon;*/
+
+        yield return new TrueFeat(
+                ModData.FeatNames.PoisonWeapon, 4,
+                "You are adept at drawing and and applying injury poisons.",
+                $$"""
+                   Drawing an {{ModData.Tooltips.InjuryPoison("injury poison")}} from your inventory is a {icon:FreeAction} free action for you, and you can apply them as {icon:Action} an action instead of the normal number of actions.
+
+                  {b}Special{/b} Each day, you prepare a number of simple injury poisons equal to your level. These poisons automatically deal 1d4 poison damage (no saving throw), and only you can apply them.
+                  """,
+                [Trait.Manipulate, Trait.Rogue])
+            .WithPermanentQEffect(
+                "You can draw injury poisons as a free action and can apply them as one action.",
+                qfFeat =>
+                {
+                    bool hasImproved = qfFeat.Owner.HasFeat(ModData.FeatNames.ImprovedPoisonWeapon);
+                    string damage = (hasImproved ? 2 : 1) + "d4";
+                    qfFeat.Description +=
+                        $" You prepare {{Blue}}{qfFeat.Owner.Level}{{/Blue}} simple injury poisons each day (they deal {(hasImproved ? "{Blue}2d4{/Blue}" : "1d4")} poison damage).";
+
+                    // Reduce apply-cost to 1
+                    qfFeat.Id = QEffectId.QuickApplyPoison;
+
+                    // Drawing poisons is free
+                    qfFeat.ModifyActionPossibility = (qfThis, action) =>
+                    {
+                        if (action.ActionId is not ActionId.DrawItem
+                            || !(action.Item?.HasTrait(Trait.Poison) ?? false))
+                            return;
+                        action.ActionCost = 0;
+                    };
+
+                    // On-demand simple injury poison button
+                    qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                    {
+                        if (section.PossibilitySectionId != PossibilitySectionId.ItemActions)
+                            return null;
+
+                        int usedCharges = GetUsedPoisonWeaponCharges(qfThis.Owner);
+                        int maxCharges = qfThis.Owner.Level;
+                        if (usedCharges >= maxCharges)
+                            return null;
+                        int remainingCharges = maxCharges - usedCharges;
+
+                        return new ActionPossibility(new CombatAction(
+                                    qfThis.Owner,
+                                    IllustrationName.AlchemicalPoison,
+                                    "Poison weapon (simple injury poison)",
+                                    [ModData.ModTrait, Trait.Basic, Trait.Manipulate],
+                                    $$"""
+                                      {b}Prepared Poisons{/b} {{remainingCharges}}/{{maxCharges}}
+
+                                      Apply your simple injury poison to a piercing or slashing weapon in your hand.
+
+                                      The poison automatically deals {{S.HeightenedVariable(hasImproved ? 2 : 1, 1)}}d4 poison damage on a hit or critical hit.{{(hasImproved ? "\n\n{Blue}{b}Improved Poison Weapon{/b} Keep this poison even on a critical failure.{/Blue}" : null)}}
+                                      """,
+                                    Target.Self()
+                                        .WithAdditionalRestriction(self =>
+                                        {
+                                            if (!self.HasFreeHand)
+                                                return "You need a free hand";
+                                            List<Item> helds = self.HeldItems.ToList();
+                                            if (!helds.Any(item =>
+                                                    item.WeaponProperties?.DamageKind is DamageKind.Piercing
+                                                        or DamageKind.Slashing))
+                                                return "No piercing or slashing weapon";
+                                            if (helds.All(item => item.HasTrait(Trait.Poisoned)))
+                                                return "All weapons are poisoned";
+                                            return null;
+                                        }))
+                                .WithEffectOnEachTarget(async (action, caster, _, _) =>
+                                {
+                                    List<Item> validWeapons = caster.HeldItems
+                                        .Where(item =>
+                                            item.WeaponProperties?.DamageKind is DamageKind.Piercing
+                                                or DamageKind.Slashing
+                                            && !item.HasTrait(Trait.Poisoned))
+                                        .ToList();
+
+                                    // Choose a weapon to apply to
+                                    Item chosenWeapon;
+                                    switch (validWeapons.Count)
+                                    {
+                                        case 0:
+                                            action.RevertRequested = true;
+                                            return;
+                                        case 1:
+                                            chosenWeapon = validWeapons[0];
+                                            break;
+                                        default:
+                                        {
+                                            ChoiceButtonOption chosenButton = await caster.AskForChoiceAmongButtons(
+                                                IllustrationName.AlchemicalPoison,
+                                                """
+                                                {b}Poison Weapon{/b} {icon:Action}
+                                                Choose a weapon to poison.
+                                                """,
+                                                [
+                                                    ..validWeapons.Select(item =>
+                                                        $"{item.Illustration.IllustrationAsIconString} {item.Name}")
+                                                ]);
+                                            chosenWeapon = validWeapons[chosenButton.Index];
+                                            break;
+                                        }
+                                    }
+
+                                    QEffect qfPoison = new QEffect(
+                                        "Poisoned Weapon",
+                                        $"Your next attack with your {{Blue}}{chosenWeapon.Name}{{/Blue}} that hits exposes the target to your simple injury poison (deals {damage} poison damage without a saving throw).",
+                                        ExpirationCondition.Never,
+                                        caster,
+                                        IllustrationName.AlchemicalPoison)
+                                    {
+                                        DoNotShowUpOverhead = true,
+                                        WhenExpires = qfThis2 =>
+                                        {
+                                            AlchemicalItems.DestroyAllPoisonsOn(chosenWeapon);
+                                        },
+                                    };
+
+                                    // Lacks self reference, applied separately.
+                                    qfPoison.AfterYouDealDamage = async (attacker, action2, defender) =>
+                                    {
+                                        if (!action2.HasTrait(Trait.Strike)
+                                            || action2.Item != chosenWeapon
+                                            || action2.CheckResult < CheckResult.Success)
+                                            return;
+
+                                        CombatAction poisonAction = new CombatAction(attacker.Battle.Pseudocreature,
+                                            IllustrationName.DragonClaws, "simple injury poison", [Trait.Poison],
+                                            "",
+                                            Target.Self());
+
+                                        await CommonSpellEffects.DealDirectDamage(
+                                            poisonAction,
+                                            DiceFormula.FromText(damage, "Simple injury poison"),
+                                            defender,
+                                            CheckResult.Failure,
+                                            DamageKind.Poison);
+
+                                        qfPoison.ExpiresAt = ExpirationCondition.Immediately;
+                                    };
+
+                                    if (!hasImproved)
+                                    {
+                                        qfPoison.Description +=
+                                            " This effect ends early if you critically fail the attack.";
+                                        qfPoison.AfterYouTakeAction += async (qfThis2, action2) =>
+                                        {
+                                            if (action2.HasTrait(Trait.Strike)
+                                                && action2.Item == chosenWeapon
+                                                && action2.CheckResult == CheckResult.CriticalFailure)
+                                            {
+                                                qfThis2.Owner.Overhead(
+                                                    "*poison lost*",
+                                                    Color.Red,
+                                                    "Prepared poison from {b}Poison Weapon{/b} lost due to critical failure.");
+                                                qfThis2.ExpiresAt = ExpirationCondition.Immediately;
+                                            }
+                                        };
+                                    }
+
+                                    chosenWeapon.Traits.Add(Trait.Poisoned);
+                                    caster.AddQEffect(qfPoison);
+                                    AddUsedPoisonWeaponCharge(caster);
+                                }))
+                            .WithPossibilityGroup("Use item");
+                    };
+                });
+        yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.PoisonWeapon, ModData.Traits.Assassin, 6);
         
         // Improved Poison Weapon
-        // No changes in the remaster, so recreate if not found,
-        // and otherwise just duplicate to this archetype if found.
-        if (AllFeats.GetFeatByFeatNameOptional(ModData.FeatNames.ImprovedPoisonWeapon) is null)
-        {
-            yield return new TrueFeat(
-                    ModData.FeatNames.ImprovedPoisonWeapon, 8,
-                    "You deliver poisons in ways that maximize their harmful effects.",
-                    $"""
-                     The damage of your prepared injury poisons increases to 2d4, and are no longer wasted on a critically failed attack roll.
+        yield return new TrueFeat(
+                ModData.FeatNames.ImprovedPoisonWeapon, 8,
+                "You deliver poisons in ways that maximize their harmful effects.",
+                $"""
+                 The damage of your prepared injury poisons increases to 2d4, and are no longer wasted on a critically failed attack roll.
 
-                     For other poisons you apply, you gain the benefits of the {AllFeats.GetFeatByFeatName(FeatName.StickyPoison).ToLink("Sticky Poison")} feat.
-                     """,
-                    [Trait.Rogue])
-                .WithPrerequisite(
-                    ModData.FeatNames.PoisonWeapon, "Poison Weapon")
-                .WithOnSheet(values =>
-                {
-                    values.GrantFeat(FeatName.StickyPoison);
-                });
-        }
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+                 For other poisons you apply, you gain the benefits of the {AllFeats.GetFeatByFeatName(FeatName.StickyPoison).ToLink("Sticky Poison")} feat.
+                 """,
+                [Trait.Rogue])
+            .WithPrerequisite(
+                ModData.FeatNames.PoisonWeapon, "Poison Weapon")
+            .WithOnSheet(values =>
+            {
+                values.GrantFeat(FeatName.StickyPoison);
+            });
+        yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.ImprovedPoisonWeapon, ModData.Traits.Assassin, 10);
         
         // Assassinate

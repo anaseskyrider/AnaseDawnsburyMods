@@ -30,14 +30,14 @@ public static class DualWeaponWarrior
     internal static void Load()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddAndReplaceFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateFeats()
     {
         // Rebuild Dual-Weapon Warrior.
         // Users have to switch the dedication, not just individual archetype feats
-        Feat dwwArchetype = ArchetypeFeats.CreateAgnosticArchetypeDedication(
+        Feat dwwArchetype = ArchetypeFeats.CreateOrUpdateDedication(
                 ModData.Traits.DualWeaponWarrior,
                 "You're exceptional in your use of two weapons.",
                 "You gain the Double Slice fighter feat.")
@@ -170,15 +170,15 @@ public static class DualWeaponWarrior
                 });
         
         // Quick Draw
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.QuickDraw, ModData.Traits.DualWeaponWarrior, 4);
 
         // Twin Parry
         if (ModManager.TryParse("Twin Parry", out FeatName twinParry1))
-            yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
                 twinParry1, ModData.Traits.DualWeaponWarrior, 6);
         if (ModManager.TryParse("TwinParry", out FeatName twinParry2))
-            yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+            yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
                 twinParry2, ModData.Traits.DualWeaponWarrior, 6);
         
         // Flensing Slice
@@ -195,93 +195,91 @@ public static class DualWeaponWarrior
                 [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.DualWeaponWarrior)
             .WithActionCost(1)
-            .WithPermanentQEffect(
-                null,
-                qfFeat =>
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.YouBeginAction = async (qfThis, action) =>
                 {
-                    qfFeat.YouBeginAction = async (qfThis, action) =>
+                    if (!action.Name.StartsWith("Double Slice"))
+                        return;
+                    List<Item> weapons = qfThis.Owner.HeldItems.ToList();
+                    QEffect flenseCounter = qfThis.Owner.FindQEffect(ModData.QEffectIds.FlenseCounter) ?? new QEffect(ExpirationCondition.ExpiresAtEndOfYourTurn)
                     {
-                        if (!action.Name.StartsWith("Double Slice"))
-                            return;
-                        List<Item> weapons = qfThis.Owner.HeldItems.ToList();
-                        QEffect flenseCounter = qfThis.Owner.FindQEffect(ModData.QEffectIds.FlenseCounter) ?? new QEffect(ExpirationCondition.ExpiresAtEndOfYourTurn)
+                        AfterYouTakeActionAgainstTarget = async (qfThis2, action2, _, result) =>
                         {
-                            AfterYouTakeActionAgainstTarget = async (qfThis2, action2, _, result) =>
+                            if (!action2.HasTrait(Trait.Strike)
+                                || result <= CheckResult.Failure)
+                                return;
+                            qfThis2.Value += 1;
+                        },
+                        Id = ModData.QEffectIds.FlenseCounter,
+                        Tag = action
+                    };
+                    // Reset in the nearly-impossible event of two Double Slices in one turn
+                    flenseCounter.Value = 0;
+                    qfThis.Owner.AddQEffect(flenseCounter);
+                    qfThis.Owner.AddQEffect(new QEffect(ExpirationCondition.ExpiresAtEndOfYourTurn)
+                    {
+                        Id = ModData.QEffectIds.FlenseWeapons,
+                        Tag = weapons
+                    });
+                };
+                qfFeat.ProvideContextualAction = qfThis =>
+                {
+                    if (qfThis.Owner.FindQEffect(ModData.QEffectIds.FlenseCounter) is not
+                            { Value: 2, Tag: CombatAction { ChosenTargets.ChosenCreature: { } enemy } sliceAction }
+                        || qfThis.Owner.Actions.ActionHistoryThisTurn.Last() != sliceAction
+                        || qfThis.Owner.FindQEffect(ModData.QEffectIds.FlenseWeapons)?.Tag is not List<Item> weapons
+                        || weapons.Count(weapon => weapon.WeaponProperties != null) < 2
+                        || !enemy.Alive)
+                        return null;
+                    
+                    int dice = weapons.MaxBy(weapon =>
+                        weapon.WeaponProperties?.DamageDieCount)
+                        ?.WeaponProperties
+                        ?.DamageDieCount ?? 1;
+
+                    CombatAction flense = new CombatAction(
+                            qfThis.Owner,
+                            ModData.Illustrations.FlensingSlice,
+                            "Flensing Slice",
+                            [Trait.Basic, ModData.ModTrait, Trait.Archetype],
+                            $$"""
+                              {b}Requirements{/b} Your last action was a Double Slice, and both attacks hit the target.
+
+                              The target takes {{S.HeightenedVariable(dice, 1)}}d8 persistent bleed damage.
+
+                              The target also becomes off-guard and reduces its physical damage resistances (if any) by 5 until the start of your next turn.
+                              """,
+                            Target.Self())
+                        .WithActionCost(1)
+                        .WithSoundEffect(SfxName.Boneshaker)
+                        .WithEffectOnSelf(async caster =>
+                        {
+                            enemy.AddQEffect(QEffect.PersistentDamage(dice + "d8", DamageKind.Bleed));
+                            QEffect offguard = QEffect.FlatFooted("Flensed")
+                                .WithExpirationAtStartOfSourcesTurn(caster, 1);
+                            offguard.Name = "Flensed";
+                            offguard.Description = offguard.Description?.Replace(".",
+                                " and your resistances to all physical damage types are reduced by 5.");
+                            offguard.StateCheckLayer = 1; // Ensure this reduces resistances after adding them
+                            offguard.StateCheck = qfThis2 =>
                             {
-                                if (!action2.HasTrait(Trait.Strike)
-                                    || result <= CheckResult.Failure)
-                                    return;
-                                qfThis2.Value += 1;
-                            },
-                            Id = ModData.QEffectIds.FlenseCounter,
-                            Tag = action
-                        };
-                        // Reset in the nearly-impossible event of two Double Slices in one turn
-                        flenseCounter.Value = 0;
-                        qfThis.Owner.AddQEffect(flenseCounter);
-                        qfThis.Owner.AddQEffect(new QEffect(ExpirationCondition.ExpiresAtEndOfYourTurn)
-                        {
-                            Id = ModData.QEffectIds.FlenseWeapons,
-                            Tag = weapons
+                                Creature owner = qfThis2.Owner;
+                                foreach (Resistance resistance in owner.WeaknessAndResistance.Resistances
+                                             .Where(resist =>
+                                                 resist.DamageKind.IsPhysical()
+                                                 || (resist is SpecialResistance spec
+                                                 && spec.Name.ToLower().Contains("physical"))))
+                                    resistance.Value = Math.Max(0, resistance.Value-5);
+                            };
+                            offguard.Illustration = ModData.Illustrations.FlensingSlice;
+                            enemy.AddQEffect(offguard);
                         });
-                    };
-                    qfFeat.ProvideContextualAction = qfThis =>
-                    {
-                        if (qfThis.Owner.FindQEffect(ModData.QEffectIds.FlenseCounter) is not
-                                { Value: 2, Tag: CombatAction { ChosenTargets.ChosenCreature: { } enemy } sliceAction }
-                            || qfThis.Owner.Actions.ActionHistoryThisTurn.Last() != sliceAction
-                            || qfThis.Owner.FindQEffect(ModData.QEffectIds.FlenseWeapons)?.Tag is not List<Item> weapons
-                            || weapons.Count(weapon => weapon.WeaponProperties != null) < 2
-                            || !enemy.Alive)
-                            return null;
-                        
-                        int dice = weapons.MaxBy(weapon =>
-                            weapon.WeaponProperties?.DamageDieCount)
-                            ?.WeaponProperties
-                            ?.DamageDieCount ?? 1;
-
-                        CombatAction flense = new CombatAction(
-                                qfThis.Owner,
-                                ModData.Illustrations.FlensingSlice,
-                                "Flensing Slice",
-                                [Trait.Basic, ModData.ModTrait, Trait.Archetype],
-                                $$"""
-                                  {b}Requirements{/b} Your last action was a Double Slice, and both attacks hit the target.
-
-                                  The target takes {{S.HeightenedVariable(dice, 1)}}d8 persistent bleed damage.
-
-                                  The target also becomes off-guard and reduces its physical damage resistances (if any) by 5 until the start of your next turn.
-                                  """,
-                                Target.Self())
-                            .WithActionCost(1)
-                            .WithSoundEffect(SfxName.Boneshaker)
-                            .WithEffectOnSelf(async caster =>
-                            {
-                                enemy.AddQEffect(QEffect.PersistentDamage(dice + "d8", DamageKind.Bleed));
-                                QEffect offguard = QEffect.FlatFooted("Flensed")
-                                    .WithExpirationAtStartOfSourcesTurn(caster, 1);
-                                offguard.Name = "Flensed";
-                                offguard.Description = offguard.Description?.Replace(".",
-                                    " and your resistances to all physical damage types are reduced by 5.");
-                                offguard.StateCheckLayer = 1; // Ensure this reduces resistances after adding them
-                                offguard.StateCheck = qfThis2 =>
-                                {
-                                    Creature owner = qfThis2.Owner;
-                                    foreach (Resistance resistance in owner.WeaknessAndResistance.Resistances
-                                                 .Where(resist =>
-                                                     resist.DamageKind.IsPhysical()
-                                                     || (resist is SpecialResistance spec
-                                                     && spec.Name.ToLower().Contains("physical"))))
-                                        resistance.Value = Math.Max(0, resistance.Value-5);
-                                };
-                                offguard.Illustration = ModData.Illustrations.FlensingSlice;
-                                enemy.AddQEffect(offguard);
-                            });
-                        
-                        return new ActionPossibility(flense)
-                            .WithPossibilityGroup("Abilities"); 
-                    };
-                });
+                    
+                    return new ActionPossibility(flense)
+                        .WithPossibilityGroup("Abilities"); 
+                };
+            });
         
         // Dual-Weapon Blitz
         yield return new TrueFeat(

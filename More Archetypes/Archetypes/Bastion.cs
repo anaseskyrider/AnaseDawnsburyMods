@@ -25,17 +25,26 @@ public static class Bastion
     internal static void Load()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft/*, ModData.Traits.ModName*/);
+            ModManager.AddAndReplaceFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateFeats()
     {
         // Rebuild Bastion.
         // Users have to switch the dedication, not just individual archetype feats
-        Feat basDed = ArchetypeFeats.CreateAgnosticArchetypeDedication(
+        Feat basDed = ArchetypeFeats.CreateOrUpdateDedication(
                 ModData.Traits.Bastion,
                 "Some say that a good offense is the best defense, but you find such boasting smacks of overconfidence. In your experience, the best defense is a good, solid shield between you and your enemies.",
-                "You gain the Reactive Shield {icon:Reaction} fighter feat.")
+                "You gain the Reactive Shield {icon:Reaction} fighter feat.",
+                null,
+                dedication =>
+                {
+                    foreach (Prerequisite req in dedication.Prerequisites
+                                 .Where(req =>
+                                     req.Description.Contains("Shield Block"))
+                                 .ToList())
+                        dedication.Prerequisites.Remove(req);
+                })
             .WithPrerequisite(FeatName.ShieldBlock, "Shield Block")
             .WithOnSheet(values =>
                 values.GrantFeat(FeatName.ReactiveShield));
@@ -43,7 +52,7 @@ public static class Bastion
         yield return basDed;
 
         // Add Agile Shield Grip to Bastion
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             Champion.AgileShieldGripFeatName, ModData.Traits.Bastion, 4);
 
         // Disarming Block
@@ -204,7 +213,7 @@ public static class Bastion
                             { Id = QEffectId.Mobility });
                 };
             });
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.ShieldedStride, ModData.Traits.Bastion, 6);
         
         // Reflexive Shield
@@ -242,14 +251,14 @@ public static class Bastion
                         return new Bonus(acBonus, BonusType.Circumstance, "raised shield" + (takingCover ? " in cover" : null));
                     };
 
-                    qfFeat.YourShieldBlockWorksAlsoAgainst = (qfThis, dEvent) =>
+                    qfFeat.YourShieldBlockWorksAlsoAgainst = (_, dEvent) =>
                         CommonShieldRules.DoesReflexiveShieldApply(dEvent.CombatAction);
                 });
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.ReflexiveShield, ModData.Traits.Bastion, 8);
 
         // Add Shield Warden to Bastion
-        TrueFeat bastionShieldWarden = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        TrueFeat bastionShieldWarden = ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.ShieldWarden, ModData.Traits.Bastion, 8);
         // Removes the requirement, "You must be a Fighter, or you must have Shield Ally as your divine ally." .
         bastionShieldWarden.Prerequisites.RemoveAll(req =>
@@ -257,11 +266,11 @@ public static class Bastion
         yield return bastionShieldWarden;
         
         // Add Quick Shield Block to Bastion
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.QuickShieldBlock, ModData.Traits.Bastion, 10);
         
         // Add Mirror Shield to Bastion
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.MirrorShield, ModData.Traits.Bastion, 12);
         
         // PETR: Lv16 Improved Reflexive Shield (Lv18 for Bastion)

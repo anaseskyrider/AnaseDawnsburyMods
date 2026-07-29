@@ -29,20 +29,13 @@ public static class Archer
     internal static void Load()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft/*, ModData.Traits.ModName*/);
-        
-        ModManager.RegisterFeatNameReplacement(
-            "MoreDedications.Class.Fighter.PartingShot",
-            ModData.FeatNames.PartingShot);
+            ModManager.AddAndReplaceFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateFeats()
     {
         // Remaster Archer
-        if (ModLoader.GetDedication(Trait.Archer) is { } archDed)
-        {
-            ModData.FeatNames.ArcherDedication = archDed.FeatName;
-            archDed.ReplaceDedicationBehavior(
+        ModData.FeatNames.ArcherDedication = ArchetypeFeats.UpdateExistingDedication(
                 Trait.Archer,
                 null,
                 $$"""
@@ -57,8 +50,8 @@ public static class Archer
                         [Trait.Simple],
                         [Trait.Martial, Trait.Bow]);
                 },
-                null);
-        }
+                null)
+            .FeatName;
         
         // Crossbow Ace
         yield return new TrueFeat(
@@ -116,12 +109,13 @@ public static class Archer
             ModData.FeatNames.CrossbowAceRemastered, Trait.Archer, 4);
         
         // Quick Shot: Add Quick Draw to Archer
-        if (ModLoader.SafelyDuplicateAsArchetype(FeatName.QuickDraw, Trait.Archer, 4) is { } qDraw)
+        if (ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(FeatName.QuickDraw, Trait.Archer, 4) is { } qDraw)
             yield return qDraw;
 
-        // Crossbow Terror
+        // Crossbow Terror (Remastered)
+        // Preserve premaster variant by making a new feat.
         yield return new TrueFeat(
-                ModData.FeatNames.CrossbowTerror, 6,
+                ModData.FeatNames.CrossbowTerrorRemastered, 6,
                 "Your skill with a crossbow strikes terror into your opponents when you threaten them with the next bolt.",
                 "Reload a crossbow, then attempt to Demoralize. You gain a +2 circumstance bonus to this check if you succeeded at a Strike with a crossbow this turn.",
                 [])
@@ -242,8 +236,11 @@ public static class Archer
                     return partingShot;
                 };
             });
-        if (ModLoader.SafelyDuplicateAsArchetype(ModData.FeatNames.PartingShot, Trait.Archer, 6) is { } pShot)
+        if (ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(ModData.FeatNames.PartingShot, Trait.Archer, 6) is { } pShot)
+        {
+            ModData.FeatNames.PartingShotForArchetypeArcher = pShot.FeatName;
             yield return pShot;
+        }
         
         // Archer's Aim
         // Update original feat.

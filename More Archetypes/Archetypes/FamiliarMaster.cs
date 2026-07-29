@@ -23,14 +23,14 @@ public static class FamiliarMaster
     internal static void Load()
     {
         foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+            ModManager.AddAndReplaceFeat(ft);
     }
 
     public static IEnumerable<Feat> CreateFeats()
     {
         // Rebuild Familiar Master.
         // Users have to switch the dedication, not just individual archetype feats
-        Feat famDed = ArchetypeFeats.CreateAgnosticArchetypeDedication(
+        Feat famDed = ArchetypeFeats.CreateOrUpdateDedication(
                 ModData.Traits.FamiliarMaster,
                 "You have forged a mystical bond with a creature. This might have involved complex rituals and invocations, such as meditating under the moon until something crept out of the forest. Or maybe you just did each other a good turn, such as rescuing the beast from a trap or a foe, and then being rescued in turn.",
                 "You gain a {link:ClassFamiliar}combat familiar{/}. If you already have one, you gain the {link:DawnsburyEnhancedFamiliar}Enhanced Familiar{/} feat.")
@@ -44,7 +44,7 @@ public static class FamiliarMaster
         yield return famDed;
         
         // Lv4: Add Enhanced Familiar to Familiar Master
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.DawnsburyEnhancedFamiliar, ModData.Traits.FamiliarMaster, 4);
 
         // Lv4: Overload Familiar (homebrew ability, vaguely replacing Familiar Conduit)

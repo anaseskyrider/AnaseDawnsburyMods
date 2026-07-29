@@ -37,6 +37,8 @@ namespace Dawnsbury.Mods.MoreArchetypes;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
+/// <item>v2.5: Add CombatAction.Fullcast(Creature, QEffect).</item>
+/// <item>v2.4: Add Feat.WithLevelPrereq(int), TrueFeat.WithLevelPrereq(int), and TrueFeat.With()..</item>
 /// <item>v2.3: Add WithExtraTrait(int, Trait).</item>
 /// <item>v2.2: Remove Trait.Mod automations in deference to new base game architecture for mod identifiers. Remove WithDisplayActionInOffenseSection. Add CombatAction.WithIllustration.</item>
 /// <item>v2.1: Make GetCharacterSheetFromPartyMember into a static extension. Update unused SafelyRegisterEnumMember to newer versions of SafelyRegister from my individual projects, now called TryRegisterEnumMember.</item>
@@ -52,7 +54,7 @@ namespace Dawnsbury.Mods.MoreArchetypes;
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
-/// <value>v2.3</value>
+/// <value>v2.5</value>
 public static class LibraryOfAnase
 {
     extension(Creature cr)
@@ -170,6 +172,16 @@ public static class LibraryOfAnase
                 };
                 self.AddQEffect(doAfter);
             });
+        }
+
+        /// <summary>
+        /// Behaves as <see cref="CombatAction.Fullcast(Creature)"/>, except you can supply a QEffect that is applied and then removed when the action completes.
+        /// </summary>
+        public async Task Fullcast(Creature againstWhom, QEffect qfForAction)
+        {
+            againstWhom.AddQEffect(qfForAction);
+            await caThis.Owner.Battle.GameLoop.FullCast(caThis, ChosenTargets.CreateSingleTarget(againstWhom));
+            againstWhom.RemoveAllQEffects(qf => qf == qfForAction);
         }
     }
     
@@ -319,6 +331,19 @@ public static class LibraryOfAnase
             changes.Invoke(feat);
             return feat;
         }
+
+        /// <summary>
+        /// Updates a feat to use a new level.
+        /// </summary>
+        /// <param name="level"></param>
+        /// <returns></returns>
+        public Feat WithLevelPrereq(int level)
+        {
+            feat.LevelIfAny = level;
+            feat.Prerequisites.RemoveAll(req => req is LevelPrerequisite);
+            feat.Prerequisites.Insert(0, new LevelPrerequisite(level));
+            return feat;
+        }
         
         /// <summary>
         /// Outputs a link to this feat.
@@ -327,6 +352,31 @@ public static class LibraryOfAnase
         public string ToLink(string caption)
         {
             return feat.FeatName.ToLink(caption);
+        }
+    }
+
+    extension(TrueFeat feat)
+    {
+        /// <summary>
+        /// Runs any modifications to the TrueFeat in one code block, similar to Zone.With().
+        /// </summary>
+        public TrueFeat With(Action<Feat> changes)
+        {
+            changes.Invoke(feat);
+            return feat;
+        }
+
+        /// <summary>
+        /// Updates a feat to use a new level.
+        /// </summary>
+        /// <param name="level"></param>
+        /// <returns></returns>
+        public TrueFeat WithLevelPrereq(int level)
+        {
+            feat.LevelIfAny = level;
+            feat.Prerequisites.RemoveAll(req => req is LevelPrerequisite);
+            feat.Prerequisites.Insert(0, new LevelPrerequisite(level));
+            return feat;
         }
     }
 

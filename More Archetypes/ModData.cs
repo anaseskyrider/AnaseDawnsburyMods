@@ -2,11 +2,14 @@ using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
+using Dawnsbury.Mods.MoreShields;
 
 namespace Dawnsbury.Mods.MoreArchetypes;
 
@@ -22,7 +25,7 @@ public static class ModData
     /// <para>
     /// When registering mod data, certain data must be called through the execution of lines of code, rather than assigned in their initialization. The Initializer skips these data until they're first called, which can result in errors due to out of order registration calls (especially when another mod isn't using <see cref="ModManager.TryParse"/>).
     /// </para>
-    /// <para>The following data forms are typically safe due to the way Dawnsbury Days loads mods (or because their initialization nearly always gets called before errors could arise): <see cref="FeatName"/>, <see cref="Illustration"/>, <see cref="Trait"/>, <see cref="SfxNames"/>, <see cref="SpellId"/>. Tooltips from <see cref="ModManager.RegisterInlineTooltip(string, string)"/> likely aren't safe to assign as part of the initializer, but they typically shouldn't be shared between mods either.
+    /// <para>The following data forms are typically safe due to the way Dawnsbury Days loads mods (or because their initialization nearly always gets called before errors could arise): <see cref="FeatName"/>, <see cref="Illustration"/>, <see cref="Trait"/>, <see cref="MoreShields.ModData.SfxNames"/>, <see cref="SpellId"/>. Tooltips from <see cref="ModManager.RegisterInlineTooltip(string, string)"/> likely aren't safe to assign as part of the initializer, but they typically shouldn't be shared between mods either.
     /// </para>
     /// <para>
     /// In general, trigger the initializer by separating declaration and assignment for the following data forms:
@@ -35,63 +38,39 @@ public static class ModData
     {
         ModTrait = ModManager.ModBeingLoadedTrait!.Value; // Known not null at this stage
         ActionIds.Initialize();
-        BooleanOptions.Initialize();
-        PossibilitySectionIds.Initialize();
         QEffectIds.Initialize();
-        SubmenuIds.Initialize();
-        TileQfIds.Initialize();
     }
 
     public static class ActionIds
     {
+        // Martial Artist
+        public static ActionId TigerSlash;
+        
+        // Marshal
         public static ActionId DreadMarshalStance;
         public static ActionId InspiringMarshalStance;
         public static ActionId StrategistStance;
         
         public static void Initialize()
         {
+            TigerSlash = ModManager.SafelyRegisterEnumMember<ActionId>("TigerSlash");
             DreadMarshalStance = ModManager.SafelyRegisterEnumMember<ActionId>("DreadMarshalStance");
             InspiringMarshalStance = ModManager.SafelyRegisterEnumMember<ActionId>("InspiringMarshalStance");
             StrategistStance = ModManager.SafelyRegisterEnumMember<ActionId>("StrategistStance");
         }
     }
 
-    /// <summary>
-    /// Keeps the options registered with <see cref="ModManager.RegisterBooleanSettingsOption"/>. To read the registered options, use <see cref="PlayerProfile.Instance.IsBooleanOptionEnabled(string)"/>.
-    /// </summary>
-    public static class BooleanOptions
+    public static class CommonRequirements
     {
-        //public static string UnrestrictedTrace = null!;
-        public static string RemoveOldFeats = null!;
-        
-        internal static void Initialize()
+        public static Func<Creature, string?> StanceRestriction(QEffectId stanceId)
         {
-            /*RemoveOldFeats = RegisterBooleanOption(
-                ID_PREPEND + "RemoveOldFeats",
-                "More Archetypes: Remove Old Feats",
-                "(REQUIRES RELOAD) Enabling this option removes pre-remaster versions of these feats from my other mods. Only enable this after updating existing characters to these options. If you don't have those mods installed, this does nothing.",
-                false);*/
+            return self =>
+            {
+                if (self.HasEffect(stanceId))
+                    return "You're already in this stance.";
+                return null;
+            };
         }
-        
-        /// <summary>
-        /// Functions as <see cref="ModManager.RegisterBooleanSettingsOption"/>, but also returns the technicalName.
-        /// </summary>
-        /// <returns>(string) The technical name for the option.</returns>
-        private static string RegisterBooleanOption(
-            string technicalName,
-            string caption,
-            string longDescription,
-            bool defaultValue)
-        {
-            ModManager.RegisterBooleanSettingsOption(technicalName, caption, longDescription, defaultValue);
-            return technicalName;
-        }
-    }
-
-    // TODO: Remove unused
-    public static class FeatGroups
-    {
-        //public static readonly FeatGroup FamiliarAbilities = new FeatGroup("Familiar Abilities", 0);
     }
 
     public static class FeatNames
@@ -102,18 +81,13 @@ public static class ModData
         public static readonly FeatName CrossbowAceRemastered = ModManager.SafelyRegisterEnumMember<FeatName>(
             "CrossbowAceRemastered",
             ["Crossbow Ace"]);
-        public static readonly FeatName CrossbowTerror = ModManager.SafelyRegisterEnumMember<FeatName>(
-            "CrossbowTerror",
-            ["Crossbow Terror"]);
+        public static readonly FeatName CrossbowTerrorRemastered = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "CrossbowTerrorRemastered",
+            ["Crossbow Terror (Remastered)"]);
         public static readonly FeatName PartingShot = ModManager.SafelyRegisterEnumMember<FeatName>(
             "PartingShot",
             ["Parting Shot"]);
-        public static readonly FeatName ArchersAim = ModManager.SafelyRegisterEnumMember<FeatName>(
-            "ArchersAim",
-            ["Archer's Aim"]);
-        public static readonly FeatName MobileShotStance = ModManager.SafelyRegisterEnumMember<FeatName>(
-            "MobileShotStance",
-            ["Mobile Shot Stance"]);
+        public static FeatName PartingShotForArchetypeArcher;
         public static readonly FeatName UnobstructedShot = ModManager.SafelyRegisterEnumMember<FeatName>(
             "UnobstructedShot",
             ["Unobstructed Shot"]);
@@ -257,6 +231,94 @@ public static class ModData
             ["Target of Opportunity"]);
         
         #endregion
+        
+        #region Martial Artist
+        
+        public static readonly FeatName StumblingStance = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "StumblingStance",
+            ["Stumbling Stance"]);
+        public static readonly FeatName TigerStance = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "TigerStance",
+            ["Tiger Stance"]);
+        public static readonly FeatName StumblingFeint = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "StumblingFeint",
+            ["Stumbling Feint"]);
+        public static readonly FeatName TigerSlash = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "TigerSlash",
+            ["Tiger Slash"]);
+        
+        #endregion
+        
+        #region Mauler
+
+        public static FeatName MaulerDedication;
+        public static FeatName slamDownForMauler;
+        public static FeatName viciousSwingForMauler;
+        public static readonly FeatName ClearTheWay = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "ClearTheWay",
+            ["Clear the Way"]);
+        public static readonly FeatName ShovingSweep = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "ShovingSweep",
+            ["Shoving Sweep"]);
+        public static FeatName ImprovedKnockdownForMauler;
+        
+        #endregion
+
+        #region Medic
+
+        public static readonly FeatName DoctorsVisitation = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "DoctorsVisitation",
+            ["Doctor's Visitation"]);
+        public static FeatName TreatConditionSkillVariant;
+        public static FeatName HolisticCareSkillVariant;
+
+        #endregion
+        
+        #region Scout
+
+        public static FeatName ScoutDedication;
+        public static readonly FeatName ScoutsWarning = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "ScoutsWarning",
+            ["Scout's Warning"]);
+        public static readonly FeatName ScoutsCharge = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "ScoutsCharge",
+            ["Scout's Charge"]);
+        public static readonly FeatName TerrainScout = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "TerrainScout",
+            ["Terrain Scout"]);
+        public static readonly FeatName FleetingShadow = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "FleetingShadow",
+            ["Fleeting Shadow"]);
+        public static readonly FeatName ScoutsSpeed = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "ScoutsSpeed",
+            ["Scout's Speed"]);
+        public static readonly FeatName ScoutsPounce = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "ScoutsPounce",
+            ["Scout's Pounce"]);
+        
+        #endregion
+
+        #region Wrestler
+
+        public static readonly FeatName ElbowBreaker = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "ElbowBreaker",
+            ["Elbow Breaker"]);
+
+        #endregion
+        
+        #region Bonus Stances
+        
+        public static readonly FeatName WildWindsInitiate = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "WildWindsInitiate",
+            ["Wild Winds Initiate"]);
+        public static readonly FeatName ClingingShadowsInitiate = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "ClingingShadowsInitiate",
+            ["Clinging Shadows Initiate"]);
+        public static readonly FeatName TangledForestStance = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "TangledForestStance",
+            ["Tangled Forest Stance"]);
+        
+        #endregion
     }
 
     public static class Illustrations
@@ -267,27 +329,50 @@ public static class ModData
         public static readonly Illustration CheckSymbol = new ModdedIllustration(MOD_FOLDER+"check symbol.png");
         public static readonly Illustration NoSymbol = new ModdedIllustration(MOD_FOLDER+"no symbol.png");
 
-        // Assassin
+        #region Assassin
+
         public static readonly Illustration MarkedForDeath = IllustrationName.RequiemOfDeath;
+
+        #endregion
         
-        // Blessed One
+        #region Blessed One
+
         public static readonly Illustration ProtectorsSacrifice = new ModdedIllustration(MOD_FOLDER+"protector's-sacrifice.png");
+
+        #endregion
         
-        // Dual-Weapon Warrior
+        #region Dual-Weapon Warrior
+
         public static readonly Illustration FlensingSlice = new ModdedIllustration(MOD_FOLDER+"FlensingSlice.png");
         public static readonly Illustration DualWeaponBlitz = new SideBySideIllustration(
             IllustrationName.FleetStep,
             IllustrationName.Swords);
-        
-        public static readonly Illustration PowderPunchStance = IllustrationName.AlchemistsFire;
+
+        #endregion
+
+        #region Martial Artist
+
         public static readonly Illustration StumblingStance = new ModdedIllustration(MOD_FOLDER+"calabash.png");
+        public static readonly Illustration WildWindsStance = IllustrationName.FourWinds;
+        public static readonly Illustration ClingingShadowsStance = IllustrationName.BlackTentacles;
+
+        #endregion
+
+        #region Marshal
+
         public static readonly Illustration DreadMarshalStance = IllustrationName.HideousLaughter;
         public static readonly Illustration InspiringMarshalStance = IllustrationName.WinningStreak;
         public static readonly Illustration SteelYourself = new ModdedIllustration(MOD_FOLDER+"heartburn.png");
         public static readonly Illustration RallyingCharge = new SideBySideIllustration(IllustrationName.FleetStep, new ModdedIllustration(MOD_FOLDER+"heart-wings.png"));
         public static readonly Illustration ToBattle = new ModdedIllustration(MOD_FOLDER+"flying-flag.png");
-        public static readonly Illustration WildWindsStance = IllustrationName.FourWinds;
-        public static readonly Illustration ClingingShadowsStance = IllustrationName.BlackTentacles;
+
+        #endregion
+
+        #region Bonus Stances
+
+        public static readonly Illustration TangledForestStance = IllustrationName.ProtectorTree;
+
+        #endregion
     }
 
     public static class PersistentActions
@@ -300,17 +385,6 @@ public static class ModData
     public static class PossibilityGroups
     {
         public const string MARSHAL = "Marshal";
-    }
-
-    // TODO: Remove unused
-    public static class PossibilitySectionIds
-    {
-        //public static PossibilitySectionId RuneSinger;
-        
-        internal static void Initialize()
-        {
-            //RuneSinger = SafelyRegister<PossibilitySectionId>("RuneSinger");
-        }
     }
 
     public static class QEffectIds
@@ -329,53 +403,58 @@ public static class ModData
         public static QEffectId DreadMarshalStance;
         public static QEffectId InspiringMarshalStance;
         
+        // Martial Artist
+        public static QEffectId StumblingStance;
+        public static QEffectId TigerStance;
+        public static QEffectId FlatFootedToStumblingFeint;
+        
+        // Bonus stances
+        public static QEffectId WildWindsStance;
+        public static QEffectId ClingingShadowsStance;
+        public static QEffectId TangledForestStance;
+        
+        // Misc
+        public static QEffectId GreaterScoutActivity;
+        
         internal static void Initialize()
         {
+            // Assassin
             MarkedForDeathTarget = ModManager.SafelyRegisterEnumMember<QEffectId>("MarkedForDeathTarget");
+            
+            // Dual-Weapon Warrior
             FlenseCounter = ModManager.SafelyRegisterEnumMember<QEffectId>("FlenseCounter");
             FlenseWeapons = ModManager.SafelyRegisterEnumMember<QEffectId>("FlenseWeapons");
             MovementCounter = ModManager.SafelyRegisterEnumMember<QEffectId>("MovementCounter");
             
+            // Marshal
             MarshalsAuraProvider = ModManager.SafelyRegisterEnumMember<QEffectId>("MarshalsAuraProvider");
             MarshalsAuraEffect = ModManager.SafelyRegisterEnumMember<QEffectId>("MarshalsAura");
             DreadMarshalStance = ModManager.SafelyRegisterEnumMember<QEffectId>("DreadMarshalStance");
             InspiringMarshalStance = ModManager.SafelyRegisterEnumMember<QEffectId>("InspiringMarshalStance");
+            
+            // Martial Artist
+            StumblingStance = ModManager.SafelyRegisterEnumMember<QEffectId>("Stumbling Stance");
+            TigerStance = ModManager.SafelyRegisterEnumMember<QEffectId>("Tiger Stance");
+            FlatFootedToStumblingFeint = ModManager.SafelyRegisterEnumMember<QEffectId>("FlatFootedToStumblingFeint");
+            
+            // Bonus stances
+            WildWindsStance = ModManager.SafelyRegisterEnumMember<QEffectId>("WildWindsStance");
+            ClingingShadowsStance = ModManager.SafelyRegisterEnumMember<QEffectId>("ClingingShadowsStance");
+            TangledForestStance = ModManager.SafelyRegisterEnumMember<QEffectId>("TangledForestStance");
+            
+            // Misc
+            GreaterScoutActivity = ModManager.SafelyRegisterEnumMember<QEffectId>("GreaterScoutActivity");
         }
-    }
-
-    // TODO: Remove unused
-    public static class SfxNames
-    {
-        //public const SfxName TraceRune = SfxName.AncientDust;
-        //public static readonly SfxName ShieldBlockWooodenImpact = ModManager.RegisterNewSoundEffect("MoreShieldsAssets/impactwood14 (quieter).mp3.flac");
     }
     
     public static class SpellIds
     {
-        //public static SpellId WildWindsStance { get; set; }
+        // Blessed One
         public static SpellId ProtectorsSacrifice { get; set; }
-    }
-
-    // TODO: Remove unused
-    public static class SubmenuIds
-    {
-        //public static SubmenuId TraceRune = null!;
         
-        internal static void Initialize()
-        {
-            //TraceRune = SafelyRegister<SubmenuId>("TraceRune");
-        }
-    }
-
-    // TODO: Remove unused
-    public static class TileQfIds
-    {
-        internal static void Initialize()
-        {
-            //BreachTile = SafelyRegister<TileQEffectId>(IdPrepend + "BreachTile");
-        }
-        
-        //public static TileQEffectId BreachTile = null!;
+        // Bonus stances
+        public static SpellId WildWindsStance { get; set; }
+        public static SpellId ClingingShadowsStance { get; set; }
     }
 
     public static class Tooltips
@@ -415,7 +494,8 @@ public static class ModData
             If you have familiarity with a group of weapons, that has the following effects:
             • You treat any martial weapons as if they were simple weapons.
             • You treat any advanced weapons as if they were martial weapons.
-            • When you become an expert with that weapon, you can trigger its critical specialization effects.
+            
+            Such features usually allow you to trigger critical specialization effects under certain conditions, such as reaching 5th-level or being an expert with the weapon.
             """);
 
         public static readonly Func<string, string> InjuryPoison = RegisterTooltipInserter(
@@ -443,26 +523,54 @@ public static class ModData
 
     public static class Traits
     {
+        /// <summary>
+        /// Assassin archetype
+        /// </summary>
         public static readonly Trait Assassin = ModManager.RegisterTrait("Assassin", new TraitProperties("Assassin", true));
         
+        /// <summary>
+        /// Bastion archetype
+        /// </summary>
         public static readonly Trait Bastion = ModManager.RegisterTrait("Bastion", new TraitProperties("Bastion", true));
         
+        /// <summary>
+        /// Blessed One archetype
+        /// </summary>
         public static readonly Trait BlessedOne = ModManager.RegisterTrait("BlessedOne", new TraitProperties("Blessed One", true));
         
+        /// <summary>
+        /// Dual-Weapon Warrior archetype
+        /// </summary>
         public static readonly Trait DualWeaponWarrior = ModManager.RegisterTrait("DualWeaponWarrior", new TraitProperties("Dual-Weapon Warrior", true));
         
+        /// <summary>
+        /// Familiar Master archetype
+        /// </summary>
         public static readonly Trait FamiliarMaster = ModManager.RegisterTrait("FamiliarMaster", new TraitProperties("Familiar Master", true));
         
+        /// <summary>
+        /// Marshal archetype
+        /// </summary>
         public static readonly Trait Marshal = ModManager.RegisterTrait("Marshal", new TraitProperties("Marshal", true));
         
-        public static readonly Trait MartialArtist = ModManager.RegisterTrait("MartialArtist", new TraitProperties("Martial Artist", true));
-        
+        /// <summary>
+        /// Mauler archetype
+        /// </summary>
         public static readonly Trait Mauler = ModManager.RegisterTrait("Mauler", new TraitProperties("Mauler", true));
         
+        /// <summary>
+        /// Medic archetype
+        /// </summary>
         public static readonly Trait Medic = ModManager.RegisterTrait("Medic", new TraitProperties("Medic", true));
         
+        /// <summary>
+        /// Scout archetype
+        /// </summary>
         public static readonly Trait Scout = ModManager.RegisterTrait("Scout", new TraitProperties("Scout", true));
         
+        /// <summary>
+        /// Wrestler archetype
+        /// </summary>
         public static readonly Trait Wrestler = ModManager.RegisterTrait("Wrestler", new TraitProperties("Wrestler", true));
     }
 }
