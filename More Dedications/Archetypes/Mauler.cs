@@ -258,13 +258,6 @@ public static class Mauler
             FeatName.ImprovedKnockdown, ModData.Traits.Mauler, 12);
         ModData.FeatNames.ImprovedKnockdownForMauler = improvedKnockdownForMauler.FeatName;
         yield return improvedKnockdownForMauler;
-        
-        /* Higher Level Feats
-         * @14 (really: 12) Brutal Finish
-         * @14 Hammer Quake
-         * @14 Unbalancing Sweep
-         * @16 Avalanche Strike
-         */
     }
 
     public static bool IsMaulerWeapon(Item item)
