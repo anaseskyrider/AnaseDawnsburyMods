@@ -8,7 +8,6 @@ using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Display;
-using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
@@ -33,6 +32,7 @@ public static class ModLoader
         FamiliarMaster.Load();
         Marshal.Load();
         MartialArtist.Load();
+        Mauler.Load();
         
         LoadOrder.WhenFeatsBecomeLoaded += () =>
         {

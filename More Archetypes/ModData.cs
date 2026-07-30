@@ -252,15 +252,21 @@ public static class ModData
         #region Mauler
 
         public static FeatName MaulerDedication;
-        public static FeatName slamDownForMauler;
-        public static FeatName viciousSwingForMauler;
+        public static FeatName SlamDownForMauler;
+        public static FeatName ViciousSwingForMauler;
         public static readonly FeatName ClearTheWay = ModManager.SafelyRegisterEnumMember<FeatName>(
             "ClearTheWay",
             ["Clear the Way"]);
         public static readonly FeatName ShovingSweep = ModManager.SafelyRegisterEnumMember<FeatName>(
             "ShovingSweep",
             ["Shoving Sweep"]);
-        public static FeatName ImprovedKnockdownForMauler;
+        public static FeatName CrashingSlamForMauler;
+        public static readonly FeatName HammerQuake = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "HammerQuake",
+            ["Hammer Quake"]);
+        public static readonly FeatName AvalancheStrike = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "AvalancheStrike",
+            ["Avalanche Strike"]);
         
         #endregion
 
