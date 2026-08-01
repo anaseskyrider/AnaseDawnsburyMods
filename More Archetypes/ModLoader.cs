@@ -33,6 +33,7 @@ public static class ModLoader
         Marshal.Load();
         MartialArtist.Load();
         Mauler.Load();
+        Medic.Load();
         
         LoadOrder.WhenFeatsBecomeLoaded += () =>
         {
@@ -122,7 +123,11 @@ public static class ModLoader
             if (!newFeat.Traits.Contains(ModData.ModTrait))
                 newFeat.Traits.Insert(0, ModData.ModTrait);
             
+            // Replace in place
             AllFeats.All[AllFeats.All.IndexOf(oldFeat)] = newFeat;
+            // Remove and add
+            /*AllFeats.All.Remove(oldFeat);
+            AllFeats.All.Add(newFeat);*/
         }
     }
 

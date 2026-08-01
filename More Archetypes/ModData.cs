@@ -272,6 +272,7 @@ public static class ModData
 
         #region Medic
 
+        public static FeatName MedicDedication;
         public static readonly FeatName DoctorsVisitation = ModManager.SafelyRegisterEnumMember<FeatName>(
             "DoctorsVisitation",
             ["Doctor's Visitation"]);
@@ -324,6 +325,17 @@ public static class ModData
             "TangledForestStance",
             ["Tangled Forest Stance"]);
         
+        #endregion
+
+        #region Bonus Skill Feats
+
+        public static readonly FeatName ContinualRecovery = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "ContinualRecovery",
+            ["Continual Recovery"]);
+        public static readonly FeatName WardMedic = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "WardMedic",
+            ["Ward Medic"]);
+
         #endregion
     }
 
