@@ -55,11 +55,8 @@ public static class ForensicMedicine
                             return;
                         QEffect temporaryImmunity = new QEffect()
                         {
-                            // Debug Features
-                            //Name = "Battle Medicine Immunity",
-                            //Description = $"You are immune to Battle Medicine from {{Blue}}{qfThis.Owner.Name}{{/Blue}} for only the rest of the encounter.",
-                            //Illustration = qfThis.Owner.Illustration,
-                            EndOfCombat = async (qfThis2, won) =>
+                            Name = "[BATTLE MEDICINE: ENCOUNTER IMMUNITY]",
+                            EndOfCombat = async (qfThis2, _) =>
                             {
                                 Creature healee = qfThis2.Owner;
                                 Creature healer = qfThis.Owner;
