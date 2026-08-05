@@ -19,6 +19,7 @@ public static class QuickRepair
 {
     public static void LoadFeat()
     {
+        // TODO: Add the ability to fix armor from Sacrifice Armor
         Feat repairFeat = new TrueFeat(
             ModData.FeatNames.QuickRepair,
             1,
