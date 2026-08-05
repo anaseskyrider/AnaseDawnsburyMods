@@ -9,9 +9,6 @@ using Dawnsbury.Modding;
 namespace Dawnsbury.Mods.StrategistSubclasses;
 public class ModLoader
 {
-    
-    // TODO: Add base game improvements like shorter/combined stat blocks.
-    
     [DawnsburyDaysModMainMethod]
     public static void LoadMod()
     {
