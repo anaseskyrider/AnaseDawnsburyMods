@@ -309,9 +309,14 @@ public static class Medic
             .WithAvailableAsArchetypeFeat(Trait.Medic)
             .WithActionCost(Constants.ACTION_COST_VARIABLE_ACTION_COST_ONE_OR_TWO)
             .WithPermanentQEffect(
-                "Stride, then {icon:Action} use Battle Medicine or Treat Poison; or {icon:TwoActions} use Stabilize, Staunch Bleeding, or Treat Condition",
+                "Stride, then {icon:Action} use Battle Medicine or Treat Poison; or {icon:TwoActions} use Stabilize or Staunch Bleeding.",
                 qfFeat =>
                 {
+                    if (qfFeat.Owner.HasFeat(FeatName.TreatCondition))
+                        qfFeat.Description = qfFeat.Description!.Replace(
+                            "use Stabilize or Staunch Bleeding",
+                            "use Stabilize, Staunch Bleeding, {Blue}or Treat Condition{/Blue}");
+                    
                     qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
                     {
                         if (section.PossibilitySectionId != PossibilitySectionId.OtherManeuvers)
