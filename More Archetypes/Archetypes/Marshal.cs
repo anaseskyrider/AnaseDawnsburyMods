@@ -42,7 +42,8 @@ public static class Marshal
     {
         // Rebuild marshal.
         // Users have to switch the dedication, not just individual archetype feats
-        Feat marshalDed = ArchetypeFeats.CreateOrUpdateDedication(
+        // ArchetypeFeats.CreateOrUpdateDedication
+        Feat marshalDed = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.Marshal,
                 "Marshals are leaders, first and foremost. They can come from any class or background, though they all share a willingness to sacrifice their own glory for the greater good of the team.",
                 """
@@ -50,7 +51,7 @@ public static class Marshal
 
                 In addition, you're surrounded by a marshal's aura in a 15-foot emanation. Your aura has the emotion, mental, and visual traits and grants you and allies within the aura a +1 status bonus to saving throws against fear.
                 """,
-                null,
+                null/*,
                 dedication =>
                 {
                     foreach (Prerequisite req in dedication.Prerequisites
@@ -59,7 +60,7 @@ public static class Marshal
                                      || req.Description.Contains("Diplomacy"))
                                  .ToList())
                         dedication.Prerequisites.Remove(req);
-                })
+                }*/)
             .WithOnSheet(values =>
             {
                 List<FeatName> options =

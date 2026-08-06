@@ -36,11 +36,12 @@ public static class Assassin
     public static IEnumerable<Feat> CreateFeats()
     {
         // Assassin Dedication
-        Feat assDed = ArchetypeFeats.CreateOrUpdateDedication(
+        // ArchetypeFeats.CreateOrUpdateDedication
+        Feat assDed = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.Assassin,
                 "Targeted killing through stealth and subterfuge is the expertise of an assassin. While assassins are skilled in ending lives and many are evil, some live by a moral code, preying on the wicked, the cruel, or those who revel in unchecked aggression or power.",
                 "You gain the {b}Mark for Death {icon:ThreeActions}{/b} activity, which you can use as a {icon:FreeAction} free action at the start of combat.",
-                null,
+                null/*,
                 dedication =>
                 {
                     foreach (Prerequisite req in dedication.Prerequisites
@@ -50,7 +51,7 @@ public static class Assassin
                                      || req.Description.Contains("Stealth"))
                                  .ToList())
                         dedication.Prerequisites.Remove(req);
-                })
+                }*/)
             .WithPermanentQEffect(qfFeat =>
             {
                 bool hasSneak = qfFeat.Owner.HasEffect(QEffectId.SneakAttack);

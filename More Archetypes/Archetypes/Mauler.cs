@@ -29,7 +29,8 @@ public static class Mauler
     public static IEnumerable<Feat> CreateFeats()
     {
         // Mauler Dedication.
-        Feat maulerDedication = ArchetypeFeats.CreateOrUpdateDedication(
+        // ArchetypeFeats.CreateOrUpdateDedication
+        Feat maulerDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.Mauler,
                 "You shove your way through legions of foes, knock enemies on all sides to the ground, and deal massive blows to anyone or anything that comes near.",
                 $$"""
@@ -37,7 +38,7 @@ public static class Mauler
 
                   While you're at least expert in a mauler weapon, it triggers {tooltip:criteffect}critical specialization effects{/}.
                   """,
-                null,
+                null/*,
                 dedication =>
                 {
                     foreach (Prerequisite req in dedication.Prerequisites
@@ -45,7 +46,7 @@ public static class Mauler
                                      req.Description.Contains("14 or more"))
                                  .ToList())
                         dedication.Prerequisites.Remove(req);
-                })
+                }*/)
             .WithOnSheet(values =>
             {
                 foreach (Trait trait in (Trait[])[Trait.TwoHanded, Trait.TwoHand1d8, Trait.TwoHand1d10,Trait.TwoHand1d12])

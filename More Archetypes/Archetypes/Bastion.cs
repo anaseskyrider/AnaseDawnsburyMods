@@ -32,11 +32,12 @@ public static class Bastion
     {
         // Rebuild Bastion.
         // Users have to switch the dedication, not just individual archetype feats
-        Feat basDed = ArchetypeFeats.CreateOrUpdateDedication(
+        // ArchetypeFeats.CreateOrUpdateDedication
+        Feat basDed = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.Bastion,
                 "Some say that a good offense is the best defense, but you find such boasting smacks of overconfidence. In your experience, the best defense is a good, solid shield between you and your enemies.",
                 "You gain the Reactive Shield {icon:Reaction} fighter feat.",
-                null,
+                null/*,
                 dedication =>
                 {
                     foreach (Prerequisite req in dedication.Prerequisites
@@ -44,7 +45,7 @@ public static class Bastion
                                      req.Description.Contains("Shield Block"))
                                  .ToList())
                         dedication.Prerequisites.Remove(req);
-                })
+                }*/)
             .WithPrerequisite(FeatName.ShieldBlock, "Shield Block")
             .WithOnSheet(values =>
                 values.GrantFeat(FeatName.ReactiveShield));

@@ -22,7 +22,7 @@
   
   <Target Name="CopyToGameModsFolder" AfterTargets="Build">
     <!--<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DawnsburyInstall)\CustomMods"/>-->
-    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(DawnsburyInstall)\CustomMods\2$(TargetName).dll"/>
+    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(DawnsburyInstall)\CustomMods\1$(TargetName).dll"/>
     <Copy SourceFiles="@(Assets)" DestinationFolder="$(DawnsburyInstall)\CustomMods\$(AssetsFolder)\%(RecursiveDir)"/>
     
     <Message Text="Copied to game mod folder." />

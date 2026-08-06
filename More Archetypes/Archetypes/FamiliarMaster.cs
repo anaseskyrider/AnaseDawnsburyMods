@@ -30,7 +30,8 @@ public static class FamiliarMaster
     {
         // Rebuild Familiar Master.
         // Users have to switch the dedication, not just individual archetype feats
-        Feat famDed = ArchetypeFeats.CreateOrUpdateDedication(
+        // ArchetypeFeats.CreateOrUpdateDedication
+        Feat famDed = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.FamiliarMaster,
                 "You have forged a mystical bond with a creature. This might have involved complex rituals and invocations, such as meditating under the moon until something crept out of the forest. Or maybe you just did each other a good turn, such as rescuing the beast from a trap or a foe, and then being rescued in turn.",
                 "You gain a {link:ClassFamiliar}combat familiar{/}. If you already have one, you gain the {link:DawnsburyEnhancedFamiliar}Enhanced Familiar{/} feat.")

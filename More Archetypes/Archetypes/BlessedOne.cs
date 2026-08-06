@@ -30,7 +30,8 @@ public static class BlessedOne
     {
         // Rebuild Blessed One.
         // Users have to switch the dedication, not just individual archetype feats
-        Feat blessedDed = ArchetypeFeats.CreateOrUpdateDedication(
+        // ArchetypeFeats.CreateOrUpdateDedication
+        Feat blessedDed = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.BlessedOne,
                 "Through luck or deed, heritage or heroics, you carry the blessing of a deity. This blessing manifests as the ability to heal wounds and remove harmful conditions, and exists independent of any worship.",
                 $"You learn the {ChampionFocusSpells.LayOnHands.ToLink("lay on hands", Trait.Champion, null)} focus spell as a champion. This feat grants a focus pool of 1 Focus Point, or an additional Focus Point if you already had one." /*+" Your focus spells from the blessed one archetype are divine spells."*/)

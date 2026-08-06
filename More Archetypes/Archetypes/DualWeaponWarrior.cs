@@ -37,7 +37,8 @@ public static class DualWeaponWarrior
     {
         // Rebuild Dual-Weapon Warrior.
         // Users have to switch the dedication, not just individual archetype feats
-        Feat dwwArchetype = ArchetypeFeats.CreateOrUpdateDedication(
+        // ArchetypeFeats.CreateOrUpdateDedication
+        Feat dwwArchetype = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.DualWeaponWarrior,
                 "You're exceptional in your use of two weapons.",
                 "You gain the Double Slice fighter feat.")
