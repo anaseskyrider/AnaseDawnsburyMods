@@ -31,21 +31,23 @@ public static class Marshal
     
     public static void LoadArchetype()
     {
-        foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+        foreach (Feat? ft in CreateFeats())
+            ModManager.AddFeatIfNew(ft);
     }
 
-    public static IEnumerable<Feat> CreateFeats()
+    public static IEnumerable<Feat?> CreateFeats()
     {
         // MORE ARCHETYPES: This has been deprecated.
-        Feat marshalDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
+        (TrueFeat? marshalDedication, FeatName fn1) = ArchetypeFeats.TryCreateAgnosticArchetypeDedication(
                 ModData.Traits.Marshal,
                 "Marshals are leaders, first and foremost. Marshals can come from any class or background, though they all share a willingness to sacrifice their own glory for the greater good of the team.",
                 """
                 Choose Diplomacy or Intimidation. You become trained in that skill or become an expert if you were already trained in it.
 
                 In addition, you're surrounded by a marshal's aura in a 10-foot emanation. Your aura has the emotion, mental, and visual traits and grants you and allies within the aura a +1 status bonus to saving throws against fear.
-                """)
+                """,
+                null);
+        marshalDedication?
             .WithOnSheet(values =>
             {
                 List<FeatName> options =
@@ -93,7 +95,7 @@ public static class Marshal
             .WithPrerequisite(values =>
                 values.HasFeat(FeatName.Diplomacy) || values.HasFeat(FeatName.Intimidation),
                 "Must be trained in Diplomacy or Intimidation");
-        ModData.FeatNames.MarshalDedication = marshalDedication.FeatName;
+        ModData.FeatNames.MarshalDedication = fn1;
         yield return marshalDedication;
         
         // TODO: Devrin's Cunning Stance?
@@ -449,10 +451,10 @@ public static class Marshal
         
         // Attack of Opportunity
         // MORE ARCHETYPES: This has been deprecated.
-        Feat aooForMarshal = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-                FeatName.AttackOfOpportunity, ModData.Traits.Marshal, 8)
-            .WithEquivalent(values => values.HasFeat(FeatName.Fighter));
-        ModData.FeatNames.AttackOfOpportunityForMarshal = aooForMarshal.FeatName;
+        (TrueFeat? aooForMarshal, FeatName fn2) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
+                FeatName.AttackOfOpportunity, ModData.Traits.Marshal, 8);
+        aooForMarshal?.WithEquivalent(values => values.HasFeat(FeatName.Fighter));
+        ModData.FeatNames.AttackOfOpportunityForMarshal = fn2;
         yield return aooForMarshal;
 
         // Back to Back

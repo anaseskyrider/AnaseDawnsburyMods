@@ -36,13 +36,13 @@ public static class MartialArtist
 {
     public static void LoadArchetype()
     {
-        foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
-        foreach (Feat ft in CreateBonusFeats())
-            ModManager.AddFeat(ft);
+        foreach (Feat? ft in CreateFeats())
+            ModManager.AddFeatIfNew(ft);
+        foreach (Feat? ft in CreateBonusFeats())
+            ModManager.AddFeatIfNew(ft);
     }
 
-    public static IEnumerable<Feat> CreateFeats()
+    public static IEnumerable<Feat?> CreateFeats()
     {
         // Powder Punch Stance
         // Source: Punks in a Powderkeg
@@ -194,8 +194,11 @@ public static class MartialArtist
             false)
             .WithPrerequisite(FeatName.Deception, "Trained in Deception");
         yield return stumblingStance;
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.StumblingStance, Trait.MartialArtist, 4);
+        
+        // Stumbling Stance for Martial Artist
+        yield return ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
+            ModData.FeatNames.StumblingStance, Trait.MartialArtist, 4)
+            .Feat;
 
         // Tiger Stance
         Feat tigerStance = CreateMonkStance2(
@@ -237,8 +240,11 @@ public static class MartialArtist
             },
             true);
         yield return tigerStance;
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.TigerStance, Trait.MartialArtist, 4);
+        
+        // Tiger Stance for Martial Artist
+        yield return ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
+            ModData.FeatNames.TigerStance, Trait.MartialArtist, 4)
+            .Feat;
 
         // Thunder Clap
         // Source: Punks in a Powderkeg
@@ -412,8 +418,11 @@ public static class MartialArtist
             .WithPrerequisite(
                 ModData.FeatNames.StumblingStance,
                 "Stumbling Stance");
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.StumblingFeint, Trait.MartialArtist, 8);
+        
+        // Stumbling Feint for Martial Artist
+        yield return ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
+            ModData.FeatNames.StumblingFeint, Trait.MartialArtist, 8)
+            .Feat;
         
         // Tiger Slash
         yield return new TrueFeat(
@@ -507,8 +516,11 @@ public static class MartialArtist
             .WithPrerequisite(
                 ModData.FeatNames.TigerStance,
                 "Tiger Stance");
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-            ModData.FeatNames.TigerSlash, Trait.MartialArtist, 8);
+        
+        // Tiger Slash for Martial Artist
+        yield return ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
+            ModData.FeatNames.TigerSlash, Trait.MartialArtist, 8)
+            .Feat;
         
         /* Higher Level Feat
          * @10 Black Powder Flash
@@ -517,7 +529,7 @@ public static class MartialArtist
          */
     }
 
-    public static IEnumerable<Feat> CreateBonusFeats()
+    public static IEnumerable<Feat?> CreateBonusFeats()
     {
         // (not otherwise part of Martial Artist)
         // (thank The Matrix Dragon for requesting these)

@@ -19,11 +19,11 @@ public static class Wrestler
 {
     public static void LoadArchetype()
     {
-        foreach (Feat ft in LoadFeats())
-            ModManager.AddFeat(ft);
+        foreach (Feat? ft in CreateFeats())
+            ModManager.AddFeatIfNew(ft);
     }
 
-    public static IEnumerable<Feat> LoadFeats()
+    public static IEnumerable<Feat?> CreateFeats()
     {
         // Elbow Breaker
         yield return new TrueFeat(

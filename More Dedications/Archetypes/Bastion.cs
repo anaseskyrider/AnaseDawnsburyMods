@@ -25,8 +25,8 @@ public static class Bastion
 {
     public static void LoadArchetype()
     {
-        foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+        foreach (Feat? ft in CreateFeats())
+            ModManager.AddFeatIfNew(ft);
         
         ModManager.RegisterActionOnEachActionPossibility(ca =>
         {
@@ -45,27 +45,29 @@ public static class Bastion
         });
     }
 
-    public static IEnumerable<Feat> CreateFeats()
+    public static IEnumerable<Feat?> CreateFeats()
     {
         // Dedication Feat
         // MORE ARCHETYPES: This has been deprecated.
-        Feat bastionDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
+        (TrueFeat? bastionDedication, FeatName fn1) = ArchetypeFeats.TryCreateAgnosticArchetypeDedication(
                 ModData.Traits.Bastion,
                 "Some say that a good offense is the best defense, but you find such boasting smacks of overconfidence. In your experience, the best defense is a good, solid shield between you and your enemies.",
-                "You gain the Reactive Shield {icon:Reaction} fighter feat.")
+                "You gain the Reactive Shield {icon:Reaction} fighter feat.",
+                null);
+        bastionDedication?
             .WithPrerequisite(FeatName.ShieldBlock, "Shield Block")
             .WithOnSheet(values =>
             {
                 values.GrantFeat(FeatName.ReactiveShield);
             });
-        ModData.FeatNames.BastionDedication = bastionDedication.FeatName;
+        ModData.FeatNames.BastionDedication = fn1;
         yield return bastionDedication;
 
         // Add Agile Shield Grip to Bastion
         // MORE ARCHETYPES: This has been deprecated.
-        TrueFeat gripForBastion = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        (TrueFeat? gripForBastion, FeatName fn2) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             Champion.AgileShieldGripFeatName, ModData.Traits.Bastion, 4);
-        ModData.FeatNames.AgileShieldGripForBastion = gripForBastion.FeatName;
+        ModData.FeatNames.AgileShieldGripForBastion = fn2;
         yield return gripForBastion;
 
         // Disarming Block
@@ -271,9 +273,11 @@ public static class Bastion
                         }
                     };
                 });
-        TrueFeat sStrideForBastion = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        
+        // Shielded Stride for Bastion
+        (TrueFeat? sStrideForBastion, FeatName fn3) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.ShieldedStride, ModData.Traits.Bastion, 6);
-        ModData.FeatNames.ShieldedStrideForBastion = sStrideForBastion.FeatName;
+        ModData.FeatNames.ShieldedStrideForBastion = fn3;
         yield return sStrideForBastion;
 
         // Reflexive Shield
@@ -430,25 +434,28 @@ public static class Bastion
                         return null;
                     }
                 });
-        TrueFeat refShieldForBastion = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        
+        // Reflexive Shield for Bastion
+        (TrueFeat? refShieldForBastion, FeatName fn4) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.ReflexiveShield, ModData.Traits.Bastion, 8);
-        ModData.FeatNames.ReflexiveShieldForBastion = refShieldForBastion.FeatName;
+        ModData.FeatNames.ReflexiveShieldForBastion = fn4;
         yield return refShieldForBastion;
 
         // Add Shield Warden to Bastion
         // MORE ARCHETYPES: This has been deprecated.
-        TrueFeat sWardForBastion = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        (TrueFeat? sWardForBastion, FeatName fn5) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             FeatName.ShieldWarden, ModData.Traits.Bastion, 8);
         // Removes the requirement, "You must be a Fighter, or you must have Shield Ally as your divine ally." .
-        sWardForBastion.Prerequisites.RemoveAll(req =>
+        sWardForBastion?.Prerequisites.RemoveAll(req =>
             req.Description.Contains("must have Shield Ally") || req.Description.Contains("must be a Fighter,"));
-        ModData.FeatNames.ShieldWardenForBastion = sWardForBastion.FeatName;
+        ModData.FeatNames.ShieldWardenForBastion = fn5;
         yield return sWardForBastion;
         
         // Add Quick Shield Block to Bastion
         // MORE ARCHETYPES: This has been deprecated.
-        yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        (TrueFeat? qSBlockForBastion, FeatName fn6) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             FeatName.QuickShieldBlock, ModData.Traits.Bastion, 10);
+        yield return qSBlockForBastion;
     }
 
     public static void ApplyDelayedShieldBlockEvent(Creature attacker, Func<CombatAction, Task> doWhat)

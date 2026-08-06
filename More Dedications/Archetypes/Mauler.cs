@@ -20,14 +20,14 @@ public static class Mauler
 {
     public static void LoadArchetype()
     {
-        foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+        foreach (Feat? ft in CreateFeats())
+            ModManager.AddFeatIfNew(ft);
     }
 
-    public static IEnumerable<Feat> CreateFeats()
+    public static IEnumerable<Feat?> CreateFeats()
     {
         // Dedication Feat
-        Feat maulerDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
+        (TrueFeat? maulerDedication, FeatName fn1) = ArchetypeFeats.TryCreateAgnosticArchetypeDedication(
                 ModData.Traits.Mauler,
                 "You shove your way through legions of foes, knock enemies on all sides to the ground, and deal massive blows to anyone or anything that comes near.",
                 """
@@ -36,7 +36,9 @@ public static class Mauler
                 Whenever you become expert, master, or legendary in any weapon, you also gain that proficiency rank in these mauler weapons.
 
                 As long as you're at least expert in a mauler weapon, that weapon triggers {tooltip:criteffect}critical specialization effects{/}.
-                """)
+                """,
+                null);
+        maulerDedication?
             .WithOnSheet(values =>
             {
                 // Become trained in all melee 2hs.
@@ -78,19 +80,19 @@ public static class Mauler
                         IsMaulerWeapon(weapon) && qfThis.Owner.Proficiencies.Get(weapon.Traits) >= Proficiency.Expert;
                 })
             .WithDemandsAbility14(Ability.Strength);
-        ModData.FeatNames.MaulerDedication = maulerDedication.FeatName;
+        ModData.FeatNames.MaulerDedication = fn1;
         yield return maulerDedication;
         
-        // Add Knockdown to Mauler
-        TrueFeat knockdownForMauler = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        // Knockdown for Mauler
+        (TrueFeat? knockdownForMauler, FeatName fn2) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             FeatName.Knockdown, ModData.Traits.Mauler, 4);
-        ModData.FeatNames.KnockdownForMauler = knockdownForMauler.FeatName;
+        ModData.FeatNames.KnockdownForMauler = fn2;
         yield return knockdownForMauler;
 
-        // Add Power Attack to Mauler
-        TrueFeat powerAttackForMauler = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        // Power Attack for Mauler
+        (TrueFeat? powerAttackForMauler, FeatName fn3) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             FeatName.PowerAttack, ModData.Traits.Mauler, 4);
-        ModData.FeatNames.PowerAttackForMauler = powerAttackForMauler.FeatName;
+        ModData.FeatNames.PowerAttackForMauler = fn3;
         yield return powerAttackForMauler;
 
         // Clear the Way
@@ -254,9 +256,9 @@ public static class Mauler
                 "You must be expert in Athletics.");
 
         // Add Improved Knockdown to Mauler
-        TrueFeat improvedKnockdownForMauler = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        (TrueFeat? improvedKnockdownForMauler, FeatName fn4) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             FeatName.ImprovedKnockdown, ModData.Traits.Mauler, 12);
-        ModData.FeatNames.ImprovedKnockdownForMauler = improvedKnockdownForMauler.FeatName;
+        ModData.FeatNames.ImprovedKnockdownForMauler = fn4;
         yield return improvedKnockdownForMauler;
     }
 

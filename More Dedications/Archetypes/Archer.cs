@@ -17,17 +17,17 @@ public static class Archer
 {
     public static void LoadArchetype()
     {
-        foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+        foreach (Feat? ft in CreateFeats())
+            ModManager.AddFeatIfNew(ft);
     }
 
-    public static IEnumerable<Feat> CreateFeats()
+    public static IEnumerable<Feat?> CreateFeats()
     {
         // Quick Shot: Add Quick Draw to Archer Dedication
         // DEPRECATED (remaster)
-        TrueFeat qDrawForArcher = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        (TrueFeat? qDrawForArcher, FeatName fn1) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             FeatName.QuickDraw, Trait.Archer, 4);
-        ModData.FeatNames.QuickDrawForArcher = qDrawForArcher.FeatName;
+        ModData.FeatNames.QuickDrawForArcher = fn1;
         yield return qDrawForArcher;
         
         // Crossbow Terror
@@ -115,9 +115,9 @@ public static class Archer
                         return partingShot;
                     };
                 });
-        TrueFeat pShotForArcher = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        (TrueFeat? pShotForArcher, FeatName fn2) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.PartingShot, Trait.Archer, 6);
-        ModData.FeatNames.PartingShotForArcher = pShotForArcher.FeatName;
+        ModData.FeatNames.PartingShotForArcher = fn2;
         yield return pShotForArcher;
         
         // TODO: Staggering Fire (lv6)

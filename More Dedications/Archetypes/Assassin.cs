@@ -27,18 +27,20 @@ public static class Assassin
 {
     public static void LoadArchetype()
     {
-        foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+        foreach (Feat? ft in CreateFeats())
+            ModManager.AddFeatIfNew(ft);
     }
 
-    public static IEnumerable<Feat> CreateFeats()
+    public static IEnumerable<Feat?> CreateFeats()
     {
         // Dedication
         // MORE ARCHETYPES: This has been deprecated.
-        Feat assassinDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
+        (TrueFeat? assassinDedication, FeatName fn1) = ArchetypeFeats.TryCreateAgnosticArchetypeDedication(
                 ModData.Traits.Assassin,
                 "Targeted killing through stealth and subterfuge is the expertise of an assassin. While assassins are skilled in ending lives and many are evil, some live by a moral code, preying on the wicked, the cruel, or those who revel in unchecked aggression or power.",
-                "You gain the Mark for Death activity, which you can use as a {icon:FreeAction} free action at the start of combat.")
+                "You gain the Mark for Death activity, which you can use as a {icon:FreeAction} free action at the start of combat.",
+                null);
+        assassinDedication?
             .WithRulesBlockForCombatAction(CreateMarkForDeathAction)
             .WithPrerequisite(values =>
                 values.HasFeat(FeatName.Crafting),
@@ -61,7 +63,7 @@ public static class Assassin
                     qfFeat.ProvideMainAction = qfThis =>
                         new ActionPossibility(CreateMarkForDeathAction(qfThis.Owner));
                 });
-        ModData.FeatNames.AssassinDedication = assassinDedication.FeatName;
+        ModData.FeatNames.AssassinDedication = fn1;
         yield return assassinDedication;
         
         // Lv4: Angel of Vindication
@@ -86,10 +88,10 @@ public static class Assassin
         
         // Poison Resistance
         // MORE ARCHETYPES: This has been deprecated.
-        Feat pResForAssassin = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        (TrueFeat? pResForAssassin, FeatName fn2) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             FeatName.PoisonResistanceDruid, ModData.Traits.Assassin, 4);
-        pResForAssassin.FlavorText = "Your body has become fortified against toxins.";
-        ModData.FeatNames.PoisonResistanceForAssassin = pResForAssassin.FeatName;
+        pResForAssassin?.FlavorText = "Your body has become fortified against toxins.";
+        ModData.FeatNames.PoisonResistanceForAssassin = fn2;
         yield return pResForAssassin;
 
         // Surprise Attack
@@ -270,16 +272,17 @@ public static class Assassin
                             .WithPossibilityGroup("Use item");
                     };
                 });
+        
         // Poison Weapon for Assassin
-        TrueFeat pWepForAssassin = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        (TrueFeat? pWepForAssassin, FeatName fn3) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.PoisonWeapon, ModData.Traits.Assassin, 6);
-        ModData.FeatNames.PoisonWeaponForAssassin = pWepForAssassin.FeatName;
+        ModData.FeatNames.PoisonWeaponForAssassin = fn3;
         yield return pWepForAssassin;
 
         // Sneak Attacker for Assassin
-        TrueFeat sneakAttacker = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        (TrueFeat? sneakAttacker, FeatName fn4) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             FeatName.SneakAttacker, ModData.Traits.Assassin, 4);
-        ModData.FeatNames.SneakAttackerForAssassin = sneakAttacker.FeatName;
+        ModData.FeatNames.SneakAttackerForAssassin = fn4;
         yield return sneakAttacker;
         
         // Improved Poison Weapon
@@ -300,11 +303,12 @@ public static class Assassin
             {
                 values.GrantFeat(FeatName.StickyPoison);
             });
+        
         // Improved Poison Weapon for Assassin
         // MORE ARCHETYPES: This has been deprecated.
-        TrueFeat impPWeaponForAssassin = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        (TrueFeat? impPWeaponForAssassin, FeatName fn5) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.ImprovedPoisonWeapon, ModData.Traits.Assassin, 10);
-        ModData.FeatNames.ImprovedPoisonWeaponForAssassin = impPWeaponForAssassin.FeatName;
+        ModData.FeatNames.ImprovedPoisonWeaponForAssassin = fn5;
         yield return impPWeaponForAssassin;
 
         // TODO: Lv8: Public Execution?

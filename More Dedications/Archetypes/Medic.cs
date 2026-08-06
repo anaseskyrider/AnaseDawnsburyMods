@@ -19,21 +19,22 @@ public static class Medic
 {
     public static void LoadArchetype()
     {
-        foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+        foreach (Feat? ft in CreateFeats())
+            ModManager.AddFeatIfNew(ft);
     }
 
-    public static IEnumerable<Feat> CreateFeats()
+    public static IEnumerable<Feat?> CreateFeats()
     {
         // Lv4: Treat Condition
         // (Skill feat variant)
-        Feat treatCondition = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-                FeatName.TreatCondition, Trait.Medic, 4)
+        (TrueFeat? treatCondition, FeatName fn1) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
+                FeatName.TreatCondition, Trait.Medic, 4);
+        treatCondition?
             .WithEquivalent(values => values.HasFeat(FeatName.TreatCondition));
         // Normal list order: 0:Healing, 1:Manipulate, 2:Archetype
-        treatCondition.Traits.Insert(2, Trait.Skill);
-        treatCondition.RulesText += "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}More Dedications{/b} This is a skill feat variant of Treat Condition which can be taken as a general feat or skill feat (requires the {i}Skill Feats for Everyone{/i} mod).";
-        ModData.FeatNames.TreatConditionSkillVariant = treatCondition.FeatName;
+        treatCondition?.Traits.Insert(2, Trait.Skill);
+        treatCondition?.RulesText += "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}More Dedications{/b} This is a skill feat variant of Treat Condition which can be taken as a general feat or skill feat (requires the {i}Skill Feats for Everyone{/i} mod).";
+        ModData.FeatNames.TreatConditionSkillVariant = fn1;
         yield return treatCondition;
 
         // Lv4: Doctor's Visitation
@@ -188,13 +189,14 @@ public static class Medic
         
         // Lv4: Holistic Care
         // (Skill feat variant)
-        Feat holisticCare = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-                FeatName.HolisticCare, Trait.Medic, 6)
+        (TrueFeat? holisticCare, FeatName fn2) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
+                FeatName.HolisticCare, Trait.Medic, 6);
+        holisticCare?
             .WithEquivalent(values => values.HasFeat(FeatName.HolisticCare));
         // Normal list order: 0:Archetype
-        holisticCare.Traits.Add(Trait.Skill);
-        holisticCare.RulesText += "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}More Dedications{/b} This is a skill feat variant of Holistic Care which can be taken as a general feat or skill feat (requires the {i}Skill Feats for Everyone{/i} mod).";
-        ModData.FeatNames.HolisticCareSkillVariant = holisticCare.FeatName;
+        holisticCare?.Traits.Add(Trait.Skill);
+        holisticCare?.RulesText += "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + "{b}More Dedications{/b} This is a skill feat variant of Holistic Care which can be taken as a general feat or skill feat (requires the {i}Skill Feats for Everyone{/i} mod).";
+        ModData.FeatNames.HolisticCareSkillVariant = fn2;
         yield return holisticCare;
         
         // TODO: Lv8: Preventative Treatment

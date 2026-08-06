@@ -22,30 +22,32 @@ public static class FamiliarMaster
 {
     public static void LoadArchetype()
     {
-        foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+        foreach (Feat? ft in CreateFeats())
+            ModManager.AddFeatIfNew(ft);
     }
 
-    public static IEnumerable<Feat> CreateFeats()
+    public static IEnumerable<Feat?> CreateFeats()
     {
         // Lv2: Dedication Feat
-        Feat familiarMasterDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
+        (TrueFeat? familiarMasterDedication, FeatName fn1) = ArchetypeFeats.TryCreateAgnosticArchetypeDedication(
                 ModData.Traits.FamiliarMaster,
                 "You have forged a mystical bond with a creature. This might have involved complex rituals and invocations, such as meditating under the moon until something crept out of the forest. Or maybe you just did each other a good turn, such as rescuing the beast from a trap or a foe, and then being rescued in turn.",
-                "You gain a {link:ClassFamiliar}combat familiar{/}. If you already have one, you gain the {link:DawnsburyEnhancedFamiliar}Enhanced Familiar{/} feat.")
+                "You gain a {link:ClassFamiliar}combat familiar{/}. If you already have one, you gain the {link:DawnsburyEnhancedFamiliar}Enhanced Familiar{/} feat.",
+                null);
+        familiarMasterDedication?
             .WithOnSheet(values =>
             {
                 values.GrantFeat(values.HasFeat(FeatName.ClassFamiliar)
                     ? FeatName.DawnsburyEnhancedFamiliar
                     : FeatName.ClassFamiliar);
             });
-        ModData.FeatNames.FamiliarMasterDedication = familiarMasterDedication.FeatName;
+        ModData.FeatNames.FamiliarMasterDedication = fn1;
         yield return familiarMasterDedication;
         
         // Lv4: Add Enhanced Familiar to Familiar Master
-        TrueFeat efForFamiliarMaster = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        (TrueFeat? efForFamiliarMaster, FeatName fn2) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             FeatName.DawnsburyEnhancedFamiliar, ModData.Traits.FamiliarMaster, 4);
-        ModData.FeatNames.EnhancedFamiliarForFamiliarMaster = efForFamiliarMaster.FeatName;
+        ModData.FeatNames.EnhancedFamiliarForFamiliarMaster = fn2;
         yield return efForFamiliarMaster;
         
         // Lv4: Overload Familiar (homebrew ability, vaguely replacing Familiar Conduit)

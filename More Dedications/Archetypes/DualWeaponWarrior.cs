@@ -23,18 +23,20 @@ public static class DualWeaponWarrior
 {
     public static void LoadArchetype()
     {
-        foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+        foreach (Feat? ft in CreateFeats())
+            ModManager.AddFeatIfNew(ft);
     }
     
-    public static IEnumerable<Feat> CreateFeats()
+    public static IEnumerable<Feat?> CreateFeats()
     {
         // Archetype
         // MORE ARCHETYPES: This has been deprecated.
-        Feat dwwArchetype = ArchetypeFeats.CreateAgnosticArchetypeDedication(
+        (TrueFeat? dwwArchetype, FeatName fn1) = ArchetypeFeats.TryCreateAgnosticArchetypeDedication(
                 ModData.Traits.DualWeaponWarrior,
                 "You're exceptional in your use of two weapons.",
-                "You gain the Double Slice fighter feat.")
+                "You gain the Double Slice fighter feat.",
+                null);
+        dwwArchetype?
             .WithRulesBlockForCombatAction(cr =>
                     CombatAction.CreateSimple(
                             cr,
@@ -52,7 +54,7 @@ public static class DualWeaponWarrior
                             IllustrationName.Dagger,
                             IllustrationName.Dagger)))
             .WithOnSheet(sheet => sheet.GrantFeat(FeatName.DoubleSlice));
-        ModData.FeatNames.DualWeaponWarriorDedication = dwwArchetype.FeatName;
+        ModData.FeatNames.DualWeaponWarriorDedication = fn1;
         yield return dwwArchetype;
         
         // Dual Thrower
@@ -166,8 +168,8 @@ public static class DualWeaponWarrior
         // Twin Parry
         // MORE ARCHETYPES: This has been deprecated.
         if (ModManager.TryParse("Twin Parry", out FeatName twinParry))
-            yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
-                twinParry, ModData.Traits.DualWeaponWarrior, 6);
+            yield return ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
+                twinParry, ModData.Traits.DualWeaponWarrior, 6).Feat;
         
         // Flensing Slice
         // MORE ARCHETYPES: This has been deprecated.

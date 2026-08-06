@@ -21,16 +21,18 @@ public static class BlessedOne
 {
     public static void LoadArchetype()
     {
-        foreach (Feat ft in CreateFeats())
-            ModManager.AddFeat(ft);
+        foreach (Feat? ft in CreateFeats())
+            ModManager.AddFeatIfNew(ft);
     }
 
-    public static IEnumerable<Feat> CreateFeats()
+    public static IEnumerable<Feat?> CreateFeats()
     {
-        Feat blessedOneDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
+        (TrueFeat? blessedOneDedication, FeatName fn1) = ArchetypeFeats.TryCreateAgnosticArchetypeDedication(
                 ModData.Traits.BlessedOne,
                 "Through luck or deed, heritage or heroics, you carry the blessing of a deity. This blessing manifests as the ability to heal wounds and remove harmful conditions, and exists independent of worship.",
-                $"You learn the {AllSpells.CreateSpellLink(ChampionFocusSpells.LayOnHands, ModData.Traits.BlessedOne)} champion focus spell. This feat grants a focus pool of 1 Focus Point, or an additional Focus Point if you already had one." /*+" Your focus spells from the blessed one archetype are divine spells."*/)
+                $"You learn the {AllSpells.CreateSpellLink(ChampionFocusSpells.LayOnHands, ModData.Traits.BlessedOne)} champion focus spell. This feat grants a focus pool of 1 Focus Point, or an additional Focus Point if you already had one." /*+" Your focus spells from the blessed one archetype are divine spells."*/,
+                null);
+        blessedOneDedication?
             .WithOnSheet(values =>
             {
                 values.SetProficiency(Trait.Spell, Proficiency.Trained);
@@ -45,35 +47,37 @@ public static class BlessedOne
                         Ability.Charisma,
                         ChampionFocusSpells.LayOnHands);
             });
-        ModData.FeatNames.BlessedOneDedication = blessedOneDedication.FeatName;
+        ModData.FeatNames.BlessedOneDedication = fn1;
         yield return blessedOneDedication;
         
         // Blessed Sacrifice
-        ModData.SpellIds.ProtectorsSacrifice = ModManager.RegisterNewSpell(
-            "ProtectorsSacrifice",
-            1,
-            (spellId, spellcaster, spellLevel, inCombat, spellInformation) =>
-            {
-                int reduction = 3 * spellLevel;
-                string description =
-                    $$"""
-                      {b}Trigger{/b} An ally within 30 feet takes damage.
+        if (!ModManager.TryParse("ProtectorsSacrifice", out SpellId _))
+        {
+            ModData.SpellIds.ProtectorsSacrifice = ModManager.RegisterNewSpell(
+                "ProtectorsSacrifice",
+                1,
+                (spellId, spellcaster, spellLevel, inCombat, spellInformation) =>
+                {
+                    int reduction = 3 * spellLevel;
+                    string description =
+                        $$"""
+                          {b}Trigger{/b} An ally within 30 feet takes damage.
 
-                      Reduce the damage the triggering ally would take by {{S.HeightenedVariable(reduction, 3)}}. You redirect this damage to yourself, but your immunities, weaknesses, resistances and so on do not apply.
+                          Reduce the damage the triggering ally would take by {{S.HeightenedVariable(reduction, 3)}}. You redirect this damage to yourself, but your immunities, weaknesses, resistances and so on do not apply.
 
-                      You aren't subject to any conditions or other effects of whatever damaged your ally (such as poison from a venomous bite). Your ally is still subject to those effects even if you redirect all of the triggering damage to yourself.
-                      """;
-                
-                return Spells.CreateModern(
-                    ModData.Illustrations.ProtectorsSacrifice,
-                    "Protector's Sacrifice",
-                    [ModData.ModTrait, Trait.Uncommon, Trait.Cleric, Trait.Focus, Trait.SomaticOnly],
-                    "You protect your ally by suffering in their stead.",
-                    description/*
-                        + S.HeightenText(spellLevel, 1, inCombat, "{b}Heightened (+1){/b} The damage you redirect increases by 3.")*/,
-                    Target.Uncastable(),
-                    spellLevel,
-                    null)
+                          You aren't subject to any conditions or other effects of whatever damaged your ally (such as poison from a venomous bite). Your ally is still subject to those effects even if you redirect all of the triggering damage to yourself.
+                          """;
+
+                    return Spells.CreateModern(
+                            ModData.Illustrations.ProtectorsSacrifice,
+                            "Protector's Sacrifice",
+                            [ModData.ModTrait, Trait.Uncommon, Trait.Cleric, Trait.Focus, Trait.SomaticOnly],
+                            "You protect your ally by suffering in their stead.",
+                            description /*
+                                + S.HeightenText(spellLevel, 1, inCombat, "{b}Heightened (+1){/b} The damage you redirect increases by 3.")*/,
+                            Target.Uncastable(),
+                            spellLevel,
+                            null)
                         .WithActionCost(-2)
                         .WithSoundEffect(SfxName.Healing) // TODO: Better sfx
                         .WithCastsAsAReaction((qfThis, spell, castable) =>
@@ -81,24 +85,25 @@ public static class BlessedOne
                             Creature cleric = qfThis.Owner;
 
                             bool isOn = true;
-                            
+
                             qfThis.ProvideActionIntoPossibilitySection = (qfThis2, section) =>
                             {
                                 if (section.PossibilitySectionId != PossibilitySectionId.SkillActions)
                                     return null;
-                                
+
                                 return new ActionPossibility(new CombatAction(
                                             qfThis2.Owner,
-                                            new CornerIllustration(ModData.Illustrations.ProtectorsSacrifice, isOn ? ModData.Illustrations.NoSymbol : ModData.Illustrations.CheckSymbol, Direction.Southeast),
+                                            new CornerIllustration(ModData.Illustrations.ProtectorsSacrifice,
+                                                isOn
+                                                    ? ModData.Illustrations.NoSymbol
+                                                    : ModData.Illustrations.CheckSymbol, Direction.Southeast),
                                             (isOn ? "Disable" : "Enable") + " Protector's Sacrifice",
                                             [],
-                                            (isOn ? "Never ask" : "Always ask") + " to use {link:ProtectorsSacrifice}protector's sacrifice{/}.\n\n{i}(This setting does not persist between encounters.){/i}",
+                                            (isOn ? "Never ask" : "Always ask") +
+                                            " to use {link:ProtectorsSacrifice}protector's sacrifice{/}.\n\n{i}(This setting does not persist between encounters.){/i}",
                                             Target.Self())
                                         .WithActionCost(0)
-                                        .WithEffectOnSelf(async _ =>
-                                        {
-                                            isOn = !isOn;
-                                        }))
+                                        .WithEffectOnSelf(async _ => { isOn = !isOn; }))
                                     .WithPossibilityGroup(Constants.POSSIBILITY_GROUP_TOGGLES);
                             };
                             qfThis.AddGrantingOfTechnical(
@@ -118,14 +123,14 @@ public static class BlessedOne
                                                   """,
                                                 ModData.Illustrations.ProtectorsSacrifice))
                                             return null;
-                                        
+
                                         cleric.Spellcasting?.UseUpSpellcastingResources(spell);
 
                                         int taken = Math.Min(dStuff.Amount, reduction);
-                                        
+
                                         cleric.TakeDamage(taken);
                                         cleric.Overhead(
-                                            "-"+taken, Color.Red,
+                                            "-" + taken, Color.Red,
                                             $"{cleric.Name} redirects {taken} damage to themselves.", "Damage",
                                             $"{{b}}{reduction} of {dStuff.Amount}{{/b}} Protector's sacrifice\n{{b}}= {taken}{{/b}}\n\n{{b}}{taken}{{/b}} Total damage");
 
@@ -133,31 +138,34 @@ public static class BlessedOne
                                     };
                                 });
                         })
-                        .WithHeighteningNumerical(spellLevel, 1, inCombat, 1, "The damage you redirect increases by 3.");
-            });
-        yield return new TrueFeat(
-                ModData.FeatNames.BlessedSacrifice,
-                4,
-                null,
-                $"You gain the {AllSpells.CreateSpellLink(ModData.SpellIds.ProtectorsSacrifice, Trait.Champion)} domain spell as a devotion spell. Increase the number of Focus Points in your focus pool by 1.",
-                [])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.BlessedOne)
-            .WithOnSheet(values =>
-            {
-                // DD code safeguards allow you to learn a focus spell multiple times, so...
-                if (values.FocusSpells.TryGetValue(Trait.Champion, out FocusSpells? champSpells) && champSpells.Spells.Any(spell => spell.SpellId == ModData.SpellIds.ProtectorsSacrifice))
-                    values.FocusPointCount = Math.Min(values.FocusPointCount+1, 3);
-                else
-                    values.AddFocusSpellAndFocusPoint(
-                        Trait.Champion, // "devotion spells" == champion spells, so, Champion trait instead of Blessed One.
-                        Ability.Charisma,
-                        ModData.SpellIds.ProtectorsSacrifice);
-            });
+                        .WithHeighteningNumerical(spellLevel, 1, inCombat, 1,
+                            "The damage you redirect increases by 3.");
+                });
+            yield return new TrueFeat(
+                    ModData.FeatNames.BlessedSacrifice,
+                    4,
+                    null,
+                    $"You gain the {AllSpells.CreateSpellLink(ModData.SpellIds.ProtectorsSacrifice, Trait.Champion)} domain spell as a devotion spell. Increase the number of Focus Points in your focus pool by 1.",
+                    [])
+                .WithAvailableAsArchetypeFeat(ModData.Traits.BlessedOne)
+                .WithOnSheet(values =>
+                {
+                    // DD code safeguards allow you to learn a focus spell multiple times, so...
+                    if (values.FocusSpells.TryGetValue(Trait.Champion, out FocusSpells? champSpells) &&
+                        champSpells.Spells.Any(spell => spell.SpellId == ModData.SpellIds.ProtectorsSacrifice))
+                        values.FocusPointCount = Math.Min(values.FocusPointCount + 1, 3);
+                    else
+                        values.AddFocusSpellAndFocusPoint(
+                            Trait.Champion, // "devotion spells" == champion spells, so, Champion trait instead of Blessed One.
+                            Ability.Charisma,
+                            ModData.SpellIds.ProtectorsSacrifice);
+                });
+        }
         
         // Accelerating Touch
-        TrueFeat aTouchForBlessedOne = ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
+        (TrueFeat? aTouchForBlessedOne, FeatName fn2) = ArchetypeFeats.TryDuplicateFeatAsArchetypeFeat(
             Champion.AcceleratingTouchFeatName, ModData.Traits.BlessedOne, 6);
-        ModData.FeatNames.AcceleratingTouchForBlessedOne = aTouchForBlessedOne.FeatName;
+        ModData.FeatNames.AcceleratingTouchForBlessedOne = fn2;
         yield return aTouchForBlessedOne;
 
         // NO MERCY??? :sob:
