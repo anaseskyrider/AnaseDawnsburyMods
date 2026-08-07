@@ -86,7 +86,7 @@ public static class Scout
                 ModData.FeatNames.ScoutsCharge,
                 4,
                 "You meander around unpredictably, and then ambush your opponents without warning.",
-                "Choose one enemy. Stride, Feint against that opponent, and then make a Strike against it. For your Feint, you can attempt a Stealth check instead of the Deception check that's usually required, using the terrain around you to surprise your foe.",
+                "Choose one enemy. Stride, Feint against that opponent, and then make a Strike against that foe. For your Feint, you can attempt a Stealth check instead of the Deception check that's usually required, because you use the terrain around you to catch your foe off-guard.",
                 [Trait.Flourish])
             .WithActionCost(2)
             .WithAvailableAsArchetypeFeat(ModData.Traits.Scout)
@@ -102,7 +102,7 @@ public static class Scout
                             """
                             {i}You meander around unpredictably, and then ambush your opponents without warning.{/i}
 
-                            Choose one enemy. Stride, Feint against that opponent, and then make a Strike against it. For your Feint, you can attempt a Stealth check instead of the Deception check that's usually required, using the terrain around you to surprise your foe.
+                            Choose one enemy. Stride, Feint against that opponent, and then make a Strike against that foe. For your Feint, you can attempt a Stealth check instead of the Deception check that's usually required, because you use the terrain around you to catch your foe off-guard.
                             """,
                             Target.Self())
                         .WithActionCost(2)
@@ -141,7 +141,7 @@ public static class Scout
         yield return new TrueFeat(
                 ModData.FeatNames.FleetingShadow,
                 6,
-                "You're able to quickly disappear and then move about without drawing the attention of your enemies.",
+                "You're able to quickly disappear and then move about stealthily.",
                 "You Hide, then Sneak twice.",
                 [Trait.Flourish])
             .WithActionCost(2)
@@ -158,7 +158,7 @@ public static class Scout
                                 "Fleeting Shadow",
                                 [ModData.ModTrait, Trait.Basic, Trait.Archetype, Trait.Flourish, Trait.DoesNotBreakStealth],
                                 """
-                                {i}You're able to quickly disappear and then move about without drawing the attention of your enemies.{/i}
+                                {i}You're able to quickly disappear and then move about stealthily.{/i}
 
                                 You Hide, then Sneak twice.
                                 """,
