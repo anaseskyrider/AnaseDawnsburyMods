@@ -73,6 +73,11 @@ public static class ModData
         }
     }
 
+    public static class FeatGroups
+    {
+        public static readonly FeatGroup Archetypes = new FeatGroup("Archetypes", 5);
+    }
+
     public static class FeatNames
     {
         #region Archer
@@ -284,6 +289,12 @@ public static class ModData
         #region Scout
 
         public static FeatName ScoutDedication;
+        /// <summary>
+        /// Avoid Notice and Scout feat for Exploration Activities. This feat is given a mod-style enum to avoid conflicts with identical options from other sources.
+        /// </summary>
+        public static readonly FeatName AvoidNoticeAndScout = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "ScoutArchetype.AvoidNoticeAndScout",
+            ["Avoid Notice and Scout"]);
         public static readonly FeatName ScoutsWarning = ModManager.SafelyRegisterEnumMember<FeatName>(
             "ScoutsWarning",
             ["Scout's Warning"]);
@@ -302,6 +313,7 @@ public static class ModData
         public static readonly FeatName ScoutsPounce = ModManager.SafelyRegisterEnumMember<FeatName>(
             "ScoutsPounce",
             ["Scout's Pounce"]);
+        public static FeatName CamouflageForScout;
         
         #endregion
 

@@ -34,6 +34,7 @@ public static class ModLoader
         MartialArtist.Load();
         Mauler.Load();
         Medic.Load();
+        Scout.Load();
         
         LoadOrder.WhenFeatsBecomeLoaded += () =>
         {
