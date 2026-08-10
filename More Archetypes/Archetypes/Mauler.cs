@@ -79,14 +79,14 @@ public static class Mauler
         // Lv4: Slam Down for Mauler
         TrueFeat slamDownForMauler = ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.Knockdown, ModData.Traits.Mauler, 4);
-        //slamDownForMauler.CustomName = "Slam Down {icon:TwoActions}";
+        slamDownForMauler.CustomName = "Slam Down {icon:TwoActions}";
         ModData.FeatNames.SlamDownForMauler = slamDownForMauler.FeatName;
         yield return slamDownForMauler;
 
         // Lv4: Vicious Swing for Mauler
         TrueFeat viciousSwingForMauler = ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.PowerAttack, ModData.Traits.Mauler, 4);
-        //viciousSwingForMauler.CustomName = "Vicious Swing {icon:TwoActions}";
+        viciousSwingForMauler.CustomName = "Vicious Swing {icon:TwoActions}";
         ModData.FeatNames.ViciousSwingForMauler = viciousSwingForMauler.FeatName;
         yield return viciousSwingForMauler;
 
@@ -354,6 +354,7 @@ public static class Mauler
         // Lv12: Add Crashing Slam to Mauler
         TrueFeat crashingSlamForMauler = ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.ImprovedKnockdown, ModData.Traits.Mauler, 12);
+        crashingSlamForMauler.CustomName = "Crashing Slam";
         ModData.FeatNames.CrashingSlamForMauler = crashingSlamForMauler.FeatName;
         yield return crashingSlamForMauler;
         
