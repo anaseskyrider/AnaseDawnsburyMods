@@ -51,12 +51,16 @@ public static class ModData
         public static ActionId InspiringMarshalStance;
         public static ActionId StrategistStance;
         
+        // Wrestler
+        public static ActionId ElbowBreaker;
+        
         public static void Initialize()
         {
             TigerSlash = ModManager.SafelyRegisterEnumMember<ActionId>("TigerSlash");
             DreadMarshalStance = ModManager.SafelyRegisterEnumMember<ActionId>("DreadMarshalStance");
             InspiringMarshalStance = ModManager.SafelyRegisterEnumMember<ActionId>("InspiringMarshalStance");
             StrategistStance = ModManager.SafelyRegisterEnumMember<ActionId>("StrategistStance");
+            ElbowBreaker = ModManager.SafelyRegisterEnumMember<ActionId>("ElbowBreaker");
         }
     }
 
@@ -322,6 +326,24 @@ public static class ModData
         public static readonly FeatName ElbowBreaker = ModManager.SafelyRegisterEnumMember<FeatName>(
             "ElbowBreaker",
             ["Elbow Breaker"]);
+        public static readonly FeatName RunningTackle = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "RunningTackle",
+            ["Running Tackle"]);
+        public static readonly FeatName Strangle = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "Strangle",
+            ["Strangle"]);
+        public static readonly FeatName SubmissionHold = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "SubmissionHold",
+            ["Submission Hold"]);
+        public static readonly FeatName InescapableGrasp = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "InescapableGrasp",
+            ["Inescapable Grasp"]);
+        public static readonly FeatName FormLock = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "FormLock",
+            ["Form Lock"]);
+        public static readonly FeatName Godbreaker = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "Godbreaker",
+            ["Godbreaker"]);
 
         #endregion
         
@@ -395,6 +417,15 @@ public static class ModData
         public static readonly Illustration SteelYourself = new ModdedIllustration(MOD_FOLDER+"heartburn.png");
         public static readonly Illustration RallyingCharge = new SideBySideIllustration(IllustrationName.FleetStep, new ModdedIllustration(MOD_FOLDER+"heart-wings.png"));
         public static readonly Illustration ToBattle = new ModdedIllustration(MOD_FOLDER+"flying-flag.png");
+
+        #endregion
+
+        #region Wrestler
+
+        public static readonly Illustration SubmissionHold = new CornerIllustration(
+            IllustrationName.Grapple,
+            IllustrationName.Enfeebled,
+            Direction.Southeast);
 
         #endregion
 
