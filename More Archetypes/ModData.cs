@@ -17,7 +17,7 @@ public static class ModData
 {
     public const string ID_PREPEND = "MoreArchetypes.";
 
-    public static Trait ModTrait;
+    public static Trait ModTrait; // Value assigned during loading
 
     /// <summary>
     /// Loads all mod data. This should typically be called by a mod before anything else.
@@ -86,7 +86,7 @@ public static class ModData
     {
         #region Archer
 
-        public static FeatName ArcherDedication;
+        public static FeatName ArcherDedication; // Value assigned during loading
         public static readonly FeatName CrossbowAceRemastered = ModManager.SafelyRegisterEnumMember<FeatName>(
             "CrossbowAceRemastered",
             ["Crossbow Ace"]);
@@ -96,7 +96,7 @@ public static class ModData
         public static readonly FeatName PartingShot = ModManager.SafelyRegisterEnumMember<FeatName>(
             "PartingShot",
             ["Parting Shot"]);
-        public static FeatName PartingShotForArchetypeArcher;
+        public static FeatName PartingShotForArchetypeArcher; // Value assigned during loading
         public static readonly FeatName UnobstructedShot = ModManager.SafelyRegisterEnumMember<FeatName>(
             "UnobstructedShot",
             ["Unobstructed Shot"]);
@@ -105,7 +105,7 @@ public static class ModData
 
         #region Assassin
 
-        public static FeatName AssassinDedication;
+        public static FeatName AssassinDedication; // Value assigned during loading
         public static readonly FeatName ExpertBackstabber = ModManager.SafelyRegisterEnumMember<FeatName>(
             "ExpertBackstabber",
             ["Expert Backstabber"]);
@@ -126,7 +126,7 @@ public static class ModData
 
         #region Bastion
 
-        public static FeatName BastionDedication;
+        public static FeatName BastionDedication; // Value assigned during loading
         public static readonly FeatName DisarmingBlock = ModManager.SafelyRegisterEnumMember<FeatName>(
             "DisarmingBlock",
             ["Disarming Block"]);
@@ -144,7 +144,7 @@ public static class ModData
 
         #region Blessed One
 
-        public static FeatName BlessedOneDedication;
+        public static FeatName BlessedOneDedication; // Value assigned during loading
         public static readonly FeatName BlessedSacrifice = ModManager.SafelyRegisterEnumMember<FeatName>(
             "BlessedSacrifice",
             ["Blessed Sacrifice"]);
@@ -153,7 +153,7 @@ public static class ModData
 
         #region Dual-Weapon Warrior
 
-        public static FeatName DualWeaponWarriorDedication;
+        public static FeatName DualWeaponWarriorDedication; // Value assigned during loading
         public static readonly FeatName DualThrower = ModManager.SafelyRegisterEnumMember<FeatName>(
             "DualThrower",
             ["Dual Thrower"]);
@@ -171,7 +171,7 @@ public static class ModData
 
         #region Familiar Master
         
-        public static FeatName FamiliarMasterDedication;
+        public static FeatName FamiliarMasterDedication; // Value assigned during loading
         public static readonly FeatName OverloadFamiliar = ModManager.SafelyRegisterEnumMember<FeatName>(
             "OverloadFamiliar",
             ["Overload Familiar"]);
@@ -189,7 +189,7 @@ public static class ModData
         
         #region Marshal
 
-        public static FeatName MarshalDedication;
+        public static FeatName MarshalDedication; // Value assigned during loading
         public static readonly FeatName DreadMarshalStance = ModManager.SafelyRegisterEnumMember<FeatName>(
             "DreadMarshalStance",
             ["Dread Marshal Stance"]);
@@ -260,16 +260,16 @@ public static class ModData
         
         #region Mauler
 
-        public static FeatName MaulerDedication;
-        public static FeatName SlamDownForMauler;
-        public static FeatName ViciousSwingForMauler;
+        public static FeatName MaulerDedication; // Value assigned during loading
+        public static FeatName SlamDownForMauler; // Value assigned during loading
+        public static FeatName ViciousSwingForMauler; // Value assigned during loading
         public static readonly FeatName ClearTheWay = ModManager.SafelyRegisterEnumMember<FeatName>(
             "ClearTheWay",
             ["Clear the Way"]);
         public static readonly FeatName ShovingSweep = ModManager.SafelyRegisterEnumMember<FeatName>(
             "ShovingSweep",
             ["Shoving Sweep"]);
-        public static FeatName CrashingSlamForMauler;
+        public static FeatName CrashingSlamForMauler; // Value assigned during loading
         /*public static readonly FeatName HammerQuake = ModManager.SafelyRegisterEnumMember<FeatName>(
             "HammerQuake",
             ["Hammer Quake"]);
@@ -285,14 +285,14 @@ public static class ModData
         public static readonly FeatName DoctorsVisitation = ModManager.SafelyRegisterEnumMember<FeatName>(
             "DoctorsVisitation",
             ["Doctor's Visitation"]);
-        public static FeatName TreatConditionSkillVariant;
-        public static FeatName HolisticCareSkillVariant;
+        public static FeatName TreatConditionSkillVariant; // Value assigned during loading
+        public static FeatName HolisticCareSkillVariant; // Value assigned during loading
 
         #endregion
         
         #region Scout
 
-        public static FeatName ScoutDedication;
+        public static FeatName ScoutDedication; // Value assigned during loading
         /// <summary>
         /// Avoid Notice and Scout feat for Exploration Activities. This feat is given a mod-style enum to avoid conflicts with identical options from other sources.
         /// </summary>
@@ -317,7 +317,7 @@ public static class ModData
         public static readonly FeatName ScoutsPounce = ModManager.SafelyRegisterEnumMember<FeatName>(
             "ScoutsPounce",
             ["Scout's Pounce"]);
-        public static FeatName CamouflageForScout;
+        public static FeatName CamouflageForScout; // Value assigned during loading
         
         #endregion
 
