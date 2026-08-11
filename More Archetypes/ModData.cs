@@ -620,11 +620,6 @@ public static class ModData
         public static readonly Trait Mauler = ModManager.RegisterTrait("Mauler", new TraitProperties("Mauler", true));
         
         /// <summary>
-        /// Medic archetype
-        /// </summary>
-        public static readonly Trait Medic = ModManager.RegisterTrait("Medic", new TraitProperties("Medic", true));
-        
-        /// <summary>
         /// Scout archetype
         /// </summary>
         public static readonly Trait Scout = ModManager.RegisterTrait("Scout", new TraitProperties("Scout", true));
