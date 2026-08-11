@@ -270,6 +270,9 @@ public static class Bastion
             || req.Description.Contains("must be a Fighter,"));
         yield return bastionShieldWarden;
         
+        // Lv10: Destructive Block
+        // TODO: Implement Destructive Block as a 1/encounter ability to double your hardness.
+        
         // Lv10: Quick Shield Block for Bastion
         yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.QuickShieldBlock, ModData.Traits.Bastion, 10);
@@ -277,6 +280,9 @@ public static class Bastion
         // Lv12: Mirror Shield for Bastion
         yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.MirrorShield, ModData.Traits.Bastion, 12);
+        
+        // Lv12: Shield Salvation
+        // TODO: Implement with a Destructive Block requirement and make it 2/encounter.
         
         // PETR: Lv16 Improved Reflexive Shield (Lv18 for Bastion)
     }
