@@ -35,8 +35,7 @@ public static class DualWeaponWarrior
 
     public static IEnumerable<Feat> CreateFeats()
     {
-        // Rebuild Dual-Weapon Warrior.
-        // Users have to switch the dedication, not just individual archetype feats
+        // Lv2: Dual-Weapon Warrior Dedication
         // ArchetypeFeats.CreateOrUpdateDedication
         Feat dwwArchetype = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.DualWeaponWarrior,
@@ -62,7 +61,7 @@ public static class DualWeaponWarrior
         ModData.FeatNames.DualWeaponWarriorDedication = dwwArchetype.FeatName;
         yield return dwwArchetype;
         
-        // Dual Thrower
+        // Lv4: Dual Thrower
         yield return new TrueFeat(
                 ModData.FeatNames.DualThrower, 4,
                 "You know how to throw two weapons as easily as strike with them.",
@@ -170,11 +169,11 @@ public static class DualWeaponWarrior
                     };
                 });
         
-        // Quick Draw
+        // Lv4: Quick Draw
         yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.QuickDraw, ModData.Traits.DualWeaponWarrior, 4);
 
-        // Twin Parry
+        // Lv6: Twin Parry
         if (ModManager.TryParse("Twin Parry", out FeatName twinParry1))
             yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
                 twinParry1, ModData.Traits.DualWeaponWarrior, 6);
@@ -182,7 +181,7 @@ public static class DualWeaponWarrior
             yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
                 twinParry2, ModData.Traits.DualWeaponWarrior, 6);
         
-        // Flensing Slice
+        // Lv8: Flensing Slice
         yield return new TrueFeat(
                 ModData.FeatNames.FlensingSlice, 8,
                 "When you hit with both attacks with Double Slice, you flense the target, making it bleed and creating a weak spot.", 
@@ -282,7 +281,7 @@ public static class DualWeaponWarrior
                 };
             });
         
-        // Dual-Weapon Blitz
+        // Lv10: Dual-Weapon Blitz
         yield return new TrueFeat(
                 ModData.FeatNames.DualWeaponBlitz, 10,
                 "You attack as you weave your way around the battlefield.",
@@ -459,7 +458,7 @@ public static class DualWeaponWarrior
         
         // Twin Riposte (Level 12, really 10)
         
-        // Dual Onslaught (Level 14)
+        // Lv14: Dual Onslaught
         yield return new TrueFeat(
             ModData.FeatNames.DualOnslaught, 14,
             "When you lash out with both weapons, you leave no room for the target to escape your attack.",

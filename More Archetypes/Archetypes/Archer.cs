@@ -34,7 +34,7 @@ public static class Archer
 
     public static IEnumerable<Feat> CreateFeats()
     {
-        // Remaster Archer
+        // Remaster Archer Dedication
         ModData.FeatNames.ArcherDedication = ArchetypeFeats.UpdateExistingDedication(
                 Trait.Archer,
                 null,
@@ -53,7 +53,8 @@ public static class Archer
                 null)
             .FeatName;
         
-        // Crossbow Ace
+        // Lv1: Crossbow Ace
+        // Preserve premaster variant by making a new feat.
         yield return new TrueFeat(
                 ModData.FeatNames.CrossbowAceRemastered, 1,
                 "Your deep understanding of the crossbow allows you to reload efficiently while moving yourself out of the line of return fire.",
@@ -105,14 +106,17 @@ public static class Archer
                     return possibilities;
                 };
             });
+        
+        // Lv4: Crossbow Ace for Archer
         yield return ArchetypeFeats.DuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.CrossbowAceRemastered, Trait.Archer, 4);
         
-        // Quick Shot: Add Quick Draw to Archer
+        // Lv4: Quick Draw for Archer
+        // (Easier variant of Quick Shot)
         if (ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(FeatName.QuickDraw, Trait.Archer, 4) is { } qDraw)
             yield return qDraw;
 
-        // Crossbow Terror (Remastered)
+        // Lv6: Crossbow Terror (Remastered)
         // Preserve premaster variant by making a new feat.
         yield return new TrueFeat(
                 ModData.FeatNames.CrossbowTerrorRemastered, 6,
@@ -168,7 +172,7 @@ public static class Archer
                 };
             });
         
-        // Parting Shot
+        // Lv4: Parting Shot
         yield return new TrueFeat(
                 ModData.FeatNames.PartingShot, 4,
                 "You jump back and fire a quick shot that catches your opponent by surprise.",
@@ -236,13 +240,15 @@ public static class Archer
                     return partingShot;
                 };
             });
+        
+        // Lv6: Parting Shot for Archer
         if (ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(ModData.FeatNames.PartingShot, Trait.Archer, 6) is { } pShot)
         {
             ModData.FeatNames.PartingShotForArchetypeArcher = pShot.FeatName;
             yield return pShot;
         }
         
-        // Archer's Aim
+        // Lv8: Archer's Aim
         // Update original feat.
         // Adds a stat block description, a targeting tooltip
         TrueFeat archersAim = (AllFeats.GetFeatByFeatName(FeatName.ArchersAim) as TrueFeat)!;
@@ -292,7 +298,7 @@ public static class Archer
             };
         });
         
-        // Unobstructed Shot
+        // Lv10: Unobstructed Shot
         yield return new TrueFeat(
                 ModData.FeatNames.UnobstructedShot, 10,
                 "With a quick use of brute force, you remove an obstacle and take a calculated shot as part of the same motion.",

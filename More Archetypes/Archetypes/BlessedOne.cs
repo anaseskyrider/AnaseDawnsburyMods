@@ -28,8 +28,7 @@ public static class BlessedOne
 
     public static IEnumerable<Feat> CreateFeats()
     {
-        // Rebuild Blessed One.
-        // Users have to switch the dedication, not just individual archetype feats
+        // Lv2: Blessed One Dedication
         // ArchetypeFeats.CreateOrUpdateDedication
         Feat blessedDed = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.BlessedOne,
@@ -191,7 +190,7 @@ public static class BlessedOne
         else
             ModData.SpellIds.ProtectorsSacrifice = ModManager.RegisterNewSpell("ProtectorsSacrifice", 1, createSpellInstance);
         
-        // Blessed Sacrifice
+        // Lv4: Blessed Sacrifice
         yield return new TrueFeat(
                 ModData.FeatNames.BlessedSacrifice, 4,
                 null,

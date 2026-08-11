@@ -168,7 +168,7 @@ public static class Medic
             });
         };
         
-        // Improve Medic Dedication
+        // Remaster Medic Dedication
         // - Bonus to healing is a circumstance bonus.
         // - Bonus healing from Medic Dedication is blue in action blocks.
         // - Immunity restriction on Battle Medicine shows before healthy, allowing more reliable preplanning.
@@ -228,6 +228,7 @@ public static class Medic
         }
         
         // Lv2: Continual Recovery
+        // DOC: This is changed to have an in-combat effect in reducing the recovery time for Battle Medicine.
         yield return new TrueFeat(
                 ModData.FeatNames.ContinualRecovery, 2,
                 "Your patients have a harder time resisting repeat treatments.",

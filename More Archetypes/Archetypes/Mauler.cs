@@ -28,7 +28,7 @@ public static class Mauler
 
     public static IEnumerable<Feat> CreateFeats()
     {
-        // Mauler Dedication.
+        // Lv2: Mauler Dedication
         // ArchetypeFeats.CreateOrUpdateDedication
         Feat maulerDedication = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.Mauler,

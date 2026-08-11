@@ -28,8 +28,7 @@ public static class FamiliarMaster
 
     public static IEnumerable<Feat> CreateFeats()
     {
-        // Rebuild Familiar Master.
-        // Users have to switch the dedication, not just individual archetype feats
+        // Lv2: Familiar Master Dedication
         // ArchetypeFeats.CreateOrUpdateDedication
         Feat famDed = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.FamiliarMaster,

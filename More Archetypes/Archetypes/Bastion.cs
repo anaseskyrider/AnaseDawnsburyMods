@@ -30,8 +30,7 @@ public static class Bastion
 
     public static IEnumerable<Feat> CreateFeats()
     {
-        // Rebuild Bastion.
-        // Users have to switch the dedication, not just individual archetype feats
+        // Lv2: Bastion Dedication
         // ArchetypeFeats.CreateOrUpdateDedication
         Feat basDed = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.Bastion,
@@ -52,11 +51,11 @@ public static class Bastion
         ModData.FeatNames.BastionDedication = basDed.FeatName;
         yield return basDed;
 
-        // Add Agile Shield Grip to Bastion
+        // Lv4: Agile Shield Grip for Bastion
         yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             Champion.AgileShieldGripFeatName, ModData.Traits.Bastion, 4);
 
-        // Disarming Block
+        // Lv4: Disarming Block
         // PETR: Disarm the attacking item
         yield return new TrueFeat(
                 ModData.FeatNames.DisarmingBlock, 4,
@@ -166,7 +165,7 @@ public static class Bastion
                 };
             });
         
-        // Nimble Shield Hand
+        // Lv6: Nimble Shield Hand
         yield return new TrueFeat(
                 ModData.FeatNames.NimbleShieldHand, 6,
                 "You are so used to wielding a shield that you can use another item and switch back to it effortlessly.",
@@ -196,7 +195,7 @@ public static class Bastion
                     };
                 });
 
-        // Shielded Stride
+        // Lv4: Shielded Stride
         yield return new TrueFeat(
                 ModData.FeatNames.ShieldedStride, 4,
                 "When your shield is up, your enemies' blows can't touch you.",
@@ -214,10 +213,12 @@ public static class Bastion
                             { Id = QEffectId.Mobility });
                 };
             });
+        
+        // Lv6: Shielded Stride for Bastion
         yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.ShieldedStride, ModData.Traits.Bastion, 6);
         
-        // Reflexive Shield
+        // Lv6: Reflexive Shield
         yield return new TrueFeat(
                 ModData.FeatNames.ReflexiveShield, 6,
                 "You can use your shield to fend off explosions and the like.",
@@ -255,22 +256,25 @@ public static class Bastion
                     qfFeat.YourShieldBlockWorksAlsoAgainst = (_, dEvent) =>
                         CommonShieldRules.DoesReflexiveShieldApply(dEvent.CombatAction);
                 });
+        
+        // Lv8: Reflexive Shield for Bastion
         yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             ModData.FeatNames.ReflexiveShield, ModData.Traits.Bastion, 8);
 
-        // Add Shield Warden to Bastion
+        // Lv8: Shield Warden for Bastion
         TrueFeat bastionShieldWarden = ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.ShieldWarden, ModData.Traits.Bastion, 8);
         // Removes the requirement, "You must be a Fighter, or you must have Shield Ally as your divine ally." .
         bastionShieldWarden.Prerequisites.RemoveAll(req =>
-            req.Description.Contains("must have Shield Ally") || req.Description.Contains("must be a Fighter,"));
+            req.Description.Contains("must have Shield Ally")
+            || req.Description.Contains("must be a Fighter,"));
         yield return bastionShieldWarden;
         
-        // Add Quick Shield Block to Bastion
+        // Lv10: Quick Shield Block for Bastion
         yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.QuickShieldBlock, ModData.Traits.Bastion, 10);
         
-        // Add Mirror Shield to Bastion
+        // Lv12: Mirror Shield for Bastion
         yield return ArchetypeFeats.SafelyDuplicateFeatAsArchetypeFeat(
             FeatName.MirrorShield, ModData.Traits.Bastion, 12);
         

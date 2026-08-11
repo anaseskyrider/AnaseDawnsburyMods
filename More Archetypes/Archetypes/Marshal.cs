@@ -40,8 +40,7 @@ public static class Marshal
 
     public static IEnumerable<Feat> CreateFeats()
     {
-        // Rebuild marshal.
-        // Users have to switch the dedication, not just individual archetype feats
+        // Lv2: Marshal Dedication
         // ArchetypeFeats.CreateOrUpdateDedication
         Feat marshalDed = ArchetypeFeats.CreateAgnosticArchetypeDedication(
                 ModData.Traits.Marshal,
@@ -326,7 +325,6 @@ public static class Marshal
         // Difference from tabletop:
         // - No expiration on temp HP.
         // - Doubles at level 12.
-        // PETR: Temp HP rework?
         yield return new TrueFeat(
                 ModData.FeatNames.SteelYourself, 4,
                 "You encourage an ally to toughen up, giving them a fighting chance.",
@@ -810,7 +808,7 @@ public static class Marshal
         // TODO: Lv10. Form Up!
         // Tian Xia Character Guide
         
-        // Lv10. Topple Foe
+        // Lv10: Topple Foe
         yield return new TrueFeat(
                 ModData.FeatNames.ToppleFoe, 10,
                 "You take advantage of the opening created by your ally to tip your foe off their feet.",
@@ -915,7 +913,7 @@ public static class Marshal
                 values => values.HasFeat(FeatName.Athletics),
                 "You must be trained in Athletics.");
         
-        // Lv12. Coordinated Charge
+        // Lv12: Coordinated Charge
         yield return new TrueFeat(
                 ModData.FeatNames.CoordinatedCharge, 12,
                 "You heroically dash into the fray, inspiring your allies to follow.",
@@ -1005,9 +1003,7 @@ public static class Marshal
         yield return new TrueFeat(
                 ModData.FeatNames.TacticalCadence, 14,
                 "Your remarkable breath control and concise instructions allow you to coordinate your allies more effectively, even in desperate situations.",
-                $$"""
-                  When you use Cadence Call, that action's quickened condition can also be used to Strike, and using it no longer causes allies to become {r}slowed 1{/r}.
-                  """,
+                "When you use Cadence Call, that action's quickened condition can also be used to Strike, and using it no longer causes allies to become {r}slowed 1{/r}.",
                 [])
             .WithAvailableAsArchetypeFeat(ModData.Traits.Marshal)
             .WithPrerequisite(ModData.FeatNames.CadenceCall, "Cadence Call");
