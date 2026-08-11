@@ -1,5 +1,4 @@
 # [More Dedications](https://steamcommunity.com/sharedfiles/filedetails/?id=3447019566)
-
 This mod adds more **Archetypes** and expands existing Archetypes.
 
 ## Current Archetypes
