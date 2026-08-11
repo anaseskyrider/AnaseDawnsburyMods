@@ -273,13 +273,14 @@ public static class Medic
                 "You must be an expert in Medicine");
         
         // Lv2: Ward Medic
+        // TODO: Treat Poison too
         yield return new TrueFeat(
                 ModData.FeatNames.WardMedic, 2,
                 "You’ve studied in large medical wards, treating several patients at once and tending to all their needs.",
                 $$"""
                     {b}Requirements{/b} Both your hands are free.
 
-                    When you use {{FeatName.BattleMedicine.ToLink("Battle Medicine")}} or Treat Poison, you can target up to two targets. If you're a master in Medicine, increase this to three targets; and if you're legendary, increase this to four targets.
+                    When you use {{FeatName.BattleMedicine.ToLink("Battle Medicine")}} or Treat Poison (NYI!), you can target up to two targets. If you're a master in Medicine, increase this to three targets; and if you're legendary, increase this to four targets.
                     """,
                     [Trait.General, Trait.Rebalanced, Trait.Skill])
             .WithPrerequisite(
