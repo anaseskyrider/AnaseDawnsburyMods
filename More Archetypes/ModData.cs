@@ -5,11 +5,8 @@ using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
-using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Illustrations;
-using Dawnsbury.IO;
 using Dawnsbury.Modding;
-using Dawnsbury.Mods.MoreShields;
 
 namespace Dawnsbury.Mods.MoreArchetypes;
 
@@ -148,6 +145,17 @@ public static class ModData
         public static readonly FeatName BlessedSacrifice = ModManager.SafelyRegisterEnumMember<FeatName>(
             "BlessedSacrifice",
             ["Blessed Sacrifice"]);
+        public static readonly FeatName Mercy = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "Mercy",
+            ["Mercy"]);
+        public static FeatName MercyOfTheBody;
+        public static FeatName MercyOfGrace;
+        public static FeatName MercyOfTheMind;
+        public static FeatName MercyForBlessedOne;
+        public static readonly FeatName GreaterMercy = ModManager.SafelyRegisterEnumMember<FeatName>(
+            "GreaterMercy",
+            ["Greater Mercy"]);
+        public static FeatName GreaterMercyForBlessedOne;
 
         #endregion
 
@@ -607,6 +615,11 @@ public static class ModData
         /// Blessed One archetype
         /// </summary>
         public static readonly Trait BlessedOne = ModManager.RegisterTrait("BlessedOne", new TraitProperties("Blessed One", true));
+
+        /// <summary>
+        /// A generic Feat that is a Mercy suboption.
+        /// </summary>
+        public static readonly Trait MercyOption = ModManager.RegisterTrait("MercyOption");
         
         /// <summary>
         /// Dual-Weapon Warrior archetype
