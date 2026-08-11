@@ -49,7 +49,7 @@ public static class ModData
         // Marshal
         public static ActionId DreadMarshalStance;
         public static ActionId InspiringMarshalStance;
-        public static ActionId StrategistStance;
+        //public static ActionId StrategistStance;
         
         // Wrestler
         public static ActionId ElbowBreaker;
@@ -59,7 +59,7 @@ public static class ModData
             TigerSlash = ModManager.SafelyRegisterEnumMember<ActionId>("TigerSlash");
             DreadMarshalStance = ModManager.SafelyRegisterEnumMember<ActionId>("DreadMarshalStance");
             InspiringMarshalStance = ModManager.SafelyRegisterEnumMember<ActionId>("InspiringMarshalStance");
-            StrategistStance = ModManager.SafelyRegisterEnumMember<ActionId>("StrategistStance");
+            //StrategistStance = ModManager.SafelyRegisterEnumMember<ActionId>("StrategistStance");
             ElbowBreaker = ModManager.SafelyRegisterEnumMember<ActionId>("ElbowBreaker");
         }
     }
@@ -235,9 +235,9 @@ public static class ModData
         public static readonly FeatName TacticalCadence = ModManager.SafelyRegisterEnumMember<FeatName>(
             "TacticalCadence",
             ["Tactical Cadence"]);
-        public static readonly FeatName TargetOfOpportunity = ModManager.SafelyRegisterEnumMember<FeatName>(
+        /*public static readonly FeatName TargetOfOpportunity = ModManager.SafelyRegisterEnumMember<FeatName>(
             "TargetOfOpportunity",
-            ["Target of Opportunity"]);
+            ["Target of Opportunity"]);*/
         
         #endregion
         
@@ -270,12 +270,12 @@ public static class ModData
             "ShovingSweep",
             ["Shoving Sweep"]);
         public static FeatName CrashingSlamForMauler;
-        public static readonly FeatName HammerQuake = ModManager.SafelyRegisterEnumMember<FeatName>(
+        /*public static readonly FeatName HammerQuake = ModManager.SafelyRegisterEnumMember<FeatName>(
             "HammerQuake",
             ["Hammer Quake"]);
         public static readonly FeatName AvalancheStrike = ModManager.SafelyRegisterEnumMember<FeatName>(
             "AvalancheStrike",
-            ["Avalanche Strike"]);
+            ["Avalanche Strike"]);*/
         
         #endregion
 
@@ -305,9 +305,9 @@ public static class ModData
         public static readonly FeatName ScoutsCharge = ModManager.SafelyRegisterEnumMember<FeatName>(
             "ScoutsCharge",
             ["Scout's Charge"]);
-        public static readonly FeatName TerrainScout = ModManager.SafelyRegisterEnumMember<FeatName>(
+        /*public static readonly FeatName TerrainScout = ModManager.SafelyRegisterEnumMember<FeatName>(
             "TerrainScout",
-            ["Terrain Scout"]);
+            ["Terrain Scout"]);*/
         public static readonly FeatName FleetingShadow = ModManager.SafelyRegisterEnumMember<FeatName>(
             "FleetingShadow",
             ["Fleeting Shadow"]);
@@ -329,13 +329,13 @@ public static class ModData
         public static readonly FeatName RunningTackle = ModManager.SafelyRegisterEnumMember<FeatName>(
             "RunningTackle",
             ["Running Tackle"]);
-        public static readonly FeatName Strangle = ModManager.SafelyRegisterEnumMember<FeatName>(
+        /*public static readonly FeatName Strangle = ModManager.SafelyRegisterEnumMember<FeatName>(
             "Strangle",
-            ["Strangle"]);
+            ["Strangle"]);*/
         public static readonly FeatName SubmissionHold = ModManager.SafelyRegisterEnumMember<FeatName>(
             "SubmissionHold",
             ["Submission Hold"]);
-        public static readonly FeatName InescapableGrasp = ModManager.SafelyRegisterEnumMember<FeatName>(
+        /*public static readonly FeatName InescapableGrasp = ModManager.SafelyRegisterEnumMember<FeatName>(
             "InescapableGrasp",
             ["Inescapable Grasp"]);
         public static readonly FeatName FormLock = ModManager.SafelyRegisterEnumMember<FeatName>(
@@ -343,7 +343,7 @@ public static class ModData
             ["Form Lock"]);
         public static readonly FeatName Godbreaker = ModManager.SafelyRegisterEnumMember<FeatName>(
             "Godbreaker",
-            ["Godbreaker"]);
+            ["Godbreaker"]);*/
 
         #endregion
         
