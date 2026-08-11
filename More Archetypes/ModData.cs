@@ -438,9 +438,18 @@ public static class ModData
 
     public static class PersistentActions
     {
+        #region Assassin
+
         public const string POISON_WEAPON_CHARGE = "PoisonWeaponCharge";
+
+        #endregion
+
+        #region Familiar Master
+
         public const string OVERLOAD_FAMILIAR = "OverloadFamiliar";
         public const string FAST_COMMAND = "FastCommand";
+
+        #endregion
     }
 
     public static class PossibilityGroups
