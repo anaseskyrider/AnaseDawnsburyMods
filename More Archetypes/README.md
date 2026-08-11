@@ -1,4 +1,4 @@
-# [More Archetypes](...)
+# [More Archetypes](https://steamcommunity.com/sharedfiles/filedetails/?id=3781611396)
 
 Adds and remasters many Archetypes. See workshop page for content listing.
 
