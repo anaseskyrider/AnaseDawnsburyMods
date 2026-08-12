@@ -1,8 +1,10 @@
 using Dawnsbury.Audio;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
+using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
@@ -19,27 +21,36 @@ public static class QuickRepair
 {
     public static void LoadFeat()
     {
-        // TODO: Add the ability to fix armor from Sacrifice Armor
         Feat repairFeat = new TrueFeat(
-            ModData.FeatNames.QuickRepair,
-            1,
+            ModData.FeatNames.QuickRepair, 1,
             "You can repair damage, even in combat.",
-            "{b}Range{/b} touch\n{b}Requirements{/b} You must have a hand free.\n\nChoose a construct. Make a Crafting check against DC 15."
-                + S.FourDegreesOfSuccess(
-                    "The construct regains 4d8 HP.",
-                    "The construct regains 2d8 HP.",
-                    null,
-                    "The construct takes 1d8 damage.")
-                + "\n\nRegardless of your result, the construct is then temporarily immune to your Quick Repair for the rest of the day.\n\nIf you are expert or higher with Crafting, you can choose to make the check at a higher DC for additional HP restored. At expert, you can choose DC 20 for +10 HP, master can choose DC 30 for +30 HP, and legendary can choose DC 40 for +50 HP.\n\n"
-                + ModData.Illustrations.DdSun.IllustrationAsIconString + "{b}Modding{/b} This skill feat is intended for use with mods which provide a construct companion, or for other summons",
+            $$"""
+              {b}Range{/b} touch
+              {b}Requirements{/b} You must have a hand free.
+
+              Choose a construct. Make a Crafting check against DC 15.{{S.FourDegreesOfSuccess(
+                  "The construct regains 4d8 HP.",
+                  "The construct regains 2d8 HP.",
+                  null,
+                  "The construct takes 1d8 damage.")}}
+
+              Regardless of your result, the construct is then temporarily immune to your Quick Repair for the rest of the day.
+
+              If you are expert or higher with Crafting, you can choose to make the check at a higher DC for additional HP restored. At expert, you can choose DC 20 for +10 HP, master can choose DC 30 for +30 HP, and legendary can choose DC 40 for +50 HP.
+
+              {{ModData.Illustrations.DdSun.IllustrationAsIconString}}{b}Modding{/b} This skill feat is intended for use with mods which provide a construct companion, or for other summons.
+              """,
             [Trait.General, Trait.Manipulate, Trait.Skill])
             .WithActionCost(1)
-            .WithPrerequisite(values => values.GetProficiency(Trait.Crafting) >= Proficiency.Trained, "You must be trained in Crafting.")
+            .WithPrerequisite(
+                values => values.GetProficiency(Trait.Crafting) >= Proficiency.Trained,
+                "You must be trained in Crafting.")
             .WithPermanentQEffect("You can repair constructs as an 'other action'.", qfFeat =>
             {
                 qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
                 {
-                    if (section.PossibilitySectionId != PossibilitySectionId.OtherManeuvers || qfThis.Owner.PersistentCharacterSheet == null)
+                    if (section.PossibilitySectionId != PossibilitySectionId.OtherManeuvers
+                        || qfThis.Owner.PersistentCharacterSheet == null)
                         return null;
 
                     Proficiency craftingTraining = qfThis.Owner.PersistentCharacterSheet.Calculated.GetProficiency(Trait.Crafting);
@@ -58,12 +69,20 @@ public static class QuickRepair
                         Subsections =
                         {
                             new PossibilitySection("Quick Repair")
-                                { Possibilities = repairLevels}
+                                { Possibilities = repairLevels }
                         }
                     };
                 };
             });
         ModManager.AddFeat(repairFeat);
+
+        // Sacrifice Armor can be repaired.
+        Feat sacArmor = AllFeats.GetFeatByFeatName(FeatName.SacrificeArmor);
+        sacArmor.RulesText = sacArmor.RulesText.Replace(
+            ", though there is no way to get rid of the status penalty until the encounter ends",
+            "")
+            + $"\n\n{ModData.Illustrations.DdSun.IllustrationAsIconString} {{b}}More Basic Actions{{/b}} You or an ally who has the {ModData.FeatNames.QuickRepair.ToLink("Quick Repair {icon:Action}")} feat can use a DC 20 or greater check to repair your armor, removing the penalty on a success. This does not heal you, unless you are also a construct.";
+        sacArmor.Traits.Insert(0, ModData.ModTrait);
     }
 
     public static CombatAction CreateQuickRepairAction(Creature owner, Proficiency? prof)
@@ -93,52 +112,87 @@ public static class QuickRepair
                 owner,
                 ModData.Illustrations.QuickRepair,
                 $"Quick Repair (DC {dc})",
-                "{i}You can repair damage, even in combat.{/i}\n"
-                    + "{b}Range{/b} touch\n{b}Requirements{/b} You must have a hand free.\n\nChoose a construct. Make a Crafting check against DC "+dc+"."
-                    + S.FourDegreesOfSuccess(
-                        "The construct regains 4d8"+(bonusHealing > 0 ? "{b}+"+bonusHealing+"{/b}" : null)+" HP.",
-                        "The construct regains 2d8"+(bonusHealing > 0 ? "{b}+"+bonusHealing+"{/b}" : null)+" HP.",
-                        null,
-                        "The construct takes 1d8 damage.")
-                    + "\n\nRegardless of your result, the target is then temporarily immune to your Quick Repair for the rest of the day."
-                    + (prof == null ? "\n\nIf you are at least expert with Crafting, you can choose to make the check at a higher DC for additional HP restored. At expert, you can choose DC 20 for +10 HP, master can choose DC 30 for +30 HP, and legendary can choose DC 40 for +50 HP." : null),
                 [ModData.ModTrait, Trait.Manipulate, Trait.Basic],
+                $$"""
+                  {i}You can repair damage, even in combat.{/i}
+                  
+                  {b}Range{/b} touch
+                  {b}Requirements{/b} You must have a hand free.
+
+                  Choose a construct. Make a Crafting check against DC {{dc}}.{{S.FourDegreesOfSuccess(
+                      $"The construct regains 4d8{(bonusHealing > 0 ? $"{{b}}+{bonusHealing}{{/b}}" : null)} HP.",
+                      $"The construct regains 2d8{(bonusHealing > 0 ? $"{{b}}+{bonusHealing}{{/b}}" : null)} HP.",
+                      null,
+                      "The construct takes 1d8 damage.")}}
+
+                  Regardless of your result, the target is then temporarily immune to your Quick Repair for the rest of the day.{{(prof == null
+                      ? "\n\nIf you are at least expert with Crafting, you can choose to make the check at a higher DC for additional HP restored. At expert, you can choose DC 20 for +10 HP, master can choose DC 30 for +30 HP, and legendary can choose DC 40 for +50 HP."
+                      : null)}}
+                  """,
                 Target.AdjacentFriendOrSelf()
                     .WithAdditionalConditionOnTargetCreature((a, d) =>
                     {
                         if (!a.HasFreeHand)
                             return Usability.CommonReasons.NoFreeHandForManeuver;
+                        if (d.PersistentUsedUpResources.UsedUpActions.Contains("QuickRepairFrom:" + a.Name))
+                            return Usability.NotUsableOnThisCreature("immune");
+                        if (d.HasEffect(QEffectId.BrokenArmor) && prof >= Proficiency.Expert)
+                            return Usability.Usable;
                         if (d.Damage == 0)
                             return Usability.NotUsableOnThisCreature("healthy");
                         if (!d.HasTrait(Trait.Construct))
                             return Usability.NotUsableOnThisCreature("not a construct");
-                        if (d.PersistentUsedUpResources.UsedUpActions.Contains("QuickRepairFrom:" + a.Name))
-                            return Usability.NotUsableOnThisCreature("immune");
                         return Usability.Usable;
                     }))
             .WithActionCost(1)
             .WithActionId(ModData.ActionIds.QuickRepair)
             .WithSoundEffect(SfxName.SwordStrike)
-            .WithActiveRollSpecification(new ActiveRollSpecification(TaggedChecks.SkillCheck(Skill.Crafting), Checks.FlatDC(dc)))
+            .WithActiveRollSpecification(new ActiveRollSpecification(
+                TaggedChecks.SkillCheck(Skill.Crafting),
+                Checks.FlatDC(dc)))
             .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
             {
+                target.PersistentUsedUpResources.UsedUpActions.Add("QuickRepairFrom:" + caster.Name);
+
+                if (target.HasEffect(QEffectId.BrokenArmor)
+                    && prof >= Proficiency.Expert
+                    && result >= CheckResult.Success)
+                {
+                    target.RemoveAllQEffects(qf => qf.Id == QEffectId.BrokenArmor);
+                    target.Battle.Log(
+                        $"{target.ToColoredName()}'s broken armor has been repaired.");
+                }
+                
+                if (!target.HasTrait(Trait.Construct))
+                {
+                    target.Battle.Log(
+                        $"{target.ToColoredName()} receives no healing due to not being a construct.");
+                    return;
+                }
+                
                 switch (result)
                 {
                     case CheckResult.CriticalFailure:
-                        await CommonSpellEffects.DealDirectDamage(thisAction, DiceFormula.FromText("1d8", "Quick Repair (critical failure)"), target, CheckResult.Failure, DamageKind.Bludgeoning); // Feels more appropriate than slashing
+                        await CommonSpellEffects.DealDirectDamage(
+                            thisAction,
+                            DiceFormula.FromText("1d8", "Quick Repair (critical failure)"),
+                            target,
+                            CheckResult.Failure,
+                            DamageKind.Bludgeoning); // Feels more appropriate than slashing
                         break;
                     case >= CheckResult.Success:
                         DiceFormula healingAmount = result == CheckResult.CriticalSuccess 
                             ? DiceFormula.FromText("4d8", "Quick Repair (critical success)")
                             : DiceFormula.FromText("2d8", "Quick Repair");
                         if (bonusHealing > 0)
-                            healingAmount = healingAmount.Add(DiceFormula.FromText(bonusHealing.ToString(), "Quick Repair (" + prof!.HumanizeLowerCase2() + ")")); // Suppress. If prof is null, bonusHealing is 0.
+                            healingAmount = healingAmount.Add(
+                                DiceFormula.FromText(
+                                    bonusHealing.ToString(),
+                                    $"Quick Repair ({prof!.HumanizeLowerCase2()})")); // Suppress. If prof is null, bonusHealing is 0.
                         await target.HealAsync(healingAmount, thisAction);
                         Sfxs.Play(SfxName.Healing);
                         break;
                 }
-                
-                target.PersistentUsedUpResources.UsedUpActions.Add("QuickRepairFrom:" + caster.Name);
             });
         return repairAction;
     }
