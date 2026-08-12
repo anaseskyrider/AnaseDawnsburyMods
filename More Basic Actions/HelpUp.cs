@@ -42,7 +42,7 @@ public static class HelpUp
                 owner, 
                 ModData.Illustrations.HelpUp,
                 "Help Up",
-                [ModData.ModTrait, Trait.Manipulate, Trait.Basic],
+                [ModData.ModTrait, Trait.Manipulate],
                 "{b}Requirements{/b} You have a free hand\n\nChoose an adjacent prone ally who is able to take move actions. " +
                 (doNotMove
                     ? "That ally ceases being prone."
@@ -71,8 +71,8 @@ public static class HelpUp
                 }
                 else
                 {
-                    CombatAction SimpleStand = CreateStandUpAction(target).WithActionCost(0);
-                    await target.Battle.GameLoop.FullCast(SimpleStand, ChosenTargets.CreateSingleTarget(target));
+                    CombatAction simpleStand = CreateStandUpAction(target).WithActionCost(0);
+                    await target.Battle.GameLoop.FullCast(simpleStand, ChosenTargets.CreateSingleTarget(target));
                 }
             });
         return helpUpAction;
