@@ -81,7 +81,7 @@ public static class Aid
                             cr,
                             ModData.Illustrations.Aid,
                             "Prepare to Aid",
-                            [ModData.Traits.ModName],
+                            [ModData.ModTrait],
                             BasicPrepareToAidDescription+"\n\n"+BasicAidReactionDescription,
                             Target.AdjacentCreature()),
                     };
@@ -111,7 +111,7 @@ public static class Aid
                         return null;
                     };
                 });
-        ModManager.AddFeat(cooperativeNature, ModData.Traits.ModName);
+        ModManager.AddFeat(cooperativeNature);
     }
 
     public static List<Possibility> CreatePrepareToAidSkills(Creature owner)
@@ -216,7 +216,7 @@ public static class Aid
             owner,
             IllustrationName.Action,
             "Prepare to Aid" + (subtitle is not null ? " (" + subtitle + ")" : ""),
-            [ModData.Traits.ModName, Trait.DoNotShowOverheadOfActionName, Trait.DoNotShowInContextMenu, Trait.Basic],
+            [ModData.ModTrait, Trait.DoNotShowOverheadOfActionName, Trait.DoNotShowInContextMenu, Trait.Basic],
             CreatePrepareToAidDescription(rank, subtitle),
             Target.RangedCreature(99)
                 .WithAdditionalConditionOnTargetCreature((a,d) =>
@@ -357,7 +357,7 @@ public static class Aid
                 aider,
                 ModData.Illustrations.Aid,
                 "Aid (" + (rollSpec.TaggedDetermineBonus.InvolvedSkill?.ToStringOrTechnical() ?? "Attack") + ")",
-                [Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName, ModData.Traits.ModName, ..bonusTraits],
+                [Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName, ModData.ModTrait, ..bonusTraits],
                 CreateAidReactionDescription(rank).Replace("{b}Aid{b} {icon:Reaction}\n", ""),
                 Target.RangedCreature(99))
             .WithActiveRollSpecification(rollSpec)
@@ -371,7 +371,7 @@ public static class Aid
                     $"{aider2.Name.WithColor("Blue")} {ProficiencyAdjective(rank)} {{b}}Aids{{/b}} {{icon:Reaction}} {targs.ChosenCreature!.Name.WithColor("Blue")}.",
                     "Aid {icon:Reaction}",
                     action.Description,
-                    new Traits([ModData.Traits.ModName]));
+                    new Traits([ModData.ModTrait]));
             })
             .WithEffectOnEachTarget(async (action, aider2, aidee, result) =>
             {

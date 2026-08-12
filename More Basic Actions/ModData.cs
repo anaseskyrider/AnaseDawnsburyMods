@@ -12,31 +12,18 @@ namespace Dawnsbury.Mods.MoreBasicActions;
 
 public static class ModData
 {
-    public const string IdPrepend = "MoreBasicActions.";
+    public const string ID_PREPEND = "MoreBasicActions.";
+    
+    public static Trait ModTrait;
     
     public static void LoadData()
     {
+        ModTrait = ModManager.ModBeingLoadedTrait!.Value;
         ActionIds.Initialize();
         BooleanOptions.Initialize();
         PossibilitySectionIds.Initialize();
         QEffectIds.Initialize();
         SubmenuIds.Initialize();
-    }
-
-    /// <summary>
-    /// Registers the source enum to the game, or returns the original if it's already registered.
-    /// </summary>
-    /// <param name="technicalName">The technicalName string of the enum being registered.</param>
-    /// <param name="displayName">The human readable name of the enum, if the type supports a humanized name.</param>
-    /// <typeparam name="T">The enum being registered to.</typeparam>
-    /// <returns>The newly registered enum.</returns>
-    public static T SafelyRegister<T>(string technicalName, string? displayName = null) where T : struct, Enum
-    {
-        return (T)(ModManager.TryParse(technicalName, out T alreadyRegistered)
-            ? alreadyRegistered
-            : typeof(T) == typeof(FeatName)
-                ? (Enum)ModManager.RegisterFeatName(technicalName, displayName)
-                : ModManager.RegisterEnumMember<T>(technicalName));
     }
 
     public static class ActionIds
@@ -51,13 +38,13 @@ public static class ModData
         
         public static void Initialize()
         {
-            PrepareToAid = SafelyRegister<ActionId>("PrepareToAid");
-            AidReaction = SafelyRegister<ActionId>("AidReaction");
-            Ready = SafelyRegister<ActionId>("Ready");
-            HelpUp = ModManager.RegisterEnumMember<ActionId>("HelpUp");
-            QuickRepair = ModManager.RegisterEnumMember<ActionId>("QuickRepair");
-            LongJump = ModManager.RegisterEnumMember<ActionId>("LongJump");
-            Reposition = SafelyRegister<ActionId>("Reposition");
+            PrepareToAid = ModManager.SafelyRegisterEnumMember<ActionId>("PrepareToAid");
+            AidReaction = ModManager.SafelyRegisterEnumMember<ActionId>("AidReaction");
+            Ready = ModManager.SafelyRegisterEnumMember<ActionId>("Ready");
+            HelpUp = ModManager.SafelyRegisterEnumMember<ActionId>("HelpUp");
+            QuickRepair = ModManager.SafelyRegisterEnumMember<ActionId>("QuickRepair");
+            LongJump = ModManager.SafelyRegisterEnumMember<ActionId>("LongJump");
+            Reposition = ModManager.SafelyRegisterEnumMember<ActionId>("Reposition");
         }
     }
     
@@ -80,27 +67,27 @@ public static class ModData
         public static void Initialize()
         {
             UntrainedAid = RegisterBooleanOption(
-                IdPrepend+"UntrainedAid",
+                ID_PREPEND+"UntrainedAid",
                 "More Basic Actions: Untrained Prepare to Aid",
                 "Enable untrained Prepare to Aid options when choosing what skills to prepare to aid.",
                 false);
             AidDCIs15 = RegisterBooleanOption(
-                IdPrepend+"AidDCIs15",
+                ID_PREPEND+"AidDCIs15",
                 "More Basic Actions: Reduce Aid DC",
                 "The DC to Aid is normally 20. If enabled, the DC is reduced to 15 instead.",
                 false);
             AllowDropProne = RegisterBooleanOption(
-                IdPrepend+"AllowDropProne",
+                ID_PREPEND+"AllowDropProne",
                 "More Basic Actions: Allow Drop Prone",
                 "Enabling this option will add the Drop Prone action to the action bar.",
                 false);
             HelpUpIsNotMove = RegisterBooleanOption(
-                IdPrepend+"HelpUpIsNotMove",
+                ID_PREPEND+"HelpUpIsNotMove",
                 "More Basic Actions: Help Up Doesn't Move Ally",
                 "Helping an ally up from prone counts as you taking a manipulate action and the ally taking a move action. Enabling this action means the ally doesn't actually take the Stand Up action.",
                 false);
             AidAndReadyInSubmenus = RegisterBooleanOption(
-                IdPrepend+"AidAndReadyInSubmenus",
+                ID_PREPEND+"AidAndReadyInSubmenus",
                 "More Basic Actions: Move Aid and Ready to Other Actions",
                 "Enabling this option will move the Aid and Ready menus to the Other Actions submenu.",
                 false);
@@ -123,10 +110,18 @@ public static class ModData
     
     public static class FeatNames
     {
-        public static readonly FeatName CooperativeNature = ModManager.RegisterFeatName(IdPrepend+"Human.CooperativeNature", "Cooperative Nature");
-        public static readonly FeatName QuickRepair = ModManager.RegisterFeatName(IdPrepend+"QuickRepair", "Quick Repair");
-        public static readonly FeatName QuickJump = ModManager.RegisterFeatName(IdPrepend+"QuickJump", "Quick Jump");
-        public static readonly FeatName GracefulLeaper = ModManager.RegisterFeatName(IdPrepend+"Acrobat.GracefulLeaper", "Graceful Leaper");
+        public static readonly FeatName CooperativeNature = ModManager.SafelyRegisterEnumMember<FeatName>(
+            ID_PREPEND+"Human.CooperativeNature",
+            ["Cooperative Nature"]);
+        public static readonly FeatName QuickRepair = ModManager.SafelyRegisterEnumMember<FeatName>(
+            ID_PREPEND+"QuickRepair",
+            ["Quick Repair"]);
+        public static readonly FeatName QuickJump = ModManager.SafelyRegisterEnumMember<FeatName>(
+            ID_PREPEND+"QuickJump",
+            ["Quick Jump"]);
+        public static readonly FeatName GracefulLeaper = ModManager.SafelyRegisterEnumMember<FeatName>(
+            ID_PREPEND+"Acrobat.GracefulLeaper",
+            ["Graceful Leaper"]);
     }
 
     public static class Illustrations
@@ -150,9 +145,9 @@ public static class ModData
         
         public static void Initialize()
         {
-            AidSkills = ModManager.RegisterEnumMember<PossibilitySectionId>("AidSkills");
-            AidAttacks = ModManager.RegisterEnumMember<PossibilitySectionId>("AidAttacks");
-            Ready = ModManager.RegisterEnumMember<PossibilitySectionId>("Ready");
+            AidSkills = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("AidSkills");
+            AidAttacks = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("AidAttacks");
+            Ready = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("Ready");
         }
     }
     
@@ -163,8 +158,8 @@ public static class ModData
         
         public static void Initialize()
         {
-            PreparedToAid = ModManager.RegisterEnumMember<QEffectId>("Prepared to Aid");
-            Readied = ModManager.RegisterEnumMember<QEffectId>("Readied");
+            PreparedToAid = ModManager.SafelyRegisterEnumMember<QEffectId>("Prepared to Aid");
+            Readied = ModManager.SafelyRegisterEnumMember<QEffectId>("Readied");
         }
     }
 
@@ -175,16 +170,13 @@ public static class ModData
         
         public static void Initialize()
         {
-            PrepareToAid = ModManager.RegisterEnumMember<SubmenuId>("PrepareToAid");
-            Ready = ModManager.RegisterEnumMember<SubmenuId>("Ready");
+            PrepareToAid = ModManager.SafelyRegisterEnumMember<SubmenuId>("PrepareToAid");
+            Ready = ModManager.SafelyRegisterEnumMember<SubmenuId>("Ready");
         }
     }
     
     public static class Traits
     {
-        public static readonly Trait ModName = ModManager.RegisterModNameTrait(
-            "MoreBasicActions",
-            "More Basic Actions");
         public static readonly Trait Brace = ModManager.RegisterTrait("Brace", new TraitProperties("Brace", true, "When you Ready to Strike an opponent that moves within your reach, until the start of your next turn Strikes made as part of a reaction with the brace weapon deal an additional 2 precision damage for each weapon damage die it has."));
         /// This attack is a reactive attack, but it has and contributes to MAP. (Used to differentiate regular Strikes from a Brace weapon with reaction Strikes). 
         public static readonly Trait ReactiveAttackWithMAP = ModManager.RegisterTrait("ReactiveAttackWithMap");

@@ -70,7 +70,7 @@ public static class Ready
                             cr,
                             ModData.Illustrations.Ready,
                             "Ready",
-                            [ModData.Traits.ModName, Trait.Concentrate],
+                            [ModData.ModTrait, Trait.Concentrate],
                             ReadyBasicDescription,
                             Target.Self()).WithActionCost(2),
                     };
@@ -88,7 +88,7 @@ public static class Ready
                 owner,
                 IllustrationName.TwoActions,
                 "Ready (Wide Open)",
-                [ModData.Traits.ModName, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
+                [ModData.ModTrait, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
                 "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy exits cover or lowers its shield\n\nYou make a Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
                 Target.Self())
             .WithActionCost(2)
@@ -179,7 +179,7 @@ public static class Ready
                 owner,
                 IllustrationName.TwoActions,
                 "Ready (Hold)",
-                [ModData.Traits.ModName, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
+                [ModData.ModTrait, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
                 "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy enters the maximum range or the first range increment of a ranged attack you have\n\nYou make a Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
                 Target.Self())
             .WithActionCost(2)
@@ -286,7 +286,7 @@ public static class Ready
                 owner,
                 IllustrationName.TwoActions,
                 "Ready (Footwork)",
-                [ModData.Traits.ModName, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
+                [ModData.ModTrait, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
                 "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy ends a move action adjacent to you\n\nMake a Step or Stride.\n\nStep actions and other similar actions do not trigger this reaction.",
                 Target.Self())
             .WithActionCost(2)
@@ -339,7 +339,7 @@ public static class Ready
                 owner,
                 IllustrationName.TwoActions,
                 "Ready (Seize Opportunity)",
-                [ModData.Traits.ModName, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
+                [ModData.ModTrait, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
                 "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy within your range or your reach becomes flat-footed to you\n\nYou make a Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
                 Target.Self())
             .WithActionCost(2)
@@ -418,7 +418,7 @@ public static class Ready
                 owner,
                 IllustrationName.TwoActions,
                 "Ready (Brace)",
-                [ModData.Traits.ModName, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
+                [ModData.ModTrait, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
                 "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy moves into your reach\n\nYou make a melee Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
                 Target.Self(/*(self, ai) => // Hopelessly nonfunctional experiment in getting AI to use Brace sometimes.
                 {

@@ -93,7 +93,6 @@ public static class QuickRepair
                 owner,
                 ModData.Illustrations.QuickRepair,
                 $"Quick Repair (DC {dc})",
-                [ModData.Traits.ModName, Trait.Manipulate, Trait.Basic],
                 "{i}You can repair damage, even in combat.{/i}\n"
                     + "{b}Range{/b} touch\n{b}Requirements{/b} You must have a hand free.\n\nChoose a construct. Make a Crafting check against DC "+dc+"."
                     + S.FourDegreesOfSuccess(
@@ -103,6 +102,7 @@ public static class QuickRepair
                         "The construct takes 1d8 damage.")
                     + "\n\nRegardless of your result, the target is then temporarily immune to your Quick Repair for the rest of the day."
                     + (prof == null ? "\n\nIf you are at least expert with Crafting, you can choose to make the check at a higher DC for additional HP restored. At expert, you can choose DC 20 for +10 HP, master can choose DC 30 for +30 HP, and legendary can choose DC 40 for +50 HP." : null),
+                [ModData.ModTrait, Trait.Manipulate, Trait.Basic],
                 Target.AdjacentFriendOrSelf()
                     .WithAdditionalConditionOnTargetCreature((a, d) =>
                     {

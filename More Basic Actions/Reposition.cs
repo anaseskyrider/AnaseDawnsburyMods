@@ -49,7 +49,7 @@ public static class Reposition
                 owner,
                 ModData.Illustrations.Reposition,
                 "Reposition",
-                [Trait.Basic, ModData.Traits.ModName, Trait.Attack, Trait.AttackDoesNotTargetAC],
+                [ModData.ModTrait, Trait.Attack, Trait.AttackDoesNotTargetAC],
                 """
                 {i}You forcefully relocate a creature.{/i}
 
