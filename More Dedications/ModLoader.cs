@@ -13,38 +13,35 @@ public static class ModLoader
     {
         ModData.LoadData();
         
-        ////////////////////////
-        // Updated Archetypes //
-        ////////////////////////
+        //////////////////////////
+        // No Longer Maintained //
+        //////////////////////////
+        Assassin.LoadArchetype();
         Archer.LoadArchetype();
+        Bastion.LoadArchetype();
+        BlessedOne.LoadArchetype();
+        DualWeaponWarrior.LoadArchetype();
+        FamiliarMaster.LoadArchetype();
+        Marshal.LoadArchetype();
         MartialArtist.LoadArchetype();
+        Mauler.LoadArchetype();
         Medic.LoadArchetype();
+        Scout.LoadArchetype();
         Wrestler.LoadArchetype();
-        // TODO: Update Sentinel to add the resting-armor feat.
+        
+        //////////////////////////
+        // Partially Maintained //
+        //////////////////////////
+        // TODO: Organize archetypes with maintained legacy feats here.
         
         ////////////////////
         // New Archetypes //
         ////////////////////
-        Mauler.LoadArchetype();
-        Bastion.LoadArchetype();
-        Marshal.LoadArchetype();
-        BlessedOne.LoadArchetype();
-        Scout.LoadArchetype();
-        Assassin.LoadArchetype();
-        DualWeaponWarrior.LoadArchetype();
-        FamiliarMaster.LoadArchetype();
-        // TODO: Student of Perfection
-        // TODO: Staff Acrobat
-        // TODO: Poisoner
-        // TODO: Sniping Duo
-        // TODO: Bounty Hunter
-        // TODO: Chronoskimmer
-        // TODO: Curse Maelstrom
-        // TODO: Eldritch Researcher
-        // TODO: Gladiator
-        // TODO: Mind Smith
-        // TODO: Pistol Phenom
-        // TODO: Shadowcaster
+        // TODO: Eldritch Researcher (Hands of the Devil)
+        // TODO: Harrower (Stolen Fate Player's Guide)
+        // TODO: Shadowcaster (Secrets of Magic)
+        // TODO: Staff Acrobat (The Show Must Go On)
+        // TODO: Student of Perfection (World Guide)
         
         //////////////////////////////////
         // Replace Old FeatName Strings //

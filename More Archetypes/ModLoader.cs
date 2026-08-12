@@ -28,13 +28,27 @@ public static class ModLoader
         Assassin.Load();
         Bastion.Load();
         BlessedOne.Load();
+        // TODO: ?. Bounty Hunter
+        // TODO: ?. Chronoskimmer (DA remastered)
+        // TODO: ?. Clawdancer (Howl of the Wild)
+        // TODO: ?. Curse Maelstrom (DA remastered)
         DualWeaponWarrior.Load();
         FamiliarMaster.Load();
+        // TODO: ?. Gladiator
+        // TODO: ?. Living Nexus (Impossible Magic)
+        // TODO: ?. Living Vessel (DA remastered)
         Marshal.Load();
         MartialArtist.Load();
         Mauler.Load();
         Medic.Load();
+        // TODO: ?. Mind Smith (DA remastered)
+        // TODO: ?. Pistol Phenom (GnG remastered)
+        // TODO: ?. Poisoner
         Scout.Load();
+        // TODO: ?. Sentinel: add the resting-armor feat.
+        // TODO: ?. Sniping Duo (GnG remastered)
+        // TODO: ?. Soulforger (Impossible Magic)
+        // TODO: 1. Werecreature (Howl of the Wild)
         Wrestler.Load();
         
         LoadOrder.WhenFeatsBecomeLoaded += () =>
