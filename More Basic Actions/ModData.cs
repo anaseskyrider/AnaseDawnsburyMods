@@ -141,13 +141,15 @@ public static class ModData
     {
         public static PossibilitySectionId AidSkills;
         public static PossibilitySectionId AidAttacks;
-        public static PossibilitySectionId Ready;
+        public static PossibilitySectionId ReadyTriggers;
+        public static PossibilitySectionId ReadyResponses;
         
         public static void Initialize()
         {
             AidSkills = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("AidSkills");
             AidAttacks = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("AidAttacks");
-            Ready = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("Ready");
+            ReadyTriggers = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("ReadyTriggers");
+            ReadyResponses = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("ReadyResponses");
         }
     }
     

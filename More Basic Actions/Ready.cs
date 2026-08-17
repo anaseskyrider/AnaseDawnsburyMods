@@ -1,271 +1,176 @@
-using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
-using Dawnsbury.Core.Animations.Movement;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Alchemy;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Coroutines.Options;
+using Dawnsbury.Core.Coroutines.Options.Reactive;
+using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
-using Dawnsbury.Core.Creatures.Parts;
-using Dawnsbury.Core.Intelligence;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
-using Dawnsbury.Core.Mechanics.Rules;
+using Dawnsbury.Core.Mechanics.ReactiveAttacks;
 using Dawnsbury.Core.Mechanics.Targeting;
-using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
-using Dawnsbury.Core.Tiles;
-using Dawnsbury.Display.Text;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
-using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.MoreBasicActions;
 
 public static class Ready
 {
-    public static readonly string ReadyBasicDescription = "{i}You prepare to use an action that will occur outside your turn.{/i}\n\nChoose one of the given options, which include both a trigger and an action you take in response using your {icon:Reaction} reaction.\n\nIf you readied an attack, this attack {Red}applies your multiple attack penalty{/Red} from your turn.";
-    
+    public static readonly List<ReadyTrigger> Triggers = [];
+    public static readonly List<ReadyResponse> Responses = [];
+
     public static void LoadReady()
     {
-        // Add Prepare to Aid to every creature.
-        ModManager.RegisterActionOnEachCreature(cr =>
-        {
-            if (cr.HasTrait(Trait.Mindless))
-                return;
-            
-            QEffect readyLoader = new QEffect()
-            {
-                Name = "Ready Loader",
-                ProvideActionIntoPossibilitySection = (qfThis, section) =>
-                {
-                    PossibilitySectionId sectionId =
-                        PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.AidAndReadyInSubmenus)
-                            ? PossibilitySectionId.OtherManeuvers
-                            : PossibilitySectionId.SkillActions;
-                    if (section.PossibilitySectionId != sectionId)
-                        return null;
-                    
-                    SubmenuPossibility readyMenu = new SubmenuPossibility(
-                        ModData.Illustrations.Ready,
-                        "Ready")
-                    {
-                        SubmenuId = ModData.SubmenuIds.Ready,
-                        Subsections =
-                        {
-                            new PossibilitySection("Ready")
-                            {
-                                PossibilitySectionId = ModData.PossibilitySectionIds.Ready,
-                                Possibilities = [
-                                    new ActionPossibility(CreateReadyBrace(cr)),
-                                    new ActionPossibility(CreateReadySeize(cr)),
-                                    new ActionPossibility(CreateReadyFootwork(cr)),
-                                    new ActionPossibility(CreateReadyHold(cr)),
-                                    new ActionPossibility(CreateReadyWideOpen(cr)),
-                                ],
-                            },
-                        },
-                        SpellIfAny = new CombatAction(
-                            cr,
-                            ModData.Illustrations.Ready,
-                            "Ready",
-                            [ModData.ModTrait, Trait.Concentrate],
-                            ReadyBasicDescription,
-                            Target.Self()).WithActionCost(2),
-                    };
-
-                    return readyMenu;
-                },
-            };
-            cr.AddQEffect(readyLoader);
-        });
+        CreateTriggers();
+        CreateResponses();
+        AddReadyToEveryCreature();
     }
 
-    public static CombatAction CreateReadyWideOpen(Creature owner)
+    public static void CreateTriggers()
     {
-        CombatAction readyWideOpen = new CombatAction(
-                owner,
-                IllustrationName.TwoActions,
-                "Ready (Wide Open)",
-                [ModData.ModTrait, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
-                "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy exits cover or lowers its shield\n\nYou make a Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
-                Target.Self())
-            .WithActionCost(2)
-            .WithActionId(ModData.ActionIds.Ready)
-            .WithEffectOnEachTarget(async (_, caster, _, _) =>
+        Triggers.Add(new ReadyTrigger(
+            "Brace",
+            "An enemy moves into your reach",
+            typeof(Creature),
+            null,
+            (trigger, response, brace) =>
             {
-                QEffect readiedWideOpen = new QEffect(
-                    "Seeking Opening",
-                    "When an enemy exits cover or lowers its shield, you can Strike the triggering creature as a reaction.",
-                    ExpirationCondition.ExpiresAtStartOfYourTurn,
-                    caster,
-                    ModData.Illustrations.Ready)
-                {
-                    DoNotShowUpOverhead = true,
-                    Value = caster.Actions.AttackedThisManyTimesThisTurn,
-                    EndOfYourTurnBeneficialEffect = async (qfThis, self) =>
+                brace.AddGrantingOfTechnical(
+                    (qfThis, cr) => cr.EnemyOf(qfThis.Owner),
+                    qfTech =>
                     {
-                        qfThis.Value = self.Actions.AttackedThisManyTimesThisTurn;
-                    },
-                    StateCheckLayer = 1,
-                    StateCheckWithVisibleChanges = async qfThis =>
-                    {
-                        if (qfThis.Owner.PrimaryWeaponIncludingRanged == null)
-                            return;
-                        
-                        // List of creatures who don't have cover or a shield
-                        List<Creature> provokeQueue = (qfThis.Tag as List<Creature>)!;
-
-                        foreach (Creature cr in qfThis.Owner.Battle.AllCreatures
-                                     .Where(qfThis.Owner.EnemyOf)
-                                     .ToList())
+                        qfTech.AfterYouMoveOneSquare = async (qfTech2, action, style, before, after) =>
                         {
-                            if (HasCoverOrShield(qfThis.Owner, cr))
+                            if (action is null
+                                || style is null
+                                || !action.HasTrait(Trait.Move)
+                                || action.HasTrait(Trait.DoesNotProvoke)
+                                || brace.Owner.DistanceTo(qfTech.Owner) > brace.Owner.Space.ActualReach)
+                                return;
+
+                            await response.Response.Invoke(new ReadyEvent(trigger, response, brace)
                             {
-                                provokeQueue.Remove(cr);
-                                continue;
-                            }
+                                Creatures = [ qfTech.Owner ],
+                                Actions = [ action ]
+                            });
+                        };
+                    });
 
-                            if (provokeQueue.Contains(cr))
-                                continue;
-                            
-                            await OfferAndMakeReactiveStrike2(
-                                qfThis.Owner,
-                                cr,
-                                $"{{b}}Ready (Wide Open) {{icon:Reaction}}{{/b}}\n{{Blue}}{cr.Name}{{/Blue}} has become exposed to you.\nMake a Strike?",
-                                "*ready (wide open)*",
-                                1,
-                                qfThis.Value,
-                                false);
-                            
-                            provokeQueue.Add(cr);
-                        }
-                    },
-                    // Creatures who don't have cover or a shield
-                    Tag = caster.Battle.AllCreatures
-                        .Where(caster.EnemyOf)
-                        .Where(cr => !HasCoverOrShield(caster, cr))
-                        .ToList(),
-                };
-                caster.AddQEffect(readiedWideOpen);
-                
-                return;
-
-                // TODO: Test going from 100% blocked to 100% open with no in-between
-                bool HasCoverOrShield(Creature me, Creature cr)
+                if (response.Name.Contains("Strike"))
                 {
-                    return
-                        me.HasLineOfEffectTo(cr) > CoverKind.None
-                        || cr.Defenses.DetermineDefenseBonuses(
-                        me,
-                        me.PrimaryWeapon is not null
-                            ? me.CreateStrike(me.PrimaryWeapon)
-                            : null,
-                        Defense.AC,
-                        cr)
-                        .Any(bonus =>
-                            bonus?.BonusType is BonusType.Circumstance
-                            && bonus.BonusSource.ToLower() is {} lower
-                            && (lower.Contains("shield") || lower.Contains("cover")));
+                    brace.Owner.AddQEffect(new QEffect(
+                        "Bracing",
+                        "Your Strikes with brace weapons deal an additional 2 precision damage for each weapon damage die.\n\nThis effect doesn't apply during your turn.\n\n",
+                        ExpirationCondition.ExpiresAtStartOfYourTurn,
+                        brace.Owner,
+                        ModData.Illustrations.Ready)
+                    {
+                        YourStrikeMayDealPrecisionDamage = (qfThis, action, defender) =>
+                        {
+                            if (!action.HasTrait(ModData.Traits.Brace)
+                                || qfThis.Owner.Battle.ActiveCreature == qfThis.Owner)
+                                return null;
+
+                            int braceBonus = (action.Item?.WeaponProperties?.DamageDieCount ?? 0) * 2;
+                            if (braceBonus > 0)
+                                return DiceFormula.FromText(
+                                    braceBonus.ToString(),
+                                    "Brace (precision)");
+
+                            return null;
+                        }
+                    });
                 }
-            });
-        return readyWideOpen;
-    }
-
-    public static CombatAction CreateReadyHold(Creature owner)
-    {
-        CombatAction holdAction = new CombatAction(
-                owner,
-                IllustrationName.TwoActions,
-                "Ready (Hold)",
-                [ModData.ModTrait, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
-                "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy enters the maximum range or the first range increment of a ranged attack you have\n\nYou make a Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
-                Target.Self())
-            .WithActionCost(2)
-            .WithActionId(ModData.ActionIds.Ready)
-            .WithEffectOnEachTarget(async (_, caster, _, _) =>
+            }));
+        
+        Triggers.Add(new ReadyTrigger(
+            "Footwork",
+            "An enemy ends a move action adjacent to you, and that action wasn't Step or a similar action",
+            typeof(Creature),
+            null,
+            (trigger, response, footwork) =>
             {
-                List<Item> rangedWeapons = GetRangedAttacks(caster);
-                
-                QEffect readiedHold = new QEffect(
-                    "Holding Fire",
-                    "When an enemy enters any of your maximum ranges or first range increments, you can Strike the triggering creature as a reaction.",
-                    ExpirationCondition.ExpiresAtStartOfYourTurn,
-                    caster,
-                    ModData.Illustrations.Ready)
-                {
-                    DoNotShowUpOverhead = true,
-                    Value = caster.Actions.AttackedThisManyTimesThisTurn,
-                    EndOfYourTurnBeneficialEffect = async (qfThis, self) =>
+                footwork.AddGrantingOfTechnical(
+                    (qfThis, cr) => cr.EnemyOf(qfThis.Owner),
+                    qfTech =>
                     {
-                        qfThis.Value = self.Actions.AttackedThisManyTimesThisTurn;
-                    },
-                    StateCheckWithVisibleChanges = async qfThis =>
-                    {
-                        List<Item> rangedAttacks = GetRangedAttacks(qfThis.Owner);
-                        if (rangedAttacks.Count == 0)
-                            return;
-                        
-                        List<(Creature, Item)> provokeQueue = (qfThis.Tag as List<(Creature, Item)>)!;
-                        List<Creature> enemies = qfThis.Owner.Battle.AllCreatures
-                            .Where(qfThis.Owner.EnemyOf)
-                            .ToList();
-
-                        foreach (Creature cr in enemies)
+                        qfTech.AfterYouTakeAction = async (qfThis, action) =>
                         {
-                            List<Item> promptWeapons = [];
+                            if (!action.HasTrait(Trait.Move)
+                                || action.HasTrait(Trait.DoesNotProvoke)
+                                || action.ActionId == ActionId.Step
+                                || action.TilesMoved == 0
+                                || !qfThis.Owner.IsAdjacentTo(footwork.Owner))
+                                return;
                             
-                            foreach (Item weapon in rangedAttacks)
+                            await response.Response.Invoke(new ReadyEvent(trigger, response, footwork)
                             {
-                                int range = weapon.WeaponProperties!.RangeIncrement > 0
-                                    ? weapon.WeaponProperties!.RangeIncrement
-                                    : weapon.WeaponProperties!.MaximumRange;
-                                if (cr.DistanceTo(qfThis.Owner) > range)
+                                Creatures = [ action.Owner ],
+                                Actions = [ action ]
+                            });
+                        };
+                    });
+            }));
+        
+        Triggers.Add(new ReadyTrigger(
+            "Hold",
+            "An enemy enters the maximum range or the first range increment of a ranged attack you have",
+            typeof(Creature),
+            response => response.Name == "Triggered Strike", // Hold only makes sense in the context of a Strike.
+            (trigger, response, hold) =>
+            {
+                hold.AddGrantingOfTechnical(
+                    cr => cr.EnemyOf(hold.Owner),
+                    qfTech =>
+                    {
+                        qfTech.AfterYouMoveOneSquare = async (qfTech2, action, style, previous, next) =>
+                        {
+                            if (action is null || style is null)
+                                return;
+                            
+                            List<Item> rangedAttacks = GetRangedAttacks(hold.Owner);
+                            
+                            if (rangedAttacks.Count == 0)
+                                return;
+                            
+                            List<Item> promptWeapons = rangedAttacks
+                                .Where(weapon =>
                                 {
-                                    provokeQueue.RemoveAll(tup =>
-                                        tup.Item1 == cr && tup.Item2 == weapon);
-                                    continue;
-                                }
+                                    int range = weapon.WeaponProperties!.RangeIncrement > 0
+                                        ? weapon.WeaponProperties!.RangeIncrement
+                                        : weapon.WeaponProperties!.MaximumRange;
+                                    // New tile is in range
+                                    if (hold.Owner.DistanceTo(next) > range)
+                                        return false;
+                                    // Old tile was not in range
+                                    if (hold.Owner.DistanceTo(previous) <= range)
+                                        return false;
+                                    return true;
+                                })
+                                .ToList();
 
-                                if (provokeQueue.Any(tup =>
-                                        tup.Item1 == cr && tup.Item2 == weapon))
-                                    continue;
-                                
-                                /*
-                                 * Don't immediately offer the reaction, do it for each weapon that
-                                 * triggered at the same time on this creature to reduce prompts
-                                 */
-                                
-                                provokeQueue.Add((cr, weapon));
-                                promptWeapons.Add(weapon);
-                            }
+                            if (promptWeapons.Count <= 0)
+                                return;
+
+                            QEffect allowRangedAttacks = new QEffect() { Id = QEffectId.MobileShot };
+                            hold.Owner.AddQEffect(allowRangedAttacks);
                             
-                            if (promptWeapons.Count > 0)
-                                await OfferAndMakeReactiveStrike2(
-                                    qfThis.Owner, cr,
-                                    $"{{b}}Ready (Hold) {{icon:Reaction}}{{/b}}\n{{Blue}}{cr.Name}{{/Blue}} has entered your {S.PluralizeIf("range", promptWeapons.Count)}.\nMake a Strike?",
-                                    "*ready (hold)*",
-                                    1, qfThis.Value,
-                                    false,
-                                    promptWeapons.Contains);
-                        }
-                    },
-                    // Creatures who are in your range increments and maximum ranges
-                    Tag = caster.Battle.AllCreatures
-                        .Where(caster.EnemyOf)
-                        .SelectMany(
-                            enemy => rangedWeapons.Where(wep =>
+                            await response.Response.Invoke(new ReadyEvent(trigger, response, hold)
                             {
-                                int range = wep.WeaponProperties!.RangeIncrement > 0
-                                    ? wep.WeaponProperties!.RangeIncrement
-                                    : wep.WeaponProperties!.MaximumRange;
-                                return caster.DistanceTo(enemy) <= range;
-                            }),
-                            (enemy, wep) => (enemy, wep))
-                        .ToList(),
-                };
-                caster.AddQEffect(readiedHold);
+                                Creatures = [ qfTech.Owner ],
+                                Tag = promptWeapons
+                            });
+
+                            hold.Owner.RemoveAllQEffects(qf => qf == allowRangedAttacks);
+                        };
+                    });
+
+                return;
 
                 List<Item> GetRangedAttacks(Creature cr)
                 {
@@ -276,447 +181,599 @@ public static class Ready
                                 || wep.WeaponProperties.MaximumRange > 0))
                         .ToList();
                 }
-            });
-        return holdAction;
-    }
-
-    public static CombatAction CreateReadyFootwork(Creature owner)
-    {
-        CombatAction footworkAction = new CombatAction(
-                owner,
-                IllustrationName.TwoActions,
-                "Ready (Footwork)",
-                [ModData.ModTrait, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
-                "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy ends a move action adjacent to you\n\nMake a Step or Stride.\n\nStep actions and other similar actions do not trigger this reaction.",
-                Target.Self())
-            .WithActionCost(2)
-            .WithActionId(ModData.ActionIds.Ready)
-            .WithEffectOnEachTarget(async (_, caster, _, _) =>
+            }));
+        
+        Triggers.Add(new ReadyTrigger(
+            "Seize Opportunity",
+            "An enemy within your range or reach becomes {r}flat-footed{/r} to you",
+            typeof(Creature),
+            null,
+            (trigger, response, seize) =>
             {
-                QEffect readiedFootwork = new QEffect(
-                    "Evading Footwork",
-                    "When an enemy ends a move action adjacent to you, you can make a Step or Stride as a reaction.",
-                    ExpirationCondition.ExpiresAtStartOfYourTurn,
-                    caster,
-                    ModData.Illustrations.Ready)
+                seize.Tag = seize.Owner.Battle.AllCreatures
+                    .Where(cr =>
+                        cr.EnemyOf(seize.Owner)
+                        && cr.IsFlatfootedToBecause(seize.Owner, null) == null
+                        && !cr.Cache.FlankedBy.Contains(seize.Owner))
+                    .ToList(); // Creatures who've been made flat-footed since last reaction-prompt
+
+                seize.StateCheckLayer = 1;
+                seize.StateCheckWithVisibleChanges = async qfThis =>
                 {
-                    DoNotShowUpOverhead = true,
-                    Value = caster.Actions.AttackedThisManyTimesThisTurn,
-                    EndOfYourTurnBeneficialEffect = async (qfThis, self) =>
+                    Creature self = qfThis.Owner;
+
+                    if (self.PrimaryWeaponIncludingRanged == null)
+                        return;
+
+                    List<Creature> provokeQueue = (qfThis.Tag as List<Creature>)!;
+
+                    foreach (Creature cr in self.Battle.AllCreatures
+                                 .Where(cr => cr.EnemyOf(self))
+                                 .ToList())
                     {
-                        qfThis.Value = self.Actions.AttackedThisManyTimesThisTurn;
-                    },
+                        if (cr.IsFlatfootedToBecause(self, null) == null
+                            && !cr.Cache.FlankedBy.Contains(self))
+                        {
+                            provokeQueue.Remove(cr);
+                            continue;
+                        }
+
+                        if (provokeQueue.Contains(cr))
+                            continue;
+
+                        await response.Response.Invoke(new ReadyEvent(trigger, response, seize)
+                        {
+                            Creatures = [ cr ]
+                        });
+
+                        provokeQueue.Add(cr);
+                    }
+                };
+            }));
+
+        Triggers.Add(new ReadyTrigger(
+            "Wide Open",
+            "An enemy exits cover or lowers their shield",
+            typeof(Creature),
+            null,
+            (trigger, response, wide) =>
+            {
+                // Creatures who don't have cover or a shield
+                wide.Tag = wide.Owner.Battle.AllCreatures
+                    .Where(wide.Owner.EnemyOf)
+                    .Where(cr => !HasCoverOrShield(wide.Owner, cr))
+                    .ToList();
+                
+                wide.StateCheckLayer = 1;
+                wide.StateCheckWithVisibleChanges = async qfThis =>
+                {
+                    if (qfThis.Owner.PrimaryWeaponIncludingRanged == null)
+                        return;
+
+                    // List of creatures who don't have cover or a shield
+                    List<Creature> provokeQueue = (qfThis.Tag as List<Creature>)!;
+
+                    foreach (Creature cr in qfThis.Owner.Battle.AllCreatures
+                                 .Where(qfThis.Owner.EnemyOf)
+                                 .ToList())
+                    {
+                        if (HasCoverOrShield(qfThis.Owner, cr))
+                        {
+                            provokeQueue.Remove(cr);
+                            continue;
+                        }
+
+                        if (provokeQueue.Contains(cr))
+                            continue;
+
+                        await response.Response.Invoke(new ReadyEvent(trigger, response, wide)
+                        {
+                            Creatures = [ cr ]
+                        });
+
+                        provokeQueue.Add(cr);
+                    }
+                };
+                
+                return;
+
+                bool HasCoverOrShield(Creature me, Creature cr)
+                {
+                    return
+                        me.HasLineOfEffectTo(cr) > CoverKind.None
+                        || cr.Defenses.DetermineDefenseBonuses(
+                                me,
+                                me.PrimaryWeapon is not null
+                                    ? me.CreateStrike(me.PrimaryWeapon)
+                                    : null,
+                                Defense.AC,
+                                cr)
+                            .Any(bonus =>
+                                bonus?.BonusType is BonusType.Circumstance
+                                && bonus.BonusSource.ToLower() is {} lower
+                                && (lower.Contains("shield") || lower.Contains("cover")));
                 }
-                .AddGrantingOfTechnical(cr => !cr.FriendOf(caster),
-                    qfTech =>
-                    {
-                        qfTech.AfterYouTakeAction = async (qfThis, provokingAction) =>
-                        {
-                            if (!provokingAction.HasTrait(Trait.Move) || provokingAction.HasTrait(Trait.DoesNotProvoke) || provokingAction.ActionId == ActionId.Step || provokingAction.TilesMoved == 0 || !qfThis.Owner.IsAdjacentTo(caster))
-                                return;
-
-                            if (await caster.AskToUseReaction(
-                                    $$"""
-                                            {b}Ready (Footwork) {icon:Reaction}{/b}
-                                            {Blue}{{qfThis.Owner.Name}}{/Blue} has ended their {Blue}{{provokingAction.Name}}{/Blue} action adjacent to you.
-                                            Step or Stride?
-                                            """))
-                            {
-                                if (!await caster.StrideAsync("Make a Step or Stride.", allowStep: true, allowCancel: true, allowPass: true))
-                                    caster.Actions.RefundReaction();
-                            }
-                        };
-                    });
-                caster.AddQEffect(readiedFootwork);
-            });
-
-        return footworkAction;
+            }));
     }
 
-    public static CombatAction CreateReadySeize(Creature owner)
+    public static void CreateResponses()
     {
-        CombatAction seizeAction = new CombatAction(
-                owner,
-                IllustrationName.TwoActions,
-                "Ready (Seize Opportunity)",
-                [ModData.ModTrait, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
-                "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy within your range or your reach becomes flat-footed to you\n\nYou make a Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
+        Responses.Add(new ReadyResponse(
+            "Strike",
+            "Strike the triggering enemy.\n\nThis Strike {Red}uses your multiple attack penalty{/Red}",
+            typeof(Creature),
+            trigger => trigger.TriggeringObject == typeof(Creature),
+            async readyEvent =>
+            {
+                if (readyEvent.Creatures?.FirstOrDefault() is not { } triggeringCreature
+                    || triggeringCreature.FriendOf(readyEvent.Self))
+                    return;
+
+                // Include ranged attacks
+                QEffect allowRangedAttacks = new QEffect() { Id = QEffectId.MobileShot };
+                readyEvent.Self.AddQEffect(allowRangedAttacks);
+                
+                await OfferReadyReactions(
+                    readyEvent.Self,
+                    triggeringCreature.ToColoredName(),
+                    readyEvent.Trigger.Description,
+                    CommonCombatActions.GetPossibleReactiveStrikes(
+                        new ReactiveAttackSpecification(
+                            readyEvent.Self,
+                            triggeringCreature,
+                            "Ready!",
+                            1,
+                            [])
+                        {
+                            ModifyEachStrike = strike => strike.WithActiveRollSpecification(
+                                new ActiveRollSpecification(
+                                    Checks.Attack(strike.Item!, readyEvent.Effect.Value),
+                                    TaggedChecks.DefenseDC(Defense.AC)))
+                        }));
+                
+                readyEvent.Self.RemoveAllQEffects(qf => qf == allowRangedAttacks);
+            }));
+        
+        Responses.Add(new ReadyResponse(
+            "Triggered Strike",
+            "Strike the triggering enemy with the triggering attack",
+            typeof(Creature),
+            trigger => trigger.Name == "Hold", // Hold is the only one that uses this format.
+            async readyEvent =>
+            {
+                if (readyEvent.Creatures?.FirstOrDefault() is not { } triggeringCreature
+                    || triggeringCreature.FriendOf(readyEvent.Self)
+                    || readyEvent.Tag is not List<Item> triggeringWeapons)
+                    return;
+                if (triggeringCreature.FriendOf(readyEvent.Self))
+                    return;
+
+                // Include ranged attacks
+                QEffect allowRangedAttacks = new QEffect() { Id = QEffectId.MobileShot };
+                readyEvent.Self.AddQEffect(allowRangedAttacks);
+                
+                await OfferReadyReactions(
+                    readyEvent.Self,
+                    triggeringCreature.ToColoredName(),
+                    readyEvent.Trigger.Description,
+                    CommonCombatActions.GetPossibleReactiveStrikes(
+                        new ReactiveAttackSpecification(
+                            readyEvent.Self,
+                            triggeringCreature,
+                            "Ready!",
+                            1,
+                            [])
+                        {
+                            IsWeaponPermissible = triggeringWeapons.Contains,
+                            ModifyEachStrike = strike => strike.WithActiveRollSpecification(
+                                new ActiveRollSpecification(
+                                    Checks.Attack(strike.Item!, readyEvent.Effect.Value),
+                                    TaggedChecks.DefenseDC(Defense.AC)))
+                        })
+                        ?.ToList());
+                
+                readyEvent.Self.RemoveAllQEffects(qf => qf == allowRangedAttacks);
+            }));
+        
+        Responses.Add(new ReadyResponse(
+            "Evade",
+            "Step or Stride",
+            null,
+            null,
+            async readyEvent =>
+            {
+                await OfferReadyReactions(
+                    readyEvent.Self,
+                    readyEvent.Creatures?.FirstOrDefault() is { } triggeringCreature
+                        ? triggeringCreature.ToColoredName()
+                        : null,
+                    readyEvent.Trigger.Description,
+                    [
+                        ReactionOption.CreateCustom(
+                                readyEvent.Response.Name,
+                                $"{readyEvent.Response.Description}.",
+                                IllustrationName.FleetStep,
+                                readyEvent.Self,
+                                async () =>
+                                {
+                                    if (!await readyEvent.Self.StrideAsync(
+                                        "Make a Step or Stride.",
+                                        allowStep: true,
+                                        allowCancel: true,
+                                        allowPass: true))
+                                        readyEvent.Self.Actions.RefundReaction();
+                                })
+                            .WithIsReaction()
+                    ]);
+            }));
+        
+        Responses.Add(new ReadyResponse(
+            "Maneuver",
+            "Grapple, Reposition, Shove, or Trip the triggering enemy",
+            typeof(Creature),
+            trigger => trigger.TriggeringObject == typeof(Creature),
+            async readyEvent =>
+            {
+                if (readyEvent.Creatures?.FirstOrDefault() is not { } triggeringCreature
+                    || triggeringCreature.FriendOf(readyEvent.Self))
+                    return;
+
+                List<Option> options = [];
+                
+                List<CombatAction> actions = CombatManeuverPossibilities
+                    .GetAllShoveGrappleAndTripOptions(readyEvent.Self)
+                    .Append(Reposition.CreateReposition(readyEvent.Self))
+                    .Select(action => action.WithActionCost(0))
+                    .ToList();
+                
+                foreach (CombatAction action
+                         in actions)
+                    GameLoop.AddDirectUsageOnCreatureOptions(action, options, false);
+
+                options.RemoveAll(opt =>
+                    opt is CreatureOption crOpt
+                    && crOpt.Creature != triggeringCreature);
+
+                if (options.Count == 0)
+                    return;
+                
+                options.Add(new CancelOption(true));
+
+                await OfferReadyReactions(
+                    readyEvent.Self,
+                    triggeringCreature.ToColoredName(),
+                    readyEvent.Trigger.Description,
+                    [
+                        ReactionOption.CreateCustom(
+                                readyEvent.Response.Name,
+                                $"{readyEvent.Response.Description}.",
+                                IllustrationName.GenericCombatManeuver,
+                                readyEvent.Self,
+                                async () =>
+                                {
+                                    Option chosen = (await readyEvent.Self.Battle.SendRequest(new AdvancedRequest(
+                                        readyEvent.Self,
+                                        "Use a maneuver against the triggering enemy, or right-click to cancel.",
+                                        options)
+                                    {
+                                        TopBarIcon = IllustrationName.GenericCombatManeuver,
+                                        TopBarText =
+                                            "Use a maneuver against the triggering enemy, or right-click to cancel.",
+                                    })).ChosenOption;
+
+                                    if (chosen is CancelOption)
+                                        readyEvent.Self.Actions.RefundReaction();
+                                    else
+                                        await chosen.Action();
+                                })
+                            .WithIsReaction()
+                    ]);
+            }));
+    }
+    
+    public static void AddReadyToEveryCreature()
+    {
+        ModManager.RegisterActionOnEachCreature(cr =>
+        {
+            if (cr.HasTrait(Trait.Mindless))
+                return;
+            
+            QEffect readyLoader = new QEffect()
+            {
+                Name = "Ready Loader",
+                Key = "ReadyLoader",
+                Value = 2,
+                ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                {
+                    PossibilitySectionId sectionId =
+                        PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.AidAndReadyInSubmenus)
+                            ? PossibilitySectionId.OtherManeuvers
+                            : PossibilitySectionId.SkillActions;
+                    if (section.PossibilitySectionId != sectionId)
+                        return null;
+
+                    // For each trigger,
+                    List<Possibility> triggers = Triggers
+                        .Select(Possibility (trigger) =>
+                        {
+                            CombatAction triggerAct = TriggerDisplay(qfThis.Owner, trigger);
+                            triggerAct.WithName($"Ready ({trigger.Name})");
+                            //triggerAct.WithFullRename($"Ready ({trigger.Name})");
+                            
+                            // create responses using that trigger,
+                            List<Possibility> responses = Responses
+                                // as long as they're compatible.
+                                .Where(response =>
+                                    trigger.ResponseFilter?.Invoke(response) is not false
+                                    && response.TriggerFilter?.Invoke(trigger) is not false)
+                                .Select(Possibility (response) =>
+                                {
+                                    CombatAction responseAct = ResponseAction(
+                                        triggerAct,
+                                        response);
+                                    responseAct.WithName($"Ready ({trigger.Name}) ({response.Name})");
+                                    //responseAct.WithFullRename($"Ready ({trigger.Name}) ({response.Name})");
+                                    return new ActionPossibility(responseAct)
+                                    {
+                                        Caption = response.Name
+                                    };
+                                })
+                                .ToList();
+                            
+                            // Create a submenu of that trigger,
+                            return new SubmenuPossibility(
+                                ModData.Illustrations.Ready,
+                                trigger.Name)
+                            {
+                                Subsections =
+                                [
+                                    // with a row of responses,
+                                    new PossibilitySection("Responses")
+                                    {
+                                        PossibilitySectionId = ModData.PossibilitySectionIds.ReadyResponses,
+                                        // and fill it with those responses.
+                                        Possibilities = responses
+                                    }
+                                ],
+                                SpellIfAny = triggerAct
+                            };
+                        })
+                        .ToList();
+                    
+                    // Ready menu.
+                    SubmenuPossibility readyMenu = new SubmenuPossibility(
+                        ModData.Illustrations.Ready,
+                        "Ready")
+                    {
+                        SubmenuId = ModData.SubmenuIds.Ready,
+                        Subsections =
+                        [
+                            // Row of triggers.
+                            new PossibilitySection("Triggers")
+                            {
+                                PossibilitySectionId = ModData.PossibilitySectionIds.ReadyTriggers,
+                                Possibilities = triggers,
+                            }
+                        ],
+                        SpellIfAny = ReadyMenuDisplay(qfThis.Owner),
+                    };
+
+                    return readyMenu;
+                },
+            };
+            cr.AddQEffect(readyLoader);
+        });
+    }
+
+    /// <summary>
+    /// Returns a Ready action for display in a SubmenuPossibility.
+    /// </summary>
+    public static CombatAction ReadyMenuDisplay(Creature self)
+    {
+        return new CombatAction(
+                self,
+                ModData.Illustrations.Ready,
+                "Ready",
+                [ModData.ModTrait, Trait.Concentrate],
+                """
+                {i}You prepare to use an action that will occur outside your turn.{/i}
+
+                Choose a trigger and a response you will take using your {icon:Reaction} reaction.
+
+                If you readied an attack, this attack {Red}applies your multiple attack penalty{/Red} from your turn.
+                """,
+                Target.Self())
+            .WithActionCost(2)
+            .WithActionId(ModData.ActionIds.Ready);
+    }
+
+    /// <summary>
+    /// Returns a Trigger action for display in the initial triggers for Ready.
+    /// </summary>
+    public static CombatAction TriggerDisplay(Creature self, ReadyTrigger trigger)
+    {
+        return new CombatAction(
+                self,
+                ModData.Illustrations.Ready,
+                trigger.Name,
+                [ModData.ModTrait, Trait.Concentrate],
+                $$"""
+                  {i}You prepare to use an action that will occur outside your turn.{/i}
+
+                  {b}Trigger{/b} {{trigger.Description}}.
+
+                  ...
+                  """,
                 Target.Self())
             .WithActionCost(2)
             .WithActionId(ModData.ActionIds.Ready)
-            .WithEffectOnEachTarget(async (_, caster, _, _) =>
-            {
-                QEffect readiedSeize = new QEffect(
-                    "Seeking Opportunity",
-                    "When an enemy becomes flat-footed to you, you can Strike the triggering creature as a reaction.",
-                    ExpirationCondition.ExpiresAtStartOfYourTurn,
-                    caster,
-                    ModData.Illustrations.Ready)
-                {
-                    DoNotShowUpOverhead = true,
-                    Value = caster.Actions.AttackedThisManyTimesThisTurn,
-                    EndOfYourTurnBeneficialEffect = async (qfThis, self) =>
-                    {
-                        qfThis.Value = self.Actions.AttackedThisManyTimesThisTurn;
-                    },
-                    StateCheckLayer = 1,
-                    StateCheckWithVisibleChanges = async qfThis =>
-                    {
-                        Creature self = qfThis.Owner;
-                        
-                        if (self.PrimaryWeaponIncludingRanged == null)
-                            return;
-                        
-                        List<Creature> provokeQueue = (qfThis.Tag as List<Creature>)!;
-
-                        foreach (Creature cr in self.Battle.AllCreatures
-                                     .Where(cr => !cr.FriendOf(self))
-                                     .ToList())
-                        {
-                             if (cr.IsFlatfootedToBecause(self, null) == null
-                                 && !cr.Cache.FlankedBy.Contains(self))
-                            {
-                                provokeQueue.Remove(cr);
-                                continue;
-                            }
-
-                            if (provokeQueue.Contains(cr))
-                                continue;
-                            
-                            await OfferAndMakeReactiveStrike2(
-                                self,
-                                cr,
-                                $"{{b}}Ready (Seize Opportunity) {{icon:Reaction}}{{/b}}\n{{Blue}}{cr.Name}{{/Blue}} has become flat-footed to you.\nMake a Strike?",
-                                "*ready (seize opportunity)*",
-                                1,
-                                qfThis.Value,
-                                false);
-                            
-                            provokeQueue.Add(cr);
-                        }
-                    },
-                    Tag = caster.Battle.AllCreatures
-                        .Where(cr =>
-                            !cr.FriendOf(caster)
-                            && cr.IsFlatfootedToBecause(caster, null) == null
-                            && !cr.Cache.FlankedBy.Contains(caster))
-                        .ToList(), // Creatures who've been made off-guard since last reaction-prompt
-                };
-                caster.AddQEffect(readiedSeize);
-            });
-
-        return seizeAction;
+            .WithTag(trigger);
     }
 
-    public static CombatAction CreateReadyBrace(Creature owner)
+    /// <summary>
+    /// Returns a Response action combined with a Trigger action. This action actually executes 
+    /// </summary>
+    public static CombatAction ResponseAction(CombatAction triggerAction, ReadyResponse response)
     {
-        // In order for creatures to provoke reactions only when they enter your reach, two things need to occur.
-        // 1. The creature completing a non-AoO-triggering movement action in your reach provokes a reaction.
-        // 2. Creatures with complex movement involving moving in and out of your reach provoke a reaction before they would leave it.
-        
-        CombatAction braceAction = new CombatAction(
-                owner,
-                IllustrationName.TwoActions,
-                "Ready (Brace)",
-                [ModData.ModTrait, Trait.DoNotShowInContextMenu, Trait.Concentrate, Trait.Basic],
-                "You prepare to take the following {icon:Reaction} reaction:\n\n{b}Trigger{/b} An enemy moves into your reach\n\nYou make a melee Strike against the triggering creature. This Strike {Red}uses your multiple attack penalty.{/Red}",
-                Target.Self(/*(self, ai) => // Hopelessly nonfunctional experiment in getting AI to use Brace sometimes.
-                {
-                    // Mindless creatures do not use Ready actions.
-                    if (ai.Tactic is Tactic.Mindless or Tactic.DoNothing or Tactic.PanickingChild)
-                        return int.MinValue;
-                    
-                    // Do not take as first action, encourage normal option evaluations before falling back to Ready
-                    int actionsLeft = self.Actions.TotalActionsLeft;
-                    if (actionsLeft > 2)
-                        return int.MinValue;
-                    
-                    // Won't take this action if it can't react since it requires a reaction to utilize
-                    if (!self.Actions.CanTakeReaction())
-                        return int.MinValue;
-                    
-                    // Will not be taken if this creature has both AoOs and Reach,
-                    // because Brace becomes wasteful compared to other options.
-                    if (self.HasEffect(QEffectId.AttackOfOpportunity) is {} opp && self.Space.ActualReach > 1)
-                        return int.MinValue;
-                    
-                    // Will not be taken by creatures who have spells or ranged Strike options.
-                    bool hasRangedOptions = self.Spellcasting is not null
-                        || self.Weapons.Any(item => item.WeaponProperties is
-                            { RangeIncrement: > 0, MaximumRange: > 0 });
-                    if (hasRangedOptions)
-                        return int.MinValue;
-                    
-                    // Will only be taken if there are enemies within a distance that could feasibly trigger Ready.
-                    List<Creature> enemies = self.Battle.AllCreatures
-                        .Where(self.EnemyOf)
-                        .OrderBy(self.DistanceTo) // First creature is the closest
-                        .ToList();
-                    if (enemies.Count == 0)
-                        return int.MinValue;
-                    // // Don't Brace if I can Stride 1+ times and then Strike.
-                    int distanceICanStrideAndStrike = (self.Speed * (actionsLeft - 1)) + self.Space.ActualReach;
-                    if (enemies.Any(cr =>
-                            self.DistanceToWith10FeetException(cr) <= distanceICanStrideAndStrike))
-                        return int.MinValue;
-                    // // Don't Brace if nobody can Stride up and enter my reach.
-                    if (enemies.All(cr =>
-                            cr.DistanceTo(self) > (cr.Speed * 3) + self.Space.ActualReach))
-                        return int.MinValue;
-                    
-                    // The value of this action is based on the goodness of their default melee attack.
-                    if (self.PrimaryWeapon == null)
-                        return int.MinValue;
+        return new CombatAction(
+                triggerAction.Owner,
+                ModData.Illustrations.Ready,
+                response.Name,
+                [ModData.ModTrait, Trait.Concentrate, Trait.DoNotShowOverheadOfActionName],
+                $$"""
+                  {i}You prepare to use an action that will occur outside your turn.{/i}
 
-                    float mainStrike = self.CreateStrike(
-                            self.PrimaryWeapon,
-                            self.Actions.AttackedThisManyTimesThisTurn)
-                        .TrueDamageFormula!
-                        .ExpectedValueMinimumOne;
+                  {b}Trigger{/b} {{(triggerAction.Tag as ReadyTrigger)!.Description}}.
 
-                    int distanceOverMinimum = enemies.First().DistanceToWith10FeetException(self) - distanceICanStrideAndStrike;
-                    float distance_Modifier = -0.1f * distanceOverMinimum; // Reduced value if the creature isn't advancing
-                    float AoO_Mult = opp ? 0.5f : 1f; // Reduced value if the creature has AoOs.
-
-                    return mainStrike * AoO_Mult + distance_Modifier;
-                }*/))
+                  {{response.Description}}.
+                  """,
+                Target.Self())
             .WithActionCost(2)
             .WithActionId(ModData.ActionIds.Ready)
-            .WithEffectOnEachTarget(async (_, caster, _, _) =>
+            .WithTag(new ReadyTag((triggerAction.Tag as ReadyTrigger)!, response))
+            .WithEffectOnSelf(async (action, self) =>
             {
-                // AoO tile icons are inaccurate. Nothing I can do to fix it.
-                QEffect readiedBrace = new QEffect(
-                    "Bracing",
-                    "When an enemy moves within your reach, you can make a melee Strike against the triggering creature as a reaction.",
-                    ExpirationCondition.ExpiresAtStartOfYourTurn,
-                    caster,
-                    ModData.Illustrations.Ready)
+                // Doing this so that it's possible to modify the instance of the tag before execution occurs
+                ReadyTag tag = (action.Tag as ReadyTag)!;
+                
+                QEffect setup = new QEffect
                 {
-                    DoNotShowUpOverhead = true,
-                    Value = caster.Actions.AttackedThisManyTimesThisTurn,
-                    YouDealDamageWithStrike = (qfThis, action, formula, defender) =>
+                    Name = $"Ready ({tag.Trigger.Name}) ({tag.Response.Name})",
+                    Owner = self, // Set this early so it's accessible during construction
+                    Description = $"{{b}}Trigger{{/b}} {tag.Trigger.Description}.\n{{b}}Response{{/b}} {tag.Response.Description}.\n",
+                    Illustration = action.Illustration,
+                    Id = ModData.QEffectIds.Readied,
+                    ExpiresAt = ExpirationCondition.ExpiresAtStartOfYourTurn,
+                    // Track MAP
+                    Value = self.Actions.AttackedThisManyTimesThisTurn,
+                    HideValue = true,
+                    EndOfYourTurnBeneficialEffect = async (qfThis, self2) =>
                     {
-                        if (!defender.IsImmuneTo(Trait.PrecisionDamage)
-                            && (action.Item?.HasTrait(ModData.Traits.Brace) ?? false)
-                            && (action.HasTrait(ModData.Traits.ReactiveAttackWithMAP)
-                            || action.HasTrait(Trait.AttackOfOpportunity)
-                            || action.HasTrait(Trait.ReactiveAttack)))
-                        {
-                            int braceBonus = (action.Item.WeaponProperties?.DamageDieCount ?? 0) * 2;
-                            if (braceBonus > 0)
-                                return formula.Add(DiceFormula.FromText(
-                                    braceBonus.ToString(),
-                                    "Brace (precision)"));
-                        }
-                        return formula;
+                        qfThis.Value = self2.Actions.AttackedThisManyTimesThisTurn;
                     },
-                    EndOfYourTurnBeneficialEffect = async (qfThis, self) =>
-                    {
-                        qfThis.Value = self.Actions.AttackedThisManyTimesThisTurn;
-                    },
-                    StateCheckWithVisibleChanges = async qfThis =>
-                    {
-                        // Each state check, look for creatures currently in my reach. If that creature has a movement history in which the previous tile was outside my reach, then it provokes a custom-built reaction attack.
-
-                        Creature self = qfThis.Owner;
-                        
-                        if (self.PrimaryWeapon == null)
-                            return;
-
-                        int reach = self.PrimaryWeapon.DetermineReach(self);
-                        Dictionary<Creature,int> provokeQueue = (qfThis.Tag as Dictionary<Creature,int>)!;
-                        
-                        // For each enemy currently in my reach,
-                        foreach (Creature cr in self.Battle.AllCreatures
-                                     .Where(cr => !cr.FriendOf(self))
-                                     .ToList())
-                        {
-                            if (cr.DistanceToWith10FeetException(self) > reach)
-                            {
-                                provokeQueue.Remove(cr);
-                                continue;
-                            }
-                            
-                            // who is currently moving,
-                            LongMovement? move = cr.AnimationData.LongMovement;
-                            if (move?.Path is null || move.Path.Count < 1 || move.CombatAction?.TilesMoved == 0)
-                                continue;
-                            
-                            // and whose last movement was outside my reach,
-                            int currentTileIndex = move.Path.IndexOf(cr.Occupies);
-                            Tile previousTile = move.Path.Count > 1 && currentTileIndex > 0
-                                ? move.Path[currentTileIndex-1]
-                                : move.OriginalTile;
-                            if (self.DistanceToWith10FeetException(previousTile) <= reach)
-                                continue;
-                            
-                            // and didn't just prompt on the same movement,
-                            if (provokeQueue.TryGetValue(cr, out int pathLength) && pathLength == move.Path.Count)
-                                continue;
-                            
-                            // prompt a strike against it,
-                            if (await ProvokeBraceReaction(qfThis.Owner, cr, move.CombatAction, qfThis.Value))
-                                // and add it to the queue if it was actually prompted
-                                provokeQueue[cr] = move.Path.Count;
-                        }
-                    },
-                    Tag = new Dictionary<Creature,int>(), // used to prevent some double-prompts
                 };
-                caster.AddQEffect(readiedBrace);
+                tag.Trigger.Effect.Invoke(tag.Trigger, tag.Response, setup);
+                self.AddQEffect(setup);
             });
-        
-        return braceAction;
     }
 
-    public static async Task<bool> ProvokeBraceReaction(
-        Creature reactor,
-        Creature provoker,
-        CombatAction? provokingAction,
-        int attacksMade = 0)
+    /// <summary>
+    /// A truncated version of <see cref="CommonQuestions.OfferReactionsAsync(ReactionRequestStyle)"/>.
+    /// </summary>
+    /// <remarks>
+    /// This standardizes the display text formatting for the reaction popup. Only collects reactions once and only from the one executing a readied reaction.
+    /// </remarks>
+    /// <param name="readier">The creature executing their readied reaction.</param>
+    /// <param name="whoTriggered">If a creature triggered this reaction, use <see cref="Creature.ToColoredName"/>. Otherwise, use null.</param>
+    /// <param name="triggerDescription">Use <see cref="ReadyTrigger.Description"/>.</param>
+    /// <param name="reactions">The potentially-null list of reaction options to use.</param>
+    public static async Task OfferReadyReactions(Creature readier, string? whoTriggered, string triggerDescription, List<ReactionOption>? reactions)
     {
-        if (reactor.PrimaryWeapon == null
-            || provokingAction == null
-            || !provokingAction.HasTrait(Trait.Move)
-            || provokingAction.TilesMoved == 0
-            || provokingAction.ActionId == ActionId.Step
-            || provokingAction.HasTrait(Trait.DoesNotProvoke))
-            return false;
-        
-        await OfferAndMakeReactiveStrike2(
-            reactor,
-            provoker,
-            $"{{b}}Ready (Brace) {{icon:Reaction}}{{/b}}\n{{Blue}}{provoker.Name}{{/Blue}} enters your reach using {{Blue}}{provokingAction.Name}{{/Blue}}.\nMake a melee Strike?",
-            "*ready (brace)*",
-            1,
-            attacksMade);
-
-        return true;
+        await CommonQuestions.OfferReactionsAsync(new ReactionRequestStyle(
+            readier.Battle,
+            () =>
+                $$"""
+                  {{(whoTriggered is not null ? $"{whoTriggered} triggered your Readied action" : "Your Readied action was triggered")}}:
+                  {b}Trigger{/b} {{triggerDescription}}.
+                  """,
+            false,
+            readier,
+            () =>
+                reactions is null ? [] : new ReactionOptions(reactions)));
     }
-    
-    public static async Task<CheckResult?> OfferAndMakeReactiveStrike2(
-      Creature attacker,
-      Creature target,
-      string question,
-      string overhead,
-      int numberOfStrikes,
-      int attacksMade,
-      bool meleeOnly = true,
-      Func<Item, bool>? filter = null)
+
+    public class ReadyTag(ReadyTrigger trigger, ReadyResponse response)
     {
-        filter ??= _ => true;
-        IEnumerable<Item> listToUse = meleeOnly ? attacker.MeleeWeapons : attacker.Weapons;
-        Item? primaryWeapon = meleeOnly ? attacker.PrimaryWeapon : attacker.PrimaryWeaponIncludingRanged;
-        List<CombatAction> possibleStrikes = listToUse
-            .Select(CreateReactiveAttackFromWeapon)
-            .Where(IsStrikeOk)
-            .Where(ca => filter(ca.Item!))
-            .ToList();
-        CombatAction? combatAction = primaryWeapon != null
-            ? CreateReactiveAttackFromWeapon(primaryWeapon)
-            : null;
-
-        if (combatAction != null && !IsStrikeOk(combatAction))
-          combatAction = null;
-
-        if (possibleStrikes.Count == 0)
-            return null;
-
-        CombatAction? selectedStrike;
-        bool flag;
-        if (ShouldUseStrikeAsPrimary2(combatAction, attacker, target) && !PlayerProfile.Instance.AlwaysAllowReactiveStrikeOption)
-        {
-            selectedStrike = combatAction;
-            flag = await attacker.Battle.AskToUseReaction(attacker, question);
-        }
-        else if (possibleStrikes.Count == 1 && !PlayerProfile.Instance.AlwaysAllowReactiveStrikeOption)
-        {
-            selectedStrike = possibleStrikes[0];
-            flag = await attacker.Battle.AskToUseReaction(attacker, question);
-        }
-        else
-        {
-            int? useReaction = await attacker.Battle.AskToUseReaction(attacker, question, IllustrationName.Reaction, possibleStrikes.Select(strike =>
-            {
-                Item? obj1 = strike.Item;
-                return "With "
-                       + (obj1 != null
-                           ? !Items.TryGetItemTemplate(obj1.ItemName, out Item? obj2)
-                               ? obj1.Name != "fist"
-                                   ? obj1.Illustration.IllustrationAsIconString + " " + obj1.Name
-                                   : "{icon:Kick} kick"
-                               : obj2.Name != "fist"
-                                   ? obj1.Illustration.IllustrationAsIconString + " " + obj2.Name
-                                   : "{icon:Kick} kick" : "??");
-            }).ToArray());
-            flag = useReaction.HasValue;
-            selectedStrike = useReaction.HasValue ? possibleStrikes[useReaction.Value] : null;
-        }
-        
-        if (!flag || selectedStrike == null)
-            return null;
-        
-        // Do not capture MAP
-        //int map = attacker.Actions.AttackedThisManyTimesThisTurn;
-        
-        attacker.Overhead(overhead, Color.White);
-        
-        CheckResult? bestCheckResult = null;
-        for (int i = 0; i < numberOfStrikes; ++i)
-        {
-            CheckResult checkResult = await attacker.MakeStrike(selectedStrike, target);
-            if (!bestCheckResult.HasValue)
-            {
-                bestCheckResult = checkResult;
-            }
-            else
-            {
-                int num = (int) checkResult;
-                CheckResult? nullable = bestCheckResult;
-                int valueOrDefault = (int) nullable.GetValueOrDefault();
-                if (num > valueOrDefault & nullable.HasValue)
-                    bestCheckResult = checkResult;
-            }
-        }
-      
-        // Do not restore MAP
-        //attacker.Actions.AttackedThisManyTimesThisTurn = map;
-      
-        return bestCheckResult;
-
-        CombatAction CreateReactiveAttackFromWeapon(Item weapon)
-        {
-            // Do not set any MAP value.
-            CombatAction attackFromWeapon = attacker.CreateStrike(weapon, attacksMade/*, 0*/)
-                .WithActionCost(0);
-            //attackFromWeapon.Traits.Add(Trait.AttackOfOpportunity);
-            //attackFromWeapon.Traits.Add(Trait.ReactiveAttack);
-            attackFromWeapon.Traits.Add(ModData.Traits.ReactiveAttackWithMAP);
-            return attackFromWeapon;
-        }
-
-        bool IsStrikeOk(CombatAction strike)
-        {
-            return (bool) strike.CanBeginToUse(attacker)
-                   && strike.Target is CreatureTarget target1
-                   && (bool) target1.IsLegalTarget(attacker, target);
-        }
+        public ReadyTrigger Trigger { get; set; } = trigger;
+        public ReadyResponse Response { get; set; } = response;
     }
-    
-    private static bool ShouldUseStrikeAsPrimary2(
-        CombatAction? primaryStrike,
-        Creature attacker,
-        Creature target)
+
+    public class ReadyTrigger(string name, string description, Type? triggeringObject, Func<ReadyResponse, bool>? responseFilter, Action<ReadyTrigger, ReadyResponse, QEffect> effect)
     {
-        if (primaryStrike == null)
-            return false;
-        Item? obj = primaryStrike.Item;
-        if (obj == null)
-            return true;
-        WeaponProperties? weaponProperties = obj.WeaponProperties;
-        return weaponProperties == null
-               || !target.WeaknessAndResistance.Immunities.Contains(weaponProperties.DamageKind)
-               && !target.WeaknessAndResistance.Resistances.Any(wp => wp.DamageKind == weaponProperties.DamageKind)
-               && !obj.HasTrait(Trait.Shield)
-               && !attacker.HasTrait(Trait.Monk);
+        /// <summary>
+        /// The short, thematic name of the trigger, such as "Seize Opportunity".
+        /// </summary>
+        public string Name { get; } = name;
+
+        /// <summary>
+        /// The Trigger entry of an action stat block.
+        /// </summary>
+        public string Description { get; } = description;
+
+        /// <summary>
+        /// The primary triggering object's type.
+        /// </summary>
+        public Type? TriggeringObject { get; } = triggeringObject;
+
+        /// <summary>
+        /// A filter for what kinds of responses are valid for this trigger.
+        /// </summary>
+        public Func<ReadyResponse, bool>? ResponseFilter { get; } = responseFilter;
+
+        /// <summary>
+        /// The constructor for a QEffect that will execute a ReadyResponse. A default effect is passed in, and then modified by this specific trigger.
+        /// </summary>
+        public Action<ReadyTrigger, ReadyResponse, QEffect> Effect { get; } = effect;
+
+    }
+
+    public class ReadyResponse(string name, string description, Type? triggeringObject, Func<ReadyTrigger, bool>? triggerFilter, Func<ReadyEvent, Task> response)
+    {
+        /// <summary>
+        /// The short, literal description of the response, such as "Strike" or "Stride away".
+        /// </summary>
+        public string Name { get; } = name;
+
+        /// <summary>
+        /// The description of the actions to take in response to the trigger.
+        /// </summary>
+        public string Description { get; } = description;
+
+        /// <summary>
+        /// The primary triggering object's type. This type must match with a ReadyTrigger to create a valid combination.
+        /// </summary>
+        public Type? TriggeringObject { get; } = triggeringObject;
+
+        /// <summary>
+        /// A filter for what kinds of responses are valid for this trigger.
+        /// </summary>
+        public Func<ReadyTrigger, bool>? TriggerFilter { get; } = triggerFilter;
+
+        /// <summary>
+        /// The asynchronous event to execute. Includes the connected ReadyTrigger and ReadyResponse. The QEffect is from the trigger, the Creature is yourself, and the object is any triggering data type (usually the triggering creature).
+        /// </summary>
+        public Func<ReadyEvent, Task> Response { get; } = response;
+    }
+
+    public class ReadyEvent(ReadyTrigger trigger, ReadyResponse response, QEffect qfReady)
+    {
+        public ReadyTrigger Trigger { get; } = trigger;
+        
+        public ReadyResponse Response { get; } = response;
+
+        /// <summary>
+        /// The Ready QEffect that is part of the reaction event.
+        /// </summary>
+        public QEffect Effect { get; } = qfReady;
+
+        /// <summary>
+        /// The Creature taking the Readied reaction.
+        /// </summary>
+        public Creature Self { get; } = qfReady.Owner;
+        
+        /// <summary>
+        /// For an event involving a creature who triggers a reaction, do not include yourself. Enemies are listed first, then allies.
+        /// </summary>
+        public List<Creature>? Creatures { get; init; }
+        
+        /// <summary>
+        /// For an event that involves an action triggering a reaction, these are those actions (virtually never more than one).
+        /// </summary>
+        public List<CombatAction>? Actions { get; init; }
+        
+        /// <summary>
+        /// Arbitrary data to share from a Trigger to a Response.
+        /// </summary>
+        public object? Tag { get; init; }
     }
 }
