@@ -169,6 +169,7 @@ public static class ModLoader
                 {
                     if (qfFeat.Owner.FindQEffect(ModData.QEffectIds.WereShape) is { Key: "WerecreatureAnimalShape" } &&
                         (qfThis.Owner.HasEffect(QEffectId.AquaticCombat) ||
+                         // TODO: replace .Occupies
                          qfThis.Owner.Occupies.Kind is TileKind.ShallowWater or TileKind.Water))
                         return new Bonus(2, BonusType.Untyped, "wereshark");
                     return null;

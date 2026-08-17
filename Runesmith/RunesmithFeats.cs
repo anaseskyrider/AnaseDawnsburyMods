@@ -133,6 +133,7 @@ public static class RunesmithFeats
                         {
                             if (result >= CheckResult.Success)
                             {
+                                // TODO: replace .Occupies
                                 await caster.FictitiousSingleTileMove(caster.Occupies); // So that you aren't blocking the target's square during the trace await
                                 if (!target.DeathScheduledForNextStateCheck)
                                     await CommonRuneRules.PickACreatureAndDrawARune(thisAction, caster, (filterTarget => filterTarget == target));
@@ -549,6 +550,7 @@ public static class RunesmithFeats
                             if (HiddenRules.IsHiddenFromAllEnemies(self))
                                 return "You're already hidden from all enemies.";
                             return self.Battle.AllCreatures.Any(cr =>
+                                // TODO: replace .Occupies
                                 cr.EnemyOf(self) && cr.Occupies.FogOfWar != FogOfWar.Blackened &&
                                 HiddenRules.CountsAsHavingCoverOrConcealment(self, cr))
                                 ? null
@@ -1202,6 +1204,7 @@ public static class RunesmithFeats
                                             return;
 
                                         // Move them back, so the invoke animation looks good
+                                        // TODO: replace .Occupies
                                         await dEvent.Source.FictitiousSingleTileMove(dEvent.Source.Occupies);
 
                                         //invokeThisRune.Name = $"Runic Reprisal ({reprisalDr.Name})";
@@ -1250,6 +1253,7 @@ public static class RunesmithFeats
                                     return;
 
                                 // Move them back, so the invoke animation looks good
+                                // TODO: replace .Occupies
                                 await attacker.FictitiousSingleTileMove(attacker.Occupies);
 
                                 CombatAction? invokeThisRune = CommonRuneRules.CreateInvokeAction(
@@ -1784,8 +1788,10 @@ public static class RunesmithFeats
                                                     target.HeldItems[target.HeldItems.IndexOf(item)] = newItem;
                                                     target.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.ElementalRevision);
                                                     Sfxs.Play(ModData.SfxNames.ElementalRevision);
+                                                    // TODO: replace .Occupies
                                                     await caster.FictitiousSingleTileMove(target.Occupies);
                                                     target.Overhead(newItem.Name, Color.Black);
+                                                    // TODO: replace .Occupies
                                                     await caster.FictitiousSingleTileMove(caster.Occupies);
                                                 })
                                             .WithTooltip(newRunestone.Description!)

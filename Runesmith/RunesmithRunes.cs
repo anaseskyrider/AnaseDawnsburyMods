@@ -806,6 +806,7 @@ public static class RunesmithRunes
             .WithInvocationBehavior(async (sourceAction, thisRune, caster, target, invokedRune) =>
             {
                 // Define this in case it needs to change for behavioral logic
+                // TODO: replace .Occupies
                 Tile cannotMoveAwayFrom = target.Occupies; //invokedRune.Owner.Occupies;
 
                 foreach (Creature cr in target.Battle.AllCreatures.Where(cr =>
@@ -983,10 +984,12 @@ public static class RunesmithRunes
                             return false;
 
                         // Define this in case it needs to change for behavioral logic
+                        // TODO: replace .Occupies
                         Tile cannotMoveFrom = invokedRune.Owner.Occupies; //target.Occupies;
                         int flatDC = 5;
                         if (action.ChosenTargets.ChosenTile is { } chosenTile
                             && cannotMoveFrom.DistanceTo(chosenTile) >
+                            // TODO: replace .Occupies
                             cannotMoveFrom.DistanceTo(qfThis.Owner.Occupies))
                             flatDC = 11;
                         (CheckResult, string) result = Checks.RollFlatCheck(flatDC);
@@ -1476,9 +1479,11 @@ public static class RunesmithRunes
                     $"You can Stride with a +15-foot status bonus if your destination space is closer to {caster.Name}.",
                     caster)
                 {
+                    // TODO: replace .Occupies
                     Tag = target.Occupies,
                     StartOfYourEveryTurn = async (qfThis, self) =>
                     {
+                        // TODO: replace .Occupies
                         qfThis.Tag = self.Occupies;
                     },
                     ProvideContextualAction = qfThis =>
@@ -1566,6 +1571,7 @@ public static class RunesmithRunes
                         // Populate options with empty adjacent tiles
                         foreach (Tile tile in caster.Battle.Map.Tiles)
                         {
+                            // TODO: replace .Occupies
                             if (tile.IsFree && tile.IsAdjacentTo(caster.Occupies))
                             {
                                 options.Add(new TileOption(tile, "Tile (" + tile.X + "," + tile.Y + ")",
@@ -1918,6 +1924,7 @@ public static class RunesmithRunes
                         // Return an ephemeral DrawnRune since we just applied this to a whole batch of runes.
                         return new DrawnRune(thisRune);
                     default:
+                        // TODO: replace .Occupies
                         await caster.FictitiousSingleTileMove(caster.Occupies); // Move back into place
                         DrawnRune? chosenRune = await CommonRuneRules.ChooseADrawnRune(
                             caster,
@@ -2270,6 +2277,7 @@ public static class RunesmithRunes
                                 qf is DrawnRune dr && dr.Rune.RuneId == thisRune.RuneId))
                             return;
                         
+                        // TODO: Is there another way to get your reach with a weapon/item?
                         if (action.Target is CreatureTarget { RangeKind: RangeKind.Melee } && !(action.HasTrait(Trait.Weapon) && action.HasTrait(Trait.Reach)))
                         {
                             await CommonSpellEffects.DealDirectDamage(

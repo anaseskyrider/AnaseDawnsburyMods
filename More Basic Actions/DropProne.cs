@@ -133,6 +133,7 @@ public static class DropProne
                     .ToList()
                     is { Count: > 0 } persistentDamages)
                 {
+                    // TODO: replace .Occupies
                     if (self.Occupies.Kind is TileKind.Water or TileKind.ShallowWater
                         || self.HasEffect(QEffectId.AquaticCombat))
                     {

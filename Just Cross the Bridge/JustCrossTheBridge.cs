@@ -33,6 +33,8 @@ namespace Dawnsbury.Mods.JustCrossTheBridge;
 // TODO: Alternative triggers?
 // TODO: Save-based trap distance and damage, scaled to difficulty (scale the damage and distance less, leveraging difficulty modifiers?)
 
+// TODO: replace .Occupies
+
 // ReSharper disable once ClassNeverInstantiated.Global
 /// <summary>
 /// A level 5 encounter which requires you to simply cross a bridge.

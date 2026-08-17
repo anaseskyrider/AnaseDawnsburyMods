@@ -238,6 +238,7 @@ public static class Scout
                                 {
                                     if (HiddenRules.IsHiddenFromAllEnemies(self))
                                         return "You're already hidden from all enemies.";
+                                    // TODO: replace .Occupies
                                     return self.Battle.AllCreatures.Any(cr =>
                                         cr.EnemyOf(self) && cr.Occupies.FogOfWar != FogOfWar.Blackened &&
                                         HiddenRules.CountsAsHavingCoverOrConcealment(self, cr))

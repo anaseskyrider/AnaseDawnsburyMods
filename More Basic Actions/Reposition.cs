@@ -118,6 +118,7 @@ public static class Reposition
             })
             .WithEffectOnEachTarget(async (action, caster, target, result) =>
             {
+                // TODO: replace .Occupies
                 await caster.FictitiousSingleTileMove(caster.Occupies);
                 switch (result)
                 {

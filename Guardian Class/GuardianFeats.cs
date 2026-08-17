@@ -877,9 +877,11 @@ public static class GuardianFeats
                                 if (recalculated is null)
                                     break;
 
+                                // TODO: replace .Occupies
                                 // Disrupt immediately if
                                 if (!recalculated.Contains(provoker.Occupies) // They're already too far along
                                     || ReferenceEquals(recalculated.LastOrDefault(),
+                                        // TODO: replace .Occupies
                                         provoker.Occupies)) // Can't move further
                                     action.Disrupted = true;
                                 // Otherwise, disrupt when they reach their new furthest intended tile
@@ -888,6 +890,7 @@ public static class GuardianFeats
                                 {
                                     speedPen.StateCheck += qfPen =>
                                     {
+                                        // TODO: replace .Occupies
                                         if (ReferenceEquals(qfPen.Owner.Occupies, last)) // Reaches the last tile
                                         {
                                             action.Disrupted = true;
@@ -1301,6 +1304,7 @@ public static class GuardianFeats
                     if (!item.HasTrait(Trait.Melee))
                         return null;
                     
+                    // TODO: Is there another way to get your reach with a weapon/item?
                     int reach = item.HasTrait(Trait.Reach) ? 2 : 1;
                     StrikeModifiers newMods = new StrikeModifiers(){ };
 

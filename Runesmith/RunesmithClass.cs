@@ -775,12 +775,14 @@ public static class RunesmithClass
         }
         
         // Determines the starting tile, all enemy tiles and initatlizes the options list
+        // TODO: replace .Occupies
         Tile startingTile = fromStart ?? self.Occupies;
         List<Tile> enemyTiles;
         if (enemy != null)
         {
             enemyTiles = self.Battle.AllCreatures
                 .Where(creature => self != creature && creature == enemy)
+                // TODO: replace .Occupies
                 .Select(creature => creature.Occupies)
                 .ToList();
         }
@@ -788,6 +790,7 @@ public static class RunesmithClass
         {
             enemyTiles = self.Battle.AllCreatures
                 .Where(creature => self != creature && !self.FriendOf(creature))
+                // TODO: replace .Occupies
                 .Select(creature => creature.Occupies)
                 .ToList();
         }
@@ -805,6 +808,7 @@ public static class RunesmithClass
         // Cycles through all map tiles and determines if the tile is closer to an enemy and if the user can actually reach the tile
         foreach (Tile tile in floodFill)
         {
+            // TODO: replace .Occupies
             if (!tile.IsFree || tile == self.Occupies || !IsTileCloserToAnyOfTheseTiles(startingTile, tile, enemyTiles))
                 continue;
 
@@ -890,12 +894,15 @@ public static class RunesmithClass
             return;
         }
         
+        // TODO: replace .Occupies
         Point finalPoint = new Point(
             target.Occupies.X,
             target.Occupies.Y);
+        // TODO: replace .Occupies
         Point pullerPoint = new Point(
             puller.Occupies.X,
             puller.Occupies.Y);
+        // TODO: replace .Occupies
         Point towardPullerInit = new Point(
             Math.Sign(puller.Occupies.X - target.Occupies.X),
             Math.Sign(puller.Occupies.Y - target.Occupies.Y));
