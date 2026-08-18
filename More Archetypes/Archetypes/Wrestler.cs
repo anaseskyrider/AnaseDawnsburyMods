@@ -98,8 +98,9 @@ public static class Wrestler
 
                             if (result == CheckResult.CriticalSuccess)
                             {
-                                target.HeldItems.Remove(chosen);
-                                target.Occupies.DropItem(chosen);
+                                target.DropItem(chosen);
+                                /*target.HeldItems.Remove(chosen);
+                                target.Occupies.DropItem(chosen);*/
                                 Sfxs.Play(SfxName.DropItem);
                             }
                             else
