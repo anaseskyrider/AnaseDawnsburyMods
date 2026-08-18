@@ -250,7 +250,7 @@ public static class Archer
         
         // Lv8: Archer's Aim
         // Update original feat.
-        // Adds a stat block description, a targeting tooltip
+        // Adds a stat block description
         TrueFeat archersAim = (AllFeats.GetFeatByFeatName(FeatName.ArchersAim) as TrueFeat)!;
         archersAim.OnCreature = null;
         archersAim.WithPermanentQEffect(qfFeat =>
@@ -258,6 +258,7 @@ public static class Archer
             qfFeat.AddToOffenseBlock = qfThis =>
                 qfThis.Name!.WithTag("b")
                 + " Make a ranged bow or crossbow Strike. You gain a +2 circumstance bonus to the attack roll, ignore the concealed condition, and reduce amy hidden flat checks to DC 5.";
+            
             qfFeat.ProvideStrikeModifier = item =>
             {
                 if (!item.HasTrait(Trait.Ranged) || !item.HasTrait(Trait.Bow))
@@ -273,22 +274,10 @@ public static class Archer
                         item.Illustration,
                         IllustrationName.TargetSheet))
                     .WithName("Archer's Aim")
-                    .WithExtraTrait(0, /*ModData.Traits.ModName*/ ModData.ModTrait)
+                    .WithExtraTrait(0, ModData.ModTrait)
+                    .WithExtraTrait(Trait.BlindFightAction)
                     .WithExtraTrait(Trait.Concentrate)
-                    .WithActionCost(2)
-                    .WithTargetingTooltip((action, target, _) =>
-                    {
-                        QEffect blindFight = new QEffect()
-                        {
-                            Name = "[ARCHER'S AIM: BLINDFIGHT TOOLTIP]",
-                            Id = QEffectId.BlindFight
-                        };
-                        action.Owner.AddQEffect(blindFight);
-                        CheckBreakdown breakdown = CombatActionExecution.BreakdownAttackForTooltip(action, target);
-                        blindFight.ExpiresAt = ExpirationCondition.Immediately;
-                        action.Owner.RemoveAllQEffects(qf => qf == blindFight);
-                        return breakdown.TooltipDescription;
-                    });
+                    .WithActionCost(2);
                 strike.WithFullRename("Archer's Aim");
                 strike.Description = StrikeRules.CreateBasicStrikeDescription4(
                     strike.StrikeModifiers,
