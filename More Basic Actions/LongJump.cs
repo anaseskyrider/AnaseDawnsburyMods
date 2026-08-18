@@ -77,7 +77,7 @@ public static class LongJump
                 "You must be a master in Acrobatics");
     }
 
-    public static CombatAction CreateLongJump(Creature owner, bool hasQuickJump = false)
+    public static CombatAction CreateLongJump(Creature owner, bool isQuickJump = false)
     {
         Skill bestSkill = owner.HasFeat(ModData.FeatNames.GracefulLeaper)
             ? new[] {Skill.Acrobatics, Skill.Athletics}.MaxBy(skill => owner.Skills.Get(skill))
@@ -89,7 +89,7 @@ public static class LongJump
                 "Long Jump",
                 [ModData.ModTrait, Trait.Move, Trait.DoesNotProvoke],
                 null!,
-                hasQuickJump
+                isQuickJump
                     ? Target.Self() // Skips the Stride part
                     : Target.Tile((cr, t) =>
                                 t.LooksFreeTo(cr)
@@ -99,19 +99,21 @@ public static class LongJump
                         .WithPathfindingGuidelines(cr =>
                             new PathfindingDescription { Squares = cr.Speed }))
             .WithDescription(
-                (hasQuickJump ? "You " : "With a running start, you ")
+                (isQuickJump ? "You " : "With a running start, you ")
                     + "attempt to jump through the air.",
-                (!hasQuickJump ? "Stride at least 10 feet in a straight line. At the end of your Stride, " : null)
-                    + $"Leap {(!hasQuickJump ? "in the direction of your Stride " : null)}with a DC 15 {(bestSkill is Skill.Athletics ? "Athletics" : "{Blue}"+bestSkill.HumanizeTitleCase2()+"{/Blue}")} check ({S.SkillBonus(owner, bestSkill)}) to increase the distance you jump, up to your Speed."
+                (!isQuickJump ? "Stride at least 10 feet in a straight line. At the end of your Stride, " : null)
+                    + $"Leap {(!isQuickJump ? "in the direction of your Stride " : null)}with a DC 15 {(bestSkill is Skill.Athletics ? "Athletics" : "{Blue}"+bestSkill.HumanizeTitleCase2()+"{/Blue}")} check ({S.SkillBonus(owner, bestSkill)}) to increase the distance you jump, up to your Speed."
                     + S.FourDegreesOfSuccess(
                         null,   
                         "You Leap up to a distance equal to your check result (round down to the nearest square).",
                         "You Leap normally.",
                         "You Leap normally and land prone."))
-            .WithActionCost(hasQuickJump ? 1 : 2)
+            .WithActionCost(isQuickJump ? 1 : 2)
             .WithActionId(ModData.ActionIds.LongJump) // Bonuses to checks to leap should use ActionId.Leap.
             .WithEffectOnChosenTargets(async (action, caster, targets) =>
             {
+                bool hasQuickJump = action.ActionCost == 1 && isQuickJump;
+                
                 #region Minimum Stride
 
                 // Stride in a straight line
