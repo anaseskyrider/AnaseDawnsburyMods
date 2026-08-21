@@ -1050,7 +1050,7 @@ public static class GuardianFeats
             .WithPrerequisite(
                 values => values.HasFeat(FeatName.Athletics),
                 "You must be trained in Athletics.")
-            .WithInappropriateBecauseOfBadInventory(RequiresShove);
+            .WithInappropriateBecauseOfBadInventory(RequiresTrip);
         
         // Not so Fast!
         yield return new TrueFeat(
