@@ -2424,7 +2424,7 @@ public static class GuardianFeats
                             if (!await CommonCombatActions.StrikeCreature(
                                     qfThis.Owner,
                                     //isValidStrike
-                                    strike => strike.HasTrait(Trait.Melee),
+                                    null, //strike => strike.HasTrait(Trait.Melee),
                                     //adjustStrike
                                     strike => strike
                                         .WithEffectOnEachTarget(async (_, striker, target2, result) =>
