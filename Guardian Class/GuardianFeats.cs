@@ -909,7 +909,148 @@ public static class GuardianFeats
                 "You must have the guardian's Intercept Attack feature.");
         
         // Flying Tackle
-        //// Not sure if will include due to reliance on More Basic Actions, and weak implementation
+        yield return new TrueFeat(
+                ModData.FeatNames.FlyingTackle, 4,
+                "You barrel forward, gathering enough momentum to take down a threatening foe.",
+                $"""
+                 Stride, then Leap. If you end your movement adjacent to a foe, you can attempt to Trip that foe. If you succeed, you get a critical success instead.
+
+                 {ModData.Illustrations.DdSun.IllustrationAsIconString + " " + (ModLoader.MBALoaded
+                     ? "{b}More Basic Actions{/b} " + "You can attempt to Long Jump instead of Striding and Leaping."
+                     : "{b}Modding{/b} This gains additional functionality if the {link:https://steamcommunity.com/workshop/filedetails/?id=3485625903}{i}More Basic Actions{/i}{/} mod is loaded.")}
+                 """,
+                [Trait.Flourish, ModData.Traits.Guardian])
+            .WithActionCost(2)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.ProvideMainAction = qfThis =>
+                {
+                    CombatAction tackleLeap = CreateFlyingTackle(false);
+
+                    return ModLoader.MBALoaded
+                        ? new SubmenuPossibility(
+                            new SideBySideIllustration(
+                                IllustrationName.FleetStep,
+                                IllustrationName.Trip),
+                            "Flying Tackle")
+                        {
+                            Subsections = [ new PossibilitySection("Flying Tackle")
+                            {
+                                Possibilities = [
+                                    new ActionPossibility(tackleLeap),
+                                    new ActionPossibility(CreateFlyingTackle(true))
+                                ]
+                            }]
+                        }
+                        : new ActionPossibility(tackleLeap);
+
+                    CombatAction CreateFlyingTackle(bool isLongJump)
+                    {
+                        return new CombatAction(
+                                qfThis.Owner,
+                                new SideBySideIllustration(
+                                    IllustrationName.FleetStep,
+                                    IllustrationName.Trip),
+                                "Flying Tackle" + (isLongJump ? " (Long Jump)" : null),
+                                [ModData.ModTrait, Trait.Flourish, ModData.Traits.Guardian],
+                                $"{(isLongJump ? "Make a Long Jump" : "Stride, then Leap")}. If you end your movement adjacent to a foe, you can attempt to Trip that foe. If you succeed, you get a critical success instead.",
+                                Target.Self()
+                                    .WithAdditionalRestriction(self =>
+                                        self.WouldBeAbleToStride() ? null : "Can't Stride"))
+                            .WithActionCost(2)
+                            .WithEffectOnSelf(async (action, self) =>
+                            {
+                                if (isLongJump)
+                                {
+                                    if (!await self.OfferOptions2(ap =>
+                                            ap.CombatAction.Name == "Long Jump"))
+                                    {
+                                        action.RevertRequested = true;
+                                        return;
+                                    }
+                                }
+                                else
+                                {
+                                    await self.StrideAsync(
+                                        "Choose where to Stride with Flying Tackle. (1/2)",
+                                        allowPass: true);
+                                    await self.Battle.GameLoop.FullCast(
+                                        CommonCombatActions.Leap(self)
+                                            .WithActionCost(0));
+                                }
+                                
+                                if (self.Actions.ActionHistoryThisEncounter.LastOrDefault() is { } last
+                                    && last.ActionId is ActionId.Stride)
+                                {
+                                    self.Battle.Log("Flying Tackle was converted to a simple Stride.");
+                                    action.SpentActions = 1;
+                                    action.RevertRequested = true;
+                                    return;
+                                }
+                                
+                                List<Creature> adjacents = self.Battle.AllCreatures
+                                    .Where(cr =>
+                                        cr.EnemyOf(self) && cr.IsAdjacentTo(self))
+                                    .ToList();
+
+                                List<Option> options = [];
+                                List<CombatAction> actions = [];
+
+                                QEffect adjustment = new QEffect()
+                                {
+                                    AdjustActiveRollCheckResult = (qfAdjust, combatAction, target, result) =>
+                                        actions.Contains(combatAction)
+                                        && result == CheckResult.Success
+                                            ? result.ImproveByOneStep()
+                                            : result,
+                                };
+                                self.AddQEffect(adjustment);
+                                
+                                foreach (CombatAction trip in 
+                                         CombatManeuverPossibilities.GetAllOptions(
+                                             CombatManeuverPossibilities.CreateTripPossibility(self)))
+                                {
+                                    trip.WithActionCost(0);
+                                    GameLoop.AddDirectUsageOnCreatureOptions(
+                                        trip.WithActionCost(0),
+                                        options);
+                                    actions.Add(trip);
+                                }
+                                options.RemoveAll(opt =>
+                                    opt is CreatureOption crOpt
+                                    && !adjacents.Contains(crOpt.Creature));
+
+                                if (options.Count == 0)
+                                    return;
+                                
+                                options.Add(new CancelOption(true));
+                                options.Add(new PassViaButtonOption("Pass"));
+                                
+                                Option chosenOption = (await self.Battle.SendRequest(
+                                    new AdvancedRequest(self, "Choose a creature to Trip.", options)
+                                    {
+                                        TopBarText = "Choose a creature to Trip or right-click to cancel. (3/3)",
+                                        TopBarIcon = IllustrationName.Trip,
+                                    })).ChosenOption;
+                                
+                                switch (chosenOption)
+                                {
+                                    case PassViaButtonOption:
+                                    case CancelOption:
+                                        return;
+                                }
+                                
+                                await chosenOption.Action();
+
+                                adjustment.ExpiresAt = ExpirationCondition.Immediately;
+                            });
+                    }
+                };
+            })
+            .WithPrerequisite(
+                values => values.HasFeat(FeatName.Athletics),
+                "You must be trained in Athletics.")
+            .WithInappropriateBecauseOfBadInventory(RequiresShove);
         
         // Not so Fast!
         yield return new TrueFeat(
