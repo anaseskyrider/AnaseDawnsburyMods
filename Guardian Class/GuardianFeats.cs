@@ -374,13 +374,117 @@ public static class GuardianFeats
             .WithAllowsForAdditionalClassTrait(ModData.Traits.Guardian);
         
         // Covering Stance
-        //// Might not be possible without asterisks.
-        /*yield return new TrueFeat(
-                ModData.FeatNames.CoveringStance,
-                2,
+        yield return new TrueFeat(
+                ModData.FeatNames.CoveringStance, 2,
                 "Your very presence on the field of battle protects nearby allies from harm.",
-                "At the end of each of your turns while you're in this stance, choose one ally adjacent to you to gain lesser cover until the start of your next turn.\n\nThat ally loses this benefit if they move to a space that is no longer adjacent to you at any point during their move.\n\nIf you Intercept an Attack that would harm the ally you're covering, that ally can Step as a free action after your reaction is complete.",
-                [ModData.Traits.Guardian]);*/
+                """
+                Enter a stance. At the end of each of your turns while you're in this stance, choose one ally adjacent to you to gain lesser cover until the start of your next turn.
+
+                That ally loses this benefit if they move to a space that is no longer adjacent to you at any point during their move.
+
+                If you Intercept an Attack that would harm the ally you're covering, that ally can Step as a free action after your reaction is complete.
+                """,
+                [ModData.Traits.Guardian])
+            .WithActionCost(1)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.ProvideMainAction = qfThis =>
+                    new ActionPossibility(
+                        new CombatAction(
+                                qfThis.Owner,
+                                ModData.Illustrations.CoveringStance,
+                                "Covering Stance",
+                                [ModData.ModTrait, ModData.Traits.Guardian, Trait.Stance],
+                                null!,
+                                Target.Self()
+                                    .WithAdditionalRestriction(self =>
+                                        self.HasEffect(ModData.QEffectIds.CoveringStance)
+                                        ? "You're already in this stance." : null))
+                            .WithDescription(
+                                "Your very presence on the field of battle protects nearby allies from harm.",
+                                """
+                                Enter a stance. At the end of each of your turns while you're in this stance, choose one ally adjacent to you to gain lesser cover until the start of your next turn.
+
+                                That ally loses this benefit if they move to a space that is no longer adjacent to you at any point during their move.
+
+                                If you Intercept an Attack that would harm the ally you're covering, that ally can Step as a free action after your reaction is complete.
+                                """)
+                            .WithShortDescription("Enter a stance. At the end of each of your turns, choose an adjacent ally to protect until the start of your next turn.")
+                            .WithActionCost(1)
+                            .WithSoundEffect(SfxName.RaiseShield)
+                            .WithEffectOnEachTarget(async (action, caster, _, _) =>
+                            {
+                                QEffect stance = KineticistCommonEffects.EnterStance(
+                                    caster,
+                                    ModData.Illustrations.CoveringStance,
+                                    "Covering Stance",
+                                    "At the end of each of your turns, choose an adjacent ally to gain lesser cover until the start of your next turn. They lose this cover if they move away from you. If you Intercept an Attack made against the covered ally, they can Step as a free action.",
+                                    ModData.QEffectIds.CoveringStance);
+                                stance.EndOfYourTurnBeneficialEffect = async (qfStance, self) =>
+                                {
+                                    Creature? chosen = await self.Battle.AskToChooseACreature(
+                                        self,
+                                        self.Battle.AllCreatures.Where(cr =>
+                                            cr.FriendOfAndNotSelf(self)
+                                            && cr.IsAdjacentTo(self)),
+                                        ModData.Illustrations.CoveringStance,
+                                        """
+                                        {b}Covering Stance{/b}
+                                        Your turn ended. Choose an adjacent ally to gain lesser cover until the start of your next turn.
+                                        """,
+                                        "This ally gains lesser cover until the start of your next turn. They lose this cover if they move away from you. If you Intercept an Attack made against this ally, they can Step as a free action.",
+                                        "Don't cover ally");
+
+                                    if (chosen is null)
+                                        return;
+
+                                    chosen.AddQEffect(new QEffect(
+                                        "Covered",
+                                        $"You have lesser cover. This effect ends early if you move to cease being adjacent to {self.ToColoredName()}. When {self.ToColoredName()} Intercepts an Attack made against you, you can Step as a free action.",
+                                        ExpirationCondition.ExpiresAtStartOfSourcesTurn,
+                                        self,
+                                        ModData.Illustrations.CoveringStance)
+                                    {
+                                        IncreaseCover = (_, _, cover) =>
+                                            cover is CoverKind.None
+                                                ? CoverKind.Lesser
+                                                : cover,
+                                        AfterYouMoveOneSquare = async (qfCover, move, style, previous, next) =>
+                                        {
+                                            if (move is null
+                                                || style is null
+                                                || style.ForcedMovement
+                                                || move.Owner != qfCover.Owner
+                                                || next.IsAdjacentTo(qfCover.Source!))
+                                                return;
+                                            qfCover.ExpiresAt = ExpirationCondition.Immediately;
+                                            qfCover.Owner.Battle.Log(
+                                                $"{qfCover.Owner.Name}'s cover from Hampering Stance ends early due to moving away from {qfCover.Source!.Name}.",
+                                                "Covering Stance {icon:Action}",
+                                                action.Description,
+                                                action.Traits);
+                                        },
+                                        AfterYouAreTargetedReaction = (qfCover, combatAction, _) =>
+                                        {
+                                            if (combatAction.ActionId != ModData.ActionIds.InterceptAttack)
+                                                return null;
+
+                                            return ReactionOption.CreateCustom(
+                                                    "Covered by Covering Stance",
+                                                    "Step.",
+                                                    ModData.Illustrations.CoveringStance,
+                                                    qfCover.Owner,
+                                                    async () =>
+                                                        await qfCover.Owner.StepAsync(
+                                                            "Choose where to Step.",
+                                                            true, true))
+                                                .WithIsFreeAction();
+                                        } 
+                                    });
+                                };
+                            }))
+                        .WithPossibilityGroup(Constants.POSSIBILITY_GROUP_STANCES);
+            });
         
         // Hampering Stance
         yield return new TrueFeat(
