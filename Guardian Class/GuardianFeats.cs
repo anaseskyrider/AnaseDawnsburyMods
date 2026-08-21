@@ -420,14 +420,17 @@ public static class GuardianFeats
                                 Zone terrain = Zone.Spawn(stance, ZoneAttachment.Aura(1))
                                     .With(zone =>
                                     {
+                                        List<IllustrationName> rubble = [IllustrationName.Rubble, IllustrationName.Rubble2];
                                         zone.TileEffectCreator = tile =>
                                             new TileQEffect(tile)
                                             {
-                                                Illustration = ((IReadOnlyList<IllustrationName>)
+                                                // Consistent checkerboard pattern
+                                                Illustration = rubble[(tile.X + tile.Y) % 2],
+                                                /*Illustration = ((IReadOnlyList<IllustrationName>)
                                                 [
                                                     IllustrationName.Rubble,
                                                     IllustrationName.Rubble2
-                                                ]).GetRandomVisualOnly(),
+                                                ]).GetRandomVisualOnly(),*/
                                                 StateCheck = tQf =>
                                                     tile.DifficultTerrainToComputerControlledCreatures = true
                                             };
