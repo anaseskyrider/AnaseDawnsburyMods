@@ -30,6 +30,7 @@ using Dawnsbury.Core.Mechanics.Zoning;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
+using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
@@ -2137,7 +2138,106 @@ public static class GuardianFeats
         mightyBulwark.Traits.Add(ModData.Traits.Guardian);
         mightyBulwark.Prerequisites.Add(new ClassPrerequisite([ModData.Traits.Guardian]));
         
-        // Repositioning Block ????? More Basic Actions??? Hard-coded?
+        // Repositioning Block
+        yield return new TrueFeat(
+                ModData.FeatNames.RepositioningBlock, 8,
+                "As you absorb a blow from an enemy, you can use their attack's momentum against them.",
+                """
+                {b}Trigger{/b} You used Shield Block to prevent damage from an adjacent creature's attack.
+                
+                Attempt to Reposition the creature whose attack you used Shield Block against. You don't need to have a hand free to do so.
+                
+                You gain a +1 item bonus to the Athletics check if your shield is at least 4th level, a +2 if your shield is at least 10th level, and a +3 if your shield is at least 16th level.
+                """,
+                [ModData.Traits.Guardian])
+            .WithActionCost(0)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " When you Shield Block an adjacent creature's attack, attempt to Reposition that creature.";
+
+                if (!ModManager.TryParse("Reposition", out ActionId reposition))
+                    return;
+                
+                qfFeat.AfterYouTakeActionReaction = (qfThis, action) =>
+                {
+                    if (!action.HasTrait(Trait.ShieldBlock)
+                        || action.Tag is not DamageEvent dEvent
+                        || action.Item is not { } shield
+                        || !dEvent.Source.IsAdjacentTo(qfThis.Owner))
+                        return null;
+
+                    CombatAction repBlock = new CombatAction(
+                            qfThis.Owner,
+                            new SideBySideIllustration(
+                                action.Illustration,
+                                IllustrationName.Shove),
+                            "Repositioning Block",
+                            [ModData.ModTrait, ModData.Traits.Guardian, Trait.ProxyAttack],
+                            null!,
+                            Target.AdjacentCreature()
+                                .WithAdditionalConditionOnTargetCreature(
+                                    new EnemyCreatureTargetingRequirement()))
+                        .WithActionCost(0)
+                        .WithDescription(
+                            "As you absorb a blow from an enemy, you can use their attack's momentum against them.",
+                            """
+                            {b}Trigger{/b} You used Shield Block to prevent damage from an adjacent creature's attack.
+
+                            Attempt to Reposition the creature whose attack you used Shield Block against. You don't need to have a hand free to do so.
+                            
+                            You gain a +1 item bonus to the Athletics check if your shield is at least 4th level, a +2 if your shield is at least 10th level, and a +3 if your shield is at least 16th level.
+                            """)
+                        .WithEffectOnEachTarget(async (spell, caster, target, _) =>
+                        {
+                            await target.FictitiousSingleTileMoveBack();
+                            int bonus = shield.Level switch { >=16 => 3, >= 10 => 2, >= 4 => 1, _ => 0 };
+                            QEffect? bonusToReposition = null;
+                            if (bonus > 0)
+                            {
+                                bonusToReposition = new QEffect(ExpirationCondition.ExpiresAtEndOfAnyTurn)
+                                {
+                                    BonusToSkillChecks = (_, skillAction, defender) =>
+                                        skillAction.ActionId == reposition
+                                        && defender == target
+                                            ? new Bonus(bonus, BonusType.Item, "Repositioning block")
+                                            : null
+                                };
+                                caster.AddQEffect(bonusToReposition);
+                            }
+                            await caster.OfferOptions2(ap =>
+                            {
+                                if (ap.CombatAction.ActionId != reposition)
+                                    return false;
+                                
+                                CreatureTarget crTar = (ap.CombatAction.Target as CreatureTarget)!;
+                                crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
+                                    d == dEvent.Source
+                                        ? Usability.Usable
+                                        : Usability.NotUsableOnThisCreature("Not the triggering creature"));
+                                crTar.CreatureTargetingRequirements.RemoveAll(req =>
+                                    req.Satisfied(caster, target) == Usability.CommonReasons.NoFreeHandForManeuver);
+                                
+                                return true;
+                            });
+                            bonusToReposition?.ExpiresAt = ExpirationCondition.Immediately;
+                        });
+
+                    ReactionOption reactOpt = ReactionOption.WrapFullcastWithChosenTargets(
+                            repBlock,
+                            ChosenTargets.CreateSingleTarget(dEvent.Source),
+                            "Attempt to Reposition the attacker.")
+                        .WithIsFreeAction()
+                        .WithTriggerReason($"{qfThis.Owner.ToColoredBoldedName()} used {action.ShortName} to defend against an adjacent creature's attack.");
+
+                    return reactOpt;
+                };
+            })
+            .WithPrerequisite(FeatName.ShieldBlock, "Shield Block")
+            .WithPrerequisite(
+                _ => ModLoader.MBALoaded,
+                "You must have the {link:https://steamcommunity.com/workshop/filedetails/?id=3485625903}{i}More Basic Actions{/i}{/} mod installed.")
+            .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
         
         // TODO: Shield from Arrows
         
@@ -2290,7 +2390,8 @@ public static class GuardianFeats
         
         // TODO: Momentum Strike
         
-        // TODO: Shield Salvation
+        // Shield Salvation
+        // Will not be implemented due to the fact that shields cannot be destroyed.
         
         // Sure-Footed
         yield return new TrueFeat(
