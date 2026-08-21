@@ -2293,6 +2293,29 @@ public static class GuardianFeats
         // TODO: Shield Salvation
         
         // Sure-Footed
+        yield return new TrueFeat(
+                ModData.FeatNames.SureFooted, 10,
+                "Even if you're knocked off balance, your armor continues to protect you.",
+                "You don't take a penalty to AC from the clumsy condition if you're wearing medium or heavy armor. Your clumsy condition still applies to other Dexterity-based checks and DCs, and this benefit is negated if the armor is broken.",
+                [ModData.Traits.Guardian])
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToDefenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + $". {(ModData.CommonRequirements.IsWearingMediumOrHeavyArmor(qfThis.Owner) ? null : "{Red}(Must be wearing medium or heavy armor){/Red}")}The {{r}}clumsy{{/r}} condition doesn't apply to your AC while your armor isn't broken.";
+
+                qfFeat.BeforeBonusesAreFlattened = (qfThis, bonuses, reason, action, defender) =>
+                {
+                    if (reason is BonusCalculationReason.Defense
+                        && defender == qfThis.Owner
+                        && action?.ActiveRollSpecification?.TaggedDetermineDC.InvolvedDefense is Defense.AC
+                        && ModData.CommonRequirements.IsWearingMediumOrHeavyArmor(qfThis.Owner)
+                        && !qfThis.Owner.HasEffect(QEffectId.BrokenArmor))
+                        bonuses.RemoveAll(bonus =>
+                            bonus?.BonusType is BonusType.Status
+                            && bonus.Amount < 0
+                            && bonus.BonusSource.ToLower().Contains("clumsy"));
+                };
+            });
         
         // Tough Cookie
         yield return new TrueFeat(
