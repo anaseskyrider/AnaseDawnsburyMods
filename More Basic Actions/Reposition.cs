@@ -65,18 +65,27 @@ public static class Reposition
                 new CreatureTarget( // Custom target that will let you target allies
                     RangeKind.Melee, 
                     [
-                        MeleeReachCreatureTargetingRequirement.WithWeaponOfTrait(Trait.Grapple),
-                        new TargetMustNotBeTwoSizesAboveYouCreatureTargetingRequirement(),
+                        // Cannot be self
                         new LegacyCreatureTargetingRequirement((a, d) =>
-                        {
-                            if (a == d) // Cannot be self
-                                return Usability.NotUsableOnThisCreature("self");
-                            if (!a.HasFreeHand && !a.WieldsItem(Trait.Grapple)) // Need a free hand or a grapple weapon
-                                return Usability.CommonReasons.NoFreeHandForManeuver;
-                            if (d.WeaknessAndResistance.ImmunityToForcedMovement) // Mustn't be immune
-                                return Usability.NotUsableOnThisCreature("immune to forced movement");
-                            return Usability.Usable;
-                        })
+                            a == d
+                                ? Usability.NotUsableOnThisCreature("self")
+                                : Usability.Usable),
+                        // Adjacent or within reach of Grapple weapon
+                        MeleeReachCreatureTargetingRequirement.WithWeaponOfTrait(Trait.Grapple),
+                        // Can't reposition incorporeals
+                        new CombatManeuverCorporealityCreatureTargetingRequirement(),
+                        // Use the same size limitation scaling as other maneuvers
+                        new TargetMustNotBeTwoSizesAboveYouCreatureTargetingRequirement(),
+                        // Creature can't be immune to forced movement
+                        new LegacyCreatureTargetingRequirement((a, d) =>
+                            d.WeaknessAndResistance.ImmunityToForcedMovement 
+                                ? Usability.NotUsableOnThisCreature("immune to forced movement")
+                                : Usability.Usable),
+                        // Must have a free hand or be wielding a grapple weapon
+                        new LegacyCreatureTargetingRequirement((a, d) =>
+                            !a.HasFreeHand && !a.WieldsItem(Trait.Grapple)
+                                ? Usability.CommonReasons.NoFreeHandForManeuver
+                                : Usability.Usable)
                     ],
                     (_, _, _) => int.MinValue))
             .WithActionCost(1)
