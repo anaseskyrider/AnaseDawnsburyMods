@@ -293,6 +293,7 @@ public static class GuardianFeats
                 qfFeat.AddToOffenseBlock = qfThis =>
                     qfThis.Name!.WithTag("b")
                     + " [flourish] Make a fist Strike that can knock off-guard.";
+                
                 qfFeat.Id = QEffectId.AlwaysShowedUnarmedStrike;
                 qfFeat.ProvideStrikeModifier = item =>
                 {
@@ -300,8 +301,6 @@ public static class GuardianFeats
                         return null;
 
                     CombatAction sCheck = qfFeat.Owner.CreateStrike(item)
-                        .WithName("Shoulder Check")
-                        //.WithExtraTrait(Trait.Basic)
                         .WithExtraTrait(ModData.Traits.Guardian)
                         .WithEffectOnEachTarget(async (spell, caster, target, result) =>
                         {
@@ -352,6 +351,7 @@ public static class GuardianFeats
 
                             applyTo?.AddQEffect(checkEffect);
                         });
+                    sCheck.WithFullRename("Shoulder Check");
                     sCheck.Traits = new Traits([ModData.ModTrait, ..sCheck.Traits.ToList()], sCheck);
                     sCheck.Description = StrikeRules.CreateBasicStrikeDescription4(
                         sCheck.StrikeModifiers,
