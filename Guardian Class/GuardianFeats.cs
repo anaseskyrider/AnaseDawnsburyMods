@@ -14,6 +14,7 @@ using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
+using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Intelligence;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
@@ -97,8 +98,7 @@ public static class GuardianFeats
             yield return chargeChoice;
         }
         yield return new TrueFeat(
-                ModData.FeatNames.Bodyguard,
-                1,
+                ModData.FeatNames.Bodyguard, 1,
                 "You swear a vow to protect one of your allies at all costs, regardless of the risk this might pose to you.",
                 $$"""
                 Choose one of your allies as your charge. When you {{ModData.FeatNames.Taunt.ToLink("Taunt")}}, the penalty your taunted enemy takes increases to –2 against your charge.
@@ -123,8 +123,7 @@ public static class GuardianFeats
         
         // Larger than Life
         yield return new TrueFeat(
-                ModData.FeatNames.LargerThanLife,
-                1,
+                ModData.FeatNames.LargerThanLife, 1,
                 "When you're clad in the heaviest of armors, you have an outsized presence.",
                 """
                 {b}Requirements{/b} You're wearing heavy armor
@@ -194,16 +193,14 @@ public static class GuardianFeats
         
         // Long-distance Taunt
         yield return new TrueFeat(
-            ModData.FeatNames.LongDistanceTaunt,
-            1,
+            ModData.FeatNames.LongDistanceTaunt, 1,
             "You can draw the wrath of your foes even at a great distance.",
             $"When you use {ModData.FeatNames.Taunt.ToLink("Taunt")}, you can choose a target within 120 feet.",
             [ModData.Traits.Guardian]);
         
         // Punishing Shove
         yield return new TrueFeat(
-                ModData.FeatNames.PunishingShove,
-                1,
+                ModData.FeatNames.PunishingShove, 1,
                 "When you push a foe away, you put the entire force of your armored form into it.",
                 "When you successfully Shove a creature, that creature takes an amount of bludgeoning damage equal to your Strength modifier (or double that amount on a critical success). This damage increases by 2 when you become an expert in Athletics, 6 when you become a master, and 12 when you become legendary.",
                 [ModData.Traits.Guardian])
@@ -255,8 +252,7 @@ public static class GuardianFeats
         
         // Shield Warfare
         yield return new TrueFeat(
-                ModData.FeatNames.ShieldWarfare,
-                1,
+                ModData.FeatNames.ShieldWarfare, 1,
                 "You know how to use shields offensively far better than most.",
                 "Increase the weapon damage die of any shield attack by one step.",
                 [ModData.Traits.Guardian])
@@ -278,8 +274,7 @@ public static class GuardianFeats
         
         // Shoulder Check
         yield return new TrueFeat(
-                ModData.FeatNames.ShoulderCheck,
-                1,
+                ModData.FeatNames.ShoulderCheck, 1,
                 "You hit a foe with your armor to throw them off balance.",
                 // fist, kick, gauntlet, or spiked gauntlet.
                 "Make a Strike with a fist or kick. The Strike gains the following additional results." + S.FourDegreesOfSuccess(
@@ -386,10 +381,9 @@ public static class GuardianFeats
         
         // Hampering Stance
         yield return new TrueFeat(
-                ModData.FeatNames.HamperingStance,
-                2,
+                ModData.FeatNames.HamperingStance, 2,
                 "You make it difficult for enemies to move past you.",
-                "While you are in this stance, squares in a 5-foot emanation are difficult terrain for your enemies.",
+                "Enter a stance. While you are in this stance, squares in a 5-foot emanation are difficult terrain for your enemies.",
                 [Trait.Aura, ModData.Traits.Guardian, Trait.Stance])
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
@@ -401,7 +395,7 @@ public static class GuardianFeats
                                 ModData.Illustrations.HamperingStance,
                                 "Hampering Stance",
                                 [ModData.ModTrait, Trait.Aura, ModData.Traits.Guardian, Trait.Stance],
-                                "",
+                                null!,
                                 Target.Self()
                                     .WithAdditionalRestriction(self =>
                                         self.HasEffect(ModData.QEffectIds.HamperingStance)
@@ -409,7 +403,7 @@ public static class GuardianFeats
                             .WithDescription(
                                 "You make it difficult for enemies to move past you.",
                                 "While you are in this stance, squares in a 5-foot emanation are difficult terrain for your enemies.")
-                            .WithShortDescription("Enter a stance that makes adjacent squares into difficult terrain for your enemies")
+                            .WithShortDescription("Enter a stance that makes adjacent squares into difficult terrain for your enemies.")
                             .WithActionCost(1)
                             .WithSoundEffect(SfxName.StandUp)
                             .WithEffectOnEachTarget(async (_, caster, _, _) =>
@@ -440,8 +434,7 @@ public static class GuardianFeats
         
         // Phalanx Formation
         yield return new TrueFeat(
-                ModData.FeatNames.PhalanxFormation,
-                2,
+                ModData.FeatNames.PhalanxFormation, 2,
                 "You know how to clear a line of fire for your allies.",
                 "You don't provide lesser cover to enemies against your allies' attacks.",
                 [ModData.Traits.Guardian])
@@ -495,11 +488,13 @@ public static class GuardianFeats
         
         // Raise Haft
         yield return new TrueFeat(
-                ModData.FeatNames.RaiseHaft,
-                2,
+                ModData.FeatNames.RaiseHaft, 2,
                 "You know how to use the haft of larger weapons to block your enemies' attacks.",
-                "Two-handed weapons you wield gain the parry trait. If the weapon already has the parry trait, you increase the circumstance bonus to AC it provides to +2."
-                    + "\n\n" + ModData.Illustrations.DawnsburySun.IllustrationAsIconString + " {b}Modding{/b} This benefits more with mods which add parry weapons.",
+                $$"""
+                  Two-handed weapons you wield gain the parry trait. If the weapon already has the parry trait, you increase the circumstance bonus to AC it provides to +2.
+
+                  {{ModData.Illustrations.DdSun.IllustrationAsIconString}} {b}Modding{/b} This benefits from mods which add parry weapons.
+                  """,
                 [ModData.Traits.Guardian])
             .WithOnCreature(self =>
             {
@@ -520,8 +515,7 @@ public static class GuardianFeats
         
         // Shielding Taunt
         yield return new TrueFeat(
-                ModData.FeatNames.ShieldingTaunt,
-                2,
+                ModData.FeatNames.ShieldingTaunt, 2,
                 "By banging loudly on your shield, you get the attention of even the most stubborn of foes.",
                 $"Raise a Shield, and then {ModData.FeatNames.Taunt.ToLink("Taunt")} a creature. Your Taunt gains the auditory trait.",
                 [Trait.Flourish, ModData.Traits.Guardian])
@@ -597,8 +591,7 @@ public static class GuardianFeats
         
         // Taunting Strike
         yield return new TrueFeat(
-                ModData.FeatNames.TauntingStrike,
-                2,
+                ModData.FeatNames.TauntingStrike, 2,
                 "The force of your blow causes your enemy to focus their attention on you.",
                 $"Make a Strike. Regardless of whether the Strike hits, you {ModData.FeatNames.Taunt.ToLink("Taunt")} the target. Your Taunt gains the visual trait.",
                 [Trait.Flourish, ModData.Traits.Guardian])
@@ -668,8 +661,7 @@ public static class GuardianFeats
         
         // Area Armor
         yield return new TrueFeat(
-                ModData.FeatNames.AreaArmor,
-                4,
+                ModData.FeatNames.AreaArmor, 4,
                 "The armor you wear protects you and shelters your allies against explosions and other large-scale assaults.",
                 "While you're wearing medium or heavy armor, allies adjacent to you gain a +1 circumstance bonus to Reflex saves against area effects. If you're a master in the armor, the bonus is +2 instead.",
                 [ModData.Traits.Guardian])
@@ -709,12 +701,11 @@ public static class GuardianFeats
         
         // Armored Courage
         yield return new TrueFeat(
-                ModData.FeatNames.ArmoredCourage,
-                4,
+                ModData.FeatNames.ArmoredCourage, 4,
                 "You take comfort in the safety of your armor.",
                 """
                 {b}Requirements{/b} You are wearing medium or heavy armor.
-                {b}Frequency{/b} once per encounter
+                {b}Frequency{/b} Once per encounter.
 
                 You gain a number of temporary Hit Points equal to your level, and you reduce your frightened condition value by 1.
                 """,
@@ -743,8 +734,7 @@ public static class GuardianFeats
                             $$"""
                               {i}You take comfort in the safety of your armor.{/i}
 
-                              {b}Requirements{/b} You are wearing medium or heavy armor.
-                              {b}Frequency{/b} once per encounter
+                              {b}Frequency{/b} Once per encounter.
 
                               You gain {Blue}{{qfThis.Owner.Level}}{/Blue} temporary Hit Points. Reduce your frightened condition value by 1.
                               """,
@@ -770,8 +760,7 @@ public static class GuardianFeats
         
         // Energy Interceptor
         yield return new TrueFeat(
-                ModData.FeatNames.EnergyInterceptor,
-                4,
+                ModData.FeatNames.EnergyInterceptor, 4,
                 "Though other guardians understand how to anticipate the flow of martial combat, you predict blasts of magical lightning, blazing trap runes, and more.",
                 $"You can use {ModData.FeatNames.InterceptAttack.ToLink("Intercept Attack {icon:Reaction}")} when an ally would take acid, cold, electricity, fire, or sonic damage, not only when they would take physical damage.",
                 [ModData.Traits.Guardian])
@@ -784,20 +773,18 @@ public static class GuardianFeats
         
         // Not so Fast!
         yield return new TrueFeat(
-                ModData.FeatNames.NotSoFast,
-                4,
+                ModData.FeatNames.NotSoFast, 4,
                 "You lash out when foes try to get past you, possibly stopping them in their tracks.",
-                """
-                {b}Requirements{/b} You are in Hampering Stance.
-                {b}Trigger{/b} A creature within your reach leaves a square during a move action it's using.
+                $$"""
+                  {b}Requirements{/b} You are in Hampering Stance.
+                  {b}Trigger{/b} A creature within your reach leaves a square during a move action it's using.
 
-                Make a melee Strike against the triggering creature. The Strike gains the following additional results.
-                """
-                + S.FourDegreesOfSuccess(
-                    "The target's movement is disrupted.",
-                    "The target takes a –10-foot circumstance penalty to its Speed for the rest of its triggering movement. This penalty might cause the triggering creature's movement to end immediately based on its affected Speed.",
-                    "As success, but the target instead takes a –5-foot circumstance penalty to its Speed.",
-                    "The target is unaffected."),
+                  Make a melee Strike against the triggering creature. The Strike gains the following additional results.{{S.FourDegreesOfSuccess(
+                      "The target's movement is disrupted.",
+                      "The target takes a –10-foot circumstance penalty to its Speed for the rest of its triggering movement. This penalty might cause the triggering creature's movement to end immediately based on its affected Speed.",
+                      "As success, but the penalty is -5 feet instead.",
+                      "The target is unaffected.")}}
+                  """,
                 [ModData.Traits.Guardian])
             .WithActionCost(-2)
             .WithPrerequisite(ModData.FeatNames.HamperingStance, "Hampering Stance")
@@ -954,8 +941,7 @@ public static class GuardianFeats
         
         // Proud Nail
         yield return new TrueFeat(
-                ModData.FeatNames.ProudNail,
-                4,
+                ModData.FeatNames.ProudNail, 4,
                 "When a foe ignores your taunts, you make them pay.",
                 $$"""
                 {b}Requirements{/b} Your {{ModData.FeatNames.Taunt.ToLink("taunted enemy")}} is off-guard because it didn't target you or include you in an area effect.
@@ -1000,8 +986,7 @@ public static class GuardianFeats
         
         // Shielded Attrition
         yield return new TrueFeat(
-                ModData.FeatNames.ShieldedAttrition,
-                4,
+                ModData.FeatNames.ShieldedAttrition, 4,
                 "You provoke attacks from foes that might otherwise stop your allies from moving.",
                 """
                 {b}Requirements{/b} You are wielding a shield.
@@ -1113,8 +1098,7 @@ public static class GuardianFeats
         
         // Disarming Intercept
         yield return new TrueFeat(
-                ModData.FeatNames.DisarmingIntercept,
-                6,
+                ModData.FeatNames.DisarmingIntercept, 6,
                 "When you catch a weapon in your armor, you can move your body to wrench it from your foe's grasp.",
                 $$"""
                 {b}Trigger{/b} You {{ModData.FeatNames.InterceptAttack.ToLink("Intercept an Attack")}} that was made with a melee weapon by a creature you're adjacent to.
@@ -1216,8 +1200,7 @@ public static class GuardianFeats
         
         // Guarded Advance
         yield return new TrueFeat(
-                ModData.FeatNames.GuardedAdvance,
-                6,
+                ModData.FeatNames.GuardedAdvance, 6,
                 "You slowly advance on the battlefield, taking utmost caution.",
                 "You Raise a Shield and Step twice.",
                 [ModData.Traits.Guardian])
@@ -1282,8 +1265,7 @@ public static class GuardianFeats
         
         // Lock Down
         yield return new TrueFeat(
-                ModData.FeatNames.LockDown,
-                6,
+                ModData.FeatNames.LockDown, 6,
                 "You attack an enemy to ensure they can't move beyond your reach.",
                 """
                 {b}Requirements{/b} You are in Hampering Stance.
@@ -1403,8 +1385,7 @@ public static class GuardianFeats
         
         // Reactive Strike
         yield return new TrueFeat(
-                ModData.FeatNames.ReactiveStrike,
-                6,
+                ModData.FeatNames.ReactiveStrike, 6,
                 "You swat a foe who leaves themself open to retaliation.",
                 """
                 {b}Trigger{/b} A creature within your reach uses a manipulate action or move action, makes a ranged attack, or leaves a square during a move action it's using.
@@ -1421,15 +1402,16 @@ public static class GuardianFeats
                     .Replace("e{", "e {"); // PETR: Fix missing space
                 self.AddQEffect(reactiveStrike);
             })
-            .WithEquivalent(values => values.AllFeats.Any(ft => ft.BaseName is "Attack of Opportunity" or "Reactive Strike" or "Opportunist"));
+            .WithEquivalent(values =>
+                values.AllFeats.Any(ft =>
+                    ft.BaseName is "Attack of Opportunity" or "Reactive Strike" or "Opportunist"));
         
         // Reflexive Shield, modded feat, Lv 6
         // Added in ModLoader as a post action load.
         
         // Retaliating Rescue
         yield return new TrueFeat(
-                ModData.FeatNames.RetaliatingRescue,
-                6,
+                ModData.FeatNames.RetaliatingRescue, 6,
                 "When an ally is in danger, you can hustle to reach them and punish the foe threatening them.",
                 "Stride up to your Speed. You must end this movement adjacent to an ally who is within an enemy's reach. Then, you push your ally up to 5 feet (as normal for forced movement, this movement doesn't trigger reactions) and make a melee Strike against an enemy within your reach. If your ally was in that enemy's reach and your push moved them out of it, you gain a +2 circumstance bonus to your attack roll.",
                 [ModData.Traits.Guardian])
@@ -1575,19 +1557,17 @@ public static class GuardianFeats
         
         // Ring their Bell
         yield return new TrueFeat(
-                ModData.FeatNames.RingTheirBell,
-                6,
+                ModData.FeatNames.RingTheirBell, 6,
                 "Using your armor, you pummel a foe that isn't focused on you in the head or face to stagger them.",
                 $$"""
-                {b}Requirements{/b} You are wearing medium or heavy armor, and your {{ModData.FeatNames.Taunt.ToLink("taunted enemy")}} is off-guard because it didn't target you or include you in an area effect.
+                  {b}Requirements{/b} You are wearing medium or heavy armor, and your {{ModData.FeatNames.Taunt.ToLink("taunted enemy")}} is off-guard because it didn't target you or include you in an area effect.
 
-                Make a Strike with a fist or kick against your taunted enemy. If the Strike hits and deals damage, the creature must attempt a Fortitude save against your class DC {i}(this is an incapacitation effect){/i}.
-                """
-                + S.FourDegreesOfSuccess(
-                        "The creature is unaffected.",
-                        "The creature is stunned 1.",
-                        "The creature is stunned 2.",
-                        "The creature is stunned 3."),
+                  Make a Strike with a fist or kick against your taunted enemy. If the Strike hits and deals damage, the creature must attempt a Fortitude save against your class DC {i}(this is an incapacitation effect){/i}.{{S.FourDegreesOfSuccess(
+                      "The creature is unaffected.",
+                      "The creature is stunned 1.",
+                      "The creature is stunned 2.",
+                      "The creature is stunned 3.")}}
+                  """,
                 [Trait.Flourish, ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
@@ -1607,7 +1587,7 @@ public static class GuardianFeats
                         .WithName("Ring their Bell")
                         .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
                             newMods,
-                            prologueText: "{b}Requirements{/b} You are wearing medium or heavy armor, and your taunted enemy is off-guard because it didn't target you or include you in an area effect.\n",
+                            prologueText: "{b}Requirements{/b} Your taunted enemy is off-guard because it didn't target you or include you in an area effect.\n",
                             additionalSuccessText: "If you deal damage, the creature must attempt a Fortitude save against your class DC {i}(this is an incapacitation effect){/i}.",
                             additionalCriticalSuccessText: "As success.",
                             additionalAftertext: S.FourDegreesOfSuccess(
@@ -1660,8 +1640,7 @@ public static class GuardianFeats
         
         // Stomp Ground
         yield return new TrueFeat(
-                ModData.FeatNames.StompGround,
-                6,
+                ModData.FeatNames.StompGround, 6,
                 "You bring your booted foot down on the ground with enough force to rattle your foes.",
                 "Each creature in a 5-foot emanation must attempt a Reflex saving throw against your class DC."+S.FourDegreesOfSuccess(
                     "The creature is unaffected.",
@@ -1732,16 +1711,14 @@ public static class GuardianFeats
         
         // Group Taunt
         yield return new TrueFeat(
-            ModData.FeatNames.GroupTaunt,
-            8,
+            ModData.FeatNames.GroupTaunt, 8,
             "Your taunts draw the attention of multiple enemies at once.",
             $"When you use {ModData.FeatNames.Taunt.ToLink("Taunt")}, you can choose up to three targets within range, and you can have up to three taunted enemies at a time. Each time you Taunt, you can choose which enemies remain taunted and which the effect ends for. You must remain at or below this limit.",
             [ModData.Traits.Guardian]);
         
         // Juggernaut Charge
         yield return new TrueFeat(
-                ModData.FeatNames.JuggernautCharge,
-                8,
+                ModData.FeatNames.JuggernautCharge, 8,
                 "As you move forward in a rush, you put the weight of your armor behind an attack that can drag a foe with you.",
                 """
                 {b}Requirements{/b} You are wearing medium or heavy armor.
@@ -1919,12 +1896,11 @@ public static class GuardianFeats
         
         // Repositioning Block ????? More Basic Actions??? Hard-coded?
         
-        // Shield from Arrows
+        // TODO: Shield from Arrows
         
         // Shield Wallop
         yield return new TrueFeat(
-                ModData.FeatNames.ShieldWallop,
-                8,
+                ModData.FeatNames.ShieldWallop, 8,
                 "Attacks with your shield knock the sense out of your foes.",
                 """
                 {b}Requirements{/b} You are wielding a shield.
@@ -2002,13 +1978,12 @@ public static class GuardianFeats
         
         #region Level 10
         
-        // Belly Flop
+        // TODO: Belly Flop
         
         // Get Behind Me!
         // DOC: You can choose not to move the ally further away.
         yield return new TrueFeat(
-                ModData.FeatNames.GetBehindMe,
-                10,
+                ModData.FeatNames.GetBehindMe, 10,
                 "When saving your allies from harm, you push them behind you to better protect them.",
                 $"When you use {ModData.FeatNames.InterceptAttack.ToLink("Intercept Attack")} to protect an ally, you can move that ally up to 10 feet to an unoccupied space that's within your reach. This movement doesn't trigger reactions.",
                 [ModData.Traits.Guardian])
@@ -2069,19 +2044,18 @@ public static class GuardianFeats
                     };
                 });
         
-        // Momentum Strike
+        // TODO: Momentum Strike
         
-        // Shield Salvation
+        // TODO: Shield Salvation
         
         // Sure-Footed
         
         // Tough Cookie
         yield return new TrueFeat(
-                ModData.FeatNames.ToughCookie,
-                10,
+                ModData.FeatNames.ToughCookie, 10,
                 "Though you've taken a lot of punishment, you aren't easily brought down.",
                 """
-                {b}Frequency{/b} once per day
+                {b}Frequency{/b} Once per day.
                 {b}Requirements{/b} Your current Hit Points are at half your maximum or less.
                 
                 You gain a number of temporary Hit Points equal to half your maximum Hit Points.
@@ -2113,7 +2087,7 @@ public static class GuardianFeats
                         .WithDescription(
                             "Though you've taken a lot of punishment, you aren't easily brought down.",
                             """
-                            {b}Frequency{/b} once per day
+                            {b}Frequency{/b} Once per day.
                             {b}Requirements{/b} Your current Hit Points are at half your maximum or less.
 
                             You gain a number of temporary Hit Points equal to half your maximum Hit Points.
@@ -2132,12 +2106,11 @@ public static class GuardianFeats
 
         #region Level 12
 
-        // Armor Break
+        // TODO: Armor Break
 
         // Armored Counterattack
         yield return new TrueFeat(
-                ModData.FeatNames.ArmoredCounterattack,
-                12,
+                ModData.FeatNames.ArmoredCounterattack, 12,
                 "With the might of your armor behind you, you hit back at a foe who would dare try to hurt your allies.",
                 $$"""
                 {b}Trigger{/b} You use {{ModData.FeatNames.InterceptAttack.ToLink("Intercept Attack")}} against a melee Strike and are adjacent to the creature that made the Strike.
@@ -2151,6 +2124,7 @@ public static class GuardianFeats
                 qfFeat.AddToOffenseBlock = qfThis =>
                     qfThis.Name!.WithTag("b")
                     + " After Intercepting a melee Strike from an adjacent attacker, Strike and visually Taunt them.";
+                
                 qfFeat.AfterYouTakeActionReaction = (qfThis, action) =>
                 {
                     if (action.ActionId != ModData.ActionIds.InterceptAttack
@@ -2218,16 +2192,15 @@ public static class GuardianFeats
                 values => values.HasFeat(ModData.FeatNames.InterceptAttack),
                 "You must have the Intercept Attack feature");
 
-        // Devastating Shield Wallop
+        // TODO: Devastating Shield Wallop
 
-        // Paragon's Guard
+        // TODO: Paragon's Guard
 
-        // Right Where You Want Them
+        // TODO: Right Where You Want Them
 
         // Scattering Charge
         yield return new TrueFeat(
-                ModData.FeatNames.ScatteringCharge,
-                12,
+                ModData.FeatNames.ScatteringCharge, 12,
                 "You charge into a group of enemies to send them flying.",
                 """
                     {b}Requirements{/b} You are wearing medium or heavy armor.
@@ -2255,11 +2228,7 @@ public static class GuardianFeats
                                             : "Can't Stride"))
                         .WithDescription(
                             "You charge into a group of enemies to send them flying.",
-                            """
-                            {b}Requirements{/b} You are wearing medium or heavy armor.
-
-                            Stride up to your Speed. At the end of your movement, you can Shove up to three creatures within your reach. You don't need a hand free to do so. You attempt a separate Athletics check for each one; each attempt counts toward your multiple attack penalty, but the penalty doesn't increase until after you've made all the attempts. Regardless of your results, you can’t Stride to follow any of the targets.
-                            """)
+                            "Stride up to your Speed. At the end of your movement, you can Shove up to three creatures within your reach. You don't need a hand free to do so. You attempt a separate Athletics check for each one; each attempt counts toward your multiple attack penalty, but the penalty doesn't increase until after you've made all the attempts. Regardless of your results, you can’t Stride to follow any of the targets.")
                         .WithShortDescription("Stride, then Shove up to three enemies.")
                         .WithActionCost(3)
                         .WithEffectOnEachTarget(async (action, caster, _, _) =>
@@ -2338,8 +2307,7 @@ public static class GuardianFeats
 
         // Weakening Assault
         yield return new TrueFeat(
-                ModData.FeatNames.WeakeningAssault,
-                12,
+                ModData.FeatNames.WeakeningAssault, 12,
                 "With a barrage of blows, you diminish an enemy's strength.",
                 $"Strike an enemy affected by your {ModData.FeatNames.Taunt.ToLink("Taunt")} twice. If either Strike hits, the target is enfeebled 1 (3 if both Strikes hit) until the beginning of your next turn.",
                 [ModData.Traits.Guardian])
@@ -2410,17 +2378,16 @@ public static class GuardianFeats
 
         #region Level 14
 
-        // Blanket Defense
+        // TODO: Blanket Defense
 
-        // Bloody Denial
+        // TODO: Bloody Denial
 
         // Keep Up The Good Fight
         yield return new TrueFeat(
-                ModData.FeatNames.KeepUpTheGoodFight,
-                14,
+                ModData.FeatNames.KeepUpTheGoodFight, 14,
                 "Your commitment to protecting others keeps you going, even against insurmountable odds.",
                 """
-                {b}Frequency{/b} once per encounter
+                {b}Frequency{/b} Once per encounter.
                 {b}Trigger{/b} An enemy reduces you to 0 Hit Points but doesn't kill you.
                 
                 Instead of being knocked out, you're reduced to 1 Hit Point. You increase your wounded value by 1 and gain a number of temporary Hit Points equal to your level.
@@ -2457,7 +2424,7 @@ public static class GuardianFeats
                         """
                         {i}Your commitment to protecting others keeps you going, even against insurmountable odds.{/i}
                         
-                        {b}Frequency{/b} once per encounter
+                        {b}Frequency{/b} Once per encounter.
                         {b}Trigger{/b} An enemy reduces you to 0 Hit Points but doesn't kill you.
 
                         Instead of being knocked out, you're reduced to 1 Hit Point. You increase your wounded value by 1 and gain a number of temporary Hit Points equal to your level.
