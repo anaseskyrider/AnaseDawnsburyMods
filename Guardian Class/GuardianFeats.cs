@@ -189,7 +189,8 @@ public static class GuardianFeats
                         return action.ActionId is ActionId.Disarm or ActionId.Grapple or ActionId.Shove
                             or ActionId.Trip;
                     }
-                });
+                })
+            .WithInappropriateBecauseOfBadInventory(RequiresHeavyArmor);
         
         // Long-distance Taunt
         yield return new TrueFeat(
@@ -244,7 +245,8 @@ public static class GuardianFeats
                                 DamageKind.Bludgeoning);
                         }
                     };
-                });
+                })
+            .WithInappropriateBecauseOfBadInventory(RequiresShove);
         
         // Reactive Shield
         (AllFeats.GetFeatByFeatName(FeatName.ReactiveShield) as TrueFeat)!
@@ -270,7 +272,8 @@ public static class GuardianFeats
                         return false;
                     return true;
                 };
-            });
+            })
+            .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
         
         // Shoulder Check
         yield return new TrueFeat(
@@ -503,7 +506,8 @@ public static class GuardianFeats
                     "Two-handed weapons gain the parry trait for you, or increase the bonus to +2 if they already have it.",
                     (_, weapon) =>
                         weapon.HasTrait(Trait.TwoHanded)));
-            });
+            })
+            .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresTwoHandedMeleeWeapon);
         
         // Shield your Eyes (useless?)
         /*yield return new TrueFeat(
@@ -587,7 +591,8 @@ public static class GuardianFeats
 
                     return shieldTaunt;
                 }
-            });
+            })
+            .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
         
         // Taunting Strike
         yield return new TrueFeat(
@@ -697,7 +702,8 @@ public static class GuardianFeats
                                     ? new Bonus(bonus, BonusType.Circumstance, "Area armor")
                                     : null;
                         });
-                });
+                })
+            .WithInappropriateBecauseOfBadInventory(RequiresMediumOrHeavyArmor);
         
         // Armored Courage
         yield return new TrueFeat(
@@ -756,7 +762,8 @@ public static class GuardianFeats
 
                     return (ActionPossibility)courage;
                 };
-            });
+            })
+            .WithInappropriateBecauseOfBadInventory(RequiresMediumOrHeavyArmor);
         
         // Energy Interceptor
         yield return new TrueFeat(
@@ -1090,7 +1097,8 @@ public static class GuardianFeats
 
                     return (ActionPossibility) shieldedAttrition;
                 };
-            });
+            })
+            .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
         
         #endregion
         
@@ -1261,7 +1269,8 @@ public static class GuardianFeats
                     
                     return (ActionPossibility)guardAdvance;
                 };
-            });
+            })
+            .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
         
         // Lock Down
         yield return new TrueFeat(
@@ -1883,7 +1892,8 @@ public static class GuardianFeats
                         act.RevertRequested = true;
                     }
                 };
-            });
+            })
+            .WithInappropriateBecauseOfBadInventory(RequiresMediumOrHeavyArmor);
         
         // Mighty Bulwark
         Feat mightyBulwark = (AllFeats.GetFeatByFeatName(FeatName.MightyBulwark) as TrueFeat)!
@@ -1972,7 +1982,8 @@ public static class GuardianFeats
                     
                     return wallop;
                 }
-            });
+            })
+            .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
         
         #endregion
         
@@ -2303,7 +2314,8 @@ public static class GuardianFeats
 
                     return new ActionPossibility(scatter);
                 };
-            });
+            })
+            .WithInappropriateBecauseOfBadInventory(RequiresMediumOrHeavyArmor);
 
         // Weakening Assault
         yield return new TrueFeat(
@@ -2488,5 +2500,45 @@ public static class GuardianFeats
         // Unyielding Force
 
         #endregion
+    }
+
+    public static string? RequiresMediumOrHeavyArmor(
+        CalculatedCharacterSheetValues values,
+        Inventory inventory)
+    {
+        return inventory.Armor != null && (inventory.Armor.HasTrait(Trait.MediumArmor) || inventory.Armor.HasTrait(Trait.HeavyArmor))
+            ? null
+            : "This feat only works if you're wearing medium or heavy armor.";
+    }
+
+    public static string? RequiresHeavyArmor(
+        CalculatedCharacterSheetValues values,
+        Inventory inventory)
+    {
+        return inventory.Armor != null && inventory.Armor.HasTrait(Trait.HeavyArmor)
+            ? null
+            : "This feat only works if you're wearing heavy armor.";
+    }
+
+    public static string? RequiresShove(
+        CalculatedCharacterSheetValues values,
+        Inventory inventory)
+    {
+        return FeatInventoryRequirements.RequiresOneOrFreeHand(
+            inventory,
+            item => item.HasTrait(Trait.Shove),
+            false,
+            "you're wielding a shove weapon, have a hand free, or have a feat that makes Shove actions without needing either");
+    }
+
+    public static string? RequiresTrip(
+        CalculatedCharacterSheetValues values,
+        Inventory inventory)
+    {
+        return FeatInventoryRequirements.RequiresOneOrFreeHand(
+            inventory,
+            item => item.HasTrait(Trait.Trip),
+            false,
+            "you're wielding a trip weapon or have a hand free");
     }
 }
