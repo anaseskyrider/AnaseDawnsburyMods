@@ -5,6 +5,7 @@ using Dawnsbury.Campaign.Encounters.Tutorial;
 using Dawnsbury.Campaign.Path;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations;
+using Dawnsbury.Core.Animations.Movement;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.Feats.Features;
@@ -27,6 +28,7 @@ using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
@@ -37,6 +39,10 @@ namespace Dawnsbury.Mods.GuardianClass;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
+/// <item>v2.6: Updated functionality of both GameLoop.OfferOptions2 extensions, changed their returns to Task{bool}, and added shortcuts to them as Creature.OfferOptions2(). Remove CombatAction.CreatePass(). Added LongMovement.GetCostOfPath() as instanced and static functions.</item>
+/// <item>v2.5: Add CombatAction.Fullcast(Creature, QEffect).</item>
+/// <item>v2.4: Add Feat.WithLevelPrereq(int), TrueFeat.WithLevelPrereq(int), and TrueFeat.With()..</item>
+/// <item>v2.3: Add WithExtraTrait(int, Trait).</item>
 /// <item>v2.2: Remove Trait.Mod automations in deference to new base game architecture for mod identifiers. Remove WithDisplayActionInOffenseSection. Add CombatAction.WithIllustration.</item>
 /// <item>v2.1: Make GetCharacterSheetFromPartyMember into a static extension. Update unused SafelyRegisterEnumMember to newer versions of SafelyRegister from my individual projects, now called TryRegisterEnumMember.</item>
 /// <item>v2.0: Added ClassFeature.FromFeat().</item>
@@ -51,7 +57,7 @@ namespace Dawnsbury.Mods.GuardianClass;
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
-/// <value>v2.2</value>
+/// <value>v2.6</value>
 public static class LibraryOfAnase
 {
     extension(Creature cr)
@@ -71,35 +77,43 @@ public static class LibraryOfAnase
         {
             return cr.QEffects.Any(condition);
         }
+
+        /// <summary>
+        /// Instanced extension of <see cref="LibraryOfAnase.extension(GameLoop).OfferOptions2(Creature, Func{ActionPossibility,bool}, bool)"/>
+        /// </summary>
+        public async Task<bool> OfferOptions2(Func<ActionPossibility, bool> filter, bool canPass = true)
+        {
+            return await cr.Battle.GameLoop.OfferOptions2(cr, filter, canPass);
+        }
+
+        /// <summary>
+        /// Instanced extension of <see cref="LibraryOfAnase.extension(GameLoop).OfferOptions2(Creature, Func{ActionPossibility,bool}, bool)"/>
+        /// </summary>
+        public async Task<bool> OfferOptions2(Func<Possibility, bool> filter, bool canPass = true)
+        {
+            return await cr.Battle.GameLoop.OfferOptions2(cr, filter, canPass);
+        }
     }
 
     extension(CombatAction caThis)
     {
-        /// <summary>
-        /// Creates an action that represents passing an action, such as during an OfferReaction routine.
-        /// </summary>
-        public static CombatAction CreatePass(Creature owner, Action<CombatAction,Creature>? effectOnSelf)
-        {
-            return new CombatAction(
-                    owner,
-                    IllustrationName.EndTurn,
-                    "Pass",
-                    [Trait.Basic, Trait.UsableEvenWhenUnconsciousOrParalyzed, Trait.DoesNotPreventDelay],
-                    "Do nothing.",
-                    Target.Self())
-                .WithActionCost(0)
-                .WithEffectOnSelf(async (action, self) =>
-                {
-                    effectOnSelf?.Invoke(action, self);
-                });
-        }
-        
         /// <summary>
         /// Runs any modifications to the CombatAction in one code block, similar to Zone.With().
         /// </summary>
         public CombatAction With(Action<CombatAction> changes)
         {
             changes.Invoke(caThis);
+            return caThis;
+        }
+
+        /// <summary>
+        /// Adds a trait at the specified position in the list.
+        /// </summary>
+        public CombatAction WithExtraTrait(int position, Trait trait)
+        {
+            List<Trait> traits = caThis.Traits.ToList();
+            traits.Insert(position, trait);
+            caThis.Traits = new Traits(traits, caThis);
             return caThis;
         }
 
@@ -158,6 +172,16 @@ public static class LibraryOfAnase
                 };
                 self.AddQEffect(doAfter);
             });
+        }
+
+        /// <summary>
+        /// Behaves as <see cref="CombatAction.Fullcast(Creature)"/>, except you can supply a QEffect that is applied and then removed when the action completes.
+        /// </summary>
+        public async Task Fullcast(Creature againstWhom, QEffect qfForAction)
+        {
+            againstWhom.AddQEffect(qfForAction);
+            await caThis.Owner.Battle.GameLoop.FullCast(caThis, ChosenTargets.CreateSingleTarget(againstWhom));
+            againstWhom.RemoveAllQEffects(qf => qf == qfForAction);
         }
     }
     
@@ -307,6 +331,19 @@ public static class LibraryOfAnase
             changes.Invoke(feat);
             return feat;
         }
+
+        /// <summary>
+        /// Updates a feat to use a new level.
+        /// </summary>
+        /// <param name="level"></param>
+        /// <returns></returns>
+        public Feat WithLevelPrereq(int level)
+        {
+            feat.LevelIfAny = level;
+            feat.Prerequisites.RemoveAll(req => req is LevelPrerequisite);
+            feat.Prerequisites.Insert(0, new LevelPrerequisite(level));
+            return feat;
+        }
         
         /// <summary>
         /// Outputs a link to this feat.
@@ -315,6 +352,31 @@ public static class LibraryOfAnase
         public string ToLink(string caption)
         {
             return feat.FeatName.ToLink(caption);
+        }
+    }
+
+    extension(TrueFeat feat)
+    {
+        /// <summary>
+        /// Runs any modifications to the TrueFeat in one code block, similar to Zone.With().
+        /// </summary>
+        public TrueFeat With(Action<Feat> changes)
+        {
+            changes.Invoke(feat);
+            return feat;
+        }
+
+        /// <summary>
+        /// Updates a feat to use a new level.
+        /// </summary>
+        /// <param name="level"></param>
+        /// <returns></returns>
+        public TrueFeat WithLevelPrereq(int level)
+        {
+            feat.LevelIfAny = level;
+            feat.Prerequisites.RemoveAll(req => req is LevelPrerequisite);
+            feat.Prerequisites.Insert(0, new LevelPrerequisite(level));
+            return feat;
         }
     }
 
@@ -547,71 +609,78 @@ public static class LibraryOfAnase
         /// <summary>
         /// Consolidates code commonly seen when using <see cref="GameLoop.OfferOptions(Creature, List{Option}, bool)"/>, with extra handling for when OfferOptions is used off-turn.
         /// </summary>
-        public async Task OfferOptions2(Creature self, Func<ActionPossibility, bool> filter, bool canPass = false)
+        /// <returns>Whether an action was taken that wasn't Pass.</returns>
+        public async Task<bool> OfferOptions2(Creature self, Func<ActionPossibility, bool> filter, bool canPass = true)
         {
             Possibilities poss = Possibilities
-                .Create(self)
+                .Create(self,
+                    new PossibilitiesRegenerationSpecifics()
+                    {
+                        OfferAlsoPass = canPass
+                    })
                 .Filter(ap =>
                 {
-                    ap.CombatAction.ActionCost = 0;
-                    if (!filter.Invoke(ap.CombatAction))
+                    if (!filter.Invoke(ap.CombatAction)
+                        && ap.CombatAction.ActionId != ActionId.Pass)
                         return false;
+                    ap.CombatAction.ActionCost = 0;
                     ap.RecalculateUsability();
                     return true;
                 });
             poss.CannotPass = canPass;
-            if (canPass)
-                poss.Sections.Add(new PossibilitySection("Pass")
-                {
-                    Possibilities = [new ActionPossibility(CombatAction.CreatePass(self, null))]
-                });
+            foreach (PossibilitySection section in poss.Sections)
+                foreach (Possibility possibility in section.Possibilities)
+                    possibility.PossibilitySize = PossibilitySize.Full;
             
             Creature? active = self.Battle.ActiveCreature;
             self.Battle.ActiveCreature = self;
             self.Possibilities = poss;
             
-            List<Option> actions = await gl.CreateActions(
-                self,
-                poss,
-                null);
+            List<Option> actions = await gl.CreateActions(self, poss, null);
             self.Battle.GameLoopCallback.AfterActiveCreaturePossibilitiesRegenerated();
             await gl.OfferOptions(self, actions, true);
             
             self.Battle.ActiveCreature = active;
+
+            return self.Actions.ActionHistoryThisEncounter.LastOrDefault()?.ActionId == ActionId.Pass;
         }
 
         /// <summary>
         /// Consolidates code commonly seen when using <see cref="GameLoop.OfferOptions(Creature, List{Option}, bool)"/>, with extra handling for when OfferOptions is used off-turn.
         /// </summary>
-        public async Task OfferOptions2(Creature self, Func<Possibility, bool> filter, bool canPass = false)
+        /// <returns>Whether an action was taken that wasn't Pass.</returns>
+        public async Task<bool> OfferOptions2(Creature self, Func<Possibility, bool> filter, bool canPass = true)
         {
             Possibilities poss = Possibilities
-                .Create(self)
+                .Create(self,
+                    new PossibilitiesRegenerationSpecifics()
+                    {
+                        OfferAlsoPass = true
+                    })
                 .FilterAnyPossibility2(poss =>
                 {
+                    if (poss is ActionPossibility { CombatAction.ActionId: ActionId.Pass })
+                        return true;
                     if (!filter.Invoke(poss))
                         return false;
                     return true;
                 });
             poss.CannotPass = canPass;
-            if (canPass)
-                poss.Sections.Add(new PossibilitySection("Pass")
-                {
-                    Possibilities = [new ActionPossibility(CombatAction.CreatePass(self, null))]
-                });
+            foreach (PossibilitySection section in poss.Sections)
+                foreach (Possibility possibility in section.Possibilities)
+                    possibility.PossibilitySize = PossibilitySize.Full;
             
             Creature? active = self.Battle.ActiveCreature;
             self.Battle.ActiveCreature = self;
             self.Possibilities = poss;
             
-            List<Option> actions = await gl.CreateActions(
-                self,
-                poss,
-                null);
+            List<Option> actions = await gl.CreateActions(self, poss, null);
             self.Battle.GameLoopCallback.AfterActiveCreaturePossibilitiesRegenerated();
             await gl.OfferOptions(self, actions, true);
             
             self.Battle.ActiveCreature = active;
+
+            return self.Actions.ActionHistoryThisEncounter.LastOrDefault()?.ActionId == ActionId.Pass;
         }
     }
 
@@ -821,6 +890,92 @@ public static class LibraryOfAnase
             else if (CharacterLibrary.Instance is { } library)
                 hero = library.SelectedRandomEncounterParty[index];
             return hero;
+        }
+    }
+
+    extension(LongMovement longMove)
+    {
+        /// <summary>
+        /// Gets the movement cost of the current path in execution.
+        /// </summary>
+        /// <param name="onlyCountMovedSoFar">If true, this only counts movement made so far instead of the entire path.</param>
+        /// <returns>The cost in speed of the movement.</returns>
+        public int GetCostOfPath(bool onlyCountMovedSoFar = false)
+        {
+            return LongMovement.GetCostOfPath(longMove.Creature, longMove.OriginalTile, longMove.Path, onlyCountMovedSoFar);
+        }
+
+        /// <summary>
+        /// Gets the movement cost of the given path.
+        /// </summary>
+        /// <param name="mover">The creature traversing the path.</param>
+        /// <param name="originalTile">The tile from before the first tile in the movement.</param>
+        /// <param name="inputPath">The tile-by-tile path being traversed.</param>
+        /// <param name="onlyCountMovedSoFar">If true, this only counts movement made so far instead of the entire path.</param>
+        /// <returns>The cost in speed of the movement.</returns>
+        public static int GetCostOfPath(Creature mover, Tile originalTile, IList<Tile>? inputPath, bool onlyCountMovedSoFar = false)
+        {
+            if (inputPath?.Count is 0 or null)
+                return 0;
+        
+            IList<Tile> path = inputPath.ToList();
+            
+            if (onlyCountMovedSoFar)
+            {
+                // If current position is found in the path
+                if (path.IndexOf(mover.Space.TopLeftTile) is var last and > -1)
+                {
+                    // Then don't count the rest of the path that hasn't been traversed
+                    path = path.Take(Math.Min(last + 1, path.Count - 1)).ToList();
+                }
+                else // Otherwise, movement just began so don't count the whole path
+                    return 0;
+            }
+            
+            var move = 0;
+            var diagonals = 0;
+            for (var index = 0;
+                 index < path.Count;
+                 index++)
+            {
+                Tile tile = path[index];
+                List<Tile> tiles = path.ToList();
+                if (tile.GetWalkDifficulty(mover) >= 1)
+                    move += tile.GetWalkDifficulty(mover);
+                switch (index)
+                {
+                    case >= 1 when tiles.Count > 1:
+                    {
+                        if (Equals(tile.Neighbours.BottomLeft?.Tile,
+                                tiles[index - 1]) ||
+                            Equals(tile.Neighbours.BottomRight?.Tile,
+                                tiles[index - 1]) ||
+                            Equals(tile.Neighbours.TopLeft?.Tile,
+                                tiles[index - 1]) ||
+                            Equals(tile.Neighbours.TopRight?.Tile,
+                                tiles[index - 1]))
+                            diagonals += 1;
+                        break;
+                    }
+                    case 0 when tiles.Count > 1:
+                    {
+                        if (Equals(tile.Neighbours.BottomLeft?.Tile,
+                                originalTile) ||
+                            Equals(tile.Neighbours.BottomRight?.Tile,
+                                originalTile) ||
+                            Equals(tile.Neighbours.TopLeft?.Tile,
+                                originalTile) ||
+                            Equals(tile.Neighbours.TopRight?.Tile,
+                                originalTile))
+                            diagonals += 1;
+                        break;
+                    }
+                }
+            }
+            if (diagonals > 1)
+                move += diagonals / 2;
+            
+            return move;
         }
     }
 }
