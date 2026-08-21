@@ -2488,11 +2488,13 @@ public static class GuardianFeats
                             null!,
                             Target.Self()
                                 .WithAdditionalRestriction(self =>
-                                    CombatAction.CreateSimple(self, "Stride")
-                                        .WithActionId(ActionId.Stride)
-                                        .CanBeginToUse(self)
-                                            ? null
-                                            : "Can't Stride"))
+                                    ModData.CommonRequirements.IsWearingMediumOrHeavyArmor(self)
+                                        ? null
+                                        : "Must be wearing medium or heavy armor")
+                                .WithAdditionalRestriction(self =>
+                                    self.WouldBeAbleToStride() 
+                                        ? null
+                                        : "Can't Stride"))
                         .WithDescription(
                             "You charge into a group of enemies to send them flying.",
                             "Stride up to your Speed. At the end of your movement, you can Shove up to three creatures within your reach. You don't need a hand free to do so. You attempt a separate Athletics check for each one; each attempt counts toward your multiple attack penalty, but the penalty doesn't increase until after you've made all the attempts. Regardless of your results, you can’t Stride to follow any of the targets.")
