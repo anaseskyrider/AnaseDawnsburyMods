@@ -2211,7 +2211,7 @@ public static class GuardianFeats
                                     QEffect.Stupefied(action.CheckResult == CheckResult.CriticalSuccess ? baseValue+1 : baseValue)
                                         .WithExpirationAtStartOfSourcesTurn(caster, 1));
                         });
-                    wallop.Traits = new Traits([ModData.ModTrait, ..wallop.Traits], wallop);
+                    wallop.Traits = new Traits([ModData.ModTrait, ..wallop.Traits.ToList()], wallop);
                     
                     return wallop;
                 }
