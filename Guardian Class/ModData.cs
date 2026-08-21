@@ -211,7 +211,7 @@ public static class ModData
         public static readonly FeatName AreaArmor = ModManager.RegisterFeatName(ID_PREPEND + "AreaArmor", "Area Armor");
         public static readonly FeatName ArmoredCourage = ModManager.RegisterFeatName(ID_PREPEND + "ArmoredCourage", "Armored Courage");
         public static readonly FeatName EnergyInterceptor = ModManager.RegisterFeatName(ID_PREPEND + "EnergyInterceptor", "Energy Interceptor");
-        public static readonly FeatName FlyingTackle = ModManager.RegisterFeatName(ID_PREPEND + "FlyingTackle", "FlyingTackle");
+        public static readonly FeatName FlyingTackle = ModManager.RegisterFeatName(ID_PREPEND + "FlyingTackle", "Flying Tackle");
         public static readonly FeatName NotSoFast = ModManager.RegisterFeatName(ID_PREPEND + "NotSoFast", "Not so Fast!");
         public static readonly FeatName ProudNail = ModManager.RegisterFeatName(ID_PREPEND + "ProudNail", "Proud Nail");
         public static readonly FeatName ShieldedAttrition = ModManager.RegisterFeatName(ID_PREPEND + "ShieldedAttrition", "Shielded Attrition");
@@ -248,7 +248,7 @@ public static class ModData
         public static readonly FeatName GetBehindMe = ModManager.RegisterFeatName(ID_PREPEND + "GetBehindMe", "Get Behind Me!");
         public static readonly FeatName MomentumStrike = ModManager.RegisterFeatName(ID_PREPEND + "MomentumStrike", "Momentum Strike");
         public static readonly FeatName ShieldSalvation = ModManager.RegisterFeatName(ID_PREPEND + "ShieldSalvation", "Shield Salvation");
-        public static readonly FeatName SureFooted = ModManager.RegisterFeatName(ID_PREPEND + "SureFooted", "Sure-footed");
+        public static readonly FeatName SureFooted = ModManager.RegisterFeatName(ID_PREPEND + "SureFooted", "Sure-Footed");
         public static readonly FeatName ToughCookie = ModManager.RegisterFeatName(ID_PREPEND + "ToughCookie", "Tough Cookie");
         
         #endregion
