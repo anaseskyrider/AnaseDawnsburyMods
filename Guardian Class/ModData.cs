@@ -496,6 +496,15 @@ public static class ModData
             This is in contrast to a conditional off-guard state that your character may or may not be aware of, such as an enemy who has an equivalent of the Surprise Attack rogue feature.
             """);
 
+        public static readonly Func<string, string> BellyFlopRuling = RegisterTooltipInserter(
+            ID_PREPEND + "Ruling.BellyFlopDropProne",
+            """
+            {b}Belly Flop {icon:Action}{/b}
+            {i}Ruling — drop prone{/i}
+            
+            This does not execute the Drop Prone action; you simply become prone. This means that Belly Flop will not draw reactions based on movement.
+            """);
+
         #endregion
         
         public static Func<string, string> RegisterTooltipInserter(string tooltipName, string tooltipDescription)

@@ -2436,7 +2436,138 @@ public static class GuardianFeats
         
         #region Level 10
         
-        // TODO: Belly Flop
+        // Belly Flop
+        yield return new TrueFeat(
+                ModData.FeatNames.BellyFlop, 10,
+                "You crush an enemy under the enormous weight of your armor.",
+                $$"""
+                {b}Requirements{/b} You are wearing medium or heavy armor and are standing adjacent to a prone enemy.
+                
+                Make a fist or kick Strike against the required enemy as you drop prone{{ModData.Tooltips.BellyFlopRuling(ModData.Illustrations.InfoSymbol.IllustrationAsIconString)}}. On a hit, you {r}immobilize{/r} the target, and add your armor's item bonus to your Athletics for the Escape DC.
+                
+                The immobilization ends automatically if you Stand or otherwise move from the spot where you dropped prone.
+                """,
+                [ModData.Traits.Guardian])
+            .WithActionCost(1)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + $" {(ModData.CommonRequirements.IsWearingMediumOrHeavyArmor(qfThis.Owner) ? null : "{Red}(Must be wearing medium or heavy armor){/Red}")}Make a fist Strike against a prone enemy as you also drop prone, immobilizing them on a hit.";
+
+                qfFeat.ProvideContextualAction = qfThis =>
+                {
+                    if (!ModData.CommonRequirements.IsWearingMediumOrHeavyArmor(qfThis.Owner)
+                        || !qfThis.Owner.CanMakeBasicUnarmedAttack
+                        || qfThis.Owner.Battle.AllCreatures
+                                .Where(cr =>
+                                    cr.EnemyOf(qfThis.Owner)
+                                    && cr.HasEffect(QEffectId.Prone)
+                                    && cr.IsAdjacentTo(qfThis.Owner))
+                                .ToList()
+                            is not { } enemies
+                        || enemies.Count == 0)
+                        return null;
+
+                    CombatAction flop = new CombatAction(
+                            qfThis.Owner,
+                            new SideBySideIllustration(
+                                IllustrationName.DropProne,
+                                IllustrationName.Fist),
+                            "Belly Flop",
+                            [ModData.ModTrait, ModData.Traits.Guardian, Trait.ProxyAttack],
+                            null!,
+                            Target.AdjacentCreature()
+                                .WithAdditionalConditionOnTargetCreature(
+                                    new EnemyCreatureTargetingRequirement())
+                                .WithAdditionalConditionOnTargetCreature(
+                                    new TargetHasQEffectCreatureTargetingRequirement(
+                                        QEffectId.Prone,
+                                        "Not prone"))
+                                .WithAdditionalConditionOnTargetCreature((a, d) =>
+                                    a.HasEffect(QEffectId.Prone)
+                                        ? Usability.NotUsable("Must be standing")
+                                        : Usability.Usable)
+                                .WithAdditionalConditionOnTargetCreature((a,_) =>
+                                    a.CanMakeBasicUnarmedAttack
+                                        ? Usability.Usable
+                                        : Usability.NotUsable("Can't make basic unarmed Strike")))
+                        .WithDescription(
+                            "You crush an enemy under the enormous weight of your armor.",
+                            $$"""
+                              {b}Requirements{/b} You are standing adjacent to a prone enemy.
+
+                              Make a fist or kick Strike against the required enemy as you drop prone{{ModData.Tooltips.BellyFlopRuling(ModData.Illustrations.InfoSymbol.IllustrationAsIconString)}}. On a hit, you {r}immobilize{/r} the target, and add your armor's item bonus to your Athletics for the Escape DC.
+
+                              The immobilization ends automatically if you Stand or otherwise move from the spot where you dropped prone.
+                              """)
+                        .WithActionCost(1)
+                        .WithTargetingTooltip((_, target, _) =>
+                            CombatActionExecution.BreakdownAttackForTooltip(
+                                    CreateFistStrike(),
+                                    target)
+                                .TooltipDescription)
+                        .WithEffectOnEachTarget(async (spell, caster, target, _) =>
+                        {
+                            // Same as prone
+                            caster.AnimationData.ChangeSizeTo(0.9f);
+                            
+                            // Strike
+                            await caster.MakeStrike(CreateFistStrike(), target);
+                            
+                            // Fall prone
+                            await caster.FallProne();
+                        });
+                    
+                    return new ActionPossibility(flop);
+
+                    CombatAction CreateFistStrike() =>
+                        qfThis.Owner
+                            .CreateStrike(qfThis.Owner.UnarmedStrike)
+                            .WithActionCost(0)
+                            .WithEffectOnEachTarget(async (action, caster, target, result) =>
+                            {
+                                if (result < CheckResult.Success)
+                                    return;
+
+                                Tile cachedSpot = caster.Space.TopLeftTile;
+                                
+                                QEffect immobilized = QEffect.Immobilized()
+                                    .WithExpirationNever();
+                                immobilized.Name = "Immobilized (Belly Flop)";
+                                immobilized.Description = $"You can't take move actions.\n\nYou are immobilized by {caster.ToColoredBoldedName()}. The DC is greater than normal, and it ends early if {caster.ToColoredBoldedName()} stands or moves.";
+                                immobilized.Source = caster;
+                                immobilized.SourceAction = action;
+                                immobilized.ProvideContextualAction = qfImm =>
+                                {
+                                    CombatAction escape = Possibilities.CreateEscape(
+                                        qfImm.Owner,
+                                        qfImm);
+                                    escape.WithActiveRollSpecification(new ActiveRollSpecification(
+                                        escape.ActiveRollSpecification!.TaggedDetermineBonus,
+                                        TaggedChecks.DefenseDC(Defense.Athletics, caster)
+                                            .WithExtraBonus((_, _, _) =>
+                                                new Bonus(caster.Armor.ItemBonus, BonusType.Item, "Belly Flop"))));
+                                    return new ActionPossibility(escape);
+                                };
+                                immobilized.StateCheck = qfImm =>
+                                {
+                                    if (!ReferenceEquals(caster.Space.TopLeftTile, cachedSpot))
+                                    {
+                                        qfImm.ExpiresAt = ExpirationCondition.Immediately;
+                                        qfImm.Owner.Battle.Log($"{qfImm.Owner.Name}'s immobilization due to Belly Flop ends because {caster.Name} has moved.");
+                                    }
+
+                                    if (!caster.HasEffect(QEffectId.Prone))
+                                    {
+                                        qfImm.ExpiresAt = ExpirationCondition.Immediately;
+                                        qfImm.Owner.Battle.Log($"{qfImm.Owner.Name}'s immobilization due to Belly Flop ends because {caster.Name} is no longer prone.");
+                                    }
+                                };
+
+                                target.AddQEffect(immobilized);
+                            });
+                };
+            });
         
         // Get Behind Me!
         // DOC: You can choose not to move the ally further away.
