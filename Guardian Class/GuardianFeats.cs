@@ -749,37 +749,26 @@ public static class GuardianFeats
             {
                 qfFeat.AddToOffenseBlock = qfThis =>
                     qfThis.Name!.WithTag("b") + " [flourish] Strike and visually Taunt a creature.";
-                // The actual action
-                qfFeat.ProvideStrikeModifier = item =>
-                    CreateTauntingStrike(item, false);
-                qfFeat.Owner.AddQEffect(new QEffect()
-                {
-                    Name = "[TAUNTING STRIKE THROWN VARIANT GRANTER]",
-                    ProvideStrikeModifier = item =>
-                        item.WeaponProperties!.ForcedMelee && item.WeaponProperties!.Throwable
-                            ? CreateTauntingStrike(item, true)
-                            : null
-                });
                 
-                return;
-
-                CombatAction CreateTauntingStrike(Item item, bool isThrown)
+                qfFeat.ProvideStrikeModifierIncludingForThrownStrike = (item, thrown) =>
                 {
                     CombatAction tauntingStrike = StrikeRules
                         .CreateStrike(
                             qfFeat.Owner,
                             item,
-                            isThrown || item.HasTrait(Trait.Ranged)
+                            thrown || item.HasTrait(Trait.Ranged)
                                 ? RangeKind.Ranged
                                 : RangeKind.Melee,
                             -1,
-                            isThrown)
-                        .WithName("Taunting Strike" + (isThrown ? " (Thrown)" : null))
-                        .WithIllustration(new SideBySideIllustration(
-                            item.Illustration,
-                            ModData.Illustrations.Taunt_1))
-                        .WithExtraTrait(Trait.Flourish)
-                        .WithExtraTrait(ModData.Traits.Guardian)
+                            thrown,
+                            new StrikeModifiers()
+                            {
+                                AdditionalTraits = [Trait.Flourish, ModData.Traits.Guardian]
+                            })
+                        .WithStrikeNameAndIllustrationChange(
+                            "Exacting Strike",
+                            ModData.Illustrations.Taunt_1,
+                            thrown)
                         //.WithExtraTrait(Trait.Basic)
                         .WithEffectOnEachTarget(async (action, caster, target, result) =>
                         {
@@ -801,7 +790,7 @@ public static class GuardianFeats
                                 ? Usability.NotUsableOnThisCreature("Immune to visual")
                                 : Usability.Usable);
                     return tauntingStrike;
-                }
+                };
             });
         
         #endregion
