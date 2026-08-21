@@ -488,8 +488,8 @@ public static class ModData
         public static readonly Func<string, string> ShieldFromArrowsRuling = RegisterTooltipInserter(
             ID_PREPEND + "Ruling.ShieldFromArrowsOffGuard",
             """
-            {b}Shield from Arrows{/b}
-            {i}Ruling{/i}
+            {b}Shield from Arrows {icon:Reaction}{/b}
+            {i}Ruling — Off-guard{/i}
 
             The requirement that you are not off-guard is interpreted as requiring you to not have an instance of the condition that applies universally, such as from being grabbed.
 
