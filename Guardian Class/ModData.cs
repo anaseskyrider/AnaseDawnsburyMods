@@ -337,6 +337,10 @@ public static class ModData
         
         public static readonly Illustration NoSymbol = new ModdedIllustration(MOD_FOLDER+"no symbol.png");
         public static readonly Illustration CheckSymbol = new ModdedIllustration(MOD_FOLDER+"check symbol.png");
+        /// <summary>
+        /// Used to indicate an information tooltip such as documented changes from tabletop.
+        /// </summary>
+        public static readonly Illustration InfoSymbol = new ModdedIllustration(MOD_FOLDER+"information_(raised).png");
         public static readonly Illustration DdSun = new ModdedIllustration(MOD_FOLDER+"PatreonSunTransparent.png");
         
         #endregion
@@ -388,7 +392,6 @@ public static class ModData
     
     public static class SfxNames
     {
-        //public const SfxName TraceRune = SfxName.AncientDust;
         public static readonly Func<Creature, Trait[], SfxName> Taunt = (taunter, traits) =>
             traits.Contains(Trait.Auditory)
                 ? taunter.HasTrait(Trait.Female) ? SfxName.Intimidate : SfxName.MaleIntimidate
