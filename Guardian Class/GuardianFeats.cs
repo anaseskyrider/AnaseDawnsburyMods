@@ -1073,151 +1073,111 @@ public static class GuardianFeats
             {
                 AttackOfOpportunityMechanics mechanics = new AttackOfOpportunityMechanics()
                 {
-                    Name = "Not so Fast!", // QuestionText doesn't ask about the name
+                    Name = "Not so Fast!",
+                    OverheadName = "*not so fast!*",
                     Description = "While in Hampering Stance, creatures who leave a square in your reach provoke a reaction to Strike and slow them down.",
                     RestrictToOnlyAgainstWhom = (qfReact, _) =>
                         qfReact.Owner.HasEffect(ModData.QEffectIds.HamperingStance),
-                    OverheadName = "*not so fast!*",
+                    // Prevent Disruptive Stance from adding ranged options
+                    IsWeaponPermissible = item => item.HasTrait(Trait.Melee),
                     StandStill = true,
-                    StrikeAndReactionTraits = [ModData.Traits.Guardian, ModData.Traits.NotSoFastAttack, Trait.ReactiveAttack],
-                    NumberOfStrikes = 1,
+                    Provokes = (_, _, action) =>
+                        action.HasTrait(Trait.Move)
+                        && action.TilesMoved > 0,
+                    StrikeAndReactionTraits = [ModData.Traits.Guardian, ModData.Traits.NotSoFastAttack, Trait.ReactiveAttack]
                 };
-                QEffect notSoFast = AttackOfOpportunityMechanics.AttackOfOpportunity(mechanics);
-                notSoFast.Name = "Not so Fast! {icon:Reaction}"; // PETR: Fix missing space before the pip
-                notSoFast.Innate = false;
-                notSoFast.AddToOffenseBlock = qfThis =>
-                    qfThis.Name!.WithTag("b") +
-                    $" {(!qfThis.Owner.HasEffect(ModData.QEffectIds.HamperingStance) ? "{Red}(Must be in Hampering Stance){/Red} " : null)}Creatures who leave a square in your reach provoke a reaction to Strike and slow them down.";
-                var oldProvoke = notSoFast.WhenProvoked;
-                notSoFast.WhenProvoked = async (qfThis, action) =>
-                {
-                    // Must be exiting a square, not just any move action.
-                    if (action.TilesMoved == 0)
-                        return;
-                    await oldProvoke!.Invoke(qfThis, action);
-                };
-                notSoFast.AfterYouTakeAction = async (qfThis, action) =>
-                {
-                    if (!action.HasTrait(ModData.Traits.NotSoFastAttack))
-                        return;
-
-                    Creature provoker = action.ChosenTargets.ChosenCreature!;
-                    
-                    // Determine move disruption result
-                    int pen = 1;
-                    switch (action.CheckResult)
+                
+                QEffect notSoFast = AttackOfOpportunityMechanics.AttackOfOpportunity(mechanics)
+                    .With(qfFast =>
                     {
-                        //
-                        // Disrupt on a crit success is handled by StandStill = true
-                        //
-                        case CheckResult.Success:
-                            pen = 2;
-                            goto case CheckResult.Failure;
-                        case CheckResult.Failure:
+                        qfFast.Innate = false;
+                        
+                        qfFast.AddToOffenseBlock = qfThis =>
+                            qfThis.Name!.WithTag("b") +
+                            $" {(!qfThis.Owner.HasEffect(ModData.QEffectIds.HamperingStance) ? "{Red}(Must be in Hampering Stance){/Red} " : null)}Creatures who leave a square in your reach provoke a reaction to Strike and slow them down.";
+                
+                        // BUG: Disruptive Stance causes disruption. This effect needs to be an overwriting EffectOnEachTarget of the Strike being modified, rather than its own QEffect.
+                        qfFast.AfterYouTakeAction = async (_, action) =>
+                        {
+                            if (!action.HasTrait(ModData.Traits.NotSoFastAttack)
+                                // Disrupt on a crit success is handled by StandStill = true
+                                || action.CheckResult is CheckResult.CriticalSuccess
+                                    or CheckResult.CriticalFailure)
+                                return;
+
+                            Creature provoker = action.ChosenTargets.ChosenCreature!;
+                            
                             // Apply the speed penalty
-                            QEffect speedPen = QEffect.PenaltyToSpeed(pen, BonusType.Circumstance);
-                            speedPen.ExpiresAt = ExpirationCondition.ExpiresAtEndOfYourTurn;
-                            speedPen.StateCheck += qfPen =>
-                            {
-                                if (qfPen.Owner.AnimationData.LongMovement is null)
-                                    qfPen.ExpiresAt = ExpirationCondition.Immediately;
-                            };
+                            QEffect speedPen = QEffect.PenaltyToSpeed(
+                                    action.CheckResult is CheckResult.Success ? 2 : 1,
+                                    BonusType.Circumstance)
+                                .With(qfPen =>
+                                {
+                                    qfPen.ExpiresAt = ExpirationCondition.ExpiresAtEndOfYourTurn;
+                                    qfPen.StateCheck += qfPen2 =>
+                                    {
+                                        if (qfPen2.Owner.AnimationData.LongMovement is null)
+                                            qfPen2.ExpiresAt = ExpirationCondition.Immediately;
+                                    };
+                                });
+
+                            // Was going to include exact speed and distance details in the log.
+                            //int oldSpeed = provoker.Speed;
                             provoker.AddQEffect(speedPen);
 
                             // Determine disruption
-                            if (provoker.AnimationData.LongMovement is { Path: not null } move)
+                            if (provoker.AnimationData.LongMovement is not { Path.Count: > 0 } longMove)
+                                return;
+                            
+                            // Calculate the cost of every possible movement along its original path.
+                            IList<Tile>? recalculated = null;
+                            foreach (Tile tile in longMove.Path)
                             {
-                                // Calculate the cost of every possible movement along its original path.
-                                IList<Tile>? recalculated = null;
-                                foreach (Tile tile in move.Path)
-                                {
-                                    IList<Tile> truncPath = move.Path
-                                        .Take(move.Path.IndexOf(tile) + 1)
-                                        .ToList();
-                                    int cost = CostOfPath(provoker, move.OriginalTile, truncPath);
-                                    if (cost <= provoker.Speed)
-                                        recalculated = truncPath; // Store the last path it could move to
-                                    else
-                                        break;
-                                }
-
-                                // Don't do anything if it errors
-                                if (recalculated is null)
+                                IList<Tile> truncPath = longMove.Path
+                                    .Take(longMove.Path.IndexOf(tile) + 1)
+                                    .ToList();
+                                int cost = LongMovement.GetCostOfPath(provoker, longMove.OriginalTile, truncPath);
+                                if (cost <= provoker.Speed)
+                                    recalculated = truncPath; // Store the last path it could move to
+                                else
                                     break;
-
-                                // TODO: replace .Occupies
-                                // Disrupt immediately if
-                                if (!recalculated.Contains(provoker.Occupies) // They're already too far along
-                                    || ReferenceEquals(recalculated.LastOrDefault(),
-                                        // TODO: replace .Occupies
-                                        provoker.Occupies)) // Can't move further
-                                    action.Disrupted = true;
-                                // Otherwise, disrupt when they reach their new furthest intended tile
-                                else if (recalculated.Last() is { } last
-                                         && !ReferenceEquals(last, move.Path.Last()))
-                                {
-                                    speedPen.StateCheck += qfPen =>
-                                    {
-                                        // TODO: replace .Occupies
-                                        if (ReferenceEquals(qfPen.Owner.Occupies, last)) // Reaches the last tile
-                                        {
-                                            action.Disrupted = true;
-                                            qfPen.ExpiresAt = ExpirationCondition.Immediately;
-                                        }
-                                    };
-                                }
                             }
 
-                            break;
-                    }
-                };
-                self.AddQEffect(notSoFast);
+                            // Don't do anything if it errors
+                            if (recalculated is null)
+                                return;
 
-                return;
+                            // Disrupt immediately if,
+                            if (!recalculated.Contains(provoker.Space.TopLeftTile) // they're already too far along,
+                                || ReferenceEquals(recalculated.LastOrDefault(), provoker.Space.TopLeftTile)) // and can't move further.
+                            {
+                                longMove.CombatAction?.Disrupted = true;
+                                provoker.Overhead(
+                                    "movement disrupted",
+                                    Color.Red,
+                                    provoker + "'s movement ends immediately because of a speed penalty applied by Not So Fast!.");
+                            }
+                            // Otherwise, disrupt when they reach their new furthest intended tile.
+                            else if (recalculated.Last() is { } last
+                                     && !ReferenceEquals(last, longMove.Path.Last()))
+                            {
+                                speedPen.StateCheck += qfPen =>
+                                {
+                                    if (!ReferenceEquals(qfPen.Owner.Space.TopLeftTile, last))
+                                        return;
+                                    // Reaches the last tile
+                                    longMove.CombatAction?.Disrupted = true;
+                                    qfPen.ExpiresAt = ExpirationCondition.Immediately;
+                                    provoker.Overhead(
+                                        "movement disrupted",
+                                        Color.Red,
+                                        provoker + "'s movement ends early because of a speed penalty applied by Not So Fast!.");
+                                };
+                            }
+                        };
+                    });
                 
-                // Gets the movement cost for a MOVER who begins at the START tile and follows it along a PATH. Uses LongMovement.OriginalTile and LongMovement.Path.
-                int CostOfPath(Creature mover, Tile start, IList<Tile> path)
-                {
-                    int move = 0;
-                    var diagonals = 0;
-                    for (var index = 0; index < path.Count; index++)
-                    {
-                        Tile tile = path[index];
-                        var tiles = path.ToList();
-                        if (tile.GetWalkDifficulty(mover) >= 1)
-                            move += tile.GetWalkDifficulty(mover);
-                        switch (index)
-                        {
-                            case >= 1 when tiles.Count > 1:
-                                if (Equals(tile.Neighbours.BottomLeft?.Tile,
-                                        tiles[index - 1]) ||
-                                    Equals(tile.Neighbours.BottomRight?.Tile,
-                                        tiles[index - 1]) ||
-                                    Equals(tile.Neighbours.TopLeft?.Tile,
-                                        tiles[index - 1]) ||
-                                    Equals(tile.Neighbours.TopRight?.Tile,
-                                        tiles[index - 1]))
-                                    diagonals += 1;
-                                break;
-                            case 0 when tiles.Count > 1:
-                                if (Equals(tile.Neighbours.BottomLeft?.Tile,
-                                        start) ||
-                                    Equals(tile.Neighbours.BottomRight?.Tile,
-                                        start) ||
-                                    Equals(tile.Neighbours.TopLeft?.Tile,
-                                        start) ||
-                                    Equals(tile.Neighbours.TopRight?.Tile,
-                                        start))
-                                    diagonals += 1;
-                                break;
-                        }
-                    }
-
-                    if (diagonals > 1)
-                        move += diagonals / 2;
-
-                    return move;
-                }
+                self.AddQEffect(notSoFast);
             });
         
         // Proud Nail
@@ -1681,8 +1641,7 @@ public static class GuardianFeats
             {
                 QEffect reactiveStrike = QEffect.AttackOfOpportunity();
                 reactiveStrike.Name = reactiveStrike.Name?
-                    .Replace("Attack of Opportunity", "Reactive Strike")
-                    .Replace("e{", "e {"); // PETR: Fix missing space
+                    .Replace("Attack of Opportunity", "Reactive Strike");
                 self.AddQEffect(reactiveStrike);
             })
             .WithEquivalent(values =>
