@@ -320,6 +320,7 @@ public static class ModData
         
         public static readonly Illustration ArmoredCourage = new ModdedIllustration(MOD_FOLDER+"armor-upgrade 2.png");
         public static readonly Illustration StompGround = new ModdedIllustration(MOD_FOLDER+"quake-stomp.png");
+        public static readonly Illustration CoveringStance = IllustrationName.Protection;
         public static readonly Illustration HamperingStance = new ModdedIllustration(MOD_FOLDER+"banana-peel + hot-surface.png");
         public static readonly Illustration LockDown = new ModdedIllustration(MOD_FOLDER+"foot-trip.png");
         public static readonly Illustration GetBehindMe = IllustrationName.FleetStep;
@@ -336,7 +337,7 @@ public static class ModData
         
         public static readonly Illustration NoSymbol = new ModdedIllustration(MOD_FOLDER+"no symbol.png");
         public static readonly Illustration CheckSymbol = new ModdedIllustration(MOD_FOLDER+"check symbol.png");
-        public static readonly Illustration DawnsburySun = new ModdedIllustration(MOD_FOLDER+"PatreonSunTransparent.png");
+        public static readonly Illustration DdSun = new ModdedIllustration(MOD_FOLDER+"PatreonSunTransparent.png");
         
         #endregion
     }
@@ -372,6 +373,7 @@ public static class ModData
         public static QEffectId TauntTarget;
         public static QEffectId ReactionTime;
         public static QEffectId BodyguardCharge;
+        public static QEffectId CoveringStance;
         public static QEffectId HamperingStance;
         
         public static void Initialize()
@@ -379,6 +381,7 @@ public static class ModData
             TauntTarget = ModManager.SafelyRegisterEnumMember<QEffectId>("TauntTarget");
             ReactionTime = ModManager.SafelyRegisterEnumMember<QEffectId>("ReactionTime");
             BodyguardCharge = ModManager.SafelyRegisterEnumMember<QEffectId>("Bodyguard's Charge");
+            CoveringStance = ModManager.SafelyRegisterEnumMember<QEffectId>("CoveringStance");
             HamperingStance = ModManager.SafelyRegisterEnumMember<QEffectId>("HamperingStance");
         }
     }

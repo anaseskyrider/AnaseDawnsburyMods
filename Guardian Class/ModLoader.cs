@@ -15,9 +15,16 @@ using Dawnsbury.Modding;
 namespace Dawnsbury.Mods.GuardianClass;
 public static class ModLoader
 {
+    public static bool MBALoaded;
+    
     [DawnsburyDaysModMainMethod]
     public static void LoadMod()
     {
+        ////////////////////
+        // Preload Checks //
+        ////////////////////
+        MBALoaded = ModManager.TryParse<ActionId>("LongJump", out _);
+        
         ////////////////
         // Load Calls //
         ////////////////
