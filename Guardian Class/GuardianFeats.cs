@@ -435,7 +435,8 @@ public static class GuardianFeats
                                                     tile.DifficultTerrainToComputerControlledCreatures = true
                                             };
                                     });
-                            }));
+                            }))
+                        .WithPossibilityGroup(Constants.POSSIBILITY_GROUP_STANCES);
             });
         
         // Phalanx Formation
