@@ -434,11 +434,14 @@ public static class ModData
 
     public static class Tooltips
     {
+        #region Common Features and Rules
+
         public static readonly Func<string, string> CommonDamageTypesRemastered = RegisterTooltipInserter(
             ID_PREPEND + "Common.DamageTypesRemastered",
             """
             {b}Damage Types{/b}
             {i}Core rule{/i}
+
             Most damage falls into one of the following types:
             • {b}Physical{/b} bludgeoning, piercing, slashing; bleed.
             • {b}Energy{/b} acid, cold, electricity, fire, sonic; vitality, void.
@@ -453,6 +456,7 @@ public static class ModData
             """
             {b}Weapon Specialization{/b}
             {i}Common class feature{/i}
+
             You deal 2 additional damage with weapons and unarmed attacks in which you are an expert; this damage increases to 3 if you're a master, and to 4 if you're legendary.
             """);
         public static readonly Func<string, string> CommonGreaterWeaponSpec = RegisterTooltipInserter(
@@ -460,15 +464,39 @@ public static class ModData
             """
             {b}Greater Weapon Specialization{/b}
             {i}Common class feature{/i}
+
             Your damage from weapon specialization increases to 4 with weapons and unarmed attacks in which you're expert, 6 if you're a master, and 8 if you're legendary.
             """);
+
+        #endregion
+
+        #region Guardian Features
+
         public static readonly Func<string, string> ArmorResting = RegisterTooltipInserter(
             ID_PREPEND + "Feature.GuardiansArmorResting",
             """
             {b}Resting in Armor{/b}
             {i}Common rule{/i}
+
             Sleeping in armor is uncomfortable, and would lead to poor-quality sleep. Some encounters occur while the party is sleeping. If you aren't able to sleep in armor, you won't have your armor donned at the start of combat.
             """);
+
+        #endregion
+
+        #region Rulings
+
+        public static readonly Func<string, string> ShieldFromArrowsRuling = RegisterTooltipInserter(
+            ID_PREPEND + "Ruling.ShieldFromArrowsOffGuard",
+            """
+            {b}Shield from Arrows{/b}
+            {i}Ruling{/i}
+
+            The requirement that you are not off-guard is interpreted as requiring you to not have an instance of the condition that applies universally, such as from being grabbed.
+
+            This is in contrast to a conditional off-guard state that your character may or may not be aware of, such as an enemy who has an equivalent of the Surprise Attack rogue feature.
+            """);
+
+        #endregion
         
         public static Func<string, string> RegisterTooltipInserter(string tooltipName, string tooltipDescription)
         {

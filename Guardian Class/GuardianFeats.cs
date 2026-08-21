@@ -2239,7 +2239,121 @@ public static class GuardianFeats
                 "You must have the {link:https://steamcommunity.com/workshop/filedetails/?id=3485625903}{i}More Basic Actions{/i}{/} mod installed.")
             .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
         
-        // TODO: Shield from Arrows
+        // Shield from Arrows
+        yield return new TrueFeat(
+                ModData.FeatNames.ShieldFromArrows, 8,
+                "You place your shield in the path of an oncoming projectile.",
+                $$"""
+                {b}Trigger{/b} An adjacent ally is the target of a physical ranged Strike.
+                {b}Requirements{/b} You have Raised your Shield, can see the attacker, and are not {r:flat-footed}off-guard{/r}{{ModData.Tooltips.ShieldFromArrowsRuling(ModData.Illustrations.InfoSymbol.IllustrationAsIconString)}}.
+
+                Your adjacent ally gains a +4 circumstance bonus to AC against the triggering attack.
+                """,
+                [ModData.Traits.Guardian])
+            .WithActionCost(-2)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToDefenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " If your shield is raised, you aren't {r:flat-footed}off-guard{/r}, and you can see the attacker, you can give an adjacent ally a +4 circumstance bonus to AC when they're targeted by a physical ranged Strike.";
+                
+                // I would use AddGrantingOfTechnical here, but I want
+                // to make this slightly more efficient by not adding this
+                // state-wise behavior while your shield isn't raised.
+                qfFeat.StateCheck = qfThis =>
+                {
+                    if (!qfThis.Owner.HasEffect(QEffectId.RaisingAShield)
+                        || qfThis.Owner.IsFlatfootedToBecause(null, null) is not null)
+                        return;
+                    
+                    foreach (Creature cr in qfThis.Owner.Battle.AllCreatures
+                                 .Where(cr =>
+                                     cr.FriendOfAndNotSelf(qfThis.Owner)
+                                     && cr.IsAdjacentTo(qfThis.Owner))
+                                 .ToList())
+                    {
+                        QEffect qfTechnical = new QEffect(ExpirationCondition.Ephemeral)
+                        {
+                            Owner = cr,
+                            Source = qfThis.Owner,
+                            YouAreTargetedByARoll = async (qfTech, action, breakdown) =>
+                            {
+                                if (/*breakdown.CheckResult < CheckResult.Success
+                                    ||*/ !action.HasTrait(Trait.Strike)
+                                    || action.ActiveRollSpecification == null
+                                    || action.ActiveRollSpecification.TaggedDetermineDC.InvolvedDefense is not Defense.AC
+                                    || !action.HasTrait(Trait.Ranged)
+                                    || action.Item is null
+                                    || action.Item is { WeaponProperties: null }
+                                    || !action.Item.WeaponProperties.DamageKind.IsPhysical()
+                                    || HiddenRules.DetermineHidden(qfThis.Owner, action.Owner) >= DetectionStrength.Hidden)
+                                    return false;
+                                
+                                /*int threshold = breakdown.GetCircumstanceBonusThresholdNeededToDowngrade();
+                                if (threshold > 4)
+                                    return false;*/
+
+                                int bestCirc = breakdown.CheckBreakdown.DefenseBonuses?.Max(sb =>
+                                    sb is not { BonusType: BonusType.Circumstance }
+                                    || sb.Amount <= 0
+                                        ? 0
+                                        : sb.Amount) ?? 0;
+                                if (bestCirc >= 4)
+                                    return false;
+
+                                CombatAction shieldArrows = new CombatAction(
+                                        qfThis.Owner,
+                                        new ScrollIllustration(
+                                            IllustrationName.SteelShield,
+                                            IllustrationName.ArrowPointedProjectile30),
+                                        "Shield from Arrows",
+                                        [ModData.ModTrait, ModData.Traits.Guardian],
+                                        null!,
+                                        Target.AdjacentFriend())
+                                    .WithDescription(
+                                        "You place your shield in the path of an oncoming projectile.",
+                                        $$"""
+                                          {b}Trigger{/b} An adjacent ally is the target of a physical ranged Strike.
+                                          {b}Requirements{/b} You have Raised your Shield, can see the attacker, and are not {r:flat-footed}off-guard{/r}{{ModData.Tooltips.ShieldFromArrowsRuling(ModData.Illustrations.InfoSymbol.IllustrationAsIconString)}}.
+
+                                          Your adjacent ally gains a +4 circumstance bonus to AC against the triggering attack.
+                                          """)
+                                    .WithActionCost(-2)
+                                    .WithEffectOnEachTarget(async (_,_, target, _) =>
+                                    {
+                                        target.AddQEffect(new QEffect(ExpirationCondition.ExpiresAtEndOfAnyTurn)
+                                        {
+                                            BonusToDefenses = (_, combatAction, def) =>
+                                                def is Defense.AC
+                                                && combatAction == action
+                                                    ? new Bonus(4, BonusType.Circumstance, "Shield from Arrows")
+                                                    : null,
+                                            AfterYouAreTargeted = async (qfBonus, combatAction) =>
+                                            {
+                                                if (combatAction == action)
+                                                    qfBonus.ExpiresAt = ExpirationCondition.Immediately;
+                                            } 
+                                        });
+                                    });
+                                
+                                if (!await qfThis.Owner.AskToUseReaction(
+                                        $$"""
+                                        {b}Shield from Arrows {icon:Reaction}{/b}
+                                        {{qfTech.Owner.ToColoredBoldedName()}} has been targeted by {Blue}{{action.Name}}{/Blue}. Grant a +4 circumstance bonus to their AC?{{(bestCirc > 0 ? $" {{Red}}They already have a +{bestCirc} bonus.{{/Red}}" : null)}}
+                                        {i}(This might not affect the Strike's outcome.){/i}
+                                        """,
+                                        shieldArrows))
+                                    return false;
+
+                                await shieldArrows.Fullcast(qfTech.Owner);
+
+                                return true;
+                            }
+                        };
+                        cr.AddQEffect(qfTechnical);
+                    }
+                };
+            })
+            .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
         
         // Shield Wallop
         yield return new TrueFeat(
