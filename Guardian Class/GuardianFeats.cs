@@ -617,13 +617,49 @@ public static class GuardianFeats
             })
             .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresTwoHandedMeleeWeapon);
         
-        // Shield your Eyes (useless?)
-        /*yield return new TrueFeat(
-                ModData.FeatNames.ShieldYourEyes,
-                2,
+        // Shield your Eyes
+        yield return new TrueFeat(
+                ModData.FeatNames.ShieldYourEyes, 2,
                 "You reflexively place your shield between your eyes and visual dangers.",
                 "While your shield is raised, you gain a +2 circumstance bonus to all defenses against effects with the light or visual trait. If you critically fail your save against such an effect while your shield is raised, you fail instead. Likewise, if such an effect critically succeeds against your DC, it's a success instead.",
-                [ModData.Traits.Guardian]);*/
+                [ModData.Traits.Guardian])
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToDefenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + ". While your shield is raised, your defenses against light and visual effects are greatly enhanced.";
+
+                // +2 circumstance to all defenses against light/visual.
+                qfFeat.BonusToDefenses = (qfThis, action, _) =>
+                    action is not null
+                    && (action.HasTrait(Trait.Light)
+                        || action.HasTrait(Trait.Visual))
+                    && qfThis.Owner.HasEffect(QEffectId.RaisingAShield)
+                        ? new Bonus(2, BonusType.Circumstance, "Shield your eyes")
+                        : null;
+
+                // Cannot fumble your save against light/visual.
+                qfFeat.AdjustSavingThrowCheckResult = (qfThis, _, action, result) =>
+                    result is CheckResult.CriticalFailure
+                    && (action.HasTrait(Trait.Light)
+                        || action.HasTrait(Trait.Visual))
+                    && qfThis.Owner.HasEffect(QEffectId.RaisingAShield)
+                        ? result.ImproveByOneStep()
+                        : result;
+
+                // Cannot be crit by light/visual.
+                qfFeat.AddGrantingOfTechnical(
+                    cr => cr.EnemyOf(qfFeat.Owner),
+                    qfTech =>
+                        qfTech.AdjustActiveRollCheckResult = (qfThis, action, target, result) =>
+                            result is CheckResult.CriticalSuccess
+                            && target == qfFeat.Owner
+                            && (action.HasTrait(Trait.Light)
+                                || action.HasTrait(Trait.Visual))
+                            && qfFeat.Owner.HasEffect(QEffectId.RaisingAShield)
+                                ? result.WorsenByOneStep()
+                                : result);
+            })
+            .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
         
         // Shielding Taunt
         yield return new TrueFeat(
