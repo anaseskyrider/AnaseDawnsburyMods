@@ -282,10 +282,10 @@ public static class GuardianFeats
                 "You hit a foe with your armor to throw them off balance.",
                 // fist, kick, gauntlet, or spiked gauntlet.
                 "Make a Strike with a fist or kick. The Strike gains the following additional results." + S.FourDegreesOfSuccess(
-                    "The target is off-guard against melee attacks you attempt against it until the end of your next turn.",
-                    "The target is off-guard against the next melee attack you attempt against it before the end of your current turn.",
+                    "The target is {r:flat-footed}off-guard{/r} against melee attacks you attempt against it until the end of your next turn.",
+                    "The target is {r:flat-footed}off-guard{/r} against the next melee attack you attempt against it before the end of your current turn.",
                     null,
-                    "You are off-guard against melee attacks the target attempts against you until the end of your next turn."),
+                    "You are {r:flat-footed}off-guard{/r} against melee attacks the target attempts against you until the end of your next turn."),
                 [Trait.Flourish, ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
@@ -383,8 +383,8 @@ public static class GuardianFeats
 
                 That ally loses this benefit if they move to a space that is no longer adjacent to you at any point during their move.
 
-                If you Intercept an Attack that would harm the ally you're covering, that ally can Step as a free action after your reaction is complete.
-                """,
+                 If you {ModData.FeatNames.InterceptAttack.ToLink("Intercept an Attack")} that would harm the ally you're covering, that ally can Step as a free action after your reaction is complete.
+                 """,
                 [ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
@@ -491,7 +491,7 @@ public static class GuardianFeats
         yield return new TrueFeat(
                 ModData.FeatNames.HamperingStance, 2,
                 "You make it difficult for enemies to move past you.",
-                "Enter a stance. While you are in this stance, squares in a 5-foot emanation are difficult terrain for your enemies.",
+                "Enter a stance. While you are in this stance, squares in a 5-foot emanation are {r}difficult terrain{/r} for your enemies.",
                 [Trait.Aura, ModData.Traits.Guardian, Trait.Stance])
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
@@ -510,7 +510,7 @@ public static class GuardianFeats
                                         ? "You're already in this stance." : null))
                             .WithDescription(
                                 "You make it difficult for enemies to move past you.",
-                                "While you are in this stance, squares in a 5-foot emanation are difficult terrain for your enemies.")
+                                "While you are in this stance, squares in a 5-foot emanation are {r}difficult terrain{/r} for your enemies.")
                             .WithShortDescription("Enter a stance that makes adjacent squares into difficult terrain for your enemies.")
                             .WithActionCost(1)
                             .WithSoundEffect(SfxName.StandUp)
@@ -847,7 +847,7 @@ public static class GuardianFeats
                 {b}Requirements{/b} You are wearing medium or heavy armor.
                 {b}Frequency{/b} Once per encounter.
 
-                You gain a number of temporary Hit Points equal to your level, and you reduce your frightened condition value by 1.
+                You gain a number of temporary Hit Points equal to your level, and you reduce your {r}frightened{/r} condition value by 1.
                 """,
                 [ModData.Traits.Guardian])
             .WithActionCost(1)
@@ -876,7 +876,7 @@ public static class GuardianFeats
 
                               {b}Frequency{/b} Once per encounter.
 
-                              You gain {Blue}{{qfThis.Owner.Level}}{/Blue} temporary Hit Points. Reduce your frightened condition value by 1.
+                              You gain {Blue}{{qfThis.Owner.Level}}{/Blue} temporary Hit Points. Reduce your {r}frightened{/r} condition value by 1.
                               """,
                             Target.Self()
                                 .WithAdditionalRestriction(cr =>
@@ -1656,7 +1656,7 @@ public static class GuardianFeats
         yield return new TrueFeat(
                 ModData.FeatNames.RetaliatingRescue, 6,
                 "When an ally is in danger, you can hustle to reach them and punish the foe threatening them.",
-                "Stride up to your Speed. You must end this movement adjacent to an ally who is within an enemy's reach. Then, you push your ally up to 5 feet (as normal for forced movement, this movement doesn't trigger reactions) and make a melee Strike against an enemy within your reach. If your ally was in that enemy's reach and your push moved them out of it, you gain a +2 circumstance bonus to your attack roll.",
+                "Stride up to your Speed. You must end this movement adjacent to an ally who is within an enemy's reach. Then, you {r}push{/r} your ally up to 5 feet (as normal for forced movement, this movement doesn't trigger reactions) and make a melee Strike against an enemy within your reach. If your ally was in that enemy's reach and your {r}push{/r} moved them out of it, you gain a +2 circumstance bonus to your attack roll.",
                 [ModData.Traits.Guardian])
             .WithActionCost(2)
             .WithPermanentQEffect(qfFeat =>
@@ -1672,7 +1672,7 @@ public static class GuardianFeats
                             """
                             {i}When an ally is in danger, you can hustle to reach them and punish the foe threatening them.{/i}
 
-                            Stride up to your Speed. You must end this movement adjacent to an ally who is within an enemy's reach. Then, you push your ally up to 5 feet (as normal for forced movement, this movement doesn't trigger reactions) and make a melee Strike against an enemy within your reach. If your ally was in that enemy's reach and your push moved them out of it, you gain a +2 circumstance bonus to your attack roll.
+                            Stride up to your Speed. You must end this movement adjacent to an ally who is within an enemy's reach. Then, you {r}push{/r} your ally up to 5 feet (as normal for forced movement, this movement doesn't trigger reactions) and make a melee Strike against an enemy within your reach. If your ally was in that enemy's reach and your {r}push{/r} moved them out of it, you gain a +2 circumstance bonus to your attack roll.
                             """,
                             Target.Tile(
                                     (self, t) =>
@@ -1807,9 +1807,9 @@ public static class GuardianFeats
 
                   Make a Strike with a fist or kick against your taunted enemy. If the Strike hits and deals damage, the creature must attempt a Fortitude save against your class DC {i}(this is an incapacitation effect){/i}.{{S.FourDegreesOfSuccess(
                       "The creature is unaffected.",
-                      "The creature is stunned 1.",
-                      "The creature is stunned 2.",
-                      "The creature is stunned 3.")}}
+                      "The creature is {r}stunned 1{/r}.",
+                      "The creature is {r}stunned 2{/r}.",
+                      "The creature is {r}stunned 3{/r}.")}}
                   """,
                 [Trait.Flourish, ModData.Traits.Guardian])
             .WithActionCost(1)
@@ -1835,10 +1835,9 @@ public static class GuardianFeats
                             additionalCriticalSuccessText: "As success.",
                             additionalAftertext: S.FourDegreesOfSuccess(
                                 "The creature is unaffected.",
-                                "The creature is stunned 1.",
-                                "The creature is stunned 2.",
-                                "The creature is stunned 3.")))
-                        //.WithExtraTrait(Trait.Basic)
+                                "The creature is {r}stunned 1{/r}.",
+                                "The creature is {r}stunned 2{/r}.",
+                                "The creature is {r}stunned 3{/r}.")))
                         .WithExtraTrait(Trait.Flourish)
                         .WithExtraTrait(ModData.Traits.Guardian)
                         .WithHitAndDealDamage(async (caster, action, target) =>
@@ -1887,9 +1886,9 @@ public static class GuardianFeats
                 "You bring your booted foot down on the ground with enough force to rattle your foes.",
                 "Each creature in a 5-foot emanation must attempt a Reflex saving throw against your class DC."+S.FourDegreesOfSuccess(
                     "The creature is unaffected.",
-                    "The creature is off-guard until the end of your turn.",
-                    "The creature is knocked prone.",
-                    "The creature is knocked prone and takes 1d6 bludgeoning damage from the fall."),
+                    "The creature is {r:flat-footed}off-guard{/r} until the end of your turn.",
+                    "The creature is knocked {r}prone{/r}.",
+                    "The creature is knocked {r}prone{/r} and takes 1d6 bludgeoning damage from the fall."),
                 [ModData.Traits.Guardian])
             .WithActionCost(2)
             .WithPermanentQEffect(qfFeat =>
@@ -1907,9 +1906,9 @@ public static class GuardianFeats
                             Each creature in a 5-foot emanation must attempt a Reflex saving throw against your class DC.
                             """+S.FourDegreesOfSuccess(
                                 "The creature is unaffected.",
-                                "The creature is off-guard until the end of your turn.",
-                                "The creature is knocked prone.",
-                                "The creature is knocked prone and takes 1d6 bludgeoning damage from the fall."),
+                                "The creature is {r:flat-footed}off-guard{/r} until the end of your turn.",
+                                "The creature is knocked {r}prone{/r}.",
+                                "The creature is knocked {r}prone{/r} and takes 1d6 bludgeoning damage from the fall."),
                             Target.SelfExcludingEmanation(1))
                         .WithActionCost(2)
                         .WithShortDescription("Creatures within 5 feet must make a Reflex save against becoming off-guard or falling prone.")
@@ -2362,9 +2361,9 @@ public static class GuardianFeats
                 """
                 {b}Requirements{/b} You are wielding a shield.
 
-                Make a shield Strike. If you hit and deal damage, the target is stupefied 1 until the start of your next turn (stupefied 2 on a critical hit).
+                Make a shield Strike. If you hit and deal damage, the target is {r}stupefied 1{/r} until the start of your next turn ({r}stupefied 2{/r} on a critical hit).
 
-                If your shield is a tower shield, fortress shield, or another shield that grants a higher circumstance bonus to AC when you Take Cover behind it, the creature is instead stupefied 2 if you hit and deal damage to it (stupefied 3 on a critical hit).
+                If your shield is a tower shield, fortress shield, or another shield that grants a higher circumstance bonus to AC when you Take Cover behind it, the creature is instead {r}stupefied 2{/r} if you hit and deal damage to it ({r}stupefied 3{/r} on a critical hit).
                 """,
                 [Trait.Flourish, ModData.Traits.Guardian])
             .WithActionCost(1)
@@ -2642,7 +2641,7 @@ public static class GuardianFeats
         yield return new TrueFeat(
                 ModData.FeatNames.SureFooted, 10,
                 "Even if you're knocked off balance, your armor continues to protect you.",
-                "You don't take a penalty to AC from the clumsy condition if you're wearing medium or heavy armor. Your clumsy condition still applies to other Dexterity-based checks and DCs, and this benefit is negated if the armor is broken.",
+                "You don't take a penalty to AC from the {r}clumsy{/r} condition if you're wearing medium or heavy armor. Your {r}clumsy{/r} condition still applies to other Dexterity-based checks and DCs, and this benefit is negated if the armor is broken.",
                 [ModData.Traits.Guardian])
             .WithPermanentQEffect(qfFeat =>
             {
@@ -2925,7 +2924,7 @@ public static class GuardianFeats
         yield return new TrueFeat(
                 ModData.FeatNames.WeakeningAssault, 12,
                 "With a barrage of blows, you diminish an enemy's strength.",
-                $"Strike an enemy affected by your {ModData.FeatNames.Taunt.ToLink("Taunt")} twice. If either Strike hits, the target is enfeebled 1 (3 if both Strikes hit) until the beginning of your next turn.",
+                $"Strike an enemy affected by your {ModData.FeatNames.Taunt.ToLink("Taunt")} twice. If either Strike hits, the target is {{r}}enfeebled 1{{/r}} (3 if both Strikes hit) until the beginning of your next turn.",
                 [ModData.Traits.Guardian])
             .WithActionCost(2)
             .WithPermanentQEffect(qfFeat =>
@@ -2953,7 +2952,7 @@ public static class GuardianFeats
                         .WithActionCost(2)
                         .WithDescription(
                             "With a barrage of blows, you diminish an enemy's strength.",
-                            $"Strike an enemy affected by your {ModData.FeatNames.Taunt.ToLink("Taunt")} twice. If either Strike hits, the target is enfeebled 1 until the beginning of your next turn. If both Strikes hit, the target is enfeebled 3 instead.")
+                            $"Strike an enemy affected by your {ModData.FeatNames.Taunt.ToLink("Taunt")} twice. If either Strike hits, the target is {{r}}enfeebled 1{{/r}} (3 if both Strikes hit) until the beginning of your next turn.")
                         .WithShortDescription("Strike an enemy affected by your Taunt twice and make them enfeebled 1 or 3.")
                         .WithEffectOnEachTarget(async (action, caster, _, _) =>
                         {
@@ -3006,7 +3005,7 @@ public static class GuardianFeats
                 {b}Frequency{/b} Once per encounter.
                 {b}Trigger{/b} An enemy reduces you to 0 Hit Points but doesn't kill you.
                 
-                Instead of being knocked out, you're reduced to 1 Hit Point. You increase your wounded value by 1 and gain a number of temporary Hit Points equal to your level.
+                Instead of being knocked out, you're reduced to 1 Hit Point. You increase your {r}wounded{/r} value by 1 and gain a number of temporary Hit Points equal to your level.
                 """,
                 [ModData.Traits.Guardian])
             .WithActionCost(-2)
@@ -3027,7 +3026,7 @@ public static class GuardianFeats
                             you,
                             $$"""
                             {b}Keep up the Good Fight{/b} {icon:Reaction}
-                            You're about to be reduced to 0 HP. Remain at 1 HP, become wounded {{(wounded + 1).ToString()}}, and gain {Blue}{{you.Level}}{/Blue} temp HP?
+                            You're about to be reduced to 0 HP. Remain at 1 HP, become {r}wounded{/r} {{(wounded + 1).ToString()}}, and gain {Blue}{{you.Level}}{/Blue} temp HP?
                             """,
                             ModData.Illustrations.KeepUpTheGoodFight,
                             [ModData.Traits.Guardian]))
@@ -3043,7 +3042,7 @@ public static class GuardianFeats
                         {b}Frequency{/b} Once per encounter.
                         {b}Trigger{/b} An enemy reduces you to 0 Hit Points but doesn't kill you.
 
-                        Instead of being knocked out, you're reduced to 1 Hit Point. You increase your wounded value by 1 and gain a number of temporary Hit Points equal to your level.
+                        Instead of being knocked out, you're reduced to 1 Hit Point. You increase your {r}wounded{/r} value by 1 and gain a number of temporary Hit Points equal to your level.
                         """);
                     you.IncreaseWounded();
                     qfThis.Tag = true;
