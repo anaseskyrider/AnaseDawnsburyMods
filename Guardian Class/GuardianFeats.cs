@@ -378,10 +378,10 @@ public static class GuardianFeats
         yield return new TrueFeat(
                 ModData.FeatNames.CoveringStance, 2,
                 "Your very presence on the field of battle protects nearby allies from harm.",
-                """
-                Enter a stance. At the end of each of your turns while you're in this stance, choose one ally adjacent to you to gain lesser cover until the start of your next turn.
+                $"""
+                 Enter a stance. At the end of each of your turns while you're in this stance, choose one ally adjacent to you to gain lesser cover until the start of your next turn.
 
-                That ally loses this benefit if they move to a space that is no longer adjacent to you at any point during their move.
+                 That ally loses this benefit if they move to a space that is no longer adjacent to you at any point during their move.
 
                  If you {ModData.FeatNames.InterceptAttack.ToLink("Intercept an Attack")} that would harm the ally you're covering, that ally can Step as a free action after your reaction is complete.
                  """,
@@ -429,10 +429,7 @@ public static class GuardianFeats
                                             cr.FriendOfAndNotSelf(self)
                                             && cr.IsAdjacentTo(self)),
                                         ModData.Illustrations.CoveringStance,
-                                        """
-                                        {b}Covering Stance{/b}
-                                        Your turn ended. Choose an adjacent ally to gain lesser cover until the start of your next turn.
-                                        """,
+                                        "Your turn ended. Choose an adjacent ally to gain lesser cover until the start of your next turn.",
                                         "This ally gains lesser cover until the start of your next turn. They lose this cover if they move away from you. If you Intercept an Attack made against this ally, they can Step as a free action.",
                                         "Don't cover ally");
 
