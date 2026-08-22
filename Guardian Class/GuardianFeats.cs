@@ -764,10 +764,9 @@ public static class GuardianFeats
                                 AdditionalTraits = [Trait.Flourish, ModData.Traits.Guardian]
                             })
                         .WithStrikeNameAndIllustrationChange(
-                            "Exacting Strike",
+                            "Taunting Strike",
                             ModData.Illustrations.Taunt_1,
                             thrown)
-                        //.WithExtraTrait(Trait.Basic)
                         .WithEffectOnEachTarget(async (action, caster, target, result) =>
                         {
                             CombatAction taunt = GuardianClass.CreateTaunt(caster, true, Trait.Visual)
