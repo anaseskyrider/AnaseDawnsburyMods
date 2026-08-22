@@ -2298,9 +2298,7 @@ public static class GuardianFeats
 
                                 CombatAction shieldArrows = new CombatAction(
                                         qfThis.Owner,
-                                        new ScrollIllustration(
-                                            IllustrationName.SteelShield,
-                                            IllustrationName.ArrowPointedProjectile30),
+                                        ModData.Illustrations.ShieldFromArrows,
                                         "Shield from Arrows",
                                         [ModData.ModTrait, ModData.Traits.Guardian],
                                         null!,
