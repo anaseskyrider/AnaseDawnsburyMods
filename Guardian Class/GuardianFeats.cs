@@ -1,5 +1,4 @@
 using Dawnsbury.Audio;
-using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations.Movement;
 using Dawnsbury.Core.CharacterBuilder;
@@ -14,7 +13,6 @@ using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
-using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Intelligence;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
@@ -30,7 +28,6 @@ using Dawnsbury.Core.Mechanics.Zoning;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
-using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
@@ -2364,54 +2361,38 @@ public static class GuardianFeats
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
             {
+                bool hasDevastate = qfFeat.Owner.HasFeat(ModData.FeatNames.DevastatingShieldWallop);
+                
                 qfFeat.AddToOffenseBlock = qfThis =>
-                    qfThis.Name!.WithTag("b")
-                    + " [flourish] Make a shield Strike that stupefies the target.";
-                // The actual action
-                qfFeat.ProvideStrikeModifier = item =>
-                    item.HasTrait(Trait.Shield)
-                        ? CreateShieldWallop(item, false)
-                        : null;
-                qfFeat.Owner.AddQEffect(new QEffect()
-                {
-                    Name = "[SHIELD WALLOP THROWN VARIANT GRANTER]",
-                    ProvideStrikeModifier = item =>
-                        item.WeaponProperties!.ForcedMelee && item.WeaponProperties!.Throwable
-                            ? CreateShieldWallop(item, true)
-                            : null
-                });
+                    qfThis.Name!.WithTag("b") + " [flourish] Make a shield Strike that stupefies the target." + (hasDevastate ? " {Blue}The target also makes a Fortitude saving throw against being knocked prone and stunned 1.{/Blue}" : null);
 
-                return;
-
-                CombatAction CreateShieldWallop(Item item, bool isThrown)
+                qfFeat.ProvideStrikeModifierIncludingForThrownStrike = (item, thrown) =>
                 {
+                    if (!item.HasTrait(Trait.Shield))
+                        return null;
+                    
                     int baseValue = item.HasTrait(MoreShields.ModData.Traits.CoverShield)
                         ? 2
                         : 1;
                     
-                    StrikeModifiers newMods = new StrikeModifiers() { };
                     CombatAction wallop = StrikeRules
                         .CreateStrike(
                             qfFeat.Owner,
                             item,
-                            isThrown || item.HasTrait(Trait.Ranged)
+                            thrown || item.HasTrait(Trait.Ranged)
                                 ? RangeKind.Ranged
                                 : RangeKind.Melee,
                             -1,
-                            isThrown,
-                            newMods)
-                        .WithName("Shield Wallop" + (isThrown ? " (Thrown)" : null))
-                        .WithIllustration(new SideBySideIllustration(
-                            item.Illustration,
-                            IllustrationName.BrainDrain))
-                        .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
-                            newMods,
-                            additionalSuccessText: $"The target is stupefied {baseValue}.",
-                            additionalCriticalSuccessText: $"The target is stupefied {baseValue+1}."))
-                        //.WithExtraTrait(Trait.Basic)
-                        .WithExtraTrait(Trait.Flourish)
-                        .WithExtraTrait(ModData.Traits.Guardian)
-                        .WithActionCost(1)
+                            thrown,
+                            new StrikeModifiers()
+                            {
+                                AdditionalTraits = [Trait.Flourish, ModData.Traits.Guardian]
+                            })
+                        .WithStrikeNameAndIllustrationChange(
+                            "Shield Wallop",
+                            IllustrationName.BrainDrain,
+                            thrown)
+                        .WithActionId(ModData.ActionIds.ShieldWallop)
                         .WithHitAndDealDamage(async (caster, action, target) =>
                         {
                             if (action.CheckResult >= CheckResult.Success)
@@ -2420,9 +2401,13 @@ public static class GuardianFeats
                                         .WithExpirationAtStartOfSourcesTurn(caster, 1));
                         });
                     wallop.Traits = new Traits([ModData.ModTrait, ..wallop.Traits.ToList()], wallop);
+                    wallop.Description = StrikeRules.CreateBasicStrikeDescription4(
+                        wallop.StrikeModifiers,
+                        additionalSuccessText: $"The target is {{r}}stupefied {baseValue}{{/r}}." + (hasDevastate ? " The target also makes a Fortitude saving throw against being knocked prone and stunned 1." : null),
+                        additionalCriticalSuccessText: $"The target is {{r}}stupefied {baseValue + 1}{{/r}}." + (hasDevastate ? " The target also makes a Fortitude saving throw against being knocked prone and stunned 1." : null));
                     
                     return wallop;
-                }
+                };
             })
             .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
         
@@ -2799,9 +2784,183 @@ public static class GuardianFeats
                 values => values.HasFeat(ModData.FeatNames.InterceptAttack),
                 "You must have the Intercept Attack feature");
 
-        // TODO: Devastating Shield Wallop
+        // Devastating Shield Wallop
+        yield return new TrueFeat(
+                ModData.FeatNames.DevastatingShieldWallop, 12,
+                "The impact of your shield sends foes tumbling to the ground.",
+                $"When you use {ModData.FeatNames.ShieldWallop.ToLink("Shield Wallop")}, after its other effects, the target attempts a Fortitude saving throw against your class DC. If your shield is a tower shield, fortress shield, or another shield that grants a higher circumstance bonus to AC when you Take Cover behind it, the target takes a –2 circumstance penalty to this saving throw.{S.FourDegreesOfSuccess(
+                    "The target takes no additional effect.",
+                    "The target is {r:flat-footed}off-guard{/r} to you until the end of the current turn.",
+                    "The target is knocked {r}prone{/r}.",
+                    "The target is knocked {r}prone{/r} and {r}stunned 1{/r}.")}",
+                [Trait.Flourish, ModData.Traits.Guardian])
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AfterYouDealDamage = async (self, action, target) =>
+                {
+                    if (action.ActionId != ModData.ActionIds.ShieldWallop
+                        || action.CheckResult < CheckResult.Success)
+                        return;
 
-        // TODO: Paragon's Guard
+                    CombatAction devastate = new CombatAction(
+                            self,
+                            action.Illustration,
+                            "Devastating Shield Wallop",
+                            [ModData.ModTrait, Trait.Flourish, ModData.Traits.Guardian],
+                            null!,
+                            Target.Self())
+                        .WithActionCost(0)
+                        .WithDescription(
+                            "The impact of your shield sends foes tumbling to the ground.",
+                            $"When you use {ModData.FeatNames.ShieldWallop.ToLink("Shield Wallop")}, after its other effects, the target attempts a Fortitude saving throw against your class DC. If your shield is a tower shield, fortress shield, or another shield that grants a higher circumstance bonus to AC when you Take Cover behind it, the target takes a –2 circumstance penalty to this saving throw.{S.FourDegreesOfSuccess(
+                                "The target takes no additional effect.",
+                                "The target is {r:flat-footed}off-guard{/r} to you until the end of the current turn.",
+                                "The target is knocked {r}prone{/r}.",
+                                "The target is knocked {r}prone{/r} and {r}stunned 1{/r}.")}")
+                        .WithSavingThrow(new SavingThrow(
+                            Defense.Fortitude,
+                            self.ClassDC(ModData.Traits.Guardian)));
+
+                    if (action.Item!.HasTrait(MoreShields.ModData.Traits.CoverShield))
+                        target.AddQEffect(new QEffect(ExpirationCondition.ExpiresAtEndOfAnyTurn)
+                        {
+                            Name = "[PENALTY TO DEVASTATING SHIELD WALLOP]",
+                            Source = self,
+                            BonusToDefenses = (qfPen, combatAction, def) =>
+                                def is Defense.Fortitude
+                                && combatAction == devastate
+                                    ? new Bonus(-2, BonusType.Circumstance, "Cover Shield")
+                                    : null
+                        });
+
+                    CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(target, devastate, devastate.SavingThrow!);
+
+                    switch (result)
+                    {
+                        case CheckResult.CriticalSuccess:
+                            return;
+                        case CheckResult.Success:
+                            target.AddQEffect(new QEffect(ExpirationCondition.ExpiresAtEndOfSourcesTurn)
+                            {
+                                Source = self,
+                                IsFlatFootedTo = (_, cr, _) => cr == self
+                                    ? "Devastating Shield Wallop (Success)"
+                                    : null
+                            });
+                            target.Battle.Log($"{$"{devastate.Name}:".WithTag("b")} Inflict {{r:flat-footed}}off-guard{{/r}} until the end of this turn.", devastate.Name, devastate.Description, devastate.Traits);
+                            break;
+                        case CheckResult.CriticalFailure:
+                            target.AddQEffect(QEffect.Stunned(1)
+                                .With(qfStun =>
+                                {
+                                    qfStun.Source = self;
+                                    qfStun.SourceAction = devastate;
+                                }));
+                            target.Battle.Log($"{$"{devastate.Name}:".WithTag("b")} Inflict {{r}}stunned 1{{/r}}.", devastate.Name, devastate.Description, devastate.Traits);
+                            goto case CheckResult.Failure;
+                        case CheckResult.Failure:
+                            await target.FallProne();
+                            target.Battle.Log($"{$"{devastate.Name}:".WithTag("b")} Inflict {{r}}prone{{/r}}.", devastate.Name, devastate.Description, devastate.Traits);
+                            break;
+                    }
+                };
+            })
+            .WithPrerequisite(ModData.FeatNames.ShieldWallop, "Shield Wallop")
+            .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
+
+        // Paragon's Guard
+        yield return new TrueFeat(
+                ModData.FeatNames.ParagonsGuard, 12,
+                "Once you’ve had a moment to set your stance, you always have your shield ready without a thought.",
+                """
+                {b}Requirements{/b} You are wielding a shield.
+
+                Enter a stance. While you are in this stance, you constantly have your shield raised as if you’d used the Raise a Shield action.
+                """,
+                [Trait.Fighter, ModData.Traits.Guardian, Trait.Stance])
+            .WithActionCost(1)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.ProvideMainAction = qfThis =>
+                    new ActionPossibility(
+                        new CombatAction(
+                                qfThis.Owner,
+                                ModData.Illustrations.ParagonsGuard,
+                                "Paragon's Guard",
+                                [ModData.ModTrait, Trait.Fighter, ModData.Traits.Guardian, Trait.Stance],
+                                null!,
+                                Target.Self()
+                                    .WithAdditionalRestriction(self =>
+                                        self.HasEffect(ModData.QEffectIds.ParagonsGuard)
+                                        ? "You're already in this stance." : null)
+                                    .WithAdditionalRestriction(self =>
+                                        MoreShields.CommonShieldRules.GetWieldedShields(self).Count > 0
+                                            ? null : "You must be wielding a shield"))
+                            .WithDescription(
+                                "Once you’ve had a moment to set your stance, you always have your shield ready without a thought.",
+                                """
+                                {b}Requirements{/b} You are wielding a shield.
+
+                                Enter a stance. While you are in this stance, you constantly have your shield raised as if you’d used the Raise a Shield action.
+                                """)
+                            .WithShortDescription("Enter a stance that keeps your shield constantly raised.")
+                            .WithActionCost(1)
+                            .WithSoundEffect(SfxName.RaiseShield)
+                            .WithEffectOnEachTarget(async (_, caster, _, _) =>
+                            {
+                                // Choose a shield.
+                                // It can be any wielded shield. I don't see a reason to
+                                // restrict your options in the event of mistakenly raising
+                                // one anyway.
+                                List<Item> shields = MoreShields.CommonShieldRules.GetWieldedShields(caster);
+                                Item shield;
+                                if (shields.Count == 1)
+                                    shield = shields[0];
+                                else if ((await caster.AskForChoiceAmongButtons(
+                                             ModData.Illustrations.ParagonsGuard,
+                                             """
+                                             {b}Paragon's Guard {icon:Action}{/b}
+                                             Choose a shield to raise as part of this stance.
+                                             """,
+                                             shields.Select(item =>
+                                                     item.Illustration.IllustrationAsIconString + item.Name)
+                                                 .ToArray()
+                                         )).Index is var index
+                                         && index < shields.Count)
+                                    shield = shields[index];
+                                else
+                                    return;
+                                
+                                // Raise that shield, increase duration.
+                                Fighter.RaiseShield(caster, shield, caster, false);
+                                QEffect raise = caster.QEffects.First(qf =>
+                                    qf.Id == QEffectId.RaisingAShield
+                                    && qf.Tag == shield);
+                                raise.ExpiresAt = ExpirationCondition.Never;
+                                raise.HideFromPortrait = true;
+                                
+                                QEffect stance = KineticistCommonEffects.EnterStance(
+                                    caster,
+                                    ModData.Illustrations.ParagonsGuard,
+                                    "Paragon's Guard",
+                                    $"Your {{Blue}}{shield.Name}{{/Blue}} is always raised while you wield it:\n\n{raise.Description}",
+                                    ModData.QEffectIds.ParagonsGuard);
+                                stance.Tag = raise;
+                                stance.StateCheck += qfStance =>
+                                {
+                                    if (qfStance.Tag is not QEffect
+                                            { Tag: Item thisShield } qfRaise
+                                        || MoreShields.CommonShieldRules
+                                            .GetWieldedShields(qfStance.Owner)
+                                            .Contains(thisShield))
+                                        return;
+                                    qfStance.ExpiresAt = ExpirationCondition.Immediately;
+                                    qfRaise.ExpiresAt = ExpirationCondition.Immediately;
+                                };
+                            }))
+                        .WithPossibilityGroup(Constants.POSSIBILITY_GROUP_STANCES);
+            })
+            .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
 
         // TODO: Right Where You Want Them
 

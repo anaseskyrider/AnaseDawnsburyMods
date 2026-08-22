@@ -51,11 +51,13 @@ public static class ModData
     {
         public static ActionId Taunt;
         public static ActionId InterceptAttack;
+        public static ActionId ShieldWallop;
         
         public static void Initialize()
         {
             Taunt = ModManager.SafelyRegisterEnumMember<ActionId>("Taunt");
             InterceptAttack = ModManager.SafelyRegisterEnumMember<ActionId>("InterceptAttack");
+            ShieldWallop = ModManager.SafelyRegisterEnumMember<ActionId>("ShieldWallop");
         }
     }
 
@@ -320,16 +322,17 @@ public static class ModData
         
         public static readonly Illustration ArmoredCourage = new ModdedIllustration(MOD_FOLDER+"armor-upgrade 2.png");
         public static readonly Illustration StompGround = new ModdedIllustration(MOD_FOLDER+"quake-stomp.png");
-        public static readonly Illustration CoveringStance = IllustrationName.Protection;
+        public static readonly Illustration CoveringStance = new ModdedIllustration(MOD_FOLDER+"guarded-tower.png");
         public static readonly Illustration HamperingStance = new ModdedIllustration(MOD_FOLDER+"banana-peel + hot-surface.png");
         public static readonly Illustration LockDown = new ModdedIllustration(MOD_FOLDER+"foot-trip.png");
+        public static readonly Illustration ShieldFromArrows = new ModdedIllustration(MOD_FOLDER+"arrows-shield.png");
         public static readonly Illustration GetBehindMe = IllustrationName.FleetStep;
         public static readonly Illustration ToughCookie = IllustrationName.Enlarge;
         public static readonly Illustration ArmoredCounterattack = new CornerIllustration(InterceptAttack, IllustrationName.StarHit, Direction.Southeast);
+        public static readonly Illustration ParagonsGuard = IllustrationName.Shattershields;
         public static readonly Illustration ScatteringCharge = new SideBySideIllustration(IllustrationName.FleetStep, IllustrationName.Shove);
         public static readonly Illustration WeakeningAssault = new CornerIllustration(new SideBySideIllustration(IllustrationName.Swipe, IllustrationName.Swipe), IllustrationName.Enfeebled, Direction.Southeast);
         public static readonly Illustration KeepUpTheGoodFight = IllustrationName.WinningStreak;
-        public static readonly Illustration OpeningStance = IllustrationName.RemoveConfusion;
         
         #endregion
         
@@ -379,6 +382,7 @@ public static class ModData
         public static QEffectId BodyguardCharge;
         public static QEffectId CoveringStance;
         public static QEffectId HamperingStance;
+        public static QEffectId ParagonsGuard;
         
         public static void Initialize()
         {
@@ -387,6 +391,7 @@ public static class ModData
             BodyguardCharge = ModManager.SafelyRegisterEnumMember<QEffectId>("Bodyguard's Charge");
             CoveringStance = ModManager.SafelyRegisterEnumMember<QEffectId>("CoveringStance");
             HamperingStance = ModManager.SafelyRegisterEnumMember<QEffectId>("HamperingStance");
+            ParagonsGuard = ModManager.SafelyRegisterEnumMember<QEffectId>("ParagonsGuard");
         }
     }
     
