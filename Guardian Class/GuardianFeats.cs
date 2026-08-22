@@ -1514,7 +1514,7 @@ public static class GuardianFeats
 
                 This effect lasts until the beginning of your next turn, until you move, or until you use that weapon or unarmed attack to make another attack, whichever comes first.
                 """,
-                [Trait.Flourish, ModData.Traits.Guardian])
+                [Trait.Flourish, Trait.Rebalanced, ModData.Traits.Guardian])
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
             {
@@ -1814,6 +1814,7 @@ public static class GuardianFeats
                 qfFeat.AddToOffenseBlock = qfThis =>
                     qfThis.Name!.WithTag("b")
                     + " [flourish] Strike a taunted enemy who ignored your Taunt, stunning them.";
+                
                 qfFeat.Id = QEffectId.AlwaysShowedUnarmedStrike;
                 qfFeat.ProvideStrikeModifier = item =>
                 {
