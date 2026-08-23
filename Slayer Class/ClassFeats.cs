@@ -811,7 +811,7 @@ public static class ClassFeats
                 $"When you go {onTheHunt.ToLink("On the Hunt")}, you can Step toward the nearest enemy as a {{icon:FreeAction}} free action.",
                 [ModData.Traits.Slayer])
             .WithPermanentQEffect(
-                "You can Step after you go On the Hunt.",
+                "You can Step {icon:FreeAction} towards the nearest enemy after you go On the Hunt.",
                 qfFeat =>
                 {
                     qfFeat.AfterYouTakeAction = async (qfThis, action) =>
@@ -832,7 +832,7 @@ public static class ClassFeats
                             .ToList();
                         
                         await qfThis.Owner.StrideOrStepAdvancedAsync(
-                            "Choose where to Step.",
+                            "Choose where to Step that's closer to an enemy as part of Eager Hunter.",
                             true, null, true, true, false, null, null,
                             stepTo => enemies.Any(enemy =>
                                 stepTo.DistanceTo(enemy) <= qfThis.Owner.DistanceTo(enemy)));
