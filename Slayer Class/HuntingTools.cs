@@ -26,7 +26,6 @@ using Dawnsbury.Display;
 using Dawnsbury.Display.ContextMenu;
 using Dawnsbury.Display.Controls;
 using Dawnsbury.Display.Controls.Statblocks;
-using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
