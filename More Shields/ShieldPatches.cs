@@ -488,39 +488,59 @@ public static class ShieldPatches
             };
         }
     }
-
-    /// Speed calculation now uses the worst of Fortress Shield or Tower Shield.
-    [HarmonyPatch(typeof(Creature), nameof(Creature.RecalculateLandSpeedAndInitiative))]
+    
+    /// <summary>
+    /// Adjusts the characters' listed speed breakdown to account for a Fortress Shield.
+    /// </summary>
+    /// <remarks>Since two Tower Shields don't double your penalty, the presence of a Fortress Shield is designed for "use worst penalty" here. If a Fortress Shield is present, it needs to be added to the list. This penalty can be reduced by Unburdened Iron. Consequently, if Unburdened Iron is present, the reduced-penalty can be added since the Tower Shield wouldn't show at all. If it's not, then the description must be updated too.</remarks>
+    [HarmonyPatch(typeof(Creature), nameof(Creature.DetermineLandSpeed))]
     internal static class PatchTowerShieldSpeedPenalty
     {
-        internal static void Postfix(Creature __instance/*, ref int ___Speed*/)
+        internal static void Postfix(Creature __instance, ref (int, string) __result)
         {
-            // Harmony Traverse causes errors with Thaumaturge's Mirror Reflection which is a subclass of Creature.
-            // Old code will be kept for austerity
-            
-            PropertyInfo? Speed = typeof(Creature).GetProperty("Speed", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            
-            //Traverse Speed = Traverse.Create(__instance).Property("Speed");
-
-            if (Speed is null)
+            // This only exists to patch the presence of a Fortress Shield.
+            bool hasFortressShield = __instance.HeldItems.Any(itm => itm.HasTrait(ModData.Traits.FortressShield));
+            if (!hasFortressShield)
                 return;
             
+            // Cache the old speed so it can be replaced later.
+            int cachedSpeed = __result.Item1;
+            
+            // Get the penalty for a Fortress Shield.
             bool unburdenedIron = __instance.HasEffect(QEffectId.UnburdenedIron);
+            int penalty = unburdenedIron ? -1 : -2;
+            List<Bonus> bonuses =
+            [
+                new Bonus(penalty, BonusType.Untyped, "Fortress Shield")
+            ];
+            (int _, string fShieldDesc) = Bonus.CalculateBestNonNull(bonuses, true, true);
+            
+            // If a Tower Shield is present in the description, account for this.
             bool hasTowerShield = __instance.HeldItems.Any(itm => itm.HasTrait(Trait.TowerShield));
-            bool hasFortressShield = __instance.HeldItems.Any(itm => itm.HasTrait(ModData.Traits.FortressShield));
+            if (hasTowerShield && !unburdenedIron)
+            {
+                // Get the Tower Shield's description.
+                (int _, string tShieldDesc) = Bonus.CalculateBestNonNull(
+                    [ new Bonus(-1, BonusType.Untyped, "Tower Shield") ],
+                    true, true);
+                // Replace the Tower Shield with the Fortress Shield.
+                __result.Item2 = __result.Item2.Replace(tShieldDesc, fShieldDesc);
+                // Reduce the user's speed by 1 more unit (use worst penalty).
+                __result.Item1 -= 1;
+            }
+            // Unburdened Iron is present (so there was never a penalty),
+            // or there was no Tower Shield. Regardless, simply add the
+            // Fortress Shield's penalty and add it to the description.
+            else
+            {
+                // Reduce your speed from the Fortress Shield.
+                __result.Item1 += penalty;
+                __result.Item2 = __result.Item2.Replace(
+                    $"\n\n{{b}}{cachedSpeed * 5} feet{{/b}} Final speed",
+                    $"\n{fShieldDesc}\n\n{{b}}{cachedSpeed * 5} feet{{/b}} Final speed");
+            }
             
-            int worstPenalty = hasFortressShield ? -2 : hasTowerShield ? -1 : 0;
-            int finalPenalty = unburdenedIron ? Math.Min(worstPenalty+1, 0) : worstPenalty;
-
-            /*if (hasTowerShield && !unburdenedIron && Speed.GetValue() is int value1)
-                Speed.SetValue(value1 + 1); // reverse the original Tower Shield penalty
-            if (Speed.GetValue() is int value2)
-                Speed.SetValue(value2 + finalPenalty); // Apply final penalty*/
-            
-            if (hasTowerShield && !unburdenedIron && Speed.GetValue(__instance) is int value1)
-                Speed.SetValue(__instance, value1 + 1); // reverse the original Tower Shield penalty
-            if (Speed.GetValue(__instance) is int value2)
-                Speed.SetValue(__instance, value2 + finalPenalty); // Apply final penalty
+            __result.Item2 = __result.Item2.Replace($"{{b}}{cachedSpeed * 5} feet{{/b}} Final speed", $"{{b}}{__result.Item1 * 5} feet{{/b}} Final speed");
         }
     }
 }
