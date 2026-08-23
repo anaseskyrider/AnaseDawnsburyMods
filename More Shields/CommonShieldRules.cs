@@ -139,15 +139,21 @@ public static class CommonShieldRules
     #region Shield Abilities
 
     /// <summary>
-    /// The basic triggers for Shield Block, with Sparkling Targe Magus.
+    /// Whether the BLOCKING CREATURE can block this DAMAGE EVENT.
     /// </summary>
-    public static bool DoesShieldBlockApply(Creature blocker, DamageStuff dStuff)
+    public static bool DoesShieldBlockApply(Creature blocker, DamageEvent dEvent)
     {
+        DamageStuff dStuff = new DamageStuff(
+            dEvent.TotalResolvedDamage,
+            dEvent.CombatAction,
+            dEvent.KindedDamages.First().DamageKind);
+        
         return (dStuff.Kind.IsPhysical()
                 && dStuff.Power != null
                 && dStuff.Power.HasTrait(Trait.Attack)
                 && dStuff.Power.ActionId != ActionId.Trip)
-               || DoesSparklingTargeShieldBlockApply(dStuff.Power, blocker);
+               || blocker.QEffects.Any(qff =>
+                   qff.YourShieldBlockWorksAlsoAgainst?.Invoke(qff, dEvent) ?? false);
     }
 
     /// <summary>
