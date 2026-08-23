@@ -298,7 +298,8 @@ public static class ClassFeats
                     dEvent.CombatAction is { } action
                     && action.HasTrait(Trait.Attack)
                     && action.ActionId != ActionId.Trip
-                    && CommonShieldRules.GetBlockableShields(qfThis.Owner).Contains(iShield)
+                    && (qfThis.Owner.HasFeat(FeatName.ReactiveShield)
+                        || CommonShieldRules.GetBlockableShields(qfThis.Owner).Contains(iShield))
                     && dEvent.KindedDamages.Any(kd => trophyData.Value.Kinds.Contains(kd.DamageKind));
                 
                 self.AddQEffect(repellQF);
