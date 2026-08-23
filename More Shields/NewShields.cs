@@ -1,6 +1,4 @@
 using System.Reflection;
-using Dawnsbury.Core;
-using Dawnsbury.Core.Animations;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
@@ -53,13 +51,10 @@ public static class NewShields
                     ModData.Illustrations.MeteorShield,
                     "meteor shield",
                     0, 4,
-                    ModData.ModTrait, Trait.Shield, Trait.Martial, Trait.Thrown30Feet, ModData.Traits.MediumShield)
+                    ModData.ModTrait, Trait.Shield, Trait.Martial, Trait.Thrown30Feet, ModData.Traits.MediumShield, Trait.RangedStrikeUsesItemIllustration)
                 .WithMainTrait(ModData.Traits.MeteorShield)
                 .WithDescription("Meteor shields are specifically designed with throwing in mind. A meteor shield is made from thin steel and has quick-release straps, allowing for easy, long-distance throws.", "")
-                .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning)
-                {
-                    VfxStyle = new VfxStyle(1, ProjectileKind.Arrow, IllustrationName.WoodenShieldBoss)
-                })
+                .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning))
                 .WithShieldProperties(4));
         ModData.ItemNames.HeavyRondache = ModManager.RegisterNewItemIntoTheShop(
             "HeavyRondache",
