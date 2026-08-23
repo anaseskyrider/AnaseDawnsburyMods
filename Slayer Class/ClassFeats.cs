@@ -55,8 +55,7 @@ public static class ClassFeats
 
         // Bloodscent
         yield return new TrueFeat(
-                ModData.FeatNames.Bloodscent,
-                1,
+                ModData.FeatNames.Bloodscent, 1,
                 "With a glance, you can judge how close your target is to falling.",
                 $"The {RecallWeakness.GetActionLink()} action gains the {ModData.Tooltips.Relentless("relentless")} trait for you. You can also use Recall Weakness as a {{icon:FreeAction}} free action if the target is your quarry or is taking persistent bleed damage.",
                 [ModData.Traits.Slayer])
@@ -111,8 +110,7 @@ public static class ClassFeats
         
         // Crossbow Slayer
         yield return new TrueFeat(
-                ModData.FeatNames.CrossbowSlayer,
-                1,
+                ModData.FeatNames.CrossbowSlayer, 1,
                 "You find that a crossbow's versatility is the perfect companion to your own, and you eagerly reload it to get back in the fight.",
                 $$"""
                   Reloading gains the {{ModData.Tooltips.Relentless("relentless")}} trait for you.
@@ -315,8 +313,7 @@ public static class ClassFeats
         
         // Peculiar Weaponry
         yield return new TrueFeat(
-                    ModData.FeatNames.PeculiarWeaponry,
-                    1,
+                    ModData.FeatNames.PeculiarWeaponry, 1,
                     "You specialize in an unusual weapon, whether a common soldier's armament or a unique tool few can use.",
                     $$"""
                     If your bloodseeking blade signature tool is a simple weapon, increase its damage die size by one step.
@@ -348,15 +345,12 @@ public static class ClassFeats
                     qfFeat.IncreaseItemDamageDie = (qfThis, item) =>
                         blade.IsMyTool(item) && item.HasTrait(Trait.Simple);
                 })
-            .WithInappropriateBecauseOfBadInventory((values, inventory) =>
-            {
-                return FeatInventoryRequirements.RequiresOne(
-                    inventory,
-                    item =>
-                        (item.HasTrait(Trait.Simple) && item.WeaponProperties?.DamageDieSize < 12)
-                        || item.HasTrait(Trait.Advanced),
-                    "a simple weapon with a damage die no bigger than a d10, or an advanced weapon");
-            });
+            .WithInappropriateBecauseOfBadInventory((_, inventory) => FeatInventoryRequirements.RequiresOne(
+                inventory,
+                item =>
+                    (item.HasTrait(Trait.Simple) && item.WeaponProperties?.DamageDieSize < 12)
+                    || item.HasTrait(Trait.Advanced),
+                "a simple weapon with a damage die no bigger than a d10, or an advanced weapon"));
 
         #endregion
 
@@ -364,8 +358,7 @@ public static class ClassFeats
 
         // Instant Enmity
         yield return new TrueFeat(
-                ModData.FeatNames.InstantEnmity,
-                2,
+                ModData.FeatNames.InstantEnmity, 2,
                 "You focus your hunt on an unexpected but loathsome foe.",
                 $$"""
                   {b}Frequency{/b} Once per day.
@@ -453,8 +446,7 @@ public static class ClassFeats
         
         // Pack Slayer
         yield return new TrueFeat(
-                ModData.FeatNames.PackSlayer,
-                2,
+                ModData.FeatNames.PackSlayer, 2,
                 "You know that even lesser monsters make for worthy prey in enough numbers.",
                 $"You can {markQuarry.ToLink("Mark as your Quarry")} a group of at least three creatures that share a name, even if their level is lower than yours. You can only {claimTrophy.ToLink("Claim a Trophy")} from this group once.",
                 [ModData.Traits.Slayer])
@@ -482,8 +474,7 @@ public static class ClassFeats
 
         // Blood for Blood
         yield return new TrueFeat(
-                ModData.FeatNames.BloodForBlood,
-                4,
+                ModData.FeatNames.BloodForBlood, 4,
                 "You viciously return your foe’s attack, reinvigorating yourself with your vengeance.",
                 """
                 {b}Requirements{/b} A creature critically hit you with an attack since the end of your previous turn.
@@ -568,8 +559,7 @@ public static class ClassFeats
         
         // Blood Rush
         yield return new TrueFeat(
-                ModData.FeatNames.BloodRush,
-                4,
+                ModData.FeatNames.BloodRush, 4,
                 "The adrenaline of entering combat with your target pushes you forward.",
                 $$"""
                 {b}Trigger{/b} You roll initiative and have a quarry.
@@ -639,8 +629,7 @@ public static class ClassFeats
         
         // Expansive Panoply
         yield return new TrueFeat(
-                ModData.FeatNames.ExpansivePanoply,
-                4,
+                ModData.FeatNames.ExpansivePanoply, 4,
                 "While a short, sharp piece of metal is a remarkably versatile tool, you know that it is not appropriate for every occasion.",
                 // clubs, darts, or shortswords.
                 $"When you use {{b}}Hunting Spike {{icon:Action}}{{/b}}, you can draw and Strike with spikes that function as {ItemName.Club.ToLink("clubs")} or {ItemName.Shortsword.ToLink("shortswords")}, rather than {ItemName.Dagger.ToLink("daggers")}.",
@@ -658,8 +647,7 @@ public static class ClassFeats
         
         // Final Flourish
         yield return new TrueFeat(
-                ModData.FeatNames.FinalFlourish,
-                6,
+                ModData.FeatNames.FinalFlourish, 6,
                 "With a showy flourish, you flick blood off your blade or rearm your weapon, invigorating yourself.",
                 """
                 {b}Requirements{/b} You reduced a creature to 0 Hit Points this turn.
@@ -778,8 +766,7 @@ public static class ClassFeats
         
         // Defensive Hunt
         yield return new TrueFeat(
-                ModData.FeatNames.DefensiveHunt,
-                8,
+                ModData.FeatNames.DefensiveHunt, 8,
                 "Even in a moment of danger, you turn weakness into opportunity.",
                 $$"""
                   {b}Trigger{/b} You are critically hit by your quarry.
@@ -818,8 +805,7 @@ public static class ClassFeats
 
         // Eager Hunter
         yield return new TrueFeat(
-                ModData.FeatNames.EagerHunter,
-                10,
+                ModData.FeatNames.EagerHunter, 10,
                 "You are so eager to reach your prey that every opening propels you forward.",
                 $"When you go {onTheHunt.ToLink("On the Hunt")}, you can Step toward the nearest enemy as a {{icon:FreeAction}} free action.",
                 [ModData.Traits.Slayer])
@@ -864,8 +850,7 @@ public static class ClassFeats
 
         // Double Quarry
         yield return new TrueFeat(
-                ModData.FeatNames.DoubleQuarry,
-                12,
+                ModData.FeatNames.DoubleQuarry, 12,
                 "Your improved preparations allow you to ready your tools for two foes at once.",
                 $"You can {markQuarry.ToLink("Mark a Quarry")} twice at the beginning of combat.",
                 [ModData.Traits.Slayer])
@@ -879,8 +864,7 @@ public static class ClassFeats
 
         // Open Wound
         yield return new TrueFeat(
-                ModData.FeatNames.OpenWound,
-                14,
+                ModData.FeatNames.OpenWound, 14,
                 "Your weapons can always find your prey's wounds, guiding your hands.",
                 "Creatures that are taking persistent bleed damage are {r:flat-footed}off-guard{/r} to you.",
                 [ModData.Traits.Slayer])
