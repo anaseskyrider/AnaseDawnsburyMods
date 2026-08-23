@@ -43,7 +43,7 @@ public static class ShieldPatches
             int theirBonus = isCoverable ? 2 : 1;
 
             // Add mod trait
-            __result.Traits = new Traits([ModData.ModTrait, ..__result.Traits], __result);
+            __result.Traits = new Traits([ModData.ModTrait, ..__result.Traits.ToList()], __result);
             
             // Address hefty trait
             if (shield.HasTrait(ModData.Traits.Hefty14))
@@ -372,7 +372,7 @@ public static class ShieldPatches
 
                     If you'd be hit by a melee Strike, you immediately Raise a Shield as a reaction.
                     """,
-                    new Traits([..AllFeats.GetFeatByFeatName(FeatName.ReactiveShield).Traits, ModData.Traits.ReactiveAction]));
+                    new Traits([..AllFeats.GetFeatByFeatName(FeatName.ReactiveShield).Traits.ToList(), ModData.Traits.ReactiveAction]));
                 
                 Fighter.RaiseShield(defender, chosenShield, defender, false);
                 

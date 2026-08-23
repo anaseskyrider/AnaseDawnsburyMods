@@ -402,7 +402,7 @@ public static class OldShields
                             defender + " uses {b}Emergency Targe{/b}.",
                             "Emergency Targe {icon:Reaction}",
                             "{i}Your targe comes readily in times of danger to avoid blows and spells.{/i}\n\nWhen an enemy would hit you with a melee Strike or a melee spell attack roll, or you would fail a save against an enemy's spell, as {icon:Reaction}a reaction, you can immediately raise a shield or cast {i}shield{/i} (its circumstance bonus applies to the triggering attack or spell).",
-                            new Traits([..AllFeats.GetFeatByFeatName(FeatName.EmergencyTarge).Traits, ModData.Traits.ReactiveAction]));
+                            new Traits([..AllFeats.GetFeatByFeatName(FeatName.EmergencyTarge).Traits.ToList(), ModData.Traits.ReactiveAction]));
 
                         if (chosenShield.Tag is SpellId.Shield)
                             await LibraryOfAnase.OfferOptions2(
