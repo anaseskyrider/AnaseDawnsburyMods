@@ -858,10 +858,18 @@ public static class ClassFeats
             .WithPermanentQEffect(
                 "You can Mark a Quarry twice at the beginning of combat.",
                 qfFeat => { });
+        
+        // Expanded Spell Slates
+        
+        // Gouging Strike
+        
+        // Spectral Lenses
 
         #endregion
 
         #region 14th-Level
+        
+        // Arm Bloodburst Phial
 
         // Open Wound
         yield return new TrueFeat(
@@ -891,20 +899,30 @@ public static class ClassFeats
         #endregion
 
         #region 16th-Level
-
-
+        
+        // Impenetrable Shelter
+        
+        // Inferno Vial
+        
+        // Unerring Edge
+        
+        // Vicious Spike
 
         #endregion
 
         #region 18th-Level
-
-
+        
+        // Obliterate
+        
+        // Terrifying Bloodlust
 
         #endregion
 
         #region 20th-Level
 
-
+        // Eternal Hunt
+        
+        // Unbound Hunt
 
         #endregion
     }
