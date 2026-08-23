@@ -150,7 +150,7 @@ public static class ModData
         public static readonly Trait MediumShield = ModManager.RegisterTrait("MediumShield",
             new TraitProperties("Medium Shield", false));
         
-        /// Hidden technical trait. A heavy shield grants a +2 to AC when raised.
+        /// Hidden technical trait. A heavy shield grants a +3 to AC when raised.
         public static readonly Trait HeavyShield = ModManager.RegisterTrait("HeavyShield",
             new TraitProperties("Heavy Shield", false));
         
