@@ -15,6 +15,7 @@ using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.StatBlocks.Monsters.L5;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
@@ -342,7 +343,30 @@ public static class ShieldPatches
                 // If you have a bonus reaction you could use
                 else if (defender.Actions.DetermineReactionToUse(
                              question + "? {i}(You will still be hit but you'll be able to Shield Block.){/i}",
-                             [Trait.ShieldBlock]) is not null)
+                             [Trait.ShieldBlock]) is not null
+                         // If it has predictable damage kinds
+                         && action.Item?.WeaponProperties is not null
+                         && ((List<DamageKind?>)
+                         [
+                             ..action.Item.DetermineDamageKinds(),
+                             ..action.Item.WeaponProperties.AdditionalDamage
+                                 .Select(tup => tup.Item2),
+                             action.Item.WeaponProperties.AdditionalSplashDamageKind,
+                         ])
+                         .Where(dk =>
+                             dk is not null)
+                         .Cast<DamageKind>()
+                         .Select(dk =>
+                             new KindedDamage(DiceFormula.FromText("1"), dk))
+                         .ToList() is { Count: > 0 } kinds
+                         // Deals physical damage or is an alternative kind you can block
+                         && CommonShieldRules.DoesShieldBlockApply(
+                             defender,
+                             new DamageEvent(
+                                 action,
+                                 defender,
+                                 action.CheckResult,
+                                 kinds.ToArray())))
                     question += "? {i}(You will still be hit but you'll be able to Shield Block.){/i}";
                 else
                     return false;
