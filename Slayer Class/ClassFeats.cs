@@ -15,6 +15,7 @@ using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
@@ -311,6 +312,63 @@ public static class ClassFeats
         // Sudden Pounce
         
         // Paired Bloodseeker
+        yield return new HuntingTool(
+                "Paired Bloodseeker",
+                HuntingTools.ToolId.PairedBloodseeker,
+                HuntingTools.ToolKind.Secondary,
+                ModData.Illustrations.BloodseekingBlade,
+                (self, isSpecialized) =>
+                {
+                    //var inventory = self.PersistentCharacterSheet?.Inventory.AllItems;
+                    var inventory = self.HeldItems
+                        .Concat(self.CarriedItems)
+                        .Append(self.BaseArmor ?? self.Armor.Item ?? null)
+                        .WhereNotNull()
+                        .ToList();
+                    Item? pair = inventory.FirstOrDefault(item =>
+                            HuntingTool.GetToolId(item) is HuntingTools.ToolId.PairedBloodseeker);
+                    string? ignoreAmount = pair is not null ? (1 + pair.WeaponProperties!.DamageDieCount).WithColor("Blue") : null;
+                    Item? trophy = pair is not null ? Trophies.GetTrophy(pair) : null;
+                    DamageKind? chosenDk = trophy is not null ? Trophies.GetChosenDamageKind(trophy) : null;
+                    string damageType = chosenDk is not null
+                        ? (" " + chosenDk.Value.ToStringOrTechnical().WithColor(chosenDk.Value.DamageKindToColor() ) + " ")
+                        : " ";
+                    return $$"""
+                             {b}Bloody Fuller{/b} Against your quarry, you ignore {{(ignoreAmount is null ? "an amount" : ignoreAmount + " points")}} of {{(isSpecialized ? "{Blue}any{/Blue}" : "physical")}} resistance to this tool's damage{{(ignoreAmount is null ? " equal to 1 + the number of weapon damage dice" : null)}}.
+                             {b}Reinforced{/b} Your first Strike with this tool deals {Blue}{{(self.Level >= 19 ? 3 : self.Level >= 11 ? 2 : 1)}}d4{/Blue} additional{{damageType}}damage.{{(chosenDk is null ? " The type is chosen from the reinforcing trophy." : null)}}
+                             """
+                           + (isSpecialized
+                               ? $"\n{{b}}Specialized{{/b}} This tool has {{tooltip:criteffect}}critical specialization effects{{/}}, and gains the effects of a {(self.PersistentCharacterSheet?.Calculated.GetTagOrNull<ItemName>(HuntingTools.PAIRED_BLOODSEEKER_RUNESTONE_KEY) is {} rune ? ("{i}" + Items.GetItemTemplate(rune).RuneProperties!.Prefix + "{/i} property rune").WithColor("Blue") : "property rune you choose when you Reinforce your Arsenal")}."
+                               : null);
+                },
+                (
+                    "simple or martial one-handed weapon",
+                    (values, item) =>
+                        item.HasAnyTraits([Trait.Simple, Trait.Martial])
+                        && !item.HasTrait(Trait.TwoHanded)
+                ))
+            .ToSecondaryToolFeat(
+                1,
+                "Whether you carry two identical weapons or a useful sidearm, your signature weapon is paired, threatening your quarry with a storm of blows.",
+                $$"""
+                  You gain a paired bloodseeker as a secondary tool. You can designate any one-handed simple or martial weapon as your paired bloodseeker when you Reinforce your Arsenal.
+                  
+                  Your paired bloodseeker gains the initial benefit of your bloodseeking blade signature tool, except that you roll d4s instead of d6s for the additional damage. It also gains the specialized arsenal benefit when your bloodseeking blade signature tool does. You can use Honed Strike, or any other ability that requires you to wield or Strike with a bloodseeking blade signature tool, with your paired bloodseeker instead.
+                  """,
+                [ModData.Traits.Slayer])
+            .WithOnCreatureBloodseeking(
+                HuntingTools.ToolId.PairedBloodseeker,
+                HuntingTools.PAIRED_BLOODSEEKER_RUNESTONE_KEY,
+                Dice.D4)
+            .WithPrerequisite(
+                values => HuntingToolsTag.GetTool(values, HuntingTools.ToolId.BloodseekingBlade) is not null,
+                "You must know the bloodseeking blade signature tool.")
+            .WithInappropriateBecauseOfBadInventory((_, inventory) => FeatInventoryRequirements.RequiresOne(
+                inventory,
+                item =>
+                    (item.HasTrait(Trait.Simple) || item.HasTrait(Trait.Martial))
+                    && !item.HasTrait(Trait.TwoHanded),
+                "a simple or martial one-handed weapon"));
         
         // Peculiar Weaponry
         yield return new TrueFeat(

@@ -246,26 +246,6 @@ public static class HuntingTools
 
     public static IEnumerable<Feat> CreateSignatureTools()
     {
-        // Bloodseeking Blade, specialized arsenal free rune
-        List<ItemName> bladeRunes = [ItemName.FearsomeRunestone, ItemName.ReturningRunestone, ItemName.ShiftingRunestone];
-        foreach (ItemName rune in bladeRunes)
-        {
-            Item itemTemplate = Items.GetItemTemplate(rune);
-            RuneProperties runeProperties = itemTemplate.RuneProperties!;
-            yield return new Feat(
-                    ModManager.RegisterFeatName(
-                        ModData.ID_PREPEND + "BloodseekingBladePropertyRune." + itemTemplate.Name,
-                        $"{{i}}{runeProperties.Prefix.Capitalize()}{{/i}} property rune"),
-                    runeProperties.FlavorText,
-                    $"At the start of an encounter, your bloodseeking blade gains the effects of the {rune.ToLink(runeProperties.Prefix).WithTag("i")} property rune. This doesn't count against the number of property runes the weapon may have.",
-                    [..itemTemplate.Traits, ModData.Traits.BloodseekingBladePropertyRune],
-                    null)
-                .WithIllustration(itemTemplate.Illustration)
-                .WithLevel(itemTemplate.Level)
-                .WithOnSheet(values =>
-                    values.Tags[BLOODSEEKING_BLADE_RUNESTONE_KEY] = rune);
-        }
-        
         // Bloodseeking Blade
         yield return new HuntingTool(
                 "Bloodseeking Blade",
@@ -316,167 +296,33 @@ public static class HuntingTools
                     if (tag.GetTool(ToolId.BloodseekingBlade) is not { } blade
                         || !blade.IsSpecialized(values2))
                         return;
-                    if (blade.AccessSpecialized)
+                    
+                    values.AddSelectionOption(new LimitedTextSelectionOption(
+                        "BloodseekingBladePropertyRune",
+                        "Bloodseeking Blade property rune",
+                        SelectionOption.PRECOMBAT_PREPARATIONS_LEVEL,
+                        BloodseekingRunes(
+                            blade.Id,
+                            BLOODSEEKING_BLADE_RUNESTONE_KEY)));
+
+                    // Add specialized arsenal to Paired Bloodseeker too
+                    if (tag.GetTool(ToolId.PairedBloodseeker) is { } paired)
                     {
-                        values.AddSelectionOption(new SingleFeatSelectionOption(
-                            "BloodseekingBladePropertyRune",
-                            "Bloodseeking Blade property rune",
+                        tag.AddSpecialized(paired);
+                        values.AddSelectionOption(new LimitedTextSelectionOption(
+                            "PairedBloodseekerPropertyRune",
+                            "Paired Bloodseeker property rune",
                             SelectionOption.PRECOMBAT_PREPARATIONS_LEVEL,
-                            ft => ft.HasTrait(ModData.Traits.BloodseekingBladePropertyRune)));
+                            HuntingTools.BloodseekingRunes(
+                                paired.Id,
+                                HuntingTools.PAIRED_BLOODSEEKER_RUNESTONE_KEY)));
                     }
                 };
             })
-            .WithOnCreature(self =>
-            {
-                (HuntingTool? bloodBlade, Item? iBlade, Item? trophy, var trophyData) =
-                    HuntingTools.GetFullHuntingToolData(self, HuntingTools.ToolId.BloodseekingBlade);
-                if (bloodBlade is null || iBlade is null)
-                    return;
-                
-                QEffect bladeQf = new QEffect()
-                {
-                    // Debugging identifier
-                    Name = "[HUNTING TOOL: BLOODSEEKING BLADE]",
-                    
-                    // Initial Benefit:
-                    // Bypassing resistances doesn't have access to the calculated damage event.
-                    // As a result, it's not possible to only apply once to the greatest resistance.
-                    // This implementation only ever bypasses at most the amount you can bypass for
-                    // a single action that's getting resisted.
-                    
-                    // Use the value to track the amount resisted so far
-                    HideValue = true,
-                    IgnoreAmountOfResistanceAgainstYourActions = (qfBlade, action, dk, defender, resist) =>
-                    {
-                        // Damage dealt by Strikes with my bloodseeking blade
-                        if (!action.HasTrait(Trait.Strike)
-                            || action.Item is null
-                            || !Slayer.IsMyQuarry(qfBlade.Owner, defender)
-                            || iBlade == action.Item)
-                            return 0;
-                        
-                        // Must be physical if you don't have the specialized benefit
-                        if (!bloodBlade.AccessSpecialized && !dk.IsPhysical())
-                            return 0;
-
-                        // The amount I want to bypass
-                        int bypass = 1 + action.Item.WeaponProperties!.DamageDieCount;
-                        
-                        // The Tag stores the action being processed so that it doesn't over-apply
-                        if (qfBlade.Tag is not CombatAction { } taggedAction
-                            || taggedAction != action)
-                        {
-                            qfBlade.Tag = action; // Start resisting this action
-                            qfBlade.Value = 0; // None resisted so far
-                        }
-                        else
-                            // Reduced by the amount bypassed so far
-                            bypass = Math.Max(bypass - qfBlade.Value, 0);
-                        
-                        // Increment the total resisted, capped to the most that was resisted this time
-                        qfBlade.Value += Math.Min(bypass, resist);
-                        
-                        return bypass;
-                    },
-                    // Slaying technique
-                    ProvideStrikeModifier = item =>
-                    {
-                        if (item != iBlade)
-                            return null;
-
-                        CombatAction honedStrike = self.CreateStrike(item)
-                            .WithActionCost(2)
-                            .WithIllustration(new SideBySideIllustration(
-                                ModData.Illustrations.BloodseekingBlade,
-                                IllustrationName.TargetSheet))
-                            .WithExtraTrait(Trait.Basic)
-                            .WithExtraTrait(Trait.Concentrate)
-                            .WithExtraTrait(ModData.Traits.Relentless)
-                            .With(ca =>
-                            {
-                                ca.Description = StrikeRules.CreateBasicStrikeDescription2(ca.StrikeModifiers, "You gain a +2 circumstance bonus to the attack roll and ignore your target's Concealed condition (but not the Hidden condition).");
-                                ca.StrikeModifiers.HuntersAim = true;
-                                ca.StrikeModifiers.AdditionalBonusesToAttackRoll = [
-                                    new Bonus(2, BonusType.Circumstance, "Honed strike")
-                                ];
-                                ca.Traits = new Traits([ModData.ModTrait, ..ca.Traits.ToList()], ca);
-                            });
-                        honedStrike.WithFullRename("Honed Strike");
-                        honedStrike.ShortDescription += ", and ignore the Concealed condition";
-
-                        return honedStrike;
-                    },
-                    // Specialized Arsenal, critical specialization
-                    YouHaveCriticalSpecialization = (qfThis, item, action, defender) =>
-                        GetTool(qfThis.Owner, ToolId.BloodseekingBlade) is {} blade
-                        && blade.IsMyTool(item)
-                        && blade.AccessSpecialized,
-                    // Specialized Arsenal, free rune
-                    StartOfCombat = async qfThis =>
-                    {
-                        if (!(qfThis.Owner.PersistentCharacterSheet?.Calculated.Tags.TryGetValue(
-                                BLOODSEEKING_BLADE_RUNESTONE_KEY, out object? tryRune) ?? false)
-                            || tryRune is not ItemName iRune)
-                            return;
-                        
-                        foreach (Item heldItem in qfThis.Owner.HeldItems)
-                        {
-                            Item rune = Items.CreateNew(iRune);
-                            RuneProperties runeProperties = rune.RuneProperties!;
-                            if (runeProperties.CanBeAppliedTo?.Invoke(rune, heldItem) == null)
-                            {
-                                heldItem.Runes.Add(rune);
-                                runeProperties.ApplyRuneOntoItem(rune, heldItem);
-                            }
-                        }
-                    }
-                };
-
-                if (trophy is null || trophyData?.Kinds is null)
-                    return;
-
-                if (Trophies.GetChosenDamageKind(trophy) is not { } chosenKind)
-                {
-                    string toolName = bloodBlade.Id.GetNameFromToolId();
-                    self.AddQEffect(HuntingTools.ToolWarning(
-                        false,
-                        "TROPHY DAMAGE TYPE",
-                        $"""
-                         Your {toolName.WithTag("b")} has a trophy reinforcing it, but no damage type was chosen.
-
-                         This might have been an accident. Ensure that you have reinforced the tool with a damage type. To do so, while in the inventory screen, right-click the designated item with an attached trophy, and click the damage type you want to gain its reinforced benefits for.
-                         """));
-                    return;
-                }
-
-                // Reinforced benefit
-                bladeQf.StartOfYourPrimaryTurn = async (qfBlade, me) =>
-                {
-                    int numDice = self.Level >= 19 ? 3 : self.Level >= 11 ? 2 : 1;
-                    me.AddQEffect(new QEffect(
-                        "Reinforced Fuller",
-                        $"The first Strike with your bloodseeking blade deals an extra {numDice + "d6"} damage.",
-                        ExpirationCondition.ExpiresAtStartOfYourTurn,
-                        me,
-                        ModData.Illustrations.BloodseekingBlade)
-                    {
-                        AddExtraKindedDamageOnStrike = (action, target) =>
-                        {
-                            if (action.Item is null || iBlade != action.Item)
-                                return null;
-                            return new KindedDamage(DiceFormula.FromText(numDice + "d6", "Bloody fuller—Reinforced trophy"), chosenKind);
-                        },
-                        AfterYouTakeAction = async (qfFuller, action) =>
-                        {
-                            if (action.HasTrait(Trait.Strike)
-                                && iBlade == action.Item)
-                                qfFuller.ExpiresAt = ExpirationCondition.Immediately;
-                        } 
-                    });
-                };
-
-                self.AddQEffect(bladeQf);
-            });
+            .WithOnCreatureBloodseeking(
+                ToolId.BloodseekingBlade,
+                BLOODSEEKING_BLADE_RUNESTONE_KEY,
+                Dice.D6);
         
         // Chymist's Vials
         // TODO: Finish chymist
@@ -1082,6 +928,210 @@ public static class HuntingTools
 
                 self.AddQEffect(mailQf);
             });
+    }
+
+    public static Feat WithOnCreatureBloodseeking(this Feat toolFeat, ToolId toolId, string runestoneValuesKey, Dice fullerDie)
+    {
+        string toolName = toolId.GetNameFromToolId();
+        return toolFeat.WithOnCreature(self =>
+        {
+            (HuntingTool? bloodTool, Item? iBlood, Item? trophy, var trophyData) =
+                HuntingTools.GetFullHuntingToolData(self, toolId);
+            if (bloodTool is null || iBlood is null)
+                return;
+
+            QEffect bloodQf = new QEffect()
+            {
+                // Debugging identifier
+                Name = $"[HUNTING TOOL: {toolName.ToUpper()}]",
+
+                // Initial Benefit:
+                // Bypassing resistances doesn't have access to the calculated damage event.
+                // As a result, it's not possible to only apply once to the greatest resistance.
+                // This implementation only ever bypasses at most the amount you can bypass for
+                // a single action that's getting resisted.
+
+                // Use the value to track the amount resisted so far
+                HideValue = true,
+                IgnoreAmountOfResistanceAgainstYourActions = (qfBlood, action, dk, defender, resist) =>
+                {
+                    // Damage dealt by Strikes with my bloodseeking blade
+                    if (!action.HasTrait(Trait.Strike)
+                        || action.Item is null
+                        || !Slayer.IsMyQuarry(qfBlood.Owner, defender)
+                        || iBlood == action.Item)
+                        return 0;
+
+                    // Must be physical if you don't have the specialized benefit
+                    if (!bloodTool.IsSpecialized(qfBlood.Owner) && !dk.IsPhysical())
+                        return 0;
+
+                    // The amount I want to bypass
+                    int bypass = 1 + action.Item.WeaponProperties!.DamageDieCount;
+
+                    // The Tag stores the action being processed so that it doesn't over-apply
+                    if (qfBlood.Tag is not CombatAction { } taggedAction
+                        || taggedAction != action)
+                    {
+                        qfBlood.Tag = action; // Start resisting this action
+                        qfBlood.Value = 0; // None resisted so far
+                    }
+                    else
+                        // Reduced by the amount bypassed so far
+                        bypass = Math.Max(bypass - qfBlood.Value, 0);
+
+                    // Increment the total resisted, capped to the most that was resisted this time
+                    qfBlood.Value += Math.Min(bypass, resist);
+
+                    return bypass;
+                },
+                // Slaying technique
+                ProvideStrikeModifierIncludingForThrownStrike = (item, thrown) =>
+                {
+                    if (item != iBlood)
+                        return null;
+
+                    CombatAction honedStrike = StrikeRules.CreateStrike(
+                            self,
+                            item,
+                            thrown || item.HasTrait(Trait.Ranged)
+                                ? RangeKind.Ranged
+                                : RangeKind.Melee,
+                            -1,
+                            thrown,
+                            new StrikeModifiers()
+                            {
+                                AdditionalBonusesToAttackRoll =
+                                [
+                                    new Bonus(2, BonusType.Circumstance, "Honed strike")
+                                ],
+                                AdditionalTraits = [Trait.Concentrate, ModData.Traits.Relentless],
+                                HuntersAim = true,
+                            })
+                        //.WithIllustration(ModData.Illustrations.BloodseekingBlade) // Gets reused for the next func
+                        .WithStrikeNameAndIllustrationChange(
+                            "Honed Strike",
+                            IllustrationName.TargetSheet,
+                            thrown)
+                        .WithActionCost(2)
+                        .With(ca =>
+                        {
+                            ca.Description = StrikeRules.CreateBasicStrikeDescription2(ca.StrikeModifiers,
+                                "You gain a +2 circumstance bonus to the attack roll and ignore your target's Concealed condition (but not the Hidden condition).");
+                            ca.ShortDescription += ", and ignore the Concealed condition";
+                            ca.Traits = new Traits([ModData.ModTrait, ..ca.Traits.ToList()], ca);
+                        });
+
+                    return honedStrike;
+                },
+                // Specialized Arsenal, critical specialization
+                YouHaveCriticalSpecialization = (qfBlood, item, _, _) =>
+                    bloodTool.IsMyTool(item)
+                    && bloodTool.IsSpecialized(qfBlood.Owner),
+                // Specialized Arsenal, free rune
+                StartOfCombat = async qfBlood =>
+                {
+                    if (!(qfBlood.Owner.PersistentCharacterSheet?.Calculated.Tags.TryGetValue(
+                            runestoneValuesKey, out object? tryRune) ?? false)
+                        || tryRune is not ItemName iRune)
+                        return;
+
+                    foreach (Item heldItem in qfBlood.Owner.HeldItems)
+                    {
+                        Item rune = Items.CreateNew(iRune);
+                        RuneProperties runeProperties = rune.RuneProperties!;
+                        if (runeProperties.CanBeAppliedTo?.Invoke(rune, heldItem) == null)
+                        {
+                            heldItem.Runes.Add(rune);
+                            runeProperties.ApplyRuneOntoItem(rune, heldItem);
+                        }
+                    }
+                }
+            };
+
+            if (trophy is null || trophyData?.Kinds is null)
+                return;
+
+            if (Trophies.GetChosenDamageKind(trophy) is not { } chosenKind)
+            {
+                self.AddQEffect(HuntingTools.ToolWarning(
+                    false,
+                    "TROPHY DAMAGE TYPE",
+                    $"""
+                     Your {toolName.WithTag("b")} has a trophy reinforcing it, but no damage type was chosen.
+
+                     This might have been an accident. Ensure that you have reinforced the tool with a damage type. To do so, while in the inventory screen, right-click the designated item with an attached trophy, and click the damage type you want to gain its reinforced benefits for.
+                     """));
+                return;
+            }
+
+            // Reinforced benefit
+            bloodQf.StartOfYourPrimaryTurn = async (qfBlood, me) =>
+            {
+                int numDice = self.Level >= 19 ? 3 : self.Level >= 11 ? 2 : 1;
+                string dieSize = fullerDie.ToString().ToLower();
+                me.AddQEffect(new QEffect(
+                    $"Reinforced Fuller ({toolName})",
+                    $"The first Strike with your {toolName.ToLower()} deals an extra {numDice + dieSize} damage.",
+                    ExpirationCondition.ExpiresAtStartOfYourTurn,
+                    me,
+                    ModData.Illustrations.BloodseekingBlade)
+                {
+                    AddExtraKindedDamageOnStrike = (action, target) =>
+                    {
+                        if (action.Item is null || iBlood != action.Item)
+                            return null;
+                        return new KindedDamage(
+                            DiceFormula.FromText(numDice + dieSize, "Bloody fuller—Reinforced trophy"), chosenKind);
+                    },
+                    AfterYouTakeAction = async (qfFuller, action) =>
+                    {
+                        if (action.HasTrait(Trait.Strike)
+                            && iBlood == action.Item)
+                            qfFuller.ExpiresAt = ExpirationCondition.Immediately;
+                    }
+                });
+            };
+
+            self.AddQEffect(bloodQf);
+        });
+    }
+
+    public static FeatlikeChoice[] BloodseekingRunes(ToolId toolId, string key)
+    {
+        // Bloodseeking Blade, specialized arsenal free rune
+        List<ItemName> bladeRunes =
+        [
+            ItemName.FearsomeRunestone,
+            ItemName.ReturningRunestone,
+            ItemName.ShiftingRunestone
+        ];
+        FeatlikeChoice[] choices = bladeRunes
+            .Select(RuneToChoice)
+            .ToArray();
+
+        return choices;
+
+        FeatlikeChoice RuneToChoice(ItemName rune)
+        {
+            Item itemTemplate = Items.GetItemTemplate(rune);
+            RuneProperties runeProperties = itemTemplate.RuneProperties!;
+            
+            return new FeatlikeChoice(
+                // Technical is just the rune, since this technical seems to not need to
+                // be wholly unique from ALL other FeatlikeChoice or selection option.
+                // E.g. "FearsomeRunestone"
+                toolId.GetNameFromToolId().Replace(" ", "") + rune.ToStringOrTechnical(),
+                $"{runeProperties.Prefix.Capitalize().WithTag("i")} property rune")
+            {
+                Illustration = itemTemplate.Illustration,
+                TextCreator = () => $"{{i}}{runeProperties.FlavorText}{{/i}}\n\nAt the start of an encounter, your bloodseeking blade gains the effects of the {rune.ToLink(runeProperties.Prefix).WithTag("i")} property rune. This doesn't count against the number of property runes the weapon may have.",
+                Apply = values =>
+                {
+                    values.Tags.TryAdd(key, rune);
+                }
+            };
+        }
     }
 
     public static Item CreateHuntingSpike(Creature slayer, ItemName baseWeapon, Trait? consecration = null, Trait? material = null, bool isSpecialized = false)
