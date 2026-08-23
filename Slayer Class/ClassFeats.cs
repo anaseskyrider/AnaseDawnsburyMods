@@ -128,7 +128,7 @@ public static class ClassFeats
                             action.WithExtraTrait(ModData.Traits.Relentless);
                     };
 
-                    if (HuntingTools.GetTool(qfFeat.Owner, HuntingTools.ToolId.ConsecratedPanoply)
+                    if (HuntingToolsTag.GetTool(qfFeat.Owner, HuntingTools.ToolId.ConsecratedPanoply)
                         is not { } panoply)
                         return;
                     
@@ -224,7 +224,7 @@ public static class ClassFeats
                         .WhereNotNull()
                         .ToList();
                     Item? shield = inventory.FirstOrDefault(item =>
-                        HuntingTools.GetToolId(item) is HuntingTools.ToolId.RepellingShield);
+                        HuntingTool.GetToolId(item) is HuntingTools.ToolId.RepellingShield);
                     Item? trophy = shield is not null ? Trophies.GetTrophy(shield) : null;
                     List<DamageKind>? kinds = trophy is not null
                         ? Trophies.GetTrophyData(trophy)?.Kinds
@@ -322,7 +322,7 @@ public static class ClassFeats
                     """,
                     [ModData.Traits.Slayer])
             .WithPrerequisite(
-                values => HuntingTools.GetTool(values, HuntingTools.ToolId.BloodseekingBlade) is not null,
+                values => HuntingToolsTag.GetTool(values, HuntingTools.ToolId.BloodseekingBlade) is not null,
                 "You must know the bloodseeking blade signature tool.")
             .WithOnSheet(values =>
             {
@@ -334,7 +334,7 @@ public static class ClassFeats
                 "The damage die of simple bloodseeking blades increases by one step. You can have advanced bloodseeking blades, and they use your martial proficiency.",
                 qfFeat =>
                 {
-                    if (HuntingTools.GetTool(qfFeat.Owner, HuntingTools.ToolId.BloodseekingBlade)
+                    if (HuntingToolsTag.GetTool(qfFeat.Owner, HuntingTools.ToolId.BloodseekingBlade)
                         is not { } blade)
                         return;
                         
@@ -635,7 +635,7 @@ public static class ClassFeats
                 $"When you use {{b}}Hunting Spike {{icon:Action}}{{/b}}, you can draw and Strike with spikes that function as {ItemName.Club.ToLink("clubs")} or {ItemName.Shortsword.ToLink("shortswords")}, rather than {ItemName.Dagger.ToLink("daggers")}.",
                 [ModData.Traits.Slayer])
             .WithPrerequisite(
-                values => HuntingTools.GetTool(values, HuntingTools.ToolId.ConsecratedPanoply) is not null,
+                values => HuntingToolsTag.GetTool(values, HuntingTools.ToolId.ConsecratedPanoply) is not null,
                 "You must know the consecrated panoply signature tool.")
             .WithPermanentQEffect(
                 "Your hunting spikes can also be clubs or shortswords.",

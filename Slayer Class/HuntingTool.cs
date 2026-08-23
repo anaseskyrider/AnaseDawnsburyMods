@@ -47,11 +47,36 @@ public class HuntingTool
     /// Organizes information on what items can be legally designated as this hunting tool. LegalityDescription should be short and simple, and singular. E.g. "simple or martial weapon", "armor", etc. If null, then the hunting tool is linked to a specific item and cannot be changed, or otherwise doesn't take up inventory space, such as the "alchemist's toolkit" for the chymist's vials. 
     /// </summary>
     public (string LegalityDescription, Func<CalculatedCharacterSheetValues,Item,bool> ItemValidator)? LegalItem { get; set; }
-    
+
     /// <summary>
-    /// If true, then this tool's specialized arsenal benefits are known.
+    /// Constructs a new hunting tool. This isn't stored anywhere unless you turn it into a feat with one of the other methods.
     /// </summary>
-    public bool AccessSpecialized { get; set; }
+    /// <param name="name">The name of the tool, such as "Bloodseeking Blade".</param>
+    /// <param name="id">The tool's unique enumerated ID.</param>
+    /// <param name="kind">Whether this is a signature tool or a secondary tool.</param>
+    /// <param name="icon">The Illustration that represents this tool, seen in feats and tool selections and in some abilities that use the tool.</param>
+    /// <param name="shortDescription">The summarized, multi-line description of this tool as it appears on a creature stat block.</param>
+    /// <param name="legalItem">legalityDescription: The minimally-worded description of what items can be designated as this tool, such as in the sentence, "Designate this BLANK as your TOOL_NAME". The second parameter of this tuple is the function which enforces this validation.</param>
+    public HuntingTool(
+        string name,
+        HuntingTools.ToolId id,
+        HuntingTools.ToolKind kind,
+        Illustration icon,
+        Func<Creature,bool,string> shortDescription,
+        (string legalityDescription, Func<CalculatedCharacterSheetValues,Item,bool> itemValidator)? legalItem)
+    {
+        this.Name = name;
+        this.FeatName = ModManager.RegisterFeatName(
+            ModData.ID_PREPEND + "HuntingTool." + this.Name.Replace(" ", ""),
+            this.Name);
+        this.Id = id;
+        this.Kind = kind;
+        this.Icon = icon;
+        this.ShortDescription = shortDescription;
+        this.LegalItem = legalItem;
+    }
+
+    #region Instance Functions
 
     /// <summary>
     /// Generates a feat from a signature tool with a source-like description format.
@@ -122,8 +147,7 @@ public class HuntingTool
             .WithTag(this)
             .WithOnSheet(values =>
             {
-                this.AccessSpecialized = false; // Needed to avoid weird Free Play behavior
-                HuntingTools.AddTool(values, this);
+                HuntingToolsTag.AddKnownTool(values, this);
             });
     }
 
@@ -136,6 +160,17 @@ public class HuntingTool
             mod.Kind == HuntingTools.ToolDesignation
             && mod.Tag is string tagString
             && tagString == this.Id.ToStringOrTechnical());
+    }
+
+    public bool IsSpecialized(Creature slayer)
+    {
+        return slayer.PersistentCharacterSheet is not null
+               && IsSpecialized(slayer.PersistentCharacterSheet.Calculated);
+    }
+
+    public bool IsSpecialized(CalculatedCharacterSheetValues values)
+    {
+        return HuntingToolsTag.GetTag(values)?.IsSpecialized(this) == true;
     }
 
     /// <summary>
@@ -177,31 +212,35 @@ public class HuntingTool
         return item;
     }
 
+    #endregion
+
+    #region Static Functions
+
     /// <summary>
-    /// Constructs a new hunting tool. This isn't stored anywhere unless you turn it into a feat with one of the other methods.
+    /// Gets whether the given item is a tool of any kind.
     /// </summary>
-    /// <param name="name">The name of the tool, such as "Bloodseeking Blade".</param>
-    /// <param name="id">The tool's unique enumerated ID.</param>
-    /// <param name="kind">Whether this is a signature tool or a secondary tool.</param>
-    /// <param name="icon">The Illustration that represents this tool, seen in feats and tool selections and in some abilities that use the tool.</param>
-    /// <param name="shortDescription">The summarized, multi-line description of this tool as it appears on a creature stat block.</param>
-    /// <param name="legalItem">legalityDescription: The minimally-worded description of what items can be designated as this tool, such as in the sentence, "Designate this BLANK as your TOOL_NAME". The second parameter of this tuple is the function which enforces this validation.</param>
-    public HuntingTool(
-        string name,
-        HuntingTools.ToolId id,
-        HuntingTools.ToolKind kind,
-        Illustration icon,
-        Func<Creature,bool,string> shortDescription,
-        (string legalityDescription, Func<CalculatedCharacterSheetValues,Item,bool> itemValidator)? legalItem)
+    /// <param name="item"></param>
+    /// <returns></returns>
+    public static bool IsATool(Item item)
     {
-        this.Name = name;
-        this.FeatName = ModManager.RegisterFeatName(
-            ModData.ID_PREPEND + "HuntingTool." + this.Name.Replace(" ", ""),
-            this.Name);
-        this.Id = id;
-        this.Kind = kind;
-        this.Icon = icon;
-        this.ShortDescription = shortDescription;
-        this.LegalItem = legalItem;
+        return item.ItemModifications.Any(mod =>
+            mod.Kind == HuntingTools.ToolDesignation);
     }
+
+    /// <summary>
+    /// Gets the hunting tool Id of the given item, if any.
+    /// </summary>
+    /// <param name="item"></param>
+    /// <returns></returns>
+    public static HuntingTools.ToolId? GetToolId(Item item)
+    {
+        return item.ItemModifications
+            .FirstOrDefault(mod =>
+                mod.Kind == HuntingTools.ToolDesignation)
+            ?.Tag is string tag
+            ? Enum.Parse<HuntingTools.ToolId>(tag)
+            : null;
+    }
+
+    #endregion
 }

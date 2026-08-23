@@ -7,6 +7,7 @@ using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
+using Dawnsbury.Core.CharacterBuilder.Selections;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
@@ -36,15 +37,15 @@ namespace Dawnsbury.Mods.SlayerClass;
 public static class HuntingTools
 {
     #region Static Data
-
-    /// <summary>
-    /// Character sheet tag key which contains the list of tools known.
-    /// </summary>
-    public const string TOOLS_KNOWN_KEY = "HUNTING_TOOLS_KNOWN";
+    
     /// <summary>
     /// Character sheet tag key to find the chosen ItemName runestone from your 7th-level bloodseeking blade specialized arsenal feature.
     /// </summary>
     public const string BLOODSEEKING_BLADE_RUNESTONE_KEY = "BLOODSEEKING_BLADE_SPECIALIZED_ARSENAL_RUNESTONE";
+    /// <summary>
+    /// Character sheet tag key to find the chosen ItemName runestone from your paired bloodseeker, which also has the bloodseeking blade's specialized arsenal feature.
+    /// </summary>
+    public const string PAIRED_BLOODSEEKER_RUNESTONE_KEY = "PAIRED_BLOODSEEKER_SPECIALIZED_ARSENAL_RUNESTONE";
     /// <summary>
     /// Character sheet tag key to find the chosen consecration Trait from your consecrated panoply.
     /// </summary>
@@ -122,64 +123,6 @@ public static class HuntingTools
 
     #endregion
 
-    #region Static Tool Methods
-
-    public static List<HuntingTool>? GetTools(CalculatedCharacterSheetValues values)
-    {
-        return values.Tags.TryGetValue(TOOLS_KNOWN_KEY, out var tools)
-            ? tools as List<HuntingTool>
-            : null;
-    }
-
-    public static List<HuntingTool>? GetTools(Creature cr)
-    {
-        if (cr.PersistentCharacterSheet?.Calculated is not { } values)
-            return null;
-        return GetTools(values);
-    }
-
-    public static HuntingTool? GetTool(CalculatedCharacterSheetValues values, ToolId toolId)
-    {
-        return GetTools(values)?.FirstOrDefault(tool => tool.Id == toolId);
-    }
-
-    public static HuntingTool? GetTool(Creature cr, ToolId toolId)
-    {
-        return cr.PersistentCharacterSheet?.Calculated is {} values
-            ? GetTools(values)?.FirstOrDefault(tool => tool.Id == toolId)
-            : null;
-    }
-
-    /// <summary>
-    /// Add a hunting tool if it's not already known. Create stored list of hunting tools if it doesn't exist.
-    /// </summary>
-    public static void AddTool(CalculatedCharacterSheetValues values, HuntingTool tool)
-    {
-        if (GetTools(values) is { } tools
-            && tools.All(innerTool => innerTool.Id != tool.Id))
-            tools.Add(tool);
-        else
-            values.Tags.Add(TOOLS_KNOWN_KEY, new List<HuntingTool>([tool]));
-    }
-
-    public static bool IsATool(Item item)
-    {
-        return item.ItemModifications.Any(mod =>
-            mod.Kind == ToolDesignation);
-    }
-
-    public static ToolId? GetToolId(Item item)
-    {
-        return item.ItemModifications
-            .FirstOrDefault(mod =>
-                mod.Kind == ToolDesignation)
-            ?.Tag is string tag
-            ? Enum.Parse<ToolId>(tag)
-            : null;
-    }
-
-    #endregion
-
     public static void Load()
     {
         // Construct enum data
@@ -231,7 +174,7 @@ public static class HuntingTools
             if (slot.Item is null || item is null)
                 return null;
             if (slot.CharacterSheet is null
-                || GetTools(slot.CharacterSheet.Calculated) is not { } tools)
+                || HuntingToolsTag.GetTools(slot.CharacterSheet.Calculated) is not { } tools)
                 return null;
 
             List<ContextMenuItem> options = [];
@@ -285,14 +228,14 @@ public static class HuntingTools
                     "Hunting tools",
                     self =>
                     {
-                        if (GetTools(self) is not {} tools
+                        if (HuntingToolsTag.GetTools(self) is not {} tools
                             || tools.Count == 0)
                             return null;
                         tools.Sort((x, y) => x.Kind.CompareTo(y.Kind));
                         return string.Join("\n\n", tools.Select(tool =>
                             $$"""
                               {b}{{tool.Name}}{/b} ({{tool.Kind.ToStringOrTechnical().ToLower()}} tool)
-                                  {{tool.ShortDescription.Invoke(self, tool.AccessSpecialized).Replace("\n", "\n    ")}}
+                                  {{tool.ShortDescription.Invoke(self, tool.IsSpecialized(self)).Replace("\n", "\n    ")}}
                               """));
                     }));
         
@@ -338,7 +281,7 @@ public static class HuntingTools
                         .WhereNotNull()
                         .ToList();
                     Item? blade = inventory.FirstOrDefault(item =>
-                            GetToolId(item) is ToolId.BloodseekingBlade);
+                            HuntingTool.GetToolId(item) is ToolId.BloodseekingBlade);
                     string? ignoreAmount = blade is not null ? (1 + blade.WeaponProperties!.DamageDieCount).WithColor("Blue") : null;
                     Item? trophy = blade is not null ? Trophies.GetTrophy(blade) : null;
                     DamageKind? chosenDk = trophy is not null ? Trophies.GetChosenDamageKind(trophy) : null;
@@ -369,7 +312,9 @@ public static class HuntingTools
             {
                 values.AtEndOfRecalculationBeforeMorningPreparations += values2 =>
                 {
-                    if (GetTool(values2, ToolId.BloodseekingBlade) is not { } blade)
+                    HuntingToolsTag tag = HuntingToolsTag.GetTag(values2)!;
+                    if (tag.GetTool(ToolId.BloodseekingBlade) is not { } blade
+                        || !blade.IsSpecialized(values2))
                         return;
                     if (blade.AccessSpecialized)
                     {
@@ -613,7 +558,7 @@ public static class HuntingTools
                         .WhereNotNull()
                         .ToList();
                     Item? panoplyItem = inventory.FirstOrDefault(item =>
-                        GetToolId(item) is ToolId.ConsecratedPanoply);
+                        HuntingTool.GetToolId(item) is ToolId.ConsecratedPanoply);
                     Item? trophy = panoplyItem is not null ? Trophies.GetTrophy(panoplyItem) : null;
                     var data = trophy is not null ? Trophies.GetTrophyData(trophy) : null;
 
@@ -700,7 +645,7 @@ public static class HuntingTools
             {
                 values.AtEndOfRecalculationBeforeMorningPreparations += values2 =>
                 {
-                    if (GetTool(values2, ToolId.ConsecratedPanoply) is not { } panoplyTool)
+                    if (HuntingToolsTag.GetTool(values2, ToolId.ConsecratedPanoply) is not { } panoplyTool)
                         return;
                     
                     // Slaying Technique, technically
@@ -711,7 +656,7 @@ public static class HuntingTools
                         ft => ft.HasTrait(ModData.Traits.HuntingSpikeConsecration)));
                     
                     // Specialized benefit
-                    if (panoplyTool.AccessSpecialized)
+                    if (panoplyTool.IsSpecialized(values2))
                     {
                         values.AddSelectionOption(new SingleFeatSelectionOption(
                             "HuntingSpikeMaterial",
@@ -772,7 +717,7 @@ public static class HuntingTools
                             .GetTagOrNull<Trait>(HUNTING_SPIKE_CONSECRATION_KEY);
                         Trait? material = self.PersistentCharacterSheet?.Calculated
                             .GetTagOrNull<Trait>(HUNTING_SPIKE_MATERIAL_KEY);
-                        Item displaySpike = CreateHuntingSpike(qfThis.Owner, ItemName.Dagger, consecration, material, panop.AccessSpecialized);
+                        Item displaySpike = CreateHuntingSpike(qfThis.Owner, ItemName.Dagger, consecration, material, panop.IsSpecialized(qfThis.Owner));
                         string? striking = displaySpike.WeaponProperties!.DamageDieCount switch
                         {
                             >= 4 => "major striking",
@@ -826,7 +771,7 @@ public static class HuntingTools
                                     $$"""
                                     {b}Requirements{/b} You have a free hand
 
-                                    You draw and Strike with one of your{{runeDescription}}hunting spikes{{traitDescription}}.{{(panop.AccessSpecialized && self.Level >= 19 ? " {Blue}You can do this twice.{/Blue}" : null)}}{{itemDescription}}
+                                    You draw and Strike with one of your{{runeDescription}}hunting spikes{{traitDescription}}.{{(panop.IsSpecialized(self) && self.Level >= 19 ? " {Blue}You can do this twice.{/Blue}" : null)}}{{itemDescription}}
                                     """,
                                     Target.Self()
                                         .WithAdditionalRestriction(self2 =>
@@ -846,14 +791,14 @@ public static class HuntingTools
 
                                     await DoActivity();
                                     
-                                    if (panop.AccessSpecialized && self.Level >= 19)
+                                    if (panop.IsSpecialized(self2) && self.Level >= 19)
                                         await DoActivity();
 
                                     return;
                                     
                                     async Task DoActivity()
                                     {
-                                        Item huntingSpike = CreateHuntingSpike(self2, weapon.Value, consecration, material, panop.AccessSpecialized);
+                                        Item huntingSpike = CreateHuntingSpike(self2, weapon.Value, consecration, material, panop.IsSpecialized(self2));
                                         
                                         // Increase its thrown range, if any
                                         if (self2.FindQEffect(ModData.QEffectIds.CrossbowSlayer) is var xbs
@@ -928,7 +873,7 @@ public static class HuntingTools
                         .WhereNotNull()
                         .ToList();
                     Item? mail = inventory.FirstOrDefault(item =>
-                        GetToolId(item) is ToolId.WardedMail);
+                        HuntingTool.GetToolId(item) is ToolId.WardedMail);
                     
                     // Initial Benefit
                     int? quarryResistance = 2 + mail?.ArmorProperties?.ItemBonus;
@@ -1023,7 +968,7 @@ public static class HuntingTools
                         
                         // Initial Benefit, Specialized Arsenal
                         int ibAmount = 2 + armor.ArmorProperties!.ItemBonus;
-                        if (mail.AccessSpecialized)
+                        if (mail.IsSpecialized(qfThis.Owner))
                         {
                             // Resist All to quarry
                             qfThis.Owner.WeaknessAndResistance.AddSpecialResistance(
@@ -1232,7 +1177,7 @@ public static class HuntingTools
     {
         string toolName = toolId.GetNameFromToolId();
         
-        HuntingTool? tool = HuntingTools.GetTool(slayer, toolId);
+        HuntingTool? tool = HuntingToolsTag.GetTool(slayer, toolId);
         if (tool is null)
         {
             slayer.AddQEffect(ToolWarning(

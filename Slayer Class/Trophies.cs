@@ -226,7 +226,7 @@ public static class Trophies
                             
                         })
                     .WithCanBeAppliedTo((rune, baseItem) =>
-                        HuntingTools.IsATool(baseItem)
+                        HuntingTool.IsATool(baseItem)
                             ? null
                             : "You can only attach trophies to items designated as one of your hunting tools.")));
         
@@ -335,7 +335,7 @@ public static class Trophies
         {
             // Options are only to modify a trophy
             if (slot.Item is null || item is null || slot.CharacterSheet is null
-                || HuntingTools.GetTools(slot.CharacterSheet.Calculated) is null)
+                || HuntingToolsTag.GetTools(slot.CharacterSheet.Calculated) is null)
                 return null;
 
             bool itemIsTrophyItself = item.HasTrait(ModData.Traits.Trophy);
@@ -347,7 +347,7 @@ public static class Trophies
                 return null;
             
             List<ContextMenuItem> options = [];
-            HuntingTools.ToolId? specificTool = HuntingTools.GetToolId(item);
+            HuntingTools.ToolId? specificTool = HuntingTool.GetToolId(item);
             
             // Damage Kind selections (all):
             // - (Signature) Bloodseeking Blade

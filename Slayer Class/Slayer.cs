@@ -158,14 +158,14 @@ public static class Slayer
                 values.AtEndOfRecalculation += values2 =>
                 {
                     // Get all the tools I know
-                    List<HuntingTool>? tools = HuntingTools.GetTools(values);
+                    List<HuntingTool>? tools = HuntingToolsTag.GetTools(values);
                     
                     // Find all the items I have that are hunting tools
                     Inventory inv = values2.Sheet.IsCampaignCharacter
                         ? values2.Sheet.CampaignInventory
                         : values2.Sheet.Inventory;
                     List<Item> designations = inv.AllItems
-                        .Where(HuntingTools.IsATool)
+                        .Where(HuntingTool.IsATool)
                         .ToList();
                     
                     // Ignore all the items I have that are hunting tools I know
@@ -463,11 +463,14 @@ public static class Slayer
                         creature.AddQEffect(QEffect.WeaponSpecialization(values.Tags.ContainsKey("GREATER_WEAPON_SPECIALIZATION")))))
                 .AddFeature(7, new ClassFeature(ModData.Tooltips.SpecializedArsenal("Specialized Arsenal"))
                 {
-                    OnSheet = values => 
-                        HuntingTools
-                            .GetTools(values)
-                            ?.FirstOrDefault(tool => tool.Kind is HuntingTools.ToolKind.Signature)
-                            ?.AccessSpecialized = true
+                    OnSheet = values =>
+                    {
+                        // Suppressed null.
+                        // Can't reach this point without a tag and without a signature tool.
+                        HuntingToolsTag tag = HuntingToolsTag.GetTag(values)!;
+                        tag.AddSpecialized(tag.KnownTools.FirstOrDefault(tool =>
+                            tool.Kind is HuntingTools.ToolKind.Signature)!);
+                    }
                 })
                 .AddFeature(9, new ClassFeature(ModData.Tooltips.PersistentFocus("Persistent Focus"))
                     .WithOnSheet(values =>
@@ -515,13 +518,15 @@ public static class Slayer
                 })
                 .AddFeature(15, new ClassFeature(ModData.Tooltips.GreaterSpecializedArsenal("Greater Specialized Arsenal"))
                 {
-                    OnSheet = values => 
-                        HuntingTools
-                            .GetTools(values)
-                            ?.FirstOrDefault(tool =>
-                                tool.Kind is HuntingTools.ToolKind.Signature
-                                && !tool.AccessSpecialized)
-                            ?.AccessSpecialized = true
+                    OnSheet = values =>
+                    {
+                        // Suppressed null.
+                        // Can't reach this point without a tag and without a second signature tool.
+                        HuntingToolsTag tag = HuntingToolsTag.GetTag(values)!;
+                        tag.AddSpecialized(tag.KnownTools.FirstOrDefault(tool =>
+                            tool.Kind is HuntingTools.ToolKind.Signature
+                            && !tag.IsSpecialized(tool))!);
+                    }
                 })
                 .AddFeature(17, WellKnownClassFeature.LegendaryInPerception)
                 .AddFeature(17, WellKnownClassFeature.MasterInClassDC)
