@@ -196,8 +196,16 @@ public static class ModData
     public static class Illustrations
     {
         public const string MOD_FOLDER = "SlayerClassAssets/";
-        
+
+        #region Misc
+
         public static readonly Illustration DdSun = new ModdedIllustration(MOD_FOLDER + "PatreonSunTransparent.png");
+        /// <summary>
+        /// Used to indicate an information tooltip such as documented changes from tabletop.
+        /// </summary>
+        public static readonly Illustration InfoSymbol = new ModdedIllustration(MOD_FOLDER+"information_(raised).png");
+
+        #endregion
 
         #region Hunting Tools
 
@@ -208,6 +216,7 @@ public static class ModData
         public static readonly Illustration WardedMail = new ModdedIllustration(MOD_FOLDER + "heart-armor.png");
 
         public static readonly Illustration RepellingShield = IllustrationName.ShieldSpell;
+        public static readonly Illustration SaltStone = new ModdedIllustration(MOD_FOLDER + "stone-tablet.png");
 
         #endregion
 
@@ -252,12 +261,14 @@ public static class ModData
         public static QEffectId MarkedQuarry;
         public static QEffectId ArmoredShelter;
         public static QEffectId CrossbowSlayer;
+        public static QEffectId SaltStoneBuff;
         
         public static void Initialize()
         {
             MarkedQuarry = ModManager.SafelyRegisterEnumMember<QEffectId>("MarkedQuarry");
             ArmoredShelter = ModManager.SafelyRegisterEnumMember<QEffectId>("ArmoredShelter");
             CrossbowSlayer = ModManager.SafelyRegisterEnumMember<QEffectId>("CrossbowSlayer");
+            SaltStoneBuff = ModManager.SafelyRegisterEnumMember<QEffectId>("SaltStoneBuff");
         }
     }
 
@@ -279,26 +290,52 @@ public static class ModData
 
     public static class Tooltips
     {
+        #region Common Features and Rules
+
+        public static readonly Func<string, string> CommonWeaponSpec = RegisterTooltipInserter(
+            ID_PREPEND + "Common.WeaponSpecialization",
+            """
+            {b}Weapon Specialization{/b}
+            {i}Common class feature{/i}
+
+            You deal 2 additional damage with weapons and unarmed attacks in which you are an expert; this damage increases to 3 if you're a master, and to 4 if you're legendary.
+            """);
+         
+        public static readonly Func<string, string> CommonGreaterWeaponSpec = RegisterTooltipInserter(
+            ID_PREPEND + "Common.GreaterWeaponSpecialization",
+            """
+            {b}Greater Weapon Specialization{/b}
+            {i}Common class feature{/i}
+
+            Your damage from weapon specialization increases to 4 with weapons and unarmed attacks in which you're expert, 6 if you're a master, and 8 if you're legendary.
+            """);
+
+        #endregion
+        
+        #region Slayer Class Features
+
         public static readonly Func<string, string> Relentless = RegisterTooltipInserter(
             ID_PREPEND + "Relentless",
             """
             {b}Relentless{/b}
             {i}Trait — slayer mechanic{i}
+
             Actions with the relentless trait are special techniques that slayers have trained to use on instinct.
-            
+
             The quickened action you get from On the Hunt {icon:Reaction} can be used for any action with the relentless trait, including to supply 1 action to a 2+ action activity.
             """
-            );
+        );
         
         public static readonly Func<string, string> Trophy = RegisterTooltipInserter(
             ID_PREPEND + "Trophy",
             """
             {b}Trophy{/b}
             {i}Slayer mechanic{/i}
+
             Trophies are items collected by a slayer when their marked quarry is defeated, and then attached to a hunting tool. They contain properties based on the creature that was slain, but the effects are determined by the Reinforced benefits entry of the hunting tool it's attached to.
-            
+
             You can attach a trophy to a hunting tool by clicking-and-dragging it onto one.
-            
+
             Trophies have the following properties:
             • {b}Traits{/b} It has all your quarry's traits, except rarity and size.
             • {b}Damage Types{/b} It has any damage types that your quarry could deal with its Strikes or non-spellcasting abilities, or it had immunity to.
@@ -308,20 +345,22 @@ public static class ModData
         public static readonly Func<string, string> HuntingTool = RegisterTooltipInserter(
             ID_PREPEND + "HuntingTool",
             $$"""
-            {b}Hunting Tool{/b}
-            {i}Slayer mechanic{/i}
-            Hunting tools are special adjustments designated to a single item you possess, empowering that item with additional features. You can do so by right-clicking an appropriate item in your inventory, such as a weapon for your bloodseeking blade, or armor for your warded mail, to designate that item as one of your hunting tools.
-            
-            A hunting tool can also be Reinforced by attaching a trophy to them, granting additional benefits based on the trophy's properties as described by that tool's Reinforced benefits.
-            
-            For items without an equivalent in {{ModData.Illustrations.DdSun.IllustrationAsIconString}} Dawnsbury Days, a unique item is provided for you so that you can attach trophies to them.
-            """);
+              {b}Hunting Tool{/b}
+              {i}Slayer mechanic{/i}
+
+              Hunting tools are special adjustments designated to a single item you possess, empowering that item with additional features. You can do so by right-clicking an appropriate item in your inventory, such as a weapon for your bloodseeking blade, or armor for your warded mail, to designate that item as one of your hunting tools.
+
+              A hunting tool can also be Reinforced by attaching a trophy to them, granting additional benefits based on the trophy's properties as described by that tool's Reinforced benefits.
+
+              For items without an equivalent in {{Illustrations.DdSun.IllustrationAsIconString}} Dawnsbury Days, a unique item is provided for you so that you can attach trophies to them.
+              """);
         
         public static readonly Func<string, string> ChymistPronunciation = RegisterTooltipInserter(
             ID_PREPEND + "ChymistPronunciation",
             """
             {b}Chymist{/b}
             {i}Etymology{/i}
+
             Archaic spelling of "chemist". Pronounced {i}KEM-ist{i}, sometimes {i}KIM-ist{/i}.
             """);
         
@@ -330,6 +369,7 @@ public static class ModData
             """
             {b}Reinforced{/b}
             {i}Slayer mechanic{/i}
+
             You gain this benefit when your hunting tool is reinforced with a trophy.
             """);
 
@@ -338,6 +378,7 @@ public static class ModData
             """
             {b}Tip of the Tongue{/b}
             {i}Level 5 Slayer feature{/i}
+
             Your encyclopedic knowledge of monsters allows you to quickly recall basic information. You gain the Assurance and Automatic Knowledge skill feats for Monster Lore.
             """);
         
@@ -346,6 +387,7 @@ public static class ModData
             """
             {b}Specialized Arsenal{/b}
             {i}Level 7 Slayer feature{/i}
+
             You gain the specialized arsenal benefit of your signature tool.
             """);
         
@@ -354,6 +396,7 @@ public static class ModData
             """
             {b}Persistent Focus{/b}
             {i}Level 9 Slayer feature{/i}
+
             Your proficiency rank for Will saves increases to master; when you roll a success on a Will save, you get a critical success instead.
             """);
         
@@ -362,6 +405,7 @@ public static class ModData
             """
             {b}Expanded Arsenal{/b}
             {i}Level 11 Slayer feature{/i}
+
             Choose a second signature tool. You gain its normal benefits, but not its specialized arsenal benefit.
             """);
         
@@ -370,6 +414,7 @@ public static class ModData
             """
             {b}Natural Resilience{/b}
             {i}Level 11 Slayer feature{/i}
+
             Your proficiency rank for Fortitude saves increases to master; when you roll a success on a Fortitude save, you get a critical success instead.
             """);
         
@@ -378,6 +423,7 @@ public static class ModData
             """
             {b}Greater Persistent Focus{/b}
             {i}Level 15 Slayer feature{/i}
+
             You become legendary in Will saves; when you roll a critical failure on a Will save, you get a failure instead instead; and when you roll a natural failure on a Will save against a damaging effect, you take half damage only.
             """);
         
@@ -386,24 +432,26 @@ public static class ModData
             """
             {b}Greater Specialized Arsenal{/b}
             {i}Level 15 Slayer feature{/i}
+
             You gain the specialized arsenal benefit of your second signature tool.
             """);
+
+        #endregion
         
-        public static readonly Func<string, string> CommonWeaponSpec = RegisterTooltipInserter(
-            ID_PREPEND + "Common.WeaponSpecialization",
+        #region Rulings
+        
+        public static readonly Func<string, string> SaltStoneHolding = RegisterTooltipInserter(
+            ID_PREPEND + "Ruling.SaltStoneHolding",
             """
-            {b}Weapon Specialization{/b}
-            {i}Common class feature{/i}
-            You deal 2 additional damage with weapons and unarmed attacks in which you are an expert; this damage increases to 3 if you're a master, and to 4 if you're legendary.
+            {b}Salt Stone {icon:Action}{/b}
+            {i}Difference from Tabletop — Wielding{/i}
+
+            This originally required you to {i}wield{/i} the item. By requiring the target item to be wielded and for you to have a free hand, this meant you could never apply the Salt Stone to a two-handed weapon.
+            
+            This was restriction was relaxed to only needing to hold the item for ease of play and balance purposes.
             """);
-         
-        public static readonly Func<string, string> CommonGreaterWeaponSpec = RegisterTooltipInserter(
-            ID_PREPEND + "Common.GreaterWeaponSpecialization",
-            """
-            {b}Greater Weapon Specialization{/b}
-            {i}Common class feature{/i}
-            Your damage from weapon specialization increases to 4 with weapons and unarmed attacks in which you're expert, 6 if you're a master, and 8 if you're legendary.
-            """);
+        
+        #endregion
          
         /// <summary>
         /// Registers a tooltip, then returns a function that can be used to insert the tooltip with any arbitrary text.

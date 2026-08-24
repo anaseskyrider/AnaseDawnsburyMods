@@ -8,6 +8,7 @@ using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Creatures;
+using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
@@ -516,6 +517,128 @@ public static class ClassFeats
         // Personalized Gear
         
         // Salt Stone
+        yield return new TrueFeat(
+                ModData.FeatNames.SaltStone, 2,
+                $"You draw your salt stone, a small block of dried magical compounds, and scrape it along a weapon you’re holding{ModData.Tooltips.SaltStoneHolding(ModData.Illustrations.InfoSymbol.IllustrationAsIconString)}.",
+                $$"""
+                {b}Requirements{/b} You have a free hand.
+                
+                For the rest of the encounter, that weapon gains the effects of a {{ItemName.GhostTouchRunestone.ToLink("ghost touch").WithTag("i")}} rune. If your quarry has regeneration, the weapon also deactivates your quarry’s regeneration as if it dealt damage of the appropriate type.
+                
+                {{ModData.Illustrations.DdSun.IllustrationAsIconString}} {b}Contextual Action{/b} This becomes available only when the encounter contains an enemy with an incorporeal resistance or regeneration.
+                """,
+                [Trait.Manipulate, ModData.Traits.Relentless, ModData.Traits.Slayer])
+            .WithActionCost(1)
+            .WithPermanentQEffect(
+                "Draw a stone and apply it to a weapon you're holding, granting the effects of a ghost touch rune and allowing it to disable regeneration on your quarry.",
+                qfFeat =>
+                {
+                    qfFeat.ProvideContextualAction = qfThis =>
+                    {
+                        if (!qfThis.Owner.Battle.AllCreatures
+                                .Where(cr => cr.EnemyOf(qfThis.Owner))
+                                .Any(cr =>
+                                    (cr.HasEffect(QEffectId.Regeneration)
+                                     && Slayer.IsMyQuarry(qfThis.Owner, cr))
+                                    || cr.WeaknessAndResistance.Resistances.Any(resist =>
+                                        resist is ResistanceToAll resAll
+                                        && resAll.ToString().Contains("ghost touch"))))
+                            return null;
+
+                        CombatAction saltStone = new CombatAction(
+                                qfThis.Owner,
+                                ModData.Illustrations.SaltStone,
+                                "Salt Stone",
+                                [ModData.ModTrait, Trait.Manipulate, ModData.Traits.Relentless, ModData.Traits.Slayer],
+                                null!,
+                                Target.Self()
+                                    .WithAdditionalRestriction(self =>
+                                        self.HasFreeHand
+                                            ? null
+                                            : Usability.CommonReasons.NoFreeHand.UnusableReason)
+                                    .WithAdditionalRestriction(self =>
+                                        self.HeldItems.Any(IsValidWeapon)
+                                            ? null
+                                            : "No weapons to apply to."))
+                            .WithDescription(
+                                "You draw your salt stone, a small block of dried magical compounds, and scrape it along a weapon you’re holding.",
+                                $$"""
+                                  {b}Requirements{/b} You have a free hand.
+
+                                  For the rest of the encounter, that weapon gains the effects of a {{ItemName.GhostTouchRunestone.ToLink("ghost touch").WithTag("i")}} rune. If your quarry has regeneration, the weapon also deactivates your quarry’s regeneration as if it dealt damage of the appropriate type.
+                                  """)
+                            .WithEffectOnSelf(async (action, caster) =>
+                            {
+                                Item? chosenWeapon = await caster.AskForChoiceAmongItems(
+                                    action.Illustration,
+                                    """
+                                    {b}Salt Stone {icon:Action}{/b}
+                                    Choose a weapon to gain the following benefits:
+                                    • The effects of the ghost touch property rune.
+                                    • Disables the regeneration of your quarry.
+                                    """,
+                                    caster.HeldItems
+                                        .Where(IsValidWeapon)
+                                        .ToList(),
+                                    true);
+
+                                if (chosenWeapon is null)
+                                {
+                                    action.RevertRequested = true;
+                                    return;
+                                }
+
+                                chosenWeapon.Traits.Add(Trait.GhostTouch);
+                                chosenWeapon.StateCheckWhenWielded += (wielder, item) =>
+                                {
+                                    wielder.AddQEffect(new QEffect(
+                                        $"Salt Stone ({chosenWeapon.Name})",
+                                        $"Your {{Blue}}{chosenWeapon.Name}{{/Blue}} has the effects of the ghost touch property rune, and can disable the regeneration of your quarry.",
+                                        ExpirationCondition.Ephemeral,
+                                        caster,
+                                        action.Illustration)
+                                    {
+                                        Id = ModData.QEffectIds.SaltStoneBuff,
+                                        CountsAsABuff = true,
+                                        Tag = chosenWeapon,
+                                        AfterYouDealDamageAgainstPrimaryTargetQ = async (_, combatAction, _, defender, result, _) =>
+                                        {
+                                            if (result >= CheckResult.Success
+                                                && combatAction.HasTrait(Trait.Strike)
+                                                && combatAction.Item == chosenWeapon
+                                                && Slayer.IsMyQuarry(caster, defender)
+                                                && defender.HasEffect(QEffectId.Regeneration))
+                                            {
+                                                defender.RemoveAllQEffects(qf =>
+                                                    qf.Id == QEffectId.RegenerationPreventsDeath);
+                                                defender.AddQEffect(new QEffect(
+                                                    "Regeneration deactivated",
+                                                    "This creature can't regenerate for 1 round.",
+                                                    IllustrationName.RegenerationDisabled)
+                                                {
+                                                    Id = QEffectId.RegenerationDeactivated,
+                                                    Key = "RegenerationDeactivated"
+                                                }.WithExpirationInOneRound(defender.Battle));
+                                            }
+                                        }
+                                    });
+                                };
+                            });
+
+                        //QEffectId.RegenerationDeactivated
+
+                        return new ActionPossibility(saltStone);
+                        
+                        bool IsValidWeapon(Item weapon)
+                        {
+                            return 
+                                weapon.HasTrait(Trait.Weapon)
+                                && !qfThis.Owner.QEffects.Any(qf =>
+                                    qf.Id == ModData.QEffectIds.SaltStoneBuff
+                                    && qf.Tag == weapon);
+                        }
+                    };
+                });
         
         // Shifting Hunt
         
