@@ -21,7 +21,7 @@ using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
 using Dawnsbury.Mods.LoresAndWeaknesses;
-using Dawnsbury.Mods.MoreShields;
+using CommonShieldRules = Dawnsbury.Mods.MoreShields.CommonShieldRules;
 
 namespace Dawnsbury.Mods.SlayerClass;
 
@@ -286,7 +286,7 @@ public static class ClassFeats
                     BonusToDefenses = (qfThis, action, def) =>
                         def is Defense.Reflex
                         && (action?.ChosenTargets.ChosenTile is not null || action?.ChosenTargets.ChosenTiles.Count > 0)
-                        && MoreShields.CommonShieldRules.GetRaisedShields(qfThis.Owner).Contains(iShield)
+                        && CommonShieldRules.GetRaisedShields(qfThis.Owner).Contains(iShield)
                         && Slayer.IsMyQuarry(qfThis.Owner, action.Owner)
                             ? new Bonus(2, BonusType.Circumstance, "Repelling shield", true)
                             : null
