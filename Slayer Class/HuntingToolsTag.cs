@@ -48,10 +48,33 @@ public class HuntingToolsTag
         return KnownTools.FirstOrDefault(tool => tool.Id == toolId);
     }
 
-    public void AddSpecialized(HuntingTool tool)
+    public void AddSpecialized(Func<HuntingTool, bool> firstValidTool)
     {
+        HuntingTool? firstTool = KnownTools.FirstOrDefault(firstValidTool);
+        if (firstTool is not null)
+            AddSpecialized(firstTool);
+    }
+
+    public void AddSpecialized(Func<HuntingToolsTag, HuntingTool, bool> firstValidTool)
+    {
+        HuntingTool? firstTool = KnownTools.FirstOrDefault(tool => firstValidTool(this, tool));
+        if (firstTool is not null)
+            AddSpecialized(firstTool);
+    }
+
+    public void AddSpecialized(HuntingTool? tool)
+    {
+        if (tool is null)
+            return;
         if (!SpecializedArsenal.Contains(tool))
             SpecializedArsenal.Add(tool);
+    }
+
+    public void AddSpecialized(HuntingTools.ToolId toolId)
+    {
+        if (GetTool(toolId) is { } tool)
+            if (!SpecializedArsenal.Contains(tool))
+                SpecializedArsenal.Add(tool);
     }
 
     public bool IsSpecialized(HuntingTool tool)

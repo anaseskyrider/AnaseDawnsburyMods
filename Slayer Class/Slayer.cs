@@ -426,113 +426,103 @@ public static class Slayer
                 {b}7. Slayer feat.{/b}
                 """,
                 null)
-            .WithEffectiveClassFeatures(features => features
-                .AddFeature(3, WellKnownClassFeature.ExpertInReflex)
-                .AddFeature(5, new ClassFeature(ModData.Tooltips.TipOfTheTongue("Tip of the Tongue"))
-                    .WithOnSheet(values =>
-                    {
-                        Feat assurance = AllFeats.GetFeatByFeatName(New_Skill_Feats_and_Items.SkillFeats.Assurance!.FeatName);
-                        Feat automaticKnowledge = AllFeats.GetFeatByFeatName(LoresAndWeaknesses.RecallWeakness.FNAutomaticKnowledge);
-                        if (assurance.Subfeats!.FirstOrDefault(ft =>
-                                    ft.Tag is Skill { } skill
-                                    && skill == MonsterLore.Skill)
-                                is { } mslAssurance
-                            && automaticKnowledge.Subfeats!.FirstOrDefault(ft =>
-                                    ft.Tag is Skill { } skill
-                                    && skill == MonsterLore.Skill)
-                                is { } mslAutomatic)
+            .WithEffectiveClassFeatures(features =>
+            {
+                features
+                    .AddFeature(3, WellKnownClassFeature.ExpertInReflex)
+                    .AddFeature(5, new ClassFeature(ModData.Tooltips.TipOfTheTongue("Tip of the Tongue"))
+                        .WithOnSheet(values =>
                         {
-                            values.GrantFeat(assurance.FeatName, mslAssurance.FeatName);
-                            values.GrantFeat(automaticKnowledge.FeatName, mslAutomatic.FeatName);
-                        }
-                    }))
-                .AddFeature(5, new ClassFeature(
-                    "Expert weapon proficiency",
-                    "You become expert in simple weapons, martial weapons, and unarmed attacks.")
-                {
-                    OnSheet = values =>
-                    {
-                        values.IncreaseProficiency(5, Trait.Simple, Proficiency.Expert);
-                        values.IncreaseProficiency(5, Trait.Martial, Proficiency.Expert);
-                        values.IncreaseProficiency(5, Trait.Unarmed, Proficiency.Expert);
-                    }
-                })
-                .AddFeature(7, WellKnownClassFeature.ExpertInPerception)
-                .AddFeature(7, new ClassFeature(ModData.Tooltips.CommonWeaponSpec("Weapon Specialization"))
-                    .WithOnCreature((values, creature) =>
-                        creature.AddQEffect(QEffect.WeaponSpecialization(values.Tags.ContainsKey("GREATER_WEAPON_SPECIALIZATION")))))
-                .AddFeature(7, new ClassFeature(ModData.Tooltips.SpecializedArsenal("Specialized Arsenal"))
-                {
-                    OnSheet = values =>
-                    {
-                        // Suppressed null.
-                        // Can't reach this point without a tag and without a signature tool.
-                        HuntingToolsTag tag = HuntingToolsTag.GetTag(values)!;
-                        tag.AddSpecialized(tag.KnownTools.FirstOrDefault(tool =>
-                            tool.Kind is HuntingTools.ToolKind.Signature)!);
-                    }
-                })
-                .AddFeature(9, new ClassFeature(ModData.Tooltips.PersistentFocus("Persistent Focus"))
-                    .WithOnSheet(values =>
-                        values.SetProficiency(Trait.Will, Proficiency.Master))
-                    .WithOnCreature((sheet, creature) =>
-                        CommonCharacterFeatures.AddEvasion(sheet, creature, "Persistent Focus", Defense.Will)))
-                .AddFeature(9, WellKnownClassFeature.ExpertInClassDC)
-                .AddFeature(11, new ClassFeature(ModData.Tooltips.ExpandedArsenal("Expanded Arsenal"))
-                {
-                    OnSheet = values =>
-                    {
-                        values.AddSelectionOption(new SingleFeatSelectionOption(
+                            Feat assurance =
+                                AllFeats.GetFeatByFeatName(New_Skill_Feats_and_Items.SkillFeats.Assurance!.FeatName);
+                            Feat automaticKnowledge =
+                                AllFeats.GetFeatByFeatName(LoresAndWeaknesses.RecallWeakness.FNAutomaticKnowledge);
+                            if (assurance.Subfeats!.FirstOrDefault(ft =>
+                                        ft.Tag is Skill { } skill
+                                        && skill == MonsterLore.Skill)
+                                    is { } mslAssurance
+                                && automaticKnowledge.Subfeats!.FirstOrDefault(ft =>
+                                        ft.Tag is Skill { } skill
+                                        && skill == MonsterLore.Skill)
+                                    is { } mslAutomatic)
+                            {
+                                values.GrantFeat(assurance.FeatName, mslAssurance.FeatName);
+                                values.GrantFeat(automaticKnowledge.FeatName, mslAutomatic.FeatName);
+                            }
+                        }))
+                    .AddFeature(5, new ClassFeature(
+                            "Expert weapon proficiency",
+                            "You become expert in simple weapons, martial weapons, and unarmed attacks.")
+                        .WithOnSheet(values =>
+                        {
+                            values.IncreaseProficiency(5, Trait.Simple, Proficiency.Expert);
+                            values.IncreaseProficiency(5, Trait.Martial, Proficiency.Expert);
+                            values.IncreaseProficiency(5, Trait.Unarmed, Proficiency.Expert);
+                        }))
+                    .AddFeature(7, WellKnownClassFeature.ExpertInPerception)
+                    .AddFeature(7, new ClassFeature(ModData.Tooltips.CommonWeaponSpec("Weapon Specialization"))
+                        .WithOnCreature((values, creature) =>
+                            creature.AddQEffect(
+                                QEffect.WeaponSpecialization(
+                                    values.Tags.ContainsKey("GREATER_WEAPON_SPECIALIZATION")))))
+                    .AddFeature(7, new ClassFeature(ModData.Tooltips.SpecializedArsenal("Specialized Arsenal"))
+                        .WithOnSheet(values => HuntingToolsTag.GetTag(values)?
+                            .AddSpecialized(tool =>
+                                tool.Kind is HuntingTools.ToolKind.Signature)))
+                    .AddFeature(9, new ClassFeature(ModData.Tooltips.PersistentFocus("Persistent Focus"))
+                        .WithOnSheet(values =>
+                            values.SetProficiency(Trait.Will, Proficiency.Master))
+                        .WithOnCreature((sheet, creature) =>
+                            CommonCharacterFeatures.AddEvasion(sheet, creature, "Persistent Focus", Defense.Will)))
+                    .AddFeature(9, WellKnownClassFeature.ExpertInClassDC)
+                    .AddFeature(11, new ClassFeature(ModData.Tooltips.ExpandedArsenal("Expanded Arsenal"))
+                        .WithOnSheet(values => values.AddSelectionOption(new SingleFeatSelectionOption(
                             "ExpandedArsenal",
                             "Second signature tool",
                             11,
-                            ft => 
+                            ft =>
                                 ft.HasTrait(ModData.Traits.HuntingTool)
-                                && ft.Tag is HuntingTool { Kind: HuntingTools.ToolKind.Signature }));
-                    }
-                })
-                .AddFeature(11, WellKnownClassFeature.ExpertInUnarmoredDefenseAndLightArmorAndMediumArmor)
-                .AddFeature(11, new ClassFeature(ModData.Tooltips.NaturalResilience("Natural Resilience"))
-                    .WithOnSheet(values =>
-                        values.SetProficiency(Trait.Fortitude, Proficiency.Master))
-                    .WithOnCreature((sheet, creature) =>
-                        CommonCharacterFeatures.AddEvasion(sheet, creature, "Natural Resilience", Defense.Fortitude)))
-                .AddFeature(13, new ClassFeature("Master weapon proficiency", "You become master in simple weapons, martial weapons, and unarmed attacks.")
-                {
-                    OnSheet = values =>
-                    {
-                        values.IncreaseProficiency(5, Trait.Simple, Proficiency.Master);
-                        values.IncreaseProficiency(5, Trait.Martial, Proficiency.Master);
-                        values.IncreaseProficiency(5, Trait.Unarmed, Proficiency.Master);
-                    }
-                })
-                .AddFeature(15, new ClassFeature(ModData.Tooltips.GreaterPersistentFocus("Greater Persistent Focus"))
-                    .WithOnSheet(values =>
-                    {
-                        values.SetProficiency(Trait.Will, Proficiency.Legendary);
-                        values.Tags["GREATER_RESOLVE"] = true;
-                    }))
-                .AddFeature(15, new ClassFeature(ModData.Tooltips.CommonGreaterWeaponSpec("Greater Weapon Specialization"))
-                {
-                    OnSheet = values => values.Tags["GREATER_WEAPON_SPECIALIZATION"] = true,
-                })
-                .AddFeature(15, new ClassFeature(ModData.Tooltips.GreaterSpecializedArsenal("Greater Specialized Arsenal"))
-                {
-                    OnSheet = values =>
-                    {
-                        // Suppressed null.
-                        // Can't reach this point without a tag and without a second signature tool.
-                        HuntingToolsTag tag = HuntingToolsTag.GetTag(values)!;
-                        tag.AddSpecialized(tag.KnownTools.FirstOrDefault(tool =>
-                            tool.Kind is HuntingTools.ToolKind.Signature
-                            && !tag.IsSpecialized(tool))!);
-                    }
-                })
-                .AddFeature(17, WellKnownClassFeature.LegendaryInPerception)
-                .AddFeature(17, WellKnownClassFeature.MasterInClassDC)
-                .AddFeature(19, WellKnownClassFeature.MasterInUnarmoredDefenseAndLightArmorAndMediumArmor)
-                // TODO: Add "Fated Foe"
-                .AddFeature(19, new ClassFeature("Fated Foe", ModData.Illustrations.DdSun.IllustrationAsIconString + " {b}NYI{/b}") { KeepCapitalization = true }))
+                                && ft.Tag is HuntingTool { Kind: HuntingTools.ToolKind.Signature }))))
+                    .AddFeature(11, WellKnownClassFeature.ExpertInUnarmoredDefenseAndLightArmorAndMediumArmor)
+                    .AddFeature(11, new ClassFeature(ModData.Tooltips.NaturalResilience("Natural Resilience"))
+                        .WithOnSheet(values =>
+                            values.SetProficiency(Trait.Fortitude, Proficiency.Master))
+                        .WithOnCreature((sheet, creature) =>
+                            CommonCharacterFeatures.AddEvasion(sheet, creature, "Natural Resilience",
+                                Defense.Fortitude)))
+                    .AddFeature(13, new ClassFeature("Master weapon proficiency",
+                            "You become master in simple weapons, martial weapons, and unarmed attacks.")
+                        .WithOnSheet(values =>
+                        {
+                            values.IncreaseProficiency(5, Trait.Simple, Proficiency.Master);
+                            values.IncreaseProficiency(5, Trait.Martial, Proficiency.Master);
+                            values.IncreaseProficiency(5, Trait.Unarmed, Proficiency.Master);
+                        }))
+                    .AddFeature(15,
+                        new ClassFeature(ModData.Tooltips.GreaterPersistentFocus("Greater Persistent Focus"))
+                            .WithOnSheet(values =>
+                            {
+                                values.SetProficiency(Trait.Will, Proficiency.Legendary);
+                                values.Tags["GREATER_RESOLVE"] = true;
+                            }))
+                    .AddFeature(15,
+                        new ClassFeature(ModData.Tooltips.CommonGreaterWeaponSpec("Greater Weapon Specialization"))
+                            .WithOnSheet(values => values.Tags["GREATER_WEAPON_SPECIALIZATION"] = true))
+                    .AddFeature(15,
+                        new ClassFeature(ModData.Tooltips.GreaterSpecializedArsenal("Greater Specialized Arsenal"))
+                            .WithOnSheet(values => HuntingToolsTag.GetTag(values)?
+                                .AddSpecialized((tag, tool) =>
+                                    tool.Kind is HuntingTools.ToolKind.Signature
+                                    && !tag.IsSpecialized(tool))))
+                    .AddFeature(17, WellKnownClassFeature.LegendaryInPerception)
+                    .AddFeature(17, WellKnownClassFeature.MasterInClassDC)
+                    .AddFeature(19, WellKnownClassFeature.MasterInUnarmoredDefenseAndLightArmorAndMediumArmor)
+                    // TODO: Add "Fated Foe"
+                    .AddFeature(19,
+                        new ClassFeature("Fated Foe",
+                                ModData.Illustrations.DdSun.IllustrationAsIconString + " {b}NYI{/b}")
+                            { KeepCapitalization = true });
+            })
             .WithOnSheet(values =>
             {
                 values.AddClassFeatOption("SlayerFeat1", ModData.Traits.Slayer, 1);
