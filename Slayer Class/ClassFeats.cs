@@ -4,6 +4,8 @@ using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
+using Dawnsbury.Core.CharacterBuilder.Selections.Options;
+using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Options.Reactive;
@@ -639,10 +641,55 @@ public static class ClassFeats
         // Shifting Hunt
         
         // Slayer's Tricks
-        /*yield return new TrueFeat(
-                ModData.FeatNames.SlayersTricks,
-                2,
-                );*/
+        yield return new TrueFeat(
+                ModData.FeatNames.SlayersTricks, 2,
+                "You’ve learned a few simple magical tricks to supplement your tools in a pinch.",
+                """
+                    You gain two common occult cantrips as innate spells. Your spellcasting attribute modifier for these spells and any other spells you gain from slayer feats is Wisdom, rather than Charisma. Casting a Spell gains the relentless trait for you, as long as the spell you cast came from a slayer feat.
+                    
+                    {b}Special{/b} If you have a consecrated panoply signature tool, you can choose divine spells rather than occult spells for this feat and for any other slayer feats that allow you to choose innate spells.
+                    """,
+                    [ModData.Traits.Slayer])
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.ModifyActionPossibility = (qfThis, action) =>
+                {
+                    if (action.SpellcastingSource?.ClassOfOrigin != ModData.Traits.Slayer)
+                        return;
+                    
+                    action.WithExtraTrait(ModData.Traits.Relentless);
+                    action.SpellcastingSource.SpellcastingAbility = Ability.Wisdom;
+                };
+            })
+            .WithOnSheet(values =>
+            {
+                values.SetProficiency(Trait.Spell, Proficiency.Trained);
+                values.InnateSpells.GetOrCreate(
+                    ModData.Traits.Slayer,
+                    () => new InnateSpells(Trait.Occult));
+                
+                bool hasPanoply = HuntingToolsTag.GetTag(values)
+                    ?.IsKnown(HuntingTools.ToolId.ConsecratedPanoply) == true;
+                
+                values.AddSelectionOption(new AddInnateSpellOption(
+                    "SlayersTricksCantrips1",
+                    "Slayer's Tricks cantrip 1",
+                    -1,
+                    ModData.Traits.Slayer,
+                    0,
+                    spell =>
+                        spell.HasTrait(Trait.Occult)
+                        || (hasPanoply && spell.HasTrait(Trait.Divine))));
+                values.AddSelectionOption(new AddInnateSpellOption(
+                    "SlayersTricksCantrips2",
+                    "Slayer's Tricks cantrip 2",
+                    -1,
+                    ModData.Traits.Slayer,
+                    0,
+                    spell =>
+                        spell.HasTrait(Trait.Occult)
+                        || (hasPanoply && spell.HasTrait(Trait.Divine))));
+            });
 
         #endregion
 
