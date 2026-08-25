@@ -36,12 +36,7 @@ public static class ClassFeats
 
     public static IEnumerable<Feat> CreateFeats()
     {
-        yield return new TrueFeat(
-            ModManager.RegisterFeatName("SlayerEmptyFeat1", "No Feat"),
-            1,
-            "Do nothing.", "Temporary until more feats are implemented.",
-            [ModData.Traits.Slayer]);
-        for (int i = 2; i < 22; i+=2)
+        for (int i = 10; i <= 20; i+=2)
             yield return new TrueFeat(
                 ModManager.RegisterFeatName("SlayerEmptyFeat"+i, "No Feat"),
                 i,
@@ -311,6 +306,7 @@ public static class ClassFeats
         // Spiked Surcoat
         
         // Sudden Pounce
+        // Requires More Basic Actions
         
         // Paired Bloodseeker
         yield return new HuntingTool(
@@ -821,7 +817,7 @@ public static class ClassFeats
                 "You must know the consecrated panoply signature tool.")
             .WithPermanentQEffect(
                 "Your hunting spikes can also be clubs or shortswords.",
-                qfFeat => {});
+                _ => {});
 
         #endregion
 
