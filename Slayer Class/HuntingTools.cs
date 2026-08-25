@@ -37,6 +37,8 @@ namespace Dawnsbury.Mods.SlayerClass;
 public static class HuntingTools
 {
     #region Static Data
+
+    public static readonly List<HuntingTool> AllTools = []; 
     
     /// <summary>
     /// Character sheet tag key to find the chosen ItemName runestone from your 7th-level bloodseeking blade specialized arsenal feature.

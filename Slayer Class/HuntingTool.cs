@@ -139,8 +139,10 @@ public class HuntingTool
     /// <summary>
     /// Adds basic hunting tool feat functionality to a feat. The functionality of the tool must be created from subsequent WithOnSheet, WithPermanentQEffect, and/or WithOnCreature behavior.
     /// </summary>
-    private Feat WithBasicToolFeatFunctionality(Feat toolFeat)
+    private Feat WithBasicToolFeatFunctionality(Feat toolFeat, bool addToAllTools = true)
     {
+        if (addToAllTools)
+            HuntingTools.AllTools.Add(this);
         toolFeat.Traits.Add(ModData.Traits.HuntingTool);
         return toolFeat
             .WithIllustration(this.Icon)
