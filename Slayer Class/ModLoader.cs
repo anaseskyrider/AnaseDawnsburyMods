@@ -1,4 +1,6 @@
-﻿using Dawnsbury.Modding;
+﻿global using ToolId = Dawnsbury.Mods.SlayerClass.HuntingTools.ToolId;
+global using ToolKind = Dawnsbury.Mods.SlayerClass.HuntingTools.ToolKind;
+using Dawnsbury.Modding;
 
 namespace Dawnsbury.Mods.SlayerClass;
 public static class ModLoader

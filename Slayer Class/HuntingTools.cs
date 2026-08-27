@@ -11,7 +11,6 @@ using Dawnsbury.Core.CharacterBuilder.Selections;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
-using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Damage;
@@ -119,9 +118,19 @@ public static class HuntingTools
     /// </summary>
     public static ItemModificationKind ToolDesignation;
 
-    public static ItemName ChymistsVials;
+    #region Base Tool Items
 
+    public static ItemName ChymistsVials;
     public static ItemName ConsecratedPanoply;
+    //public static ItemName AdaptationSerums;
+    //public static ItemName SpikedSurcoat;
+    //public static ItemName SpiritOil;
+    //public static ItemName Cureall;
+    public static ItemName SpellSlates;
+    //public static ItemName CatalyzingFlask;
+    //public static ItemName BloodburstPhial;
+
+    #endregion
 
     #endregion
 
@@ -152,18 +161,8 @@ public static class HuntingTools
                     }
                 };
             });
-        
-        /*ChymistsVials = ModManager.RegisterNewItemIntoTheShop(
-            "")*/
 
-        ConsecratedPanoply = Items.CreateBasicToolItem(
-            "ConsecratedPanoply",
-            ModData.Illustrations.ConsecratedPanoply,
-            ToolId.ConsecratedPanoply,
-            ToolKind.Signature,
-            "This harness or coat contains a seemingly endless array of charms and consecrated weapons, whether worn openly or in hidden pockets, and their blessings protect you and skewer your prey in equal measure.",
-            true,
-            null);
+        CreateBasicToolItems();
         
         // Hunting Tool designations
         InventoryContextMenu.Options.Add(new InventoryContextMenuOption((slot, item, inv) =>
@@ -229,16 +228,64 @@ public static class HuntingTools
                             || tools.Count == 0)
                             return null;
                         tools.Sort((x, y) => x.Kind.CompareTo(y.Kind));
+                        
                         return string.Join("\n\n", tools.Select(tool =>
-                            $$"""
-                              {b}{{tool.Name}}{/b} ({{tool.Kind.ToStringOrTechnical().ToLower()}} tool)
-                                  {{tool.ShortDescription.Invoke(self, tool.IsSpecialized(self)).Replace("\n", "\n    ")}}
-                              """));
+                        {
+                            //var inventory = self.PersistentCharacterSheet?.Inventory.AllItems;
+                            var inventory = self.HeldItems
+                                .Concat(self.CarriedItems)
+                                .Append(self.BaseArmor ?? self.Armor.Item ?? null)
+                                .WhereNotNull()
+                                .ToList();
+                            
+                            Item? iTool = inventory.FirstOrDefault(item =>
+                                HuntingTool.GetToolId(item) == tool.Id);
+                            Item? trophy = iTool is not null ? Trophies.GetTrophy(iTool) : null;
+                            TrophyData? data = trophy;
+                            bool isSpecialized = tool.IsSpecialized(self);
+                            
+                            return $$"""
+                                     {b}{{tool.Name}}{/b} {{tool.Icon.IllustrationAsIconString}} ({{tool.Kind.ToStringOrTechnical().ToLower()}} tool)
+                                         {{tool.ShortDescription.Invoke(self, tool, iTool, trophy, data, isSpecialized).Replace("\n", "\n    ")}}
+                                     """;
+                        }));
                     }));
         
         // All hunting tools
         foreach (Feat ft in CreateSignatureTools())
             ModManager.AddFeat(ft);
+    }
+
+    public static void CreateBasicToolItems()
+    {
+        /*ChymistsVials = ModManager.RegisterNewItemIntoTheShop(
+            "")*/
+
+        ConsecratedPanoply = Items.CreateBasicToolItem(
+            "ConsecratedPanoply",
+            ModData.Illustrations.ConsecratedPanoply,
+            ToolId.ConsecratedPanoply,
+            ToolKind.Signature,
+            "This harness or coat contains a seemingly endless array of charms and consecrated weapons, whether worn openly or in hidden pockets, and their blessings protect you and skewer your prey in equal measure.",
+            true,
+            null);
+        
+        // AdaptationSerums =;
+        // SpikedSurcoat =;
+        // SpiritOil =;
+        // Cureall =;
+
+        SpellSlates = Items.CreateBasicToolItem(
+            "SpellSlates",
+            ModData.Illustrations.SpellSlates,
+            ToolId.SpellSlates,
+            ToolKind.Secondary,
+            "With a set of specially prepared charms or runes, you can expand your magical tricks.",
+            true,
+            null);
+        
+        // CatalyzingFlask =;
+        // BloodburstPhial =;
     }
 
     public static IEnumerable<Feat> CreateSignatureTools()
@@ -249,18 +296,9 @@ public static class HuntingTools
                 ToolId.BloodseekingBlade,
                 ToolKind.Signature,
                 ModData.Illustrations.BloodseekingBlade,
-                (self, isSpecialized) =>
+                (self, tool, iTool, trophy, data, isSpecialized) =>
                 {
-                    //var inventory = self.PersistentCharacterSheet?.Inventory.AllItems;
-                    var inventory = self.HeldItems
-                        .Concat(self.CarriedItems)
-                        .Append(self.BaseArmor ?? self.Armor.Item ?? null)
-                        .WhereNotNull()
-                        .ToList();
-                    Item? blade = inventory.FirstOrDefault(item =>
-                            HuntingTool.GetToolId(item) is ToolId.BloodseekingBlade);
-                    string? ignoreAmount = blade is not null ? (1 + blade.WeaponProperties!.DamageDieCount).WithColor("Blue") : null;
-                    Item? trophy = blade is not null ? Trophies.GetTrophy(blade) : null;
+                    string? ignoreAmount = iTool is not null ? (1 + iTool.WeaponProperties!.DamageDieCount).WithColor("Blue") : null;
                     DamageKind? chosenDk = trophy is not null ? Trophies.GetChosenDamageKind(trophy) : null;
                     string damageType = chosenDk is not null
                         ? (" " + chosenDk.Value.ToStringOrTechnical().WithColor(chosenDk.Value.DamageKindToColor() ) + " ")
@@ -271,7 +309,7 @@ public static class HuntingTools
                              {b}Honed Strike {icon:TwoActions}{/b} [concentrate, {{ModData.Tooltips.Relentless("relentless")}}] Strike using this tool with a +2 circumstance bonus and ignore the Concealed condition.
                              """
                            + (isSpecialized
-                               ? $"\n{{b}}Specialized{{/b}} This tool has {{tooltip:criteffect}}critical specialization effects{{/}}, and gains the effects of a {(self.PersistentCharacterSheet?.Calculated.GetTagOrNull<ItemName>(BLOODSEEKING_BLADE_RUNESTONE_KEY) is {} rune ? ("{i}" + Items.GetItemTemplate(rune).RuneProperties!.Prefix + "{/i} property rune").WithColor("Blue") : "property rune you choose when you Reinforce your Arsenal")}."
+                               ? $"\n{{b}}Specialized{{/b}} This tool has {{tooltip:criteffect}}critical specialization effects{{/}}, and gains the effects of a {(self.PersistentCharacterSheet?.Calculated.GetTagOrNull<ItemName>(BLOODSEEKING_BLADE_RUNESTONE_KEY) is {} rune ? $"{{i}}{rune.ToLink(Items.GetItemTemplate(rune).RuneProperties!.Prefix)}{{/i}} property rune" : "property rune you choose when you Reinforce your Arsenal")}."
                                : null);
                 },
                 (
@@ -392,20 +430,9 @@ public static class HuntingTools
                 ToolId.ConsecratedPanoply,
                 ToolKind.Signature,
                 ModData.Illustrations.ConsecratedPanoply,
-                (self, isSpecialized) =>
+                (self, tool, iTool, trophy, data, isSpecialized) =>
                 {
-                    //var inventory = self.PersistentCharacterSheet?.Inventory.AllItems;
-                    var inventory = self.HeldItems
-                        .Concat(self.CarriedItems)
-                        .Append(self.BaseArmor ?? self.Armor.Item ?? null)
-                        .WhereNotNull()
-                        .ToList();
-                    Item? panoplyItem = inventory.FirstOrDefault(item =>
-                        HuntingTool.GetToolId(item) is ToolId.ConsecratedPanoply);
-                    Item? trophy = panoplyItem is not null ? Trophies.GetTrophy(panoplyItem) : null;
-                    var data = trophy is not null ? Trophies.GetTrophyData(trophy) : null;
-
-                    string worn = "worn".WithColor(panoplyItem is null ? "Red" : "Green");
+                    string worn = "worn".WithColor(iTool is null ? "Red" : "Green");
                     var traitsList = data?.Traits?
                         .Select(t => t.HumanizeLowerCase2().WithColor("Blue"))
                         .ToList() ?? [];
@@ -511,7 +538,7 @@ public static class HuntingTools
             })
             .WithOnCreature(self =>
             {
-                (HuntingTool? panop, Item? iPanop, Item? trophy, var trophyData) =
+                (HuntingTool? panop, Item? iPanop, Item? trophy, TrophyData? trophyData) =
                     HuntingTools.GetFullHuntingToolData(self, HuntingTools.ToolId.ConsecratedPanoply);
                 if (panop is null || iPanop is null)
                     return;
@@ -540,7 +567,7 @@ public static class HuntingTools
                         // Reinforced Benefit
                         if (trophyData?.Traits is not null
                             && trophyData?.Traditions is not null
-                            && action.Owner.Traits.ContainsOneOf([..trophyData.Value.Traits, ..trophyData.Value.Traditions])
+                            && action.Owner.Traits.ContainsOneOf([..trophyData.Traits, ..trophyData.Traditions])
                             || (action.HasTrait(Trait.Spell) &&
                                 (trophyData?.Traditions?.Contains(action.SpellcastingSource!.SpellcastingTradition) ?? false)))
                         {
@@ -708,26 +735,17 @@ public static class HuntingTools
                 ToolId.WardedMail,
                 ToolKind.Signature,
                 ModData.Illustrations.WardedMail,
-                (self, isSpecialized) =>
+                (self, tool, iTool, trophy, data, isSpecialized) =>
                 {
-                    var inventory = self.HeldItems
-                        .Concat(self.CarriedItems)
-                        .Append(self.BaseArmor ?? self.Armor.Item ?? null)
-                        .WhereNotNull()
-                        .ToList();
-                    Item? mail = inventory.FirstOrDefault(item =>
-                        HuntingTool.GetToolId(item) is ToolId.WardedMail);
-                    
                     // Initial Benefit
-                    int? quarryResistance = 2 + mail?.ArmorProperties?.ItemBonus;
+                    int? quarryResistance = 2 + iTool?.ArmorProperties?.ItemBonus;
                     string resistWhat = isSpecialized ? "{Blue}all{/Blue} your quarry's damage" : "your quarry's physical damage";
                     string iB =
-                        $"{{b}}Fortified Plate{{/b}} {"Wearing".WithColor(mail is not null && (mail == self.BaseArmor || mail == self.Armor.Item) ? "Green" : "Red")} this tool grants " + (quarryResistance is null
+                        $"{{b}}Fortified Plate{{/b}} {"Wearing".WithColor(iTool is not null && (iTool == self.BaseArmor || iTool == self.Armor.Item) ? "Green" : "Red")} this tool grants " + (quarryResistance is null
                             ? $"resistance to {resistWhat} equal to 2 + the armor's potency rune value."
                             : $"{quarryResistance.Value.WithColor("Blue")} resistance to {resistWhat}.");
                     
                     // Reinforced
-                    Item? trophy = mail is not null ? Trophies.GetTrophy(mail) : null;
                     DamageKind? chosenDk = trophy is not null ? Trophies.GetChosenDamageKind(trophy) : null;
                     string reinf = $"{{b}}Reinforced{{/b}} You gain {(1 + self.Level / 2).WithColor("Blue")} resistance to " + (chosenDk is null
                         ? "a damage type you choose from the reinforcing trophy."
@@ -738,9 +756,9 @@ public static class HuntingTools
                         $"{{b}}Armored Shelter {{icon:Action}}{{/b}} [{ModData.Tooltips.Relentless("relentless")}] Position your worn warded mail to gain a +2 circumstance bonus to AC as well as Reflex against area effects. Lasts until the end of your next turn, you move, or you make an attack.";
                     
                     // Specialized Arsenal
-                    Trait? armorCat = mail?.Traits.FirstOrDefault(trait =>
+                    Trait? armorCat = iTool?.Traits.FirstOrDefault(trait =>
                         trait is Trait.HeavyArmor or Trait.MediumArmor);
-                    Trait? armorGrp = mail?.Traits.FirstOrDefault(trait =>
+                    Trait? armorGrp = iTool?.Traits.FirstOrDefault(trait =>
                         trait is Trait.Composite or Trait.Leather or Trait.Plate or Trait.Chain);
                     string? armorString = armorCat is not null && armorGrp is not null
                         ? (armorCat.Value.ToStringOrTechnical().Replace("Armor", "").ToLower() + " " +
@@ -964,7 +982,6 @@ public static class HuntingTools
         }
     }
 
-
     extension(Items)
     {
         internal static Item CreateHuntingSpike(Creature slayer, ItemName baseWeapon, Trait? consecration = null, Trait? material = null, bool isSpecialized = false)
@@ -1030,7 +1047,7 @@ public static class HuntingTools
                 ModData.ID_PREPEND + technicalName,
                 iName =>
                 {
-                    List<Trait> traits = [ModData.ModTrait, ModData.Traits.Slayer];
+                    List<Trait> traits = [ModData.Traits.Slayer];
                     if (isWorn)
                         traits.Add(Trait.Worn);
 
@@ -1283,11 +1300,7 @@ public static class HuntingTools
     /// <remarks>
     /// If the tool isn't found, a QEffect is added to the creature which triggers at the start of combat. When triggered, it prints a warning to the log.
     /// </remarks>
-    public static (
-        HuntingTool? Tool,
-        Item? iTool,
-        Item? trophy,
-        (string? Name, CreatureId? Id, List<Trait>? Traits, List<DamageKind>? Kinds, List<Trait>? Traditions, List<string>? Tags)? TrophyData)
+    public static (HuntingTool? Tool, Item? iTool, Item? Trophy, TrophyData? TrophyData)
         GetFullHuntingToolData(Creature slayer, ToolId toolId)
     {
         string toolName = toolId.GetNameFromToolId();
@@ -1298,13 +1311,13 @@ public static class HuntingTools
             slayer.AddQEffect(ToolWarning(
                 true,
                 toolName,
-                $"""
-                 Your {toolName.WithTag("b")} Hunting Tool was not found on your character sheet.
+                $$"""
+                  Your {{toolName.WithTag("b")}} Hunting Tool was not found on your character sheet.
 
-                 This error means that even though you have the signature tool choice or the class feat that grants this tool, it's not being properly saved and wasn't found.
-                 
-                 This isn't supposed to be possible. If you see this error, please report it immediately.
-                 """));
+                  This error means that even though you have the signature tool choice or the class feat that grants this tool, it's not being properly saved and wasn't found.
+                  
+                  This isn't supposed to be possible. If you see this error, please report it immediately to the {link:https://steamcommunity.com/sharedfiles/filedetails/?id=3715781137}Slayer Class{/} mod page.
+                  """));
             return (null, null, null, null);
         }
 
@@ -1339,58 +1352,95 @@ public static class HuntingTools
             return (tool, iTool, null, null);
         }
         
-        var data = Trophies.GetTrophyData(trophy);
+        TrophyData? data = trophy;
         if (data is null)
         {
             slayer.AddQEffect(ToolWarning(
                 true,
                 "TROPHY DATA",
-                $"""
-                 The Item representing your {toolName.WithTag("b")} Hunting Tool has a Trophy ({trophy.Name}) Item attached, but no trophy data was found.
+                $$"""
+                  The Item representing your {{toolName.WithTag("b")}} Hunting Tool has a Trophy ({{trophy.Name}}) Item attached, but no trophy data was found.
 
-                 This isn't supposed to be possible. If you see this error, please report it immediately.
-                 """));
+                  This isn't supposed to be possible. If you see this error, please report it immediately to the {link:https://steamcommunity.com/sharedfiles/filedetails/?id=3715781137}Slayer Class{/} mod page.
+                  """));
             return (tool, iTool, trophy, null);
         }
         
-        if (data.Value.Kinds is null || data.Value.Kinds.Count == 0)
+        if (data.Kinds is null || data.Kinds.Count == 0)
         {
             slayer.AddQEffect(HuntingTools.ToolWarning(
                 true,
                 "TROPHY DAMAGE TYPE",
-                $"""
-                 Your {toolName.WithTag("b")} has a trophy reinforcing it, but the trophy contains no damage types.
+                $$"""
+                  Your {{toolName.WithTag("b")}} has a trophy reinforcing it, but the trophy contains no damage types.
 
-                 This isn't supposed to be possible, as any creature incapable of dealing any damage shouldn't be a valid creature to mark (because it would be something like an inanimate object or hazard); and if it can deal any damage, it should have been found. If you see this error, please report it immediately.
-                 """));
+                  This isn't supposed to be possible, as any creature incapable of dealing any damage shouldn't be a valid creature to mark (because it would be something like an inanimate object or hazard); and if it can deal any damage, it should have been found. If you see this error, please report it immediately to the {link:https://steamcommunity.com/sharedfiles/filedetails/?id=3715781137}Slayer Class{/} mod page.
+                  """));
             return (tool, iTool, trophy, null);
         }
         
-        if (data.Value.Traits is null || data.Value.Traits.Count == 0)
+        if (data.Traits is null || data.Traits.Count == 0)
         {
             slayer.AddQEffect(HuntingTools.ToolWarning(
                 true,
                 "TROPHY TRAITS",
-                $"""
-                 Your {toolName.WithTag("b")} has a trophy reinforcing it, but the trophy contains no traits.
+                $$"""
+                  Your {{toolName.WithTag("b")}} has a trophy reinforcing it, but the trophy contains no traits.
 
-                 This isn't supposed to be possible, as it's virtually impossible for a creature to not have a single valid trait. If you see this error, please report it immediately.
-                 """));
+                  This isn't supposed to be possible, as it's virtually impossible for a creature to not have a single valid trait. If you see this error, please report it immediately to the {link:https://steamcommunity.com/sharedfiles/filedetails/?id=3715781137}Slayer Class{/} mod page.
+                  """));
             return (tool, iTool, trophy, null);
         }
         
-        if (data.Value.Traditions is null || data.Value.Traditions.Count == 0)
+        if (data.Traditions is null || data.Traditions.Count == 0)
         {
             slayer.AddQEffect(HuntingTools.ToolWarning(
                 true,
                 "TROPHY TRADITIONS",
-                $"""
-                 Your {toolName.WithTag("b")} has a trophy reinforcing it, but the trophy contains no traditions.
+                $$"""
+                 Your {{toolName.WithTag("b")}} has a trophy reinforcing it, but the trophy contains no traditions.
 
-                 This isn't supposed to be possible, as the default tradition is Occult. If you see this error, please report it immediately.
+                 This isn't supposed to be possible, as the default tradition is Occult. If you see this error, please report it immediately to the {link:https://steamcommunity.com/sharedfiles/filedetails/?id=3715781137}Slayer Class{/} mod page.
                  """));
             return (tool, iTool, trophy, null);
         }
+        
+        return (tool, iTool, trophy, data);
+    }
+
+    /// <summary>
+    /// Returns a Hunting Tool, its associated Item, and its reinforced Trophy data on a slayer Creature.
+    /// </summary>
+    /// <remarks>This overload is meant for the character building phase. Unlike the other overload, this does not use QEffects.</remarks>
+    /// <seealso cref="GetFullHuntingToolData(Creature, ToolId)"/>
+    public static (HuntingTool? Tool, Item? iTool, Item? Trophy, TrophyData? TrophyData)
+        GetFullHuntingToolData(CalculatedCharacterSheetValues values, Inventory inventory, ToolId toolId)
+    {
+        HuntingTool? tool = HuntingToolsTag.GetTool(values, toolId);
+        if (tool is null)
+            return (null, null, null, null);
+
+        Item? iTool = inventory.AllItems.FirstOrDefault(item =>
+            tool.IsMyTool(item));
+        if (iTool is null)
+            return (tool, null, null, null);
+
+        Item? trophy = Trophies.GetTrophy(iTool);
+        if (trophy is null)
+            return (tool, iTool, null, null);
+        
+        TrophyData? data = trophy;
+        if (data is null)
+            return (tool, iTool, trophy, null);
+        
+        if (data.Kinds is null || data.Kinds.Count == 0)
+            return (tool, iTool, trophy, null);
+        
+        if (data.Traits is null || data.Traits.Count == 0)
+            return (tool, iTool, trophy, null);
+        
+        if (data.Traditions is null || data.Traditions.Count == 0)
+            return (tool, iTool, trophy, null);
         
         return (tool, iTool, trophy, data);
     }

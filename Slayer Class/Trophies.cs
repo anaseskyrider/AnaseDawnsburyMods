@@ -1,10 +1,8 @@
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
-using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Creatures.Parts;
-using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Display;
@@ -39,143 +37,6 @@ public static class Trophies
     /// Some hunting tools have a reinforced benefit which requires you to choose one damage type from the ones on the trophy when you Reinforce your Arsenal. This item modification tracks that chosen damage type. 
     /// </summary>
     public static ItemModificationKind ChosenDamageKindModification;
-
-    public static readonly List<Trait> TraitBlacklist = [
-        // Size traits
-        /*Trait.Tiny,*/
-        Trait.Small,
-        Trait.Large,
-        Trait.Huge,
-        Trait.Gargantuan,
-        Trait.Colossal5,
-        Trait.Colossal6,
-        Trait.Colossal7,
-        Trait.Colossal8,
-        // Rarity traits
-        Trait.Uncommon,
-        /*Trait.Rare,*/
-        Trait.Unique,
-        // Various technical traits
-        Trait.AnimatedObject,
-        Trait.AssumesDirectControl,
-        Trait.BasicallyNeverWantsToMakeBasicUnarmedStrike,
-        Trait.BecomesVisibleCorpseOnDeath,
-        Trait.DoesNotBreathe,
-        Trait.Farmer,
-        Trait.Female,
-        Trait.Homebrew,
-        Trait.Indestructible,
-        Trait.Male,
-        Trait.MetalArmor,
-        Trait.MetalArmorInvisible,
-        #pragma warning disable CS0618 // Type or member is obsolete
-        Trait.Mod,
-        #pragma warning restore CS0618 // Type or member is obsolete
-        Trait.MustSurvive,
-        Trait.NativeOutsider,
-        Trait.NeedNotSurvive,
-        Trait.NeverSetsOccupant,
-        Trait.NoDeathOverhead,
-        Trait.NoDeathScream,
-        Trait.NoPhysicalUnarmedAttack,
-        Trait.Object,
-        Trait.PossessedChild,
-        Trait.Pseudocreature,
-        Trait.ThirdParty,
-        Trait.Trap,
-        Trait.UnimportantForVictoryCondition,
-        // Nonsense traits to obviously exclude
-        Trait.Summoned,
-        Trait.NonSummonable,
-        Trait.Conjuration,
-        // Tradition traits (stored elsewhere on a trophy)
-        Trait.Arcane,
-        Trait.Divine,
-        Trait.Primal,
-        Trait.Occult,
-    ];
-
-    /// <summary>
-    /// The string constants which make up the de/serialized data of a trophy.
-    /// </summary>
-    public static class DataConstants
-    {
-        // Design Note: The characters ':' and ',' are illegal to use for trophies.
-        
-        // Example tag:
-        // - quarry*OrcWarrior_traits*Chaotic-Evil-Orc-MetalArmor_damagekinds*Slashing_traditions*Occult
-
-        /// <summary>
-        /// Begins the identifier and tag string of the trophy ItemModificationKind.
-        /// </summary>
-        public const string TROPHY_MODIFICATION = "trophy_";
-        
-        /// <summary>
-        /// Separates each list.
-        /// </summary>
-        public const char LIST_SEPARATOR = '_';
-
-        /// <summary>
-        /// Separates items in a list.
-        /// </summary>
-        public const char ITEM_SEPARATOR = '-';
-        
-        /// <summary>
-        /// The humanized creature name.
-        /// </summary>
-        public const string CREATURE_NAME = "quarry*";
-
-        /// <summary>
-        /// The creature's CreatureId.
-        /// </summary>
-        public const string CREATURE_ID = "crid*";
-
-        /// <summary>
-        /// The underscore character.
-        /// </summary>
-        /// <remarks>This character is checked in a creature ID string and substituted for <see cref="UNDERSCORE_SUBSTITUTE"/>.</remarks>
-        public const string UNDERSCORE = "_";
-
-        /// <summary>
-        /// The character that underscores in creature IDs are substituted for during serialization.
-        /// </summary>
-        public const string UNDERSCORE_SUBSTITUTE = "%";
-        
-        /// <summary>
-        /// The list of the trophy's traits.
-        /// </summary>
-        public const string TRAITS = "traits*";
-
-        /// <summary>
-        /// The list of the trophy's damage kinds.
-        /// </summary>
-        public const string DAMAGE_KINDS = "damagekinds*";
-
-        /// <summary>
-        /// The list of the trophy's associated traditions.
-        /// </summary>
-        public const string TRADITIONS = "tradition*";
-
-        /// <summary>
-        /// Begins a list of any other special tags.
-        /// </summary>
-        public const string TAGS = "tags*";
-
-        /// <summary>
-        /// The fog/smoke special vision.
-        /// </summary>
-        public const string TAGS_SMOKE_VISION = "SmokeVision";
-
-        /// <summary>
-        /// The All-Around Vision special vision.
-        /// </summary>
-        public const string TAGS_ALL_AROUND_VISION = "AllAroundVision";
-
-        /// <summary>
-        /// The highest saving throw. This tag can appear more than once, with a different save each time. The Defense is added directly to the end of this constant (implicit invocation of ToString()).
-        /// </summary>
-        public const string TAGS_HIGHEST_SAVE = "HighestSave";
-    }
 
     public static void Load()
     {
@@ -233,36 +94,36 @@ public static class Trophies
         TrophyModification = ItemModifications.RegisterItemModification(
             "trophy",
             mod =>
-                DataConstants.TROPHY_MODIFICATION + mod.Tag,
-            (tag, modKind) =>
+                TrophyData.DataConstants.TROPHY_MODIFICATION + mod.Tag,
+            (tagString, modKind) =>
             {
                 // Not my modification
-                if (!tag.StartsWith(DataConstants.TROPHY_MODIFICATION))
+                if (!tagString.StartsWith(TrophyData.DataConstants.TROPHY_MODIFICATION))
                     return null;
-                string subTag = tag[DataConstants.TROPHY_MODIFICATION.Length..];
-                var tagData = TrophyStringToData(subTag);
-                string dataText = $"\n\n{{b}}Origin{{/b}} {tagData.Name}";
-                if (tagData.Traits is not null)
+                string dataString = tagString[TrophyData.DataConstants.TROPHY_MODIFICATION.Length..];
+                TrophyData data = TrophyData.FromDataString(dataString);
+                string dataText = $"\n\n{{b}}Origin{{/b}} {data.Name}";
+                if (data.Traits.Count > 0)
                     dataText += "\n{b}Traits{/b} " + string.Join(
                         ", ",
-                        tagData.Traits.Select(t => t.HumanizeTitleCase2()));
-                if (tagData.Kinds is not null)
+                        data.Traits.Select(t => t.HumanizeTitleCase2()));
+                if (data.Kinds.Count > 0)
                     dataText += "\n{b}Damage Types{/b} " + string.Join(
                         ", ",
-                        tagData.Kinds.Select(kind =>
+                        data.Kinds.Select(kind =>
                             kind.HumanizeTitleCase2().WithColor(kind.DamageKindToColor())));
-                if (tagData.Traditions is not null)
-                    dataText += "\n{b}Traditions{/b} " + string.Join(", ", tagData.Traditions.Select(trad =>
+                if (data.Traditions.Count > 0)
+                    dataText += "\n{b}Traditions{/b} " + string.Join(", ", data.Traditions.Select(trad =>
                         trad.HumanizeTitleCase2().WithColor(trad.TraditionTraitToColor())));
-                if (tagData.Tags is not null)
+                if (data.Tags.Count > 0)
                 {
                     // Remove all the save-defense tags
-                    List<string> saveTags = tagData.Tags
-                        .Where(td => td.Contains(DataConstants.TAGS_HIGHEST_SAVE))
+                    List<string> saveTags = data.Tags
+                        .Where(td => td.Contains(TrophyData.DataConstants.TAGS_HIGHEST_SAVE))
                         .ToList();
-                    List<string> humanizedTags = tagData.Tags
+                    List<string> humanizedTags = data.Tags
                         .Except(saveTags)
-                        .Select(TrophyDataTagToString)
+                        .Select(TrophyData.TrophyDataTagToString)
                         .ToList();
                     // If there are any, add them back with a more pleasant English sentence structure
                     if (saveTags.Count > 0)
@@ -272,7 +133,7 @@ public static class Trophies
                                 .PluralizeIf(" is ", "s are ", saveTags.Count)
                             + S.ConstructOrList(
                                 saveTags.Select(td =>
-                                    TrophyDataTagToString(td).Replace("highest save is ", "")),
+                                    TrophyData.TrophyDataTagToString(td).Replace("highest save is ", "")),
                                 "and");
                         // Use a semi-colon to separate this list
                         if (humanizedTags.Count > saveTags.Count
@@ -288,17 +149,17 @@ public static class Trophies
                 }
                 return new ItemModification(modKind)
                 {
-                    Tag = subTag,
+                    Tag = dataString,
                     ModifyItem = item =>
                     {
                         item.Description += dataText;
-                        if (tagData.Traits is not null)
-                            item.Traits.AddRange(tagData.Traits);
+                        if (data.Traits.Count > 0)
+                            item.Traits.AddRange(data.Traits);
                     },
                     UnmodifyItem = item =>
                     {
                         item.Description = item.Description!.Replace(dataText, "");
-                        tagData.Traits?.ForEach(t => item.Traits.Remove(t));
+                        data.Traits?.ForEach(t => item.Traits.Remove(t));
                     }
                 };
             });
@@ -358,7 +219,7 @@ public static class Trophies
                 || specificTool is HuntingTools.ToolId.BloodseekingBlade or HuntingTools.ToolId.WardedMail or HuntingTools.ToolId.PairedBloodseeker or HuntingTools.ToolId.SpiritOil)
             {
                 DamageKind? chosenKind = Trophies.GetChosenDamageKind(trophy);
-                foreach (DamageKind dk in Trophies.GetTrophyData(trophy)?.Kinds ?? [])
+                foreach (DamageKind dk in ((TrophyData?)trophy)?.Kinds ?? [])
                     SetDamageKind(dk, dk == chosenKind);
             }
             
@@ -369,7 +230,7 @@ public static class Trophies
                 || specificTool is HuntingTools.ToolId.ChymistsVials or HuntingTools.ToolId.BloodburstPhial)
             {
                 DamageKind? chosenKind = Trophies.GetChosenDamageKind(trophy);
-                foreach (DamageKind dk in Trophies.GetTrophyData(trophy)?.Kinds ?? [])
+                foreach (DamageKind dk in ((TrophyData?)trophy)?.Kinds ?? [])
                     SetDamageKind(dk, dk == chosenKind, true);
             }
             
@@ -423,49 +284,55 @@ public static class Trophies
             }
         }));
 
+        // Add starting trophies
         LoadOrder.AtEndOfLoadingSequence += () =>
         {
             List<Item> startingTrophies =
             [
-                CreateTrophy(TrophyDataToString(
-                        "{i}something unspeakable{/i}",
-                        CreatureId.None,
-                        [Trait.Aberration],
-                        [DamageKind.Cold, DamageKind.Piercing],
-                        [Trait.Occult],
-                        [DataConstants.TAGS_HIGHEST_SAVE+Defense.Reflex]))
+                CreateTrophy(new TrophyData(
+                            "{i}something unspeakable{/i}",
+                            CreatureId.None,
+                            [Trait.Aberration],
+                            [DamageKind.Cold, DamageKind.Piercing],
+                            [Trait.Occult],
+                            [TrophyData.DataConstants.TAGS_HIGHEST_SAVE+Defense.Reflex])
+                        .ToDataString())
                     .With(item => item.WithModification(ItemRenaming.CreateRenameModification("starting trophy (horrifying aberration)"))),
-                CreateTrophy(TrophyDataToString(
-                        "{i}an electric beast{/i}",
-                        CreatureId.None,
-                        [Trait.Beast, Trait.Electricity],
-                        [DamageKind.Electricity, DamageKind.Slashing],
-                        [Trait.Primal],
-                        [DataConstants.TAGS_HIGHEST_SAVE+Defense.Reflex]))
+                CreateTrophy(new TrophyData(
+                            "{i}an electric beast{/i}",
+                            CreatureId.None,
+                            [Trait.Beast, Trait.Electricity],
+                            [DamageKind.Electricity, DamageKind.Slashing],
+                            [Trait.Primal],
+                            [TrophyData.DataConstants.TAGS_HIGHEST_SAVE+Defense.Reflex])
+                        .ToDataString())
                     .With(item => item.WithModification(ItemRenaming.CreateRenameModification("starting trophy (sparking beast)"))),
-                CreateTrophy(TrophyDataToString(
-                        "{i}a fiery dragon{/i}",
-                        CreatureId.None,
-                        [Trait.Dragon, Trait.Fire],
-                        [DamageKind.Fire, DamageKind.Piercing],
-                        [Trait.Arcane],
-                        [DataConstants.TAGS_HIGHEST_SAVE+Defense.Fortitude]))
+                CreateTrophy(new TrophyData(
+                            "{i}a fiery dragon{/i}",
+                            CreatureId.None,
+                            [Trait.Dragon, Trait.Fire],
+                            [DamageKind.Fire, DamageKind.Piercing],
+                            [Trait.Arcane],
+                            [TrophyData.DataConstants.TAGS_HIGHEST_SAVE+Defense.Fortitude])
+                        .ToDataString())
                     .With(item => item.WithModification(ItemRenaming.CreateRenameModification("starting trophy (flame dragon)"))),
-                CreateTrophy(TrophyDataToString(
-                        "{i}an icy giant{/i}",
-                        CreatureId.None,
-                        [Trait.Cold, Trait.Giant, Trait.Humanoid],
-                        [DamageKind.Bludgeoning, DamageKind.Cold],
-                        [Trait.Primal],
-                        [DataConstants.TAGS_HIGHEST_SAVE+Defense.Fortitude]))
+                CreateTrophy(new TrophyData(
+                            "{i}an icy giant{/i}",
+                            CreatureId.None,
+                            [Trait.Cold, Trait.Giant, Trait.Humanoid],
+                            [DamageKind.Bludgeoning, DamageKind.Cold],
+                            [Trait.Primal],
+                            [TrophyData.DataConstants.TAGS_HIGHEST_SAVE+Defense.Fortitude])
+                        .ToDataString())
                     .With(item => item.WithModification(ItemRenaming.CreateRenameModification("starting trophy (frost giant)"))),
-                CreateTrophy(TrophyDataToString(
-                        "{i}a ghostly undead{/i}",
-                        CreatureId.None,
-                        [Trait.Ghost, Trait.Incorporeal, Trait.Spirit, Trait.Undead, UnholyTrait.Unholy],
-                        [DamageKind.Bludgeoning, DamageSpirit.Spirit],
-                        [Trait.Divine],
-                        [DataConstants.TAGS_HIGHEST_SAVE+Defense.Will]))
+                CreateTrophy(new TrophyData(
+                            "{i}a ghostly undead{/i}",
+                            CreatureId.None,
+                            [Trait.Ghost, Trait.Incorporeal, Trait.Spirit, Trait.Undead, UnholyTrait.Unholy],
+                            [DamageKind.Bludgeoning, DamageSpirit.Spirit],
+                            [Trait.Divine],
+                            [TrophyData.DataConstants.TAGS_HIGHEST_SAVE+Defense.Will])
+                        .ToDataString())
                     .With(item => item.WithModification(ItemRenaming.CreateRenameModification("starting trophy (ghostly undead)"))),
             ];
             foreach (Item trophy in startingTrophies)
@@ -629,336 +496,28 @@ public static class Trophies
         #endif
     }
 
-    #region String Parsing and De/Serialization
-
-    /// <summary>
-    /// Turns a given set of data into a string. Used for creating new instances of <see cref="TrophyModification"/>.
-    /// </summary>
-    /// <param name="name">The name of the creature this trophy came from. If null or empty, value is "Unknown".</param>
-    /// <param name="id">The creature's CreatureId.</param>
-    /// <param name="traits">The list of traits on this trophy.</param>
-    /// <param name="kinds">The list of damage types on this trophy.</param>
-    /// <param name="traditions">The list of traditions on this trophy. Must include at least one tradition.</param>
-    /// <param name="tags">The list of additional miscellaneous tags, such as features it has or other singular properties of like its highest modifier.</param>
-    /// <returns>The final data-string of the trophy, to be prepended with "trophy_" or added to the ItemModification's Tag.</returns>
-    private static string TrophyDataToString(string name, CreatureId id, List<Trait>? traits, List<DamageKind>? kinds, List<Trait>? traditions, List<string>? tags)
-    {
-        // Collect all relevant data
-        List<string> data = [];
-        
-        // Name
-        string finalName = DataConstants.CREATURE_NAME + (string.IsNullOrEmpty(name) ? "Unknown" : name);
-        data.Add(finalName);
-        
-        // Creature Id
-        string finalId = (DataConstants.CREATURE_ID + id.ToStringOrTechnical())
-            .Replace(
-                DataConstants.UNDERSCORE,
-                DataConstants.UNDERSCORE_SUBSTITUTE);
-        data.Add(finalId);
-        
-        // Traits
-        List<Trait> exceptTraits = [Trait.Small, Trait.Large, Trait.Huge, Trait.Gargantuan, Trait.Colossal5, Trait.Colossal6, Trait.Colossal7, Trait.Colossal8, Trait.Uncommon, Trait.Unique];
-        List<Trait>? filteredTraits = traits?.ToList();
-        filteredTraits?.RemoveAll(t => exceptTraits.Contains(t));
-        if (filteredTraits?.Count > 0)
-        {
-            string finalTraits =
-                DataConstants.TRAITS
-                + string.Join(
-                    DataConstants.ITEM_SEPARATOR,
-                    filteredTraits.Select(t => t.ToStringOrTechnical()));
-            data.Add(finalTraits);
-        }
-        
-        // Damage kinds
-        if (kinds?.Count > 0)
-        {
-            string finalKinds =
-                DataConstants.DAMAGE_KINDS
-                + string.Join(
-                    DataConstants.ITEM_SEPARATOR,
-                    kinds.Select(t => t.ToStringOrTechnical()));
-            data.Add(finalKinds);
-        }
-
-        // Magical traditions
-        if (traditions?.Count > 0)
-        {
-            string finalTraditions =
-                DataConstants.TRADITIONS
-                + string.Join(
-                    DataConstants.ITEM_SEPARATOR,
-                    traditions.Select(t => t.ToStringOrTechnical()));
-            data.Add(finalTraditions);
-        }
-        
-        // Special tags
-        if (tags?.Count > 0)
-        {
-            string finalTags =
-                DataConstants.TAGS
-                + string.Join(
-                    DataConstants.ITEM_SEPARATOR,
-                    tags);
-            data.Add(finalTags);
-        }
-        
-        // Combine data into a final string
-        string finalDataString = string.Join(DataConstants.LIST_SEPARATOR, data);
-        return finalDataString;
-    }
-    
-    /// <summary>
-    /// Parses a given trophy data-string and turns it into usable data.
-    /// </summary>
-    /// <param name="trophyTag">The data-string of the trophy (the string without "trophy_").</param>
-    /// <returns>A tuple containing all the trophy's properties.</returns>
-    private static (string? Name, CreatureId? Id, List<Trait>? Traits, List<DamageKind>? Kinds, List<Trait>? Traditions, List<string>? Tags)
-        TrophyStringToData(string trophyTag)
-    {
-        // Example tag:
-        // - quarry*Orc Warrior_crid*OrcWarrior_traits*Chaotic-Evil-Orc-MetalArmor_damagekinds*Slashing_traditions*Occult_Tags*HighestSaveFortitude
-
-        string[] lists = trophyTag.Split(DataConstants.LIST_SEPARATOR);
-        
-        /*Regex.Replace(
-            lists[0]["quarry*".Length..],
-            @"(?<=[a-z0-9])(?=[A-Z])",
-            " ");*/
-        string finalName = GetString(DataConstants.CREATURE_NAME) ?? "Unknown";
-        
-        CreatureId finalId = ModManager.TryParse(
-            GetString(DataConstants.CREATURE_ID)
-                ?.Replace(DataConstants.UNDERSCORE_SUBSTITUTE, DataConstants.UNDERSCORE)
-            ?? "None",
-            out CreatureId iId)
-                ? iId
-                : CreatureId.None;
-
-        List<Trait>? finalTraits = GetString(DataConstants.TRAITS)
-            ?.Split(DataConstants.ITEM_SEPARATOR)
-            .Select(t => ModManager.TryParse(t, out Trait iTrait) ? iTrait : (Trait?)null)
-            .Where(t => t.HasValue)
-            .Cast<Trait>()
-            .ToList();
-        
-        List<DamageKind>? finalKinds = GetString(DataConstants.DAMAGE_KINDS)
-            ?.Split(DataConstants.ITEM_SEPARATOR)
-            .Select(dk => ModManager.TryParse(dk, out DamageKind iDk) ? iDk : (DamageKind?)null)
-            .Where(dk => dk.HasValue)
-            .Cast<DamageKind>()
-            .ToList();
-        
-        List<Trait>? finalTraditions = GetString(DataConstants.TRADITIONS)
-            ?.Split(DataConstants.ITEM_SEPARATOR)
-            .Select(t => ModManager.TryParse(t, out Trait iTrait) ? iTrait : (Trait?)null)
-            .Where(t => t.HasValue)
-            .Cast<Trait>()
-            .ToList();
-        
-        List<string>? finalTags = GetString(DataConstants.TAGS)
-            ?.Split(DataConstants.ITEM_SEPARATOR)
-            .ToList();
-
-        return (finalName, finalId, finalTraits, finalKinds, finalTraditions, finalTags);
-
-        string? GetString(string header)
-        {
-            string? list = lists.FirstOrDefault(list => list.Contains(header));
-
-            if (list is null || list.Length <= header.Length)
-                return null;
-            
-            return list.Substring(header.Length);
-        }
-    }
-    
-    /// <summary>
-    /// Turns a creature into its associated trophy data-string.
-    /// </summary>
-    private static string CreatureToTrophyString(Creature cr)
-    {
-        List<Trait> traits = cr.Traits
-            .Except(TraitBlacklist)
-            .ToList();
-        
-        List<Trait> traditions = [
-            ..cr.Traits.Where(trait =>
-                trait is Trait.Arcane or Trait.Divine or Trait.Primal or Trait.Occult),
-            ..cr.Spellcasting?.Sources.Select(src =>
-                src.SpellcastingTradition) ?? []
-        ];
-        traditions.RemoveDuplicates();
-        if (traditions.Count == 0)
-            traditions.Add(Trait.Occult);
-
-        List<DamageKind> types = [
-            // Actions
-            ..cr.Possibilities
-                // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-                ?.Filter(ap =>
-                {
-                    // Exclude: Spells, most item-y attacks
-                    if (ap.CombatAction.Traits.ContainsOneOf([Trait.Spell, Trait.Bomb, Trait.Elixir, Trait.Potion]))
-                        return false;
-                    // Exclude some basic buttons
-                    if (ap.CombatAction.ActionId is ActionId.Trip or ActionId.DrawItem or ActionId.DropItem or ActionId.PickUpItem or ActionId.Delay)
-                        return false;
-                    // Exclude more basic and specific abilities with damage-words.
-                    if (ap.CombatAction.Name.ToLower() is "drop prone" or "reposition" or "deal 1000 damage" or "fire bomb" or "enter badger rage" or "death-stealing gaze")
-                        return false;
-                    // Allow everything else.
-                    return true;
-                })
-                .CreateActions(false)
-                .SelectMany(ica =>
-                {
-                    List<DamageKind> kinds = [];
-                    if (ica.Action.Item is { WeaponProperties: {} props } item)
-                    {
-                        kinds.AddRange(item.DetermineDamageKinds());
-                        kinds.AddRange(props.AdditionalDamage.Select(set => set.Item2));
-                        if (props.AdditionalSplashDamageFormula is not null)
-                            kinds.Add(props.AdditionalSplashDamageKind);
-                    }
-                    else
-                    {
-                        kinds.AddRange(GetKindsInDescription(ica.Action.Description));
-                    }
-                    
-                    return kinds;
-                }) ?? [],
-            
-            // QEffects
-            ..cr.QEffects
-                .SelectMany(qf =>
-                {
-                    // Ignore effects that can't be parsed with
-                    if (qf.Description is null)
-                        return [];
-                    // Ignore effects that aren't about dealing typed damage to other creatures
-                    // This also excludes afflictions
-                    if (qf.Name?.ToLower() is { } name
-                        && new List<string>(["immunity", "resistance", "weakness", "regeneration", "vulnerability", "resilience", "poison", "venom", "rot", "badger rage", "head regrowth", "split", "death-stealing gaze", "aversion", "healing"])
-                            .Any(name.Contains))
-                        return [];
-                    return GetKindsInDescription(qf.Description);
-                }),
-            
-            // Immunities
-            ..cr.WeaknessAndResistance.Immunities.Where(dk =>
-                dk is not DamageKind.Bleed and not DamageKind.Untyped)
-        ];
-        types.RemoveDuplicates();
-        types = types
-            .OrderBy(dk => dk.ToString())
-            .ToList();
-
-        // Handle various stat block observations as extra tags
-        List<string> tags = [];
-        if (cr.QEffects.Any(qf =>
-                qf is { Id: QEffectId.AllAroundVision, ExpiresAt: ExpirationCondition.Never, Dispellable: null }))
-            tags.Add(DataConstants.TAGS_ALL_AROUND_VISION);
-        if (cr.QEffects.Any(qf =>
-                qf is { Id: QEffectId.FogVision, ExpiresAt: ExpirationCondition.Never, Dispellable: null }))
-            tags.Add(DataConstants.TAGS_SMOKE_VISION);
-        List<Defense> saves = [Defense.Fortitude, Defense.Reflex, Defense.Will];
-        tags.AddRange(saves
-            .GroupBy(def => cr.Defenses.GetBaseValue(def))
-            .OrderByDescending(grp => grp.Key)
-            .First()
-            .Select(def => DataConstants.TAGS_HIGHEST_SAVE + def)
-        );
-        
-        return TrophyDataToString(
-            cr.BaseName,
-            cr.CreatureId,
-            traits.Count > 0 ? traits : null,
-            types.Count > 0 ? types : null,
-            traditions.Count > 0 ? traditions : null,
-            tags.Count > 0 ? tags : null);
-        
-        List<DamageKind> GetKindsInDescription(string desc)
-        {
-            List<DamageKind> kinds = [];
-            string valid = desc.ToLower();
-            string[] allWords = valid.Split([' ', '.', ',', '!', '?'], StringSplitOptions.RemoveEmptyEntries);
-            string[] noBeforeWords = ["persistent", "life"];
-            string[] noAfterWords = ["energy", "resistance", "resistant", "weakness", "effect", "effects", "curse"];
-            foreach (DamageKind kind in DamageKind.GetValues())
-            {
-                bool found = false;
-                if (kind is DamageKind.Bleed)
-                    continue;
-                string dkStr = kind.ToStringOrTechnical().ToLower();
-                for (int i=0; i < allWords.Length; i++)
-                {
-                    // Must be found
-                    if (allWords[i] != dkStr)
-                        continue;
-                    // Check previous word
-                    if (i > 0)
-                    {
-                        string previous = allWords[i-1];
-                        if (noBeforeWords.Contains(previous))
-                            continue;
-                        // skip errors from certain list-sentences
-                        if (previous is "and" or "or")
-                        {
-                            // "persistent X (and|or) Y" for Y
-                            if (i > 2 && allWords[i-3] == "persistent")
-                                continue;
-                            // "malice and evil" for evil
-                            if (i > 1 && allWords[i-2] == "malice")
-                                continue;
-                        }
-                    }
-                    // Check next word
-                    if (i < allWords.Length-1 && noAfterWords.Contains(allWords[i + 1]))
-                        continue;
-                    found = true;
-                }
-                if (found)
-                    kinds.Add(kind);
-            }
-
-            return kinds;
-        }
-    }
-
-    /// <summary>
-    /// Gets the humanized name, description, or entry of a value stored in <see cref="DataConstants.TAGS"/>. This gets a portion of the data from <see cref="ItemModification.Tag"/>, unrelated to the whole tag itself.
-    /// </summary>
-    public static string TrophyDataTagToString(string tag)
-    {
-        if (tag == DataConstants.TAGS_ALL_AROUND_VISION)
-            return "All-Around Vision";
-        if (tag == DataConstants.TAGS_SMOKE_VISION)
-            return "Smoke Vision";
-        if (tag.Contains(DataConstants.TAGS_HIGHEST_SAVE))
-            return Enum.TryParse(tag[DataConstants.TAGS_HIGHEST_SAVE.Length..], true, out Defense defense)
-                ? "highest save is " + defense.ToStringOrTechnical().WithColor(defense.ToColor())
-                : throw new Exception("Unknown Defense for Data Tag HighestSave: " + tag);
-        throw new Exception("Unknown Trophy Data Tag: " + tag);
-    }
-
-    #endregion
-
     #region Creating Trophies
 
+    /// <summary>
+    /// Creates a trophy from a string.
+    /// </summary>
+    /// <param name="trophyData">The data string (the serializable string containing the trophy's data) or tag string (the data string with "trophy_" prepended).</param>
+    /// <returns></returns>
     private static Item CreateTrophy(string trophyData)
     {
-        if (trophyData.StartsWith(DataConstants.TROPHY_MODIFICATION))
-            trophyData = trophyData.Remove(0, DataConstants.TROPHY_MODIFICATION.Length);
+        if (trophyData.StartsWith(TrophyData.DataConstants.TROPHY_MODIFICATION))
+            trophyData = trophyData.Remove(0, TrophyData.DataConstants.TROPHY_MODIFICATION.Length);
         Item trophy = Items.CreateNew(Trophies.TrophyItem)
-            .WithModification(ItemModification.Create(DataConstants.TROPHY_MODIFICATION + trophyData));
+            .WithModification(ItemModification.Create(TrophyData.DataConstants.TROPHY_MODIFICATION + trophyData));
         return trophy;
     }
 
+    /// <summary>
+    /// Creates a trophy item from a creature.
+    /// </summary>
     public static Item CreateTrophy(Creature cr)
     {
-        return CreateTrophy(CreatureToTrophyString(cr));
+        return CreateTrophy(TrophyData.FromCreature(cr).ToDataString());
     }
 
     #endregion
@@ -968,15 +527,6 @@ public static class Trophies
     public static Item? GetTrophy(Item item)
     {
         return item.ActiveRunes.FirstOrDefault(r => r.HasTrait(ModData.Traits.Trophy));
-    }
-    
-    public static (string? Name, CreatureId? Id, List<Trait>? Traits, List<DamageKind>? Kinds, List<Trait>? Traditions, List<string>? Tags)?
-        GetTrophyData(Item trophy)
-    {
-        ItemModification? trophyMod = trophy.ItemModifications.FirstOrDefault(mod => mod.Kind == TrophyModification);
-        if (trophyMod is null || trophyMod.Tag is not string tagString)
-            return null;
-        return TrophyStringToData(tagString);
     }
 
     #endregion

@@ -1,10 +1,13 @@
+using System.ComponentModel.DataAnnotations;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
+using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
+using Dawnsbury.Core.CharacterBuilder.Selections.Selected;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
@@ -20,6 +23,7 @@ using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
+using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
@@ -127,7 +131,7 @@ public static class ClassFeats
                             action.WithExtraTrait(ModData.Traits.Relentless);
                     };
 
-                    if (HuntingToolsTag.GetTool(qfFeat.Owner, HuntingTools.ToolId.ConsecratedPanoply)
+                    if (HuntingToolsTag.GetTool(qfFeat.Owner, ToolId.ConsecratedPanoply)
                         is not { } panoply)
                         return;
                     
@@ -212,23 +216,13 @@ public static class ClassFeats
         // Repelling Shield
         yield return new HuntingTool(
                 "Repelling Shield",
-                HuntingTools.ToolId.RepellingShield,
-                HuntingTools.ToolKind.Secondary,
+                ToolId.RepellingShield,
+                ToolKind.Secondary,
                 ModData.Illustrations.RepellingShield,
-                (self, _) =>
+                (self, tool, iTool, trophy, data, isSpecialized) =>
                 {
-                    var inventory = self.HeldItems
-                        .Concat(self.CarriedItems)
-                        .Append(self.BaseArmor ?? self.Armor.Item ?? null)
-                        .WhereNotNull()
-                        .ToList();
-                    Item? shield = inventory.FirstOrDefault(item =>
-                        HuntingTool.GetToolId(item) is HuntingTools.ToolId.RepellingShield);
-                    Item? trophy = shield is not null ? Trophies.GetTrophy(shield) : null;
-                    List<DamageKind>? kinds = trophy is not null
-                        ? Trophies.GetTrophyData(trophy)?.Kinds
-                        : [];
-                    string kindDescription = kinds?.Count > 0
+                    List<DamageKind> kinds = data?.Kinds ?? [];
+                    string kindDescription = kinds.Count > 0
                         ? S.ConstructOrList(
                             kinds
                                 .Where(kind => !kind.IsPhysical())
@@ -258,8 +252,8 @@ public static class ClassFeats
             .WithOnSheet(values => values.GrantFeat(FeatName.ShieldBlock))
             .WithOnCreature(self =>
             {
-                (HuntingTool? repShield, Item? iShield, Item? trophy, var trophyData) =
-                    HuntingTools.GetFullHuntingToolData(self, HuntingTools.ToolId.RepellingShield);
+                (HuntingTool? repShield, Item? iShield, Item? trophy, TrophyData? trophyData) =
+                    HuntingTools.GetFullHuntingToolData(self, ToolId.RepellingShield);
                 if (repShield is null || iShield is null)
                     return;
                 
@@ -276,10 +270,10 @@ public static class ClassFeats
 
                         action.Description += "\n\n{b}Repelling Shield{/b} You also gain a +2 circumstance bonus to Reflex saving throws against area effects created by your quarry.".WithColor("Blue");
 
-                        if (trophyData?.Kinds is null || trophyData.Value.Kinds.Count == 0)
+                        if (trophyData?.Kinds is null || trophyData.Kinds.Count == 0)
                             return;
                         
-                        action.Description += $"\n\n{{b}}Reinforced{{/b}} You can Shield Block with your repelling shield in response to any attack that deals {S.ConstructOrList(trophyData.Value.Kinds.Select(dk => dk.ToStringOrTechnical()))} damage.".WithColor("Blue");
+                        action.Description += $"\n\n{{b}}Reinforced{{/b}} You can Shield Block with your repelling shield in response to any attack that deals {S.ConstructOrList(trophyData.Kinds.Select(dk => dk.ToStringOrTechnical()))} damage.".WithColor("Blue");
                     },
                     BonusToDefenses = (qfThis, action, def) =>
                         def is Defense.Reflex
@@ -299,7 +293,7 @@ public static class ClassFeats
                     && action.ActionId != ActionId.Trip
                     && (qfThis.Owner.HasFeat(FeatName.ReactiveShield)
                         || CommonShieldRules.GetBlockableShields(qfThis.Owner).Contains(iShield))
-                    && dEvent.KindedDamages.Any(kd => trophyData.Value.Kinds.Contains(kd.DamageKind));
+                    && dEvent.KindedDamages.Any(kd => trophyData.Kinds.Contains(kd.DamageKind));
                 
                 self.AddQEffect(repellQF);
             })
@@ -313,21 +307,12 @@ public static class ClassFeats
         // Paired Bloodseeker
         yield return new HuntingTool(
                 "Paired Bloodseeker",
-                HuntingTools.ToolId.PairedBloodseeker,
+                ToolId.PairedBloodseeker,
                 HuntingTools.ToolKind.Secondary,
                 ModData.Illustrations.BloodseekingBlade,
-                (self, isSpecialized) =>
+                (self, tool, iTool, trophy, data, isSpecialized) =>
                 {
-                    //var inventory = self.PersistentCharacterSheet?.Inventory.AllItems;
-                    var inventory = self.HeldItems
-                        .Concat(self.CarriedItems)
-                        .Append(self.BaseArmor ?? self.Armor.Item ?? null)
-                        .WhereNotNull()
-                        .ToList();
-                    Item? pair = inventory.FirstOrDefault(item =>
-                            HuntingTool.GetToolId(item) is HuntingTools.ToolId.PairedBloodseeker);
-                    string? ignoreAmount = pair is not null ? (1 + pair.WeaponProperties!.DamageDieCount).WithColor("Blue") : null;
-                    Item? trophy = pair is not null ? Trophies.GetTrophy(pair) : null;
+                    string? ignoreAmount = iTool is not null ? (1 + iTool.WeaponProperties!.DamageDieCount).WithColor("Blue") : null;
                     DamageKind? chosenDk = trophy is not null ? Trophies.GetChosenDamageKind(trophy) : null;
                     string damageType = chosenDk is not null
                         ? (" " + chosenDk.Value.ToStringOrTechnical().WithColor(chosenDk.Value.DamageKindToColor() ) + " ")
@@ -337,7 +322,7 @@ public static class ClassFeats
                              {b}Reinforced{/b} Your first Strike with this tool deals {Blue}{{(self.Level >= 19 ? 3 : self.Level >= 11 ? 2 : 1)}}d4{/Blue} additional{{damageType}}damage.{{(chosenDk is null ? " The type is chosen from the reinforcing trophy." : null)}}
                              """
                            + (isSpecialized
-                               ? $"\n{{b}}Specialized{{/b}} This tool has {{tooltip:criteffect}}critical specialization effects{{/}}, and gains the effects of a {(self.PersistentCharacterSheet?.Calculated.GetTagOrNull<ItemName>(HuntingTools.PAIRED_BLOODSEEKER_RUNESTONE_KEY) is {} rune ? ("{i}" + Items.GetItemTemplate(rune).RuneProperties!.Prefix + "{/i} property rune").WithColor("Blue") : "property rune you choose when you Reinforce your Arsenal")}."
+                               ? $"\n{{b}}Specialized{{/b}} This tool has {{tooltip:criteffect}}critical specialization effects{{/}}, and gains the effects of a {(self.PersistentCharacterSheet?.Calculated.GetTagOrNull<ItemName>(HuntingTools.PAIRED_BLOODSEEKER_RUNESTONE_KEY) is {} rune ? $"{{i}}{rune.ToLink(Items.GetItemTemplate(rune).RuneProperties!.Prefix)}{{/i}} property rune" : "property rune you choose when you Reinforce your Arsenal")}."
                                : null);
                 },
                 (
@@ -356,11 +341,11 @@ public static class ClassFeats
                   """,
                 [ModData.Traits.Slayer])
             .WithOnCreatureBloodseeking(
-                HuntingTools.ToolId.PairedBloodseeker,
+                ToolId.PairedBloodseeker,
                 HuntingTools.PAIRED_BLOODSEEKER_RUNESTONE_KEY,
                 Dice.D4)
             .WithPrerequisite(
-                values => HuntingToolsTag.GetTool(values, HuntingTools.ToolId.BloodseekingBlade) is not null,
+                values => HuntingToolsTag.GetTool(values, ToolId.BloodseekingBlade) is not null,
                 "You must know the bloodseeking blade signature tool.")
             .WithInappropriateBecauseOfBadInventory((_, inventory) => FeatInventoryRequirements.RequiresOne(
                 inventory,
@@ -380,7 +365,7 @@ public static class ClassFeats
                     """,
                     [ModData.Traits.Slayer])
             .WithPrerequisite(
-                values => HuntingToolsTag.GetTool(values, HuntingTools.ToolId.BloodseekingBlade) is not null,
+                values => HuntingToolsTag.GetTool(values, ToolId.BloodseekingBlade) is not null,
                 "You must know the bloodseeking blade signature tool.")
             .WithOnSheet(values =>
             {
@@ -392,7 +377,7 @@ public static class ClassFeats
                 "The damage die of simple bloodseeking blades increases by one step. You can have advanced bloodseeking blades, and they use your martial proficiency.",
                 qfFeat =>
                 {
-                    if (HuntingToolsTag.GetTool(qfFeat.Owner, HuntingTools.ToolId.BloodseekingBlade)
+                    if (HuntingToolsTag.GetTool(qfFeat.Owner, ToolId.BloodseekingBlade)
                         is not { } blade)
                         return;
                         
@@ -517,7 +502,7 @@ public static class ClassFeats
         // Salt Stone
         yield return new TrueFeat(
                 ModData.FeatNames.SaltStone, 2,
-                $"You draw your salt stone, a small block of dried magical compounds, and scrape it along a weapon you’re holding{ModData.Tooltips.SaltStoneHolding(ModData.Illustrations.InfoSymbol.IllustrationAsIconString)}.",
+                $"You draw your salt stone, a small block of dried magical compounds, and scrape it along a weapon you’re holding{ModData.Tooltips.SaltStoneHolding}.",
                 $$"""
                 {b}Requirements{/b} You have a free hand.
                 
@@ -644,23 +629,12 @@ public static class ClassFeats
         yield return new TrueFeat(
                 ModData.FeatNames.SlayersTricks, 2,
                 "You’ve learned a few simple magical tricks to supplement your tools in a pinch.",
-                """
-                    You gain two common occult cantrips as innate spells. Your spellcasting attribute modifier for these spells and any other spells you gain from slayer feats is Wisdom, rather than Charisma. Casting a Spell gains the relentless trait for you, as long as the spell you cast came from a slayer feat.
+                $$"""
+                    You gain two common occult cantrips as innate spells. Your spellcasting attribute modifier for these spells and any other spells you gain from slayer feats is Wisdom{{ModData.Tooltips.SlayersTricksAbility}}, rather than Charisma. Casting a Spell gains the relentless trait for you, as long as the spell you cast came from a slayer feat.
                     
                     {b}Special{/b} If you have a consecrated panoply signature tool, you can choose divine spells rather than occult spells for this feat and for any other slayer feats that allow you to choose innate spells.
                     """,
-                    [ModData.Traits.Slayer])
-            .WithPermanentQEffect(qfFeat =>
-            {
-                qfFeat.ModifyActionPossibility = (qfThis, action) =>
-                {
-                    if (action.SpellcastingSource?.ClassOfOrigin != ModData.Traits.Slayer)
-                        return;
-                    
-                    action.WithExtraTrait(ModData.Traits.Relentless);
-                    action.SpellcastingSource.SpellcastingAbility = Ability.Wisdom;
-                };
-            })
+                [ModData.Traits.Slayer])
             .WithOnSheet(values =>
             {
                 values.SetProficiency(Trait.Spell, Proficiency.Trained);
@@ -669,26 +643,44 @@ public static class ClassFeats
                     () => new InnateSpells(Trait.Occult));
                 
                 bool hasPanoply = HuntingToolsTag.GetTag(values)
-                    ?.IsKnown(HuntingTools.ToolId.ConsecratedPanoply) == true;
+                    ?.IsKnown(ToolId.ConsecratedPanoply) == true;
                 
-                values.AddSelectionOption(new AddInnateSpellOption(
+                values.AddSlayerSpellOption(
                     "SlayersTricksCantrips1",
                     "Slayer's Tricks cantrip 1",
-                    -1,
-                    ModData.Traits.Slayer,
                     0,
-                    spell =>
-                        spell.HasTrait(Trait.Occult)
-                        || (hasPanoply && spell.HasTrait(Trait.Divine))));
-                values.AddSelectionOption(new AddInnateSpellOption(
+                    hasPanoply);
+                values.AddSlayerSpellOption(
                     "SlayersTricksCantrips2",
                     "Slayer's Tricks cantrip 2",
-                    -1,
-                    ModData.Traits.Slayer,
                     0,
-                    spell =>
-                        spell.HasTrait(Trait.Occult)
-                        || (hasPanoply && spell.HasTrait(Trait.Divine))));
+                    hasPanoply);
+            })
+            .WithOnCreature(self =>
+            {
+                self.AddQEffect(new QEffect()
+                {
+                    Name = "[SLAYER: SLAYER'S TRICKS, MODIFY SPELLCASTING SOURCE]",
+                    StartOfCombatBeforeOpeningCutscene = async qfThis =>
+                    {
+                        // Modify slayer spells to:
+                        // - use Wisdom.
+                        // - be Relentless.
+                        foreach (SpellcastingSource source in qfThis.Owner.Spellcasting
+                                     ?.Sources
+                                     .Where(IsSlayerSource)
+                                     .ToList() ?? [])
+                        {
+
+                            source.SpellcastingAbility = Ability.Wisdom;
+                        }
+                    },
+                    ModifyActionPossibility = (qfThis, action) =>
+                    {
+                        if (IsSlayerSpell(action))
+                            action.WithExtraTrait(ModData.Traits.Relentless);
+                    }
+                });
             });
 
         #endregion
@@ -860,7 +852,7 @@ public static class ClassFeats
                 $"When you use {{b}}Hunting Spike {{icon:Action}}{{/b}}, you can draw and Strike with spikes that function as {ItemName.Club.ToLink("clubs")} or {ItemName.Shortsword.ToLink("shortswords")}, rather than {ItemName.Dagger.ToLink("daggers")}.",
                 [ModData.Traits.Slayer])
             .WithPrerequisite(
-                values => HuntingToolsTag.GetTool(values, HuntingTools.ToolId.ConsecratedPanoply) is not null,
+                values => HuntingToolsTag.GetTool(values, ToolId.ConsecratedPanoply) is not null,
                 "You must know the consecrated panoply signature tool.")
             .WithPermanentQEffect(
                 "Your hunting spikes can also be clubs or shortswords.",
@@ -978,6 +970,237 @@ public static class ClassFeats
         // Shifting Combination
         
         // Spell Slates
+        // DOC: Reinforced benefit changed to "traditions" to make sense of the plurality of tradition associations written into the core rules of a trophy's properties.
+        yield return new HuntingTool(
+                "Spell Slates",
+                ToolId.SpellSlates,
+                HuntingTools.ToolKind.Secondary,
+                ModData.Illustrations.SpellSlates,
+                (self, tool, iTool, trophy, data, isSpecialized) =>
+                {
+                    // Passive benefit
+                    bool hasPanoply = HuntingToolsTag.GetTag(self)
+                        ?.IsKnown(ToolId.ConsecratedPanoply) == true;
+                    string passive =
+                        $"You gain a {S.ConstructOrList(
+                            ((IEnumerable<string?>)["1st-", "2nd-", (self.Level >= 8 ? "3rd-" : null)]).WhereNotNull(),
+                            "and")}rank {"Occult".WithColor(Trait.Occult.TraditionTraitToColor())} {(hasPanoply ? $"or {"Divine".WithColor(Trait.Divine.TraditionTraitToColor())} " : null)}innate spell. You can cast each once per day.";
+                    
+                    // Reinforced benefit
+                    int maxRank = self.PersistentCharacterSheet?.Calculated.InnateSpells
+                        .GetOrCreate(
+                            ModData.Traits.Slayer,
+                            () => new InnateSpells(Trait.Occult))
+                        .SpellsKnown
+                        .Max(spell => spell.SpellLevel) ?? 0;
+                    string rank = maxRank > 0
+                        ? $"{maxRank.Ordinalize2()}-rank".WithColor("Blue")
+                        : "the highest-rank innate slayer-feat spell you have";
+                    
+                    List<string>? traditionList = trophy is not null
+                        ? data?.Traditions
+                            ?.Select(trait =>
+                                trait.HumanizeTitleCase2()
+                                    .WithColor(trait.TraditionTraitToColor()))
+                            .ToList()
+                        : null;
+                    string reinforced = $"{{b}}Reinforced{{/b}} You gain an additional innate spell of up to {rank}. This spell must be of the {(traditionList is not null
+                        ? S.ConstructOrList(traditionList) + " tradition".PluralizeIf(null, "s", traditionList.Count)
+                        : "trophy's traditions")}. You can swap this choice when you Reinforce your Arsenal.";
+                    
+                    return
+                        $"""
+                         {passive}
+                         {reinforced}
+                         """;
+                },
+                (
+                    "set of prepared charms or runes",
+                    (_, item) => item.ItemName == HuntingTools.SpellSlates
+                ))
+            .ToSecondaryToolFeat(
+                6,
+                "You’ve learned how to expand your magical tricks with a set of specially prepared charms or runes.",
+                $$"""
+                You gain a set of spell slates as a secondary tool, which are a worn item. You can designate this item as your spell slates when you Reinforce your Arsenal.
+
+                When you gain this feat, choose a 1st-rank and a 2nd-rank occult spell to gain as innate spells. At 8th level, choose a 3rd-rank spell as well. You can cast each of these spells once per day.
+
+                {b}Reinforced{/b} You gain an additional common innate spell of a rank equal to or less than the highest-rank innate spell you have from slayer feats, which you can cast once per day. This additional spell must be of the trophy's traditions{{ModData.Tooltips.SpellSlatesTraditions}}, and you can swap it for a different spell with the same restrictions when you Reinforce your Arsenal. {i}(This swap doesn't affect the restriction on casting the spell once per day.){/i}
+                """,
+                [ModData.Traits.Slayer])
+            .WithFreeInventoryItem(HuntingTools.SpellSlates)
+            .WithOnCreature(self =>
+            {
+                if (self.PersistentCharacterSheet is null)
+                    return;
+                (HuntingTool? slates, Item? iSlates, _, _) =
+                    HuntingTools.GetFullHuntingToolData(self, ToolId.SpellSlates);
+                if (slates is null || iSlates is null)
+                    return;
+                
+                // If the bonus spell was expended,
+                // then remove other spells even if your choice was swapped.
+                self.AddQEffect(new QEffect()
+                {
+                    Name = "[SLAYER: SPELL SLATES, REMOVE EXPENDED REINFORCED SPELL]",
+                    StartOfCombatBeforeOpeningCutscene = async qfThis =>
+                    {
+                        if (qfThis.Owner.PersistentUsedUpResources
+                            .GetSpellcasting(ModData.Traits.ReinforcedSlateSpell)
+                            .PreparedSpellsUsedUp
+                            .Any(spellsOfRank =>
+                                spellsOfRank.Count > 0))
+                        {
+                            var source = qfThis.Owner.Spellcasting
+                                ?.GetSourceByOrigin(ModData.Traits.ReinforcedSlateSpell);
+                            if (source is null)
+                                return;
+                            foreach (CombatAction action in source.Spells.ToList())
+                                source.Spellcasting.UseUpSpellcastingResources(action);
+                            qfThis.ExpiresAt = ExpirationCondition.Immediately;
+                        }
+                    }
+                });
+
+                // Find selected bonus spell
+                Spell? reinforcedSpell = (self.PersistentCharacterSheet.SelectedFeats
+                        .FirstOrDefault(choice =>
+                            choice.Value is SpellSelectedChoice
+                            && choice.Key.Contains("SpellSlatesReinforcedSpell"))
+                        .Value as SpellSelectedChoice)
+                    ?.Choices.FirstOrDefault();
+                
+                if (reinforcedSpell is not null)
+                    return;
+
+                // If no bonus spell is selected, warn the user.
+                // This shouldn't be possible, but it's a good fallback.
+                string toolName = slates.Id.GetNameFromToolId();
+                self.AddQEffect(HuntingTools.ToolWarning(
+                    true, "REINFORCED SPELL",
+                    $$"""
+                      Your {{toolName.WithTag("b")}} has a trophy reinforcing it, but you did not select an additional spell.
+
+                      This error shouldn't be possible, as selecting a reinforced spell is not an optional choice. If you see this error, please report it immediately to the {link:https://steamcommunity.com/sharedfiles/filedetails/?id=3715781137}Slayer Class{/} mod page.
+                      """));
+
+                /*if (self.PersistentUsedUpResources
+                        .GetSpellcasting(ModData.Traits.Slayer)
+                        .PreparedSpellsUsedUp[reinforcedSpell.SpellLevel]
+                        .Any(spell =>
+                            spell.CombatActionSpell == reinforcedSpell.CombatActionSpell)
+                    || self.PersistentUsedUpResources.UsedUpActions
+                        .Contains(ModData.PersistentActions.REINFORCED_SPELL))
+                {
+                    string toolName = slates.Id.GetNameFromToolId();
+                    self.AddQEffect(HuntingTools.ToolWarning(
+                        false, "EXPENDED SPELL",
+                        $"""
+                         Your {toolName.WithTag("b")} has a spell chosen from its reinforced benefits, but that spell has been expended.
+
+                         This is normal. You can only cast the spell from your {toolName.WithTag("b")} once per day, regardless of whether you've changed your choice of spell.
+                         """));
+                    return;
+                }*/
+
+                /*self.AddQEffect(new QEffect()
+                {
+                    Name = "[SLAYER SPELL SLATES REINFORCED SPELL]",
+                    AfterYouExpendSpellcastingResources = (qfThis, action) =>
+                    {
+                        if (GetSuperSpell(action) == GetSuperSpell(reinforcedSpell.CombatActionSpell))
+                            self.PersistentUsedUpResources.UsedUpActions
+                                .Add(ModData.PersistentActions.REINFORCED_SPELL);
+                        
+                        return;
+                        
+                        CombatAction GetSuperSpell(CombatAction spellAction)
+                        {
+                            if (spellAction.Superspell is not null
+                                && spellAction.Superspell != spellAction)
+                                return GetSuperSpell(spellAction.Superspell);
+                            return spellAction;
+                        }
+                    }
+                });*/
+            })
+            .WithOnSheet(values =>
+            {
+                // Skipped proficiency due to Slayer's Tricks prerequisite.
+                // Create Reinforced Spell source.
+                
+                bool hasPanoply = HuntingToolsTag.GetTag(values)
+                    ?.IsKnown(ToolId.ConsecratedPanoply) == true;
+                
+                values.AddSlayerSpellOption(
+                    "SpellSlatesSpell1",
+                    "Spell Slates level 1 spell",
+                    1,
+                    hasPanoply);
+                values.AddSlayerSpellOption(
+                    "SpellSlatesSpell2",
+                    "Spell Slates level 2 spell",
+                    2,
+                    hasPanoply);
+                values.AddAtLevel(8, values8 =>
+                {
+                    values8.AddSlayerSpellOption(
+                        "SpellSlatesSpell3",
+                        "Spell Slates level 3 spell",
+                        3,
+                        hasPanoply);
+                });
+                
+                // Reinforced benefits: create innate list
+                values.InnateSpells.GetOrCreate(
+                    ModData.Traits.ReinforcedSlateSpell,
+                    () => new InnateSpells(Trait.Occult));
+
+                // Reinforced benefits: select spell before combat
+                values.AtEndOfRecalculationBeforeMorningPreparations += valuesBefore =>
+                {
+                    // Choose an inventory to query for preparations.
+                    // If you're a campaign character, use that inventory.
+                    // Otherwise, look through every builder-level inventory to
+                    // find the last one that has a Spell Slates item with a trophy.
+                    // This solution also avoids creating empty inventories.
+                    Inventory inv = valuesBefore.Sheet.IsCampaignCharacter
+                        ? valuesBefore.Sheet.CampaignInventory
+                        : valuesBefore.Sheet.InventoriesByLevel
+                            .LastOrDefault(kvp =>
+                                HuntingTools.GetFullHuntingToolData(valuesBefore, kvp.Value, ToolId.SpellSlates).TrophyData?.Traditions is not null)
+                            .Value
+                          ?? valuesBefore.Sheet.Inventory;
+                    
+                    (HuntingTool? slates, Item? iSlates, Item? trophy, var trophyData) =
+                        HuntingTools.GetFullHuntingToolData(valuesBefore, inv, ToolId.SpellSlates);
+                    if (slates is null || iSlates is null || trophy is null
+                        || trophyData?.Traditions is not { } traditions)
+                        return;
+                    
+                    int maxRank = valuesBefore.InnateSpells.GetOrCreate(
+                            ModData.Traits.Slayer,
+                            () => new InnateSpells(Trait.Occult))
+                        .SpellsKnown
+                        .Max(spell => spell.SpellLevel);
+
+                    // This isn't meant to allow cantrips.
+                    if (maxRank < 1)
+                        return;
+                    
+                    valuesBefore.AddSlayerSpellOption(
+                        "SpellSlatesReinforcedSpell",
+                        "Spell Slates reinforced spell",
+                        maxRank,
+                        traditions, 
+                        SelectionOption.PRECOMBAT_PREPARATIONS_LEVEL,
+                        alternativeSource: ModData.Traits.ReinforcedSlateSpell);
+                };
+            })
+            .WithPrerequisite(values =>
+                values.HasFeat(ModData.FeatNames.SlayersTricks),
+                "Slayer's Tricks");
         
         // Wall of Will
 
@@ -1149,5 +1372,114 @@ public static class ClassFeats
         // Unbound Hunt
 
         #endregion
+    }
+
+    public static bool IsSlayerSpell(CombatAction action)
+    {
+        if (action.SpellcastingSource is null)
+            return false;
+        return IsSlayerSource(action.SpellcastingSource);
+    }
+
+    public static bool IsSlayerSource(SpellcastingSource source)
+    {
+        Trait origin = source.ClassOfOrigin;
+        return
+            origin == ModData.Traits.Slayer
+            || origin == ModData.Traits.ReinforcedSlateSpell;
+    }
+
+    extension(CalculatedCharacterSheetValues values)
+    {
+        /// <summary>
+        /// Adds an innate spell selection of the standard tradition options from a slayer feat.
+        /// </summary>
+        /// <param name="key">The selection option key.</param>
+        /// <param name="name">The selection option display name.</param>
+        /// <param name="maxRank">The maximum level of chooseable spell. If greater than 0, cantrips are filtered out.</param>
+        /// <param name="hasPanoply">If false, you can only select occult spells. If true, you can select occult or divine spells.</param>
+        /// <param name="allowLowerRanks">If true, spells lower than maxRank can be selected.</param>
+        /// <param name="alternativeSource">If this spell option has a source other than <see cref="ModData.Traits.Slayer"/>, this is that source trait.</param>
+        internal void AddSlayerSpellOption(
+            string key,
+            string name,
+            [Range(0,10)]
+            int maxRank,
+            bool hasPanoply,
+            bool allowLowerRanks = false,
+            Trait? alternativeSource = null)
+        {
+            List<Func<Spell,bool>> spellFilters = [];
+            
+            // Filter out cantrips if it's a non-cantrip choice
+            if (maxRank > 0)
+            {
+                spellFilters.Add(spell => !spell.HasTrait(Trait.Cantrip));
+                // Add requirement for exactly this spell level if disallowing lower ranks
+                if (!allowLowerRanks)
+                    spellFilters.Add(spell => spell.MinimumSpellLevel == maxRank);
+            }
+            // Allow to include occult or divine if you have consecrated panoply
+            if (hasPanoply)
+                spellFilters.Add(spell => spell.HasTrait(Trait.Occult) || spell.HasTrait(Trait.Divine));
+            else
+                spellFilters.Add(spell => spell.HasTrait(Trait.Occult));
+        
+            // AddSelectionOptionRightNow
+            values.AddSelectionOption(new AddInnateSpellOption(
+                key,
+                name,
+                -1,
+                alternativeSource ?? ModData.Traits.Slayer,
+                maxRank,
+                spell => spellFilters.All(filter => filter(spell))));
+        }
+
+        /// <summary>
+        /// Adds an innate spell selection of a specific tradition from a slayer feat.
+        /// </summary>
+        /// <param name="key">The selection option key.</param>
+        /// <param name="name">The selection option display name.</param>
+        /// <param name="maxRank">The maximum level of chooseable spell. This overload is not meant to allow cantrips, but will handle it without triggering exceptions.</param>
+        /// <param name="traditions">The allowed traditions of the spell option.</param>
+        /// <param name="optionLevel">The <see cref="SelectionOption.OptionLevel"/> to gain the spell at. Default is -1.</param>
+        /// <param name="allowLowerRanks">If true, spells lower than maxRank can be selected.</param>
+        /// <param name="alternativeSource">If this spell option has a source other than <see cref="ModData.Traits.Slayer"/>, this is that source trait.</param>
+        /// <exception cref="Exception">tradition must be Trait.Arcane, Trait.Divine, Trait.Occult, or Trait.Primal.</exception>
+        internal void AddSlayerSpellOption(
+            string key,
+            string name,
+            [Range(1,10)]
+            int maxRank,
+            [AllowedValues(Trait.Arcane, Trait.Divine, Trait.Occult, Trait.Primal)]
+            List<Trait> traditions,
+            int optionLevel = -1,
+            bool allowLowerRanks = true,
+            Trait? alternativeSource = null)
+        {
+            if (traditions.Any(trait => !trait.IsTraditionTrait()))
+                throw new Exception("One of the Traits in traditions is not Trait.Arcane, Trait.Divine, Trait.Occult, or Trait.Primal.");
+            
+            List<Func<Spell,bool>> spellFilters = [
+                spell => !spell.HasTrait(Trait.Cantrip),
+                spell => traditions.Any(spell.HasTrait) 
+            ];
+            
+            // Filter out cantrips if it's a non-cantrip choice
+            if (maxRank > 0)
+                spellFilters.Add(spell => !spell.HasTrait(Trait.Cantrip));
+            // Add requirement for exactly this spell level if disallowing lower ranks
+            else if (!allowLowerRanks)
+                spellFilters.Add(spell => spell.MinimumSpellLevel == maxRank);
+        
+            // AddSelectionOptionRightNow
+            values.AddSelectionOption(new AddInnateSpellOption(
+                key,
+                name,
+                optionLevel,
+                alternativeSource ?? ModData.Traits.Slayer,
+                maxRank,
+                spell => spellFilters.All(filter => filter(spell))));
+        }
     }
 }

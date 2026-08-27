@@ -29,19 +29,19 @@ public class HuntingTool
     public Illustration Icon { get; set; }
     
     /// <summary>
-    /// For a CREATURE'S stat block, and whether they HAVE SPECIALIZED ARSENAL, this DESCRIPTION will appear on their stat block.
+    /// For a slayer CREATURE who has a HUNTING TOOL, an ITEM representing that tool, a TROPHY on that tool, and DATA from that tool, and whether they HAVE SPECIALIZED ARSENAL, this DESCRIPTION will appear on their stat block.
     /// </summary>
-    public Func<Creature,bool,string> ShortDescription { get; set; }
+    public Func<Creature,HuntingTool,Item?,Item?,TrophyData?,bool,string> ShortDescription { get; set; }
     
     /// <summary>
     /// The ToolId of the hunting tool.
     /// </summary>
-    public HuntingTools.ToolId Id { get; set; }
+    public ToolId Id { get; set; }
     
     /// <summary>
     /// The ToolKind of the hunting tool. A FirstSignature gains its specialized arsenal benefits at level 7, while a SecondSignature gains them at level 15.
     /// </summary>
-    public HuntingTools.ToolKind Kind { get; set; }
+    public ToolKind Kind { get; set; }
 
     /// <summary>
     /// Organizes information on what items can be legally designated as this hunting tool. LegalityDescription should be short and simple, and singular. E.g. "simple or martial weapon", "armor", etc. If null, then the hunting tool is linked to a specific item and cannot be changed, or otherwise doesn't take up inventory space, such as the "alchemist's toolkit" for the chymist's vials. 
@@ -55,14 +55,14 @@ public class HuntingTool
     /// <param name="id">The tool's unique enumerated ID.</param>
     /// <param name="kind">Whether this is a signature tool or a secondary tool.</param>
     /// <param name="icon">The Illustration that represents this tool, seen in feats and tool selections and in some abilities that use the tool.</param>
-    /// <param name="shortDescription">The summarized, multi-line description of this tool as it appears on a creature stat block.</param>
+    /// <param name="shortDescription">The summarized, multi-line description of this tool as it appears on a creature stat block. See: <see cref="ShortDescription"/>.</param>
     /// <param name="legalItem">legalityDescription: The minimally-worded description of what items can be designated as this tool, such as in the sentence, "Designate this BLANK as your TOOL_NAME". The second parameter of this tuple is the function which enforces this validation.</param>
     public HuntingTool(
         string name,
-        HuntingTools.ToolId id,
-        HuntingTools.ToolKind kind,
+        ToolId id,
+        ToolKind kind,
         Illustration icon,
-        Func<Creature,bool,string> shortDescription,
+        Func<Creature,HuntingTool,Item?,Item?,TrophyData?,bool,string> shortDescription,
         (string legalityDescription, Func<CalculatedCharacterSheetValues,Item,bool> itemValidator)? legalItem)
     {
         this.Name = name;
@@ -234,13 +234,13 @@ public class HuntingTool
     /// </summary>
     /// <param name="item"></param>
     /// <returns></returns>
-    public static HuntingTools.ToolId? GetToolId(Item item)
+    public static ToolId? GetToolId(Item item)
     {
         return item.ItemModifications
             .FirstOrDefault(mod =>
                 mod.Kind == HuntingTools.ToolDesignation)
             ?.Tag is string tag
-            ? Enum.Parse<HuntingTools.ToolId>(tag)
+            ? Enum.Parse<ToolId>(tag)
             : null;
     }
 
