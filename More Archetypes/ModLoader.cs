@@ -42,6 +42,7 @@ public static class ModLoader
         Mauler.Load();
         Medic.Load();
         // TODO: ?. Mind Smith (DA remastered)
+        // TODO: ?. Ostilli Host (Howl of the Wild)
         // TODO: ?. Pistol Phenom (GnG remastered)
         // TODO: ?. Poisoner
         Scout.Load();
