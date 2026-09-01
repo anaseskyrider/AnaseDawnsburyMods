@@ -47,6 +47,21 @@ public class HuntingTool
     /// Organizes information on what items can be legally designated as this hunting tool. LegalityDescription should be short and simple, and singular. E.g. "simple or martial weapon", "armor", etc. If null, then the hunting tool is linked to a specific item and cannot be changed, or otherwise doesn't take up inventory space, such as the "alchemist's toolkit" for the chymist's vials. 
     /// </summary>
     public (string LegalityDescription, Func<CalculatedCharacterSheetValues,Item,bool> ItemValidator)? LegalItem { get; set; }
+    
+    /// <summary>
+    /// If true, then this hunting tool will set the nickname as "{base name} ({hunting tool})" instead of as "{hunting tool}". This doesn't change that if you already have a nickname for the item, designating it as a tool doesn't change the nickname.
+    /// </summary>
+    public bool ParentheticalNickname { get; set; }
+    
+    /// <summary>
+    /// Additional modifications, if any, to make to an item when it's designated as your hunting tool. If using this function, then use <see cref="UnmodifyItem"/> to undo these changes.
+    /// </summary>
+    public Action<Item>? ModifyItem { get; private set; }
+    
+    /// <summary>
+    /// If <see cref="ModifyItem"/> is not null, then this function undoes the changes it makes.
+    /// </summary>
+    public Action<Item>? UnmodifyItem { get; private set; }
 
     /// <summary>
     /// Constructs a new hunting tool. This isn't stored anywhere unless you turn it into a feat with one of the other methods.
@@ -77,6 +92,25 @@ public class HuntingTool
     }
 
     #region Instance Functions
+
+    /// <summary>
+    /// Sets <see cref="ParentheticalNickname"/> on the hunting tool.
+    /// </summary>
+    public HuntingTool WithNicknameProperties(bool isParenthetical)
+    {
+        this.ParentheticalNickname = isParenthetical;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets <see cref="ModifyItem"/> and <see cref="UnmodifyItem"/> on the hunting tool.
+    /// </summary>
+    public HuntingTool WithItemModification(Action<Item>? modifyItem, Action<Item>? unmodifyItem)
+    {
+        this.ModifyItem = modifyItem;
+        this.UnmodifyItem = unmodifyItem;
+        return this;
+    }
 
     /// <summary>
     /// Generates a feat from a signature tool with a source-like description format.
@@ -142,7 +176,12 @@ public class HuntingTool
     private Feat WithBasicToolFeatFunctionality(Feat toolFeat, bool addToAllTools = true)
     {
         if (addToAllTools)
+        {
+            if (HuntingTools.AllTools.Any(tool => tool.Id == this.Id))
+                throw new Exception($"A hunting tool feat with the ToolId {this.Id.ToStringOrTechnical()} already exists. You can't register a tool feat with the same tool. Either modify the existing tool, create a new one, or don't add it as a feat.");
+            
             HuntingTools.AllTools.Add(this);
+        }
         toolFeat.Traits.Add(ModData.Traits.HuntingTool);
         return toolFeat
             .WithIllustration(this.Icon)
@@ -191,8 +230,10 @@ public class HuntingTool
                              mod.Kind == HuntingTools.ToolDesignation)
                          .ToList())
                 item.WithoutModification(mod);
-            return item.WithModification(
+            item.WithModification(
                 ItemModification.Create("huntingToolDesignation_" + this.Id.ToStringOrTechnical()));
+            //this.ModifyItem?.Invoke(item);
+            return item;
         }
     }
 
@@ -208,7 +249,10 @@ public class HuntingTool
             if (mod.Tag is not string tagString)
                 continue;
             if (tagString == this.Id.ToStringOrTechnical())
+            {
                 item = item.WithoutModification(mod);
+                //this.UnmodifyItem?.Invoke(item);
+            }
         }
         
         return item;

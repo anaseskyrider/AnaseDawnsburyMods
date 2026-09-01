@@ -28,6 +28,7 @@ using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
@@ -39,7 +40,7 @@ namespace Dawnsbury.Mods.SlayerClass;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
-/// <item>v2.7: Add Creature.AskForChoiceAmongItems().</item>
+/// <item>v2.7: Add Creature.AskForChoiceAmongItems(), CommonSpellEffects.DealAttackRollPersistentDamage(), CombatAction.WithAdjustTarget().</item>
 /// <item>v2.6: Updated functionality of both GameLoop.OfferOptions2 extensions, changed their returns to Task{bool}, and added shortcuts to them as Creature.OfferOptions2(). Remove CombatAction.CreatePass(). Added LongMovement.GetCostOfPath() as instanced and static functions.</item>
 /// <item>v2.5: Add CombatAction.Fullcast(Creature, QEffect).</item>
 /// <item>v2.4: Add Feat.WithLevelPrereq(int), TrueFeat.WithLevelPrereq(int), and TrueFeat.With()..</item>
@@ -213,6 +214,21 @@ public static class LibraryOfAnase
             againstWhom.AddQEffect(qfForAction);
             await caThis.Owner.Battle.GameLoop.FullCast(caThis, ChosenTargets.CreateSingleTarget(againstWhom));
             againstWhom.RemoveAllQEffects(qf => qf == qfForAction);
+        }
+
+        /// <summary>
+        /// Adjust the <see cref="CombatAction.Target"/> using the given type.
+        /// </summary>
+        /// <remarks>If the type parameter does not match the instance's current Target type, the action safely returns. Multiple adjustments can be chained to account for a variety of different types of Target.</remarks>
+        /// <param name="adjustTarget">The adjustments to make to the Target if the types match.</param>
+        /// <typeparam name="T"><see cref="Target"/> or any of its subclasses.</typeparam>
+        /// <returns>The CombatAction instance being modified.</returns>
+        public CombatAction WithAdjustTarget<T>(Action<T> adjustTarget) where T : Target
+        {
+            if (caThis.Target is not T tar)
+                return caThis;
+            adjustTarget(tar);
+            return caThis;
         }
     }
     
@@ -602,6 +618,31 @@ public static class LibraryOfAnase
                             : Usability.Usable));
                 GameLoop.AddDirectUsageOnCreatureOptions(strike, options);
             }
+        }
+    }
+
+    extension(CommonSpellEffects)
+    {
+        /// <summary>
+        /// Functions as <see cref="CommonSpellEffects.DealAttackRollPersistentDamage"/> but includes source information from the affecting action on the final QEffect, and returns it as well.
+        /// </summary>
+        public static async Task<QEffect?> DealAttackRollPersistentDamage(
+            CombatAction spell,
+            Creature target,
+            CheckResult checkResult,
+            string diceExpression,
+            DamageKind damageKind)
+        {
+            DiceFormula? damageFormula = Checks.ModifyDamageFromAttackRoll(
+                DiceFormula.FromText(diceExpression, "Persistent damage"),
+                checkResult);
+            if (damageFormula == null)
+                return null;
+            QEffect persistentDamage = QEffect.PersistentDamage(damageFormula, damageKind);
+            persistentDamage.Source = spell.Owner;
+            persistentDamage.SourceAction = spell;
+            target.AddQEffect(persistentDamage);
+            return persistentDamage;
         }
     }
 

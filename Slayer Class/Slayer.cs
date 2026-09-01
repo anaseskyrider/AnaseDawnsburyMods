@@ -73,38 +73,88 @@ public static class Slayer
                     // Quarry be critically hit
                     qfFeat.AddGrantingOfTechnical(
                         cr =>
-                            IsMyQuarry(qfFeat.Owner, cr),
+                            IsMyQuarry(qfFeat.Owner, cr)
+                            && qfFeat.Owner.CanSee(cr),
                         qfTech =>
                         {
                             qfTech.Name = "[ON THE HUNT: QUARRY IS CRIT]";
-                            qfTech.YouAreTargetedByARoll = async (qfThis, action, result) =>
+                            /*qfTech.YouAreTargetedByARoll = async (qfThis, action, result) =>
                             {
                                 if (result.CheckResult >= CheckResult.CriticalSuccess
                                     && action.HasTrait(Trait.Attack)
                                     && !action.HasTrait(Trait.AttackDoesNotTargetAC))
                                     await AskToGoOnTheHunt("Your quarry, {Blue}"+qfThis.Owner+"{/Blue}, has been critically hit");
                                 return false;
+                            };*/
+                            qfTech.AfterYouAreTargetedReaction = (qfThis, action, result) =>
+                            {
+                                // A "critical hit" is an attack roll, but Dawnsbury Days
+                                // treats rolls with Trait.Attack as an attack roll.
+                                // I may or may not want to change this in the future.
+                                if (result < CheckResult.CriticalSuccess
+                                    || !action.HasTrait(Trait.Attack)
+                                    || action.HasTrait(Trait.AttackDoesNotTargetAC))
+                                    return null;
+
+                                // user.ToColoredBoldedName() + " used " + action.ShortName + "."
+                                ReactionOption? reactOpt = AskToGoOnTheHuntReaction($"{action.Owner.ToColoredBoldedName()} used {action.ShortName} to {{Green}}critically hit{{/Green}} your quarry, {qfThis.Owner.ToColoredBoldedName()}");
+
+                                // IDE complains about directly returning this, presumably for reasons
+                                // related to implicit conversion. So I'm just avoiding it here.
+                                if (reactOpt is null)
+                                    return null;
+                                return reactOpt;
                             };
                         });
                     
                     // Anyone within 60 feet going down
+                    List<Creature> doNotHunt = []; // Buffer to not trigger multiple times at once
                     qfFeat.AddGrantingOfTechnical(
                         cr =>
                             cr != qfFeat.Owner
-                            && cr.DistanceTo(qfFeat.Owner) <= (60/5),
+                            && cr.DistanceTo(qfFeat.Owner) <= (60/5)
+                            && qfFeat.Owner.CanSee(cr)
+                            && !doNotHunt.Contains(cr),
                         qfTech =>
                         {
                             qfTech.Name = "[ON THE HUNT: WHEN YOU DIE]";
                             qfTech.WhenCreatureDiesAtStateCheckAsync = async qfThis =>
                             {
+                                doNotHunt.Add(qfThis.Owner);
                                 await AskToGoOnTheHunt("{Blue}"+qfThis.Owner+"{/Blue} has dropped to 0 HP");
+                                doNotHunt.Remove(qfThis.Owner);
+                            };
+                            qfTech.AfterYouTakeDamageReaction = (qfThis, @event) =>
+                            {
+                                if (qfThis.Owner.HP > 0
+                                    || qfThis.Owner.HasEffect(QEffectId.Unconscious)
+                                    || qfThis.Owner.HasEffect(QEffectId.Dying))
+                                    return null;
+
+                                // string fromWhere = damageEventCombatAction == null
+                                //  ? "."
+                                //  : $" from {damageEventCombatAction.Owner.ToColoredBoldedName()}'s {damageEventCombatAction.Name}.";
+                                // 
+                                // $"You took {totalDamage} damage{fromWhere}"
+                                ReactionOption? reactOpt = AskToGoOnTheHuntReaction($"{qfThis.Owner.ToColoredBoldedName()} has been reduced to 0 Hit Points within 60 feet of you");
+
+                                // IDE complains about directly returning this, presumably for reasons
+                                // related to implicit conversion. So I'm just avoiding it here.
+                                if (reactOpt is null)
+                                    return null;
+                                return reactOpt;
                             };
                         });
 
                     return;
                     
-                    async Task AskToGoOnTheHunt(string reason)
+                    async Task<bool> AskToGoOnTheHunt(string reason)
                     {
+                        // Don't ask again if it wouldn't be longer
+                        if (qfFeat.Owner.QEffects.Any(qf =>
+                                qf.Key == ModData.CommonQfKeys.ON_THE_HUNT
+                                && qf.CannotExpireThisTurn))
+                            return false;
                         if (!await qfFeat.Owner.Battle.AskToUseReaction(
                                 qfFeat.Owner,
                                 $$"""
@@ -113,8 +163,24 @@ public static class Slayer
                                   """,
                                 ModData.Illustrations.OnTheHunt,
                                 [ModData.Traits.Slayer, ModData.Traits.Relentless]))
-                            return;
+                            return false;
                         await GoOnTheHunt(qfFeat.Owner);
+                        return true;
+                    }
+
+                    ReactionOption? AskToGoOnTheHuntReaction(string reason)
+                    {
+                        // Don't ask again if it wouldn't be longer
+                        if (qfFeat.Owner.QEffects.Any(qf =>
+                                qf.Key == ModData.CommonQfKeys.ON_THE_HUNT
+                                && qf.CannotExpireThisTurn))
+                            return null;
+                        if (!qfFeat.Owner.Actions.CanTakeActions())
+                            return null;
+                        return ReactionOption.WrapFullcast(
+                                OnTheHuntAction(qfFeat.Owner),
+                                $"Become {{r}}quickened{{/r}} until the end of your next turn. {{i}}(Only to Step, Stride, or use {ModData.Tooltips.Relentless("relentless")} actions.){{/i}}")
+                            .WithTriggerReason(reason+".");
                     }
                 });
         yield return onTheHunt;
@@ -226,6 +292,28 @@ public static class Slayer
                         CombatAction displayMark = MarkQuarryAction(qfThis.Owner);
                         int max = qfThis.Owner.HasFeat(ModData.FeatNames.DoubleQuarry) ? 2 : 1;
                         bool hasPackSlayer = qfThis.Owner.HasFeat(ModData.FeatNames.PackSlayer);
+                        CombatAction groupMark = MarkQuarryAction(qfThis.Owner, true);
+
+                        bool canMark = false;
+                        if (qfThis.Owner.Battle.AllCreatures.Any(cr =>
+                                ((CreatureTarget)displayMark.Target).IsLegalTarget(
+                                    displayMark.Owner,
+                                    cr))
+                            || hasPackSlayer
+                            && qfThis.Owner.Battle.AllCreatures.Any(cr =>
+                                ((CreatureTarget)groupMark.Target).IsLegalTarget(
+                                    groupMark.Owner,
+                                    cr)))
+                            canMark = true;
+                        if (!canMark)
+                        {
+                            qfThis.Owner.Overhead("*no quarry*", Color.Red,
+                                qfThis.Owner + $" has no{(max > 1 ? (" " + 1.Ordinalize2() + " ") : " ")}quarry to mark.", "Mark Quarry {icon:FreeAction}",
+                                "{i}" + markQuarry.FlavorText + "{/i}\n\n" + markQuarry.RulesText,
+                                new Traits([..markQuarry.Traits.ToList(), ModData.Traits.Slayer]));
+                            qfThis.StartOfCombatReaction = null;
+                            return null;
+                        }
 
                         return ReactionOption.CreateFromCombatActionCustom(
                             displayMark,
@@ -297,10 +385,10 @@ public static class Slayer
                                     // Let the player know they don't have any options
                                     if (options.Count == 0)
                                     {
-                                        qfThis.Owner.Overhead("*no quarry*", Color.Red,
+                                        /*qfThis.Owner.Overhead("*no quarry*", Color.Red,
                                             qfThis.Owner + $" has no{(max > 1 ? (" " + 1.Ordinalize2() + " ") : " ")}quarry to mark.", "Mark Quarry {icon:FreeAction}",
                                             "{i}" + markQuarry.FlavorText + "{/i}\n\n" + markQuarry.RulesText,
-                                            new Traits([..markQuarry.Traits.ToList(), ModData.Traits.Slayer]));
+                                            new Traits([..markQuarry.Traits.ToList(), ModData.Traits.Slayer]));*/
                                         return;
                                     }
                                     else if (options.Count <= max)
@@ -320,6 +408,8 @@ public static class Slayer
 
                                     await chosenOption.Action();
                                 }
+                                
+                                qfThis.StartOfCombatReaction = null;
                             });
                     };
                     
@@ -655,7 +745,7 @@ public static class Slayer
                         self.QEffects.Any(qf => qf is { Key: ModData.CommonQfKeys.ON_THE_HUNT, RoundsLeft: 0 })
                             ? "Already on the hunt"
                             : null)*/)
-            .WithActionCost(0)
+            .WithActionCost(isFreeAction ? 0 : -2)
             .WithActionId(ModData.ActionIds.OnTheHunt)
             .WithSoundEffect(ModData.SfxNames.OnTheHunt)
             .WithEffectOnSelf(async (action, self) =>

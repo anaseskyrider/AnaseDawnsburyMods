@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
+using Dawnsbury.Core.Animations;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb;
@@ -17,6 +18,7 @@ using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
@@ -28,6 +30,7 @@ using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
 using Dawnsbury.Mods.LoresAndWeaknesses;
+using Microsoft.Xna.Framework;
 using CommonShieldRules = Dawnsbury.Mods.MoreShields.CommonShieldRules;
 
 namespace Dawnsbury.Mods.SlayerClass;
@@ -42,7 +45,7 @@ public static class ClassFeats
 
     public static IEnumerable<Feat> CreateFeats()
     {
-        for (int i = 10; i <= 20; i+=2)
+        for (int i = 16; i <= 20; i+=2)
             yield return new TrueFeat(
                 ModManager.RegisterFeatName("SlayerEmptyFeat"+i, "No Feat"),
                 i,
@@ -232,6 +235,7 @@ public static class ClassFeats
                         : "any of the trophy's damage types";
                     return $$"""
                            While this tool is raised, you gain a +2 circumstance bonus to Reflex saves against AoE from your quarry.
+                           
                            {b}Reinforced{/b} You can Shield Block with this tool against attacks that deal {{kindDescription}} damage.
                            """;
                 },
@@ -297,6 +301,11 @@ public static class ClassFeats
                 
                 self.AddQEffect(repellQF);
             })
+            .With(feat =>
+            {
+                // "SlayerClass.HuntingTool.RepellingShield"
+                ModData.FeatNames.RepellingShield = feat.FeatName;
+            })
             .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresShield);
         
         // Spiked Surcoat
@@ -308,8 +317,8 @@ public static class ClassFeats
         yield return new HuntingTool(
                 "Paired Bloodseeker",
                 ToolId.PairedBloodseeker,
-                HuntingTools.ToolKind.Secondary,
-                ModData.Illustrations.BloodseekingBlade,
+                ToolKind.Secondary,
+                ModData.Illustrations.PairedBloodseeker,
                 (self, tool, iTool, trophy, data, isSpecialized) =>
                 {
                     string? ignoreAmount = iTool is not null ? (1 + iTool.WeaponProperties!.DamageDieCount).WithColor("Blue") : null;
@@ -344,6 +353,11 @@ public static class ClassFeats
                 ToolId.PairedBloodseeker,
                 HuntingTools.PAIRED_BLOODSEEKER_RUNESTONE_KEY,
                 Dice.D4)
+            .With(feat =>
+            {
+                // "SlayerClass.HuntingTool.PairedBloodseeker"
+                ModData.FeatNames.PairedBloodseeker = feat.FeatName;
+            })
             .WithPrerequisite(
                 values => HuntingToolsTag.GetTool(values, ToolId.BloodseekingBlade) is not null,
                 "You must know the bloodseeking blade signature tool.")
@@ -356,14 +370,14 @@ public static class ClassFeats
         
         // Peculiar Weaponry
         yield return new TrueFeat(
-                    ModData.FeatNames.PeculiarWeaponry, 1,
-                    "You specialize in an unusual weapon, whether a common soldier's armament or a unique tool few can use.",
-                    $$"""
-                    If your bloodseeking blade signature tool is a simple weapon, increase its damage die size by one step.
+                ModData.FeatNames.PeculiarWeaponry, 1,
+                "You specialize in an unusual weapon, whether a common soldier's armament or a unique tool few can use.",
+                """
+                If your bloodseeking blade signature tool is a simple weapon, increase its damage die size by one step.
 
-                    Your bloodseeking blade signature tool can be an advanced weapon, in addition to simple or martial, and you treat any advanced weapon you've designated as your signature tool as if it were a martial weapon for the purposes of proficiency {i}({{ModData.Illustrations.DdSun.IllustrationAsIconString}} your proficiency won't display in your inventory, but works in combat){/i}.
-                    """,
-                    [ModData.Traits.Slayer])
+                Your bloodseeking blade signature tool can be an advanced weapon, in addition to simple or martial, and you treat any advanced weapon you've designated as your signature tool as if it were a martial weapon for the purposes of proficiency.
+                """,
+                [ModData.Traits.Slayer])
             .WithPrerequisite(
                 values => HuntingToolsTag.GetTool(values, ToolId.BloodseekingBlade) is not null,
                 "You must know the bloodseeking blade signature tool.")
@@ -381,9 +395,9 @@ public static class ClassFeats
                         is not { } blade)
                         return;
                         
-                    if (qfFeat.Owner.AllItems.FirstOrDefault(blade.IsMyTool) is {} bladeItem
+                    /*if (qfFeat.Owner.AllItems.FirstOrDefault(blade.IsMyTool) is {} bladeItem
                         && !bladeItem.Traits.Contains(ModData.Traits.BloodseekingBlade))
-                        bladeItem.Traits.Add(ModData.Traits.BloodseekingBlade);
+                        bladeItem.Traits.Add(ModData.Traits.BloodseekingBlade);*/
 
                     qfFeat.IncreaseItemDamageDie = (qfThis, item) =>
                         blade.IsMyTool(item) && item.HasTrait(Trait.Simple);
@@ -415,10 +429,19 @@ public static class ClassFeats
                 "{Green}Once per day{/Green}, you can mark a creature taking hostile actions against your party as your quarry, replacing any existing quarry. You can't Claim their Trophy.",
                 qfFeat =>
                 {
-                    if (qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Contains(ModData.PersistentActions.INSTANT_ENMITY))
+                    if (qfFeat.Owner.HasFeat(ModData.FeatNames.EndlessEnmity))
+                    {
                         qfFeat.Description = qfFeat.Description!.Replace(
-                            "{Green}Once per day{/Green}",
-                            "{Red}Once per day{/Red}");
+                            "Once per day",
+                            "Once per encounter");
+                        qfFeat.Owner.PersistentUsedUpResources.UsedUpActions
+                            .Remove(ModData.PersistentActions.INSTANT_ENMITY);
+                    }
+                    if (qfFeat.Owner.PersistentUsedUpResources.UsedUpActions
+                        .Contains(ModData.PersistentActions.INSTANT_ENMITY))
+                        qfFeat.Description = qfFeat.Description!.Replace(
+                            "Green}",
+                            "Red}");
                     
                     qfFeat.AddGrantingOfTechnical(
                         cr =>
@@ -445,10 +468,11 @@ public static class ClassFeats
                                     return;
                                 
                                 // Use up limited usage
-                                qfFeat.Owner.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.INSTANT_ENMITY);
+                                qfFeat.Owner.PersistentUsedUpResources.UsedUpActions
+                                    .Add(ModData.PersistentActions.INSTANT_ENMITY);
                                 qfFeat.Description = qfFeat.Description!.Replace(
-                                    "{Green}Once per day{/Green}",
-                                    "{Red}Once per day{/Red}");
+                                    "Green}",
+                                    "Red}");
                                 
                                 // Store all previous quarry and end the effect
                                 List<(Creature, QEffect)> previousQuarry = qfFeat.Owner.Battle.AllCreatures
@@ -974,7 +998,7 @@ public static class ClassFeats
         yield return new HuntingTool(
                 "Spell Slates",
                 ToolId.SpellSlates,
-                HuntingTools.ToolKind.Secondary,
+                ToolKind.Secondary,
                 ModData.Illustrations.SpellSlates,
                 (self, tool, iTool, trophy, data, isSpecialized) =>
                 {
@@ -1135,19 +1159,19 @@ public static class ClassFeats
                 
                 values.AddSlayerSpellOption(
                     "SpellSlatesSpell1",
-                    "Spell Slates level 1 spell",
+                    "Spell Slates rank 1 spell",
                     1,
                     hasPanoply);
                 values.AddSlayerSpellOption(
                     "SpellSlatesSpell2",
-                    "Spell Slates level 2 spell",
+                    "Spell Slates rank 2 spell",
                     2,
                     hasPanoply);
                 values.AddAtLevel(8, values8 =>
                 {
                     values8.AddSlayerSpellOption(
                         "SpellSlatesSpell3",
-                        "Spell Slates level 3 spell",
+                        "Spell Slates rank 3 spell",
                         3,
                         hasPanoply);
                 });
@@ -1198,6 +1222,11 @@ public static class ClassFeats
                         alternativeSource: ModData.Traits.ReinforcedSlateSpell);
                 };
             })
+            .With(feat =>
+            {
+                // "SlayerClass.HuntingTool.SpellSlates"
+                ModData.FeatNames.SpellSlates = feat.FeatName;
+            })
             .WithPrerequisite(values =>
                 values.HasFeat(ModData.FeatNames.SlayersTricks),
                 "Slayer's Tricks");
@@ -1211,6 +1240,175 @@ public static class ClassFeats
         // Armored Fortress
         
         // Catalyzing Flask
+        yield return new HuntingTool(
+            "Catalyzing Flask",
+            ToolId.CatalyzingFlask,
+            ToolKind.Secondary,
+            ModData.Illustrations.CatalyzingFlask,
+            (self, tool, iTool, trophy, data, isSpecialized) =>
+            {
+                bool usedUp = self.QEffects.Any(qf =>
+                    qf.Id == ModData.QEffectIds.CatalyzingFlaskGranter
+                    && qf.UsedUpPermanently);
+                string passive =
+                    $"(Once per encounter) Activating your {iTool?.ProsaicName.Replace("reinforced ", "").WithTag("Blue") ?? "catalyzing flask"} won't permanently consume it."
+                        .WithTag(usedUp ? "strike" : null);
+                    
+                List<Defense>? saves = data?.GetHighestSaves();
+                string savesDesc = saves is not null
+                    ? S.ConstructOrList(saves.Select(save => save.ToStringOrTechnical().WithTag("Blue"))) + " saving throws"
+                    : "whichever saving throw is the trophy's highest" ;
+                string reinforced = $"{{b}}Reinforced{{/b}} When you drink or administer from the flask, the target gains a +1 status bonus to {savesDesc} for the rest of the encounter.";
+
+                return
+                    $$"""
+                      {{passive}}
+                      {{reinforced}}
+                      """;
+            },
+            (
+                "alchemical elixir",
+                (values, item) => item.HasTrait(Trait.Alchemical) && item.HasTrait(Trait.Elixir)
+            ))
+            .WithNicknameProperties(true)
+            .ToSecondaryToolFeat(
+                8,
+                "You possess a special alchemical vial that reacts with the monster parts within the fluid to produce more and fortify its power.",
+                """
+                You gain a catalyzing flask as a secondary tool. You can designate any alchemical elixir of your level or lower as your catalyzing flask when you Reinforce your Arsenal.
+                
+                Once per encounter, you can Activate the elixir it contains without consuming it. Activating it again fully consumes the elixir.
+                
+                {b}Reinforced{/b} When you Activate the elixir within your catalyzing flask, you also a gain a +1 status bonus to Fortitude, Reflex, or Will saves. The save is whichever was the highest saving throw of the creature the trophy was claimed from. This bonus lasts for the rest of the encounter.
+                """,
+                [Trait.Rebalanced, ModData.Traits.Slayer])
+            .WithOnCreature(self =>
+            {
+                (HuntingTool? flask, Item? iFlask, Item? trophy, TrophyData? data) =
+                    HuntingTools.GetFullHuntingToolData(self, ToolId.CatalyzingFlask);
+                if (flask is null || iFlask is null)
+                    return;
+
+                List<Defense> highestDefs = data?.Tags
+                    .Where(tag => tag.Contains(TrophyData.DataConstants.TAGS_HIGHEST_SAVE))
+                    .Select(tag => Enum.TryParse(
+                        tag[TrophyData.DataConstants.TAGS_HIGHEST_SAVE.Length..],
+                        true,
+                        out Defense defense)
+                        ? defense
+                        : throw new Exception("Unknown Defense for Data Tag HighestSave: " + tag))
+                    .ToList() ?? [];
+                
+                if (trophy is not null
+                    && data is not null
+                    && highestDefs.Count == 0)
+                {
+                    string toolName = flask.Id.GetNameFromToolId();
+                    self.AddQEffect(HuntingTools.ToolWarning(
+                        true, "HIGHEST SAVE",
+                        $$"""
+                          Your {{toolName.WithTag("b")}} has a trophy reinforcing it, but the trophy contains no highest saving throws.
+
+                          This isn't supposed to be possible, as even inert object creatures have saving throw statistics in Dawnsbury Days, and a tied saving throw was implemented in the game as an additional option to the slayer. If you see this error, please report it immediately to the {link:https://steamcommunity.com/sharedfiles/filedetails/?id=3715781137}Slayer Class{/} mod page.
+                          """));
+                }
+
+                // Discover how an elixir of life activate action is constructed
+                // in order to look for a way to activate the item as a bonus.
+                
+                QEffect flaskQf = new QEffect()
+                {
+                    Id = ModData.QEffectIds.CatalyzingFlaskGranter,
+                    UsedUpPermanently = false, // is true when the flask is activated
+                    ModifyActionPossibility = (qfFlask, action) =>
+                    {
+                        if (action.Item != iFlask)
+                            return;
+
+                        List<Defense>? saves = data?.GetHighestSaves();
+
+                        if (action.ActionId is ActionId.Drink)
+                            action.EffectOnChosenTargets = async (drink, self2, _) =>
+                                await Drink(drink, drink.Item!, self2, self2);
+                        else if (action.ActionId is ActionId.Administer)
+                            action.EffectOnOneTarget = async (drink, self2, target, _) =>
+                                await Drink(drink, drink.Item!, self2, target);
+                        else
+                            return;
+
+                        action.WithFullRename(action.ActionId.ToStringOrTechnical() + " from Flask");
+                        action.Traits.Remove(Trait.Consumable);
+                        if (!qfFlask.UsedUpPermanently)
+                            action.Description += "\n\n{Blue}{b}Catalyzing Flask{/b}{/Blue} (Once per encounter) Activating this elixir won't permanently consume it.";
+                        if (saves?.Count > 0)
+                            action.Description += $"\n\n{{Blue}}{{b}}Reinforced{{/b}}{{/Blue}} You gain a +1 status bonus to {S.ConstructOrList(saves.Select(save => save.ToStringOrTechnical()))} saving throws for the rest of the encounter.";
+
+                        return;
+                        
+                        async Task Drink(CombatAction activate, Item item, Creature user, Creature target)
+                        {
+                            // Apply drinkable effects
+                            #pragma warning disable CS0618 // Type or member is obsolete
+                            Action<CombatAction, Creature>? drinkableEffect = item.DrinkableEffect;
+                            #pragma warning disable CS0618 // Type or member is obsolete
+                            drinkableEffect?.Invoke(activate, target);
+                            await item.WhenYouDrink.InvokeIfNotNull(activate, target);
+                            
+                            Sfxs.Play(SfxName.PotionUse2);
+                            
+                            // Free usage
+                            if (qfFlask.UsedUpPermanently)
+                                user.HeldItems.Remove(item);
+                            else 
+                                qfFlask.UsedUpPermanently = true; // Item is not consumed once per encounter
+                            
+                            foreach (QEffect qf in target.QEffects)
+                                await qf.AfterYouDrink.InvokeIfNotNull(qf, item, activate);
+                            
+                            // Reinforced benefits
+                            if (saves is not null)
+                            {
+                                Defense save;
+                                if (saves.Count > 1)
+                                {
+                                    var choice = await user.AskForChoiceAmongButtons(
+                                        flask.Icon,
+                                        """
+                                        {b}Catalyzing Flask{/b}
+                                        Choose a saving throw to gain a +1 status bonus in for the rest of the encounter.
+                                        """,
+                                        [
+                                            ..saves
+                                                .Select(def => def.ToStringOrTechnical())
+                                        ]);
+
+                                    save = saves[choice.Index];
+                                }
+                                else
+                                    save = saves.First();
+
+                                target.AddQEffect(new QEffect(
+                                    $"Catalyzing Flask ({save.ToStringOrTechnical()})",
+                                    $"You have a +1 status bonus to {save.ToStringOrTechnical()} saves for the rest of the encounter.",
+                                    flask.Icon)
+                                {
+                                    BonusToDefenses = (_,_, def) =>
+                                        def == save
+                                            ? new Bonus(1, BonusType.Status, "Catalyzing flask")
+                                            : null
+                                });
+                            }
+                        }
+                    }
+                };
+                
+                self.AddQEffect(flaskQf);
+            })
+            .With(feat =>
+            {
+                // "SlayerClass.HuntingTool.CatalyzingFlask"
+                ModData.FeatNames.CatalyzingFlask = feat.FeatName;
+            });
         
         // Defensive Hunt
         yield return new TrueFeat(
@@ -1246,6 +1444,7 @@ public static class ClassFeats
                 });
         
         // Field-forged Tools
+        // This doesn't really have any value, especially with precombat Reinforcement.
 
         #endregion
 
@@ -1287,8 +1486,30 @@ public static class ClassFeats
                 });
         
         // Endless Enmity
+        yield return new TrueFeat(
+                ModData.FeatNames.EndlessEnmity, 10,
+                "You are always ready to face a creature that harms you or your allies.",
+                "The frequency of Instant Enmity is reduced to once per encounter.",
+                [ModData.Traits.Slayer])
+            .WithPrerequisite(
+                ModData.FeatNames.InstantEnmity,
+                "Instant Enmity");
         
         // Ever Vigilant
+        yield return new TrueFeat(
+                ModData.FeatNames.EverVigilant, 10,
+                "You can pursue your prey even when distracted.",
+                "You gain an additional reaction each round that can be used only to go On the Hunt.",
+                [ModData.Traits.Slayer])
+            .WithPermanentQEffect(
+                "You have an additional reaction each round to go On the Hunt.",
+                qfFeat =>
+                {
+                    qfFeat.OfferExtraReaction = (qfThis, question, traits) =>
+                        question.ToLower().Contains("on the hunt")
+                            ? "Ever Vigilant"
+                            : null;
+                });
         
         // Share Insight
 
@@ -1307,8 +1528,166 @@ public static class ClassFeats
                 qfFeat => { });
         
         // Expanded Spell Slates
+        yield return new TrueFeat(
+                ModData.FeatNames.ExpandedSpellSlates, 12,
+                "You have further expanded your collection of magical tricks.",
+                """
+                You gain additional innate occult spells that you can cast each once per day.
+                • Immediately: 4th-rank
+                • 14th level: 5th-rank
+                • 16th level: 6th-rank
+                """,
+                [ModData.Traits.Slayer])
+            .WithOnSheet(values =>
+            {
+                bool hasPanoply = HuntingToolsTag.GetTag(values)
+                    ?.IsKnown(ToolId.ConsecratedPanoply) == true;
+                
+                values.AddSlayerSpellOption(
+                    "SpellSlatesSpell4",
+                    "Spell Slates level 4 spell",
+                    4,
+                    hasPanoply);
+                values.AddAtLevel(14, values14 =>
+                {
+                    values14.AddSlayerSpellOption(
+                        "SpellSlatesSpell5",
+                        "Spell Slates level 5 spell",
+                        5,
+                        hasPanoply);
+                });
+                values.AddAtLevel(16, values16 =>
+                {
+                    values16.AddSlayerSpellOption(
+                        "SpellSlatesSpell6",
+                        "Spell Slates level 6 spell",
+                        6,
+                        hasPanoply);
+                });
+            })
+            .WithPrerequisite(
+                ModData.FeatNames.SpellSlates,
+                "Spell Slates");
         
         // Gouging Strike
+        yield return new TrueFeat(
+                ModData.FeatNames.GougingStrike, 12,
+                "You twist your weapon, gouging your prey deeply and making them vulnerable.",
+                "Make a melee Strike. If this Strike hits, you deal an additional die of persistent bleed damage with the same die size as the Strike’s weapon damage dice. The target gains weakness 3 to physical damage until the start of your next turn or until it is no longer taking this persistent bleed damage, whichever comes first.",
+                [Trait.Flourish, ModData.Traits.Slayer])
+            .WithActionCost(1)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " [flourish] Make a melee Strike. On a hit, deal an additional die of the weapon's dice as persistent bleed damage, and the target gains weakness 3 to physical damage.";
+
+                qfFeat.ProvideStrikeModifier = item =>
+                {
+                    if (!item.HasTrait(Trait.Melee)
+                        || item.WeaponProperties is null)
+                        return null;
+
+                    string damageDice = $"1d{item.WeaponProperties.DamageDieSize}";
+                    float expectedValue = DiceFormula.FromText(damageDice, null).ExpectedValue;
+
+                    CombatAction gouge = StrikeRules.CreateStrike(
+                            qfFeat.Owner,
+                            item,
+                            RangeKind.Melee,
+                            -1)
+                        .WithStrikeNameAndIllustrationChange(
+                            "Gouging Strike",
+                            IllustrationName.BloodVendetta,
+                            false)
+                        .WithExtraTrait(Trait.Flourish)
+                        .WithExtraTrait(0, ModData.Traits.Slayer)
+                        .WithAdjustTarget<CreatureTarget>(tar => tar
+                            // Deny action if even a crit can't deal enough to overwrite existing bleed.
+                            .WithAdditionalConditionOnTargetCreature((_, d) =>
+                                NewBleedIsBetter(expectedValue*2, d)
+                                    ? Usability.Usable
+                                    : Usability.NotUsableOnThisCreature("Crit isn't stronger than existing bleed"))
+                            .WithAdditionalConditionOnTargetCreature((_, d) =>
+                                d.WeaknessAndResistance.Immunities.Contains(DamageKind.Bleed)
+                                    ? Usability.NotUsableOnThisCreature("Immune to bleed")
+                                    : Usability.Usable))
+                        .WithEffectOnEachTarget(async (spell, caster, target, result) =>
+                        {
+                            if (result < CheckResult.Success)
+                                return;
+                            
+                            // Custom overload which adds source information and returns the applied effect.
+                            QEffect? bleed = await CommonSpellEffects.DealAttackRollPersistentDamage(spell, target, result, damageDice, DamageKind.Bleed);
+
+                            if (bleed is null
+                                || !target.HasEffect(bleed))
+                            {
+                                caster.Battle.Log("Target failed to take persistent bleed damage from Gouging Strike.");
+                                return;
+                            }
+
+                            target.AddQEffect(new QEffect(
+                                "Gouged",
+                                """
+                                You have weakness 3 to physical damage.
+
+                                This ends early if you stop bleeding.
+                                
+                                """, // Extra line-break for the automated expiration text.
+                                ExpirationCondition.ExpiresAtStartOfSourcesTurn,
+                                caster,
+                                IllustrationName.BloodVendetta)
+                            {
+                                SourceAction = spell,
+                                StateCheck = qfGouge =>
+                                {
+                                    if (!qfGouge.Owner.HasEffect(bleed))
+                                    {
+                                        qfGouge.Owner.Battle.Log(
+                                            "Gouged effect ends early due to loss of Gouging Strike's persistent bleed damage.",
+                                            "Gouging Strike",
+                                            """
+                                            {i}You twist your weapon, gouging your prey deeply and making them vulnerable.{/i}
+
+                                            Make a melee Strike. If this Strike hits, you deal an additional die of persistent bleed damage with the same die size as the Strike’s weapon damage dice. The target gains weakness 3 to physical damage until the start of your next turn or until it is no longer taking this persistent bleed damage, whichever comes first.
+                                            """,
+                                            new Traits([ModData.ModTrait, ModData.Traits.Slayer]));
+                                        qfGouge.ExpiresAt = ExpirationCondition.Immediately;
+                                    }
+                                    else
+                                        qfGouge.Owner.WeaknessAndResistance
+                                            .AddSpecialWeakness(new SpecialResistance(
+                                                "physical",
+                                                (ca, kind) => kind.IsPhysical(),
+                                                3,
+                                                null));
+                                }
+                            });
+                        })
+                        .With(ca =>
+                        {
+                            ca.WithDescription(StrikeRules.CreateBasicStrikeDescription4(
+                                ca.StrikeModifiers,
+                                additionalSuccessText: $"You also deal 1d{item.WeaponProperties!.DamageDieSize} persistent bleed damage. While bleeding or until the start of your next turn, the target gains weakness 3 to physical damage."));
+                        });
+
+                    return gouge;
+
+                    // Returns true if the expectedBleed damage is better than any existing bleed (or if none exists).
+                    bool NewBleedIsBetter(float expectedBleed, Creature target)
+                    {
+                        // When a persistent damage effect is applied, it is
+                        // only kept if its damage is greater than the existing effect.
+                        // So if the effect doesn't exist, this is false, so return true instead.
+                        // If the effect does exist but its damage is greater-than-or-equal to
+                        // the new bleed, then this returns true, so return false.
+                        return !target.HasEffect(qf =>
+                            qf.Id is QEffectId.PersistentDamage
+                            && qf.GetPersistentDamageKind() is DamageKind.Bleed
+                            && (float)qf.Tag! >= expectedBleed);
+                    }
+                };
+            });
         
         // Spectral Lenses
 
@@ -1317,6 +1696,110 @@ public static class ClassFeats
         #region 14th-Level
         
         // Arm Bloodburst Phial
+        yield return new HuntingTool(
+            "Bloodburst Phial",
+            ToolId.BloodburstPhial,
+            ToolKind.Secondary,
+            ModData.Illustrations.BloodburstPhial,
+            (slayer, tool, iTool, trophy, data, isSpecialized) =>
+            {
+                bool usedUp = slayer.QEffects.Any(qf =>
+                    qf.Id == ModData.QEffectIds.ArmBloodburstPhialGranter
+                    && qf.UsedUpPermanently);
+                
+                string persistentDamage = (slayer.Level >= 17 ? 14 : 12) + "d6";
+                string action = $"{{b}}Arm Phial {{icon:Action}}{{/b}} [manipulate, relentless] " + $"(Once per encounter) Choose a held weapon to add bonus damage to, or make a bomb. Once this turn, the phial deal an additional {persistentDamage} persistent bleed damage and 12 persistent bleed splash damage.".WithTag(usedUp ? "strike" : null);
+
+                DamageKind? chosenKind = trophy is not null ? Trophies.GetChosenDamageKind(trophy) : null;
+                string? kindString = chosenKind?.ToStringOrTechnical().WithColor(chosenKind.Value.DamageKindToColor()) ?? null;
+                string reinforced = $"{{b}}Reinforced{{/b}} Your phial deals an additional 1d6 {(chosenKind is null ? "damage and 1 splash damage of one of the trophy's non-physical damage types" : $"{kindString} damage and 1 {kindString} splash damage")}.";
+                
+                return $"{action}\n{reinforced}";
+            },
+            (
+                "ampoule of volatile monster blood",
+                (values, item) =>
+                    item.ItemName == HuntingTools.BloodburstPhial)
+            )
+            .ToSecondaryToolFeat(
+                14,
+                "This ampoule of volatile monster blood is designed to detonate when attached to a weapon.",
+                """
+                You gain a bloodburst phial as a secondary tool, which is a worn item. You can designate this item as your bloodburst phial when you Reinforce your Arsenal.
+
+                You gain the {b}Arm Bloodburst Phial {icon:Action}{/b} action, which allows you to attach the phial to a weapon or prepare it as a bomb.
+                """,
+                [ModData.Traits.Slayer])
+            .WithRulesBlockForCombatAction(self =>
+                ArmPhialActionForTooltips(self, false, null))
+            .WithFreeInventoryItem(HuntingTools.BloodburstPhial)
+            .WithOnCreature(self =>
+            {
+                (HuntingTool? phialTool, Item? iPhial, Item? trophy, var trophyData) =
+                    HuntingTools.GetFullHuntingToolData(self, ToolId.BloodburstPhial);
+                if (phialTool is null || iPhial is null)
+                    return;
+
+                DamageKind? chosenKind = null;
+                if (trophy is not null)
+                {
+                    chosenKind = Trophies.GetChosenDamageKind(trophy);
+                    if (chosenKind is null)
+                    {
+                        string toolName = phialTool.Id.GetNameFromToolId();
+                        self.AddQEffect(HuntingTools.ToolWarning(
+                            false,
+                            "TROPHY DAMAGE TYPE",
+                            $"""
+                             Your {toolName.WithTag("b")} has a trophy reinforcing it, but no damage type was chosen.
+
+                             This might have been an accident. Ensure that you have reinforced the tool with a damage type. To do so, while in the inventory screen, right-click the designated item with an attached trophy, and click the damage type you want to gain its reinforced benefits for.
+                             """));
+                    }
+                }
+                
+                QEffect phialQf = new QEffect()
+                {
+                    // Debugging identifier
+                    Name = "[HUNTING TOOL: BLOODBURST PHIAL]",
+                    Id = ModData.QEffectIds.ArmBloodburstPhialGranter,
+                    ProvideMainAction = qfThis =>
+                    {
+                        if (qfThis.UsedUpPermanently)
+                            return null;
+                        
+                        return new SubmenuPossibility(
+                            ModData.Illustrations.BloodburstPhial,
+                            "Arm Bloodburst Phial")
+                        {
+                            SpellIfAny = ArmPhialActionForTooltips(qfThis.Owner, true, chosenKind),
+                            Subsections = [
+                                new PossibilitySection("Arm Bloodburst Phial")
+                                {
+                                    Possibilities = [
+                                        new ActionPossibility(ArmPhialAction(qfThis, false, chosenKind))
+                                        {
+                                            Caption = "Weapon"
+                                        },
+                                        new ActionPossibility(ArmPhialAction(qfThis, true, chosenKind))
+                                        {
+                                            Caption = "Bomb"
+                                        },
+                                    ]
+                                }
+                            
+                            ]
+                        };
+                    }
+                };
+
+                self.AddQEffect(phialQf);
+            })
+            .With(feat =>
+            {
+                // "SlayerClass.HuntingTool.BloodburstPhial"
+                ModData.FeatNames.ArmBloodburstPhial = feat.FeatName;
+            });
 
         // Open Wound
         yield return new TrueFeat(
@@ -1481,5 +1964,384 @@ public static class ClassFeats
                 maxRank,
                 spell => spellFilters.All(filter => filter(spell))));
         }
+    }
+
+    public static CombatAction ArmPhialActionForTooltips(Creature slayer, bool inCombat, DamageKind? reinforcedDamage)
+    {
+        string persistentDamage = slayer.Level >= 17
+            ? "14d6"
+            : "12d6";
+        const string splashDamage = "12";
+
+        string? bonusTypeName = reinforcedDamage
+            ?.ToStringOrTechnical()
+            .ToLower()
+            .WithColor(reinforcedDamage.Value.DamageKindToColor());
+        
+        return new CombatAction(
+                slayer,
+                ModData.Illustrations.BloodburstPhial,
+                "Arm Bloodburst Phial",
+                [ModData.ModTrait, Trait.Alchemical, Trait.Manipulate, ModData.Traits.Relentless, ModData.Traits.Slayer],
+                $$"""
+                  {i}You prepare your bloodburst phial to explode.{/i}
+                  
+                  {b}Frequency{/b} Once per encounter.
+                  
+                  Choose how to arm your phial.
+                  • {b}Weapon{/b} Choose a weapon you're wielding to arm. If that weapon is a ranged weapon, you can also Reload it as part of this action. The weapon gains the splash trait and deals the phial's damage as additional damage on the next Strike you make with it this turn.
+                  • {b}Bomb{/b} (requires a free hand) The phial becomes a temporary alchemical bomb in your hand that you can Strike with once this turn, dealing the listed damage.
+                  
+                  The phial deals {{persistentDamage}} persistent bleed damage and {{splashDamage}} persistent bleed splash damage (you are immune to this splash damage){{(inCombat && reinforcedDamage.HasValue
+                      ? $", plus an additional 1d6 {bonusTypeName} damage and 1 {bonusTypeName} splash damage"
+                      : ".\n\n{b}Reinforced{/b} Your bloodburst phial deals an additional 1d6 damage and 1 splash damage of one of the trophy's non-physical damage types")}}.
+                  """,
+                Target.Self())
+            .WithActionCost(1);
+    }
+
+    public static CombatAction ArmPhialAction(QEffect phialQf, bool isBomb, DamageKind? reinforcedDamage)
+    {
+        Creature slayer = phialQf.Owner;
+        string persistentDamage = (slayer.Level >= 17 ? 14 : 12) + "d6";
+        const int persistentSplashDamage = 12;
+        string? bonusTypeName = reinforcedDamage
+            ?.ToStringOrTechnical()
+            .ToLower()
+            .WithColor(reinforcedDamage.Value.DamageKindToColor());
+        
+        CombatAction armPhial = new CombatAction(
+                slayer,
+                ModData.Illustrations.BloodburstPhial,
+                $"Arm Bloodburst Phial ({(isBomb ? "bomb" : "weapon")})",
+                [ModData.ModTrait, Trait.Alchemical, Trait.Manipulate, ModData.Traits.Relentless, ModData.Traits.Slayer],
+                $$"""
+                {i}You prepare your bloodburst phial to explode.{/i}
+                
+                {b}Frequency{/b} Once per encounter.
+                {{(isBomb
+                    ? "{b}Requirements{/b} You have a free hand.\n\nArm your phial as an alchemical bomb.\n\nUntil the end of this turn, it deals"
+                    : "\nChoose a weapon you're holding to arm. If that weapon is a ranged weapon, you can also Reload it as part of this action.\n\nYour next Strike with the weapon this turn gains the splash trait and deals an additional")}} {{persistentDamage}} persistent bleed damage and {{persistentSplashDamage}} persistent bleed splash damage (you are immune to this splash damage){{(reinforcedDamage.HasValue
+                    ? $", plus an additional 1d6 {bonusTypeName} damage and 1 {bonusTypeName} splash damage"
+                    : ".\n\n{b}Reinforced{/b} Your bloodburst phial deals an additional 1d6 damage and 1 splash damage of one of the trophy's non-physical damage types")}}.
+                """,
+                Target.Self())
+            .WithActionCost(1)
+            .WithSoundEffect(SfxName.ItemAction)
+            .WithEffectOnSelf(async (arm, self) =>
+            {
+                // This is either the bomb item manager, or the strike-buffer.
+                // Either way, this effect also applies the persistent splash damage.
+                QEffect armQf;
+                Item? phial;
+                
+                if (isBomb)
+                {
+                    phial = AlchemicalItems.CreateBomb(
+                        HuntingTools.BloodburstPhial,
+                        arm.Illustration,
+                        "bloodburst phial",
+                        [ModData.Traits.Slayer],
+                        "0",
+                        DamageKind.Bleed, // Used for base and persistent kind
+                        SfxName.Throw,
+                        persistentDamage, // the Xd6 persistent damage on the target
+                        wp =>
+                        {
+                            // If it exists, add the trophy's 1d6 direct and 1 splash damage.
+                            if (reinforcedDamage.HasValue)
+                            {
+                                wp.DamageKind = reinforcedDamage.Value;
+                                wp.DamageDieCount = 1; // 1d6 direct
+                                wp.DamageDieSize = 6; // 1d6 direct
+                                wp.AdditionalSplashDamageFormula = "1"; // 1 splash
+                                wp.AdditionalSplashDamageKind = reinforcedDamage.Value; // 1 splash
+                            }
+                            // Otherwise, null. It only deals the direct persistent and splash persistent damage.
+                            else
+                            {
+                                wp.DamageKind = DamageKind.Untyped;
+                                wp.AdditionalSplashDamageFormula = null;
+                                wp.AdditionalSplashDamageKind = DamageKind.Untyped;
+                            }
+                        });
+                    phial.ProsaicName = "bloodburst phial"; // Undo item tier subname
+                    phial.ShortName = "bloodburst phial";
+                    phial.Traits.Insert(0, ModData.ModTrait);
+                    phial.Price = 0;
+                    // If no instant (direct and splash) damage from trophy exists,
+                    // then this won't attempt to deal 0 damage with applied modifiers.
+                    // It will still deal the additional Xd6 persistent bleed, though.
+                    if (!reinforcedDamage.HasValue)
+                        phial.Traits.Add(Trait.ThisNaturalAttackDealsNoDamage);
+                    armQf = QEffect.EvaporateItemAtStartOfYourNextTurn(self, phial)
+                        .WithExpirationAtEndOfThisTurn();
+                    self.AddHeldItem(phial);
+                }
+                else
+                {
+                    phial = await self.AskForChoiceAmongItems(
+                        arm.Illustration,
+                        "{b}Arm Bloodburst Phial {icon:Action}{/b}\nChoose a weapon to arm with your phial for the rest of this turn.",
+                        self.Weapons
+                            .Where(item =>
+                                !item.HasTrait(Trait.Unarmed)
+                                && !item.HasTrait(Trait.Bomb))
+                            .ToList(),
+                        true);
+                    
+                    if (phial is null)
+                    {
+                        arm.RevertRequested = true;
+                        return;
+                    }
+                    
+                    List<string> damages =
+                    [
+                        $"{persistentDamage} persistent bleed damage",
+                        $"{persistentSplashDamage} persistent bleed splash damage",
+                    ];
+                    if (reinforcedDamage.HasValue)
+                    {
+                        damages.Add($"1d6 {bonusTypeName} damage");
+                        damages.Add($"1 {bonusTypeName} splash damage");
+                    }
+                    
+                    armQf = new QEffect(
+                        $"Armed Phial ({phial.Name})",
+                        $"""
+                         Yur next Strike with your {phial.Name} gains the splash trait and deals an additional {S.ConstructOrList(damages, "and")}.
+
+                         You are immune to this splash damage.
+                         """,
+                        ExpirationCondition.ExpiresAtEndOfYourTurn,
+                        self,
+                        arm.Illustration);
+                    
+                }
+                
+                armQf.With(qf =>
+                {
+                    qf.Tag = phial;
+                    // Immunity to all damage dealt by your own bomb.
+                    qf.YouAreDealtDamageEvent = async (qfArm, dEvent) =>
+                    {
+                        if (dEvent.CombatAction?.Item != phial)
+                            return;
+                        //dEvent.KindedDamages.ForEach(kd => kd.ResolvedDamage = 0);
+                        dEvent.ReduceBy(dEvent.TotalResolvedDamage, "Immune to splash from bloodburst phial");
+                    };
+                    // Clean up strike
+                    qf.AdjustStrikeAction = (qfArm, action) =>
+                    {
+                        if (action.Item != phial)
+                            return;
+
+                        // Deal 12 persistent splash after all other damage resolves
+                        action.WithEffectOnChosenTargets(async (strike, caster, targets) =>
+                        {
+                            CheckResult result = strike.CheckResult;
+                            
+                            // Is splash, so don't deal on a fumble
+                            if (result < CheckResult.Failure)
+                                return;
+                            
+                            Creature target = targets.ChosenCreature!;
+                            int range = await DetermineSplashRadius();
+                            
+                            // Play splash animation.
+                            // Skip for a bomb with an existing animation.
+                            if (!reinforcedDamage.HasValue || !strike.HasTrait(Trait.Bomb))
+                            {
+                                List<Tile> splashedTiles = target.Battle.Map.AllTiles
+                                    .Where(tl =>
+                                        target.DistanceTo(tl) <= range
+                                        && tl.PrimaryOccupant != target)
+                                    .ToList();
+                                List<Particle> projectiles = [];
+                                foreach (Tile splashedTile in splashedTiles)
+                                {
+                                    projectiles.AddRange(self.Battle.SpawnOvercreatureProjectileParticles(
+                                        10, target, splashedTile, Color.White, arm.Illustration));
+                                }
+                                await self.Battle.WaitForProjectiles(projectiles);
+                            }
+
+                            // Deal 12 persistent splash damage
+                            await PerformSplashAreaDamage(
+                                strike,
+                                target,
+                                range,
+                                persistentSplashDamage.ToString(),
+                                "Splash damage (bloodburst phial)",
+                                DamageKind.Bleed,
+                                true);
+
+                            // Remove effect
+                            qfArm.ExpiresAt = ExpirationCondition.Immediately;
+                        });
+
+                        // Adjust buffed weapon to add phial damage.
+                        // - Xd6 persistent bleed damage
+                        // - 1 typed splash damage
+                        if (!action.HasTrait(Trait.Bomb))
+                        {
+                            if (!action.HasTrait(Trait.Splash))
+                                action.WithExtraTrait(Trait.Splash);
+                            action.WithEffectOnEachTarget(async (strike, caster, target, result) =>
+                            {
+                                // Do nothing on a fumble
+                                if (result < CheckResult.Failure)
+                                    return;
+                                
+                                // Do Xd6 persistent bleed damage to the target
+                                await CommonSpellEffects.DealAttackRollPersistentDamage(
+                                    target,
+                                    result,
+                                    persistentDamage,
+                                    DamageKind.Bleed);
+                                
+                                // Do 1 typed splash damage
+                                if (reinforcedDamage.HasValue)
+                                    await PerformSplashAreaDamage(
+                                        strike,
+                                        target,
+                                        await DetermineSplashRadius(),
+                                        "1",
+                                        "Splash damage (bloodburst phial)",
+                                        reinforcedDamage.Value,
+                                        false);
+                            });
+                        }
+
+                        if (action.SoundEffectName is SfxName.Throw
+                            || action.Item.WeaponSuccessfulHitSfxName is SfxName.Throw
+                            || action.Item.WeaponProperties!.Sfx is SfxName.Throw
+                            || !action.Item.HasTrait(Trait.Bomb))
+                        {
+                            // Play sound effect immediately on hit because
+                            // the action Sfx was Throw.
+                            action.EffectOnOneTarget = Delegates.SmartCombineDelegates(
+                                async (_, _, _, _) =>
+                                    Sfxs.Play(SfxName.RayOfFrost),
+                                action.EffectOnOneTarget!);
+                        }
+                        
+                        if (action.Item.HasTrait(Trait.Bomb))
+                        {
+                            // Fix description for the bomb iteration
+                            List<string> damages =
+                            [
+                                $"{persistentDamage} persistent bleed damage",
+                                $"{persistentSplashDamage} persistent bleed splash damage",
+                            ];
+                            if (action.Description.Contains("Success"))
+                            {
+                                action.Description = action.Description.Replace(
+                                    ".\n{b}Critical",
+                                    $", plus {persistentSplashDamage} persistent bleed splash damage.\n{{b}}Critical");
+                            }
+                            else
+                            {
+                                action.Description +=
+                                    $"{{b}}Success{{/b}} You deal {string.Join(", plus ", damages)}."
+                                    + "\n{b}Critical success{/b} Double damage.";
+                            }
+                        }
+                    };
+
+                    // Adjust buffed weapon to add phial damage.
+                    // - 1d6 typed damage
+                    if (!phial.HasTrait(Trait.Bomb) && reinforcedDamage.HasValue)
+                    {
+                        qf.AddExtraStrikeDamage = (strike, target) =>
+                        {
+                            if (strike.Item != phial)
+                                return null;
+                            
+                            return (
+                                DiceFormula.FromText(
+                                    "1d6",
+                                    "Reinforced bloodburst phial"),
+                                reinforcedDamage.Value);
+                        };
+                    }
+
+                    return;
+
+                    // Can be expanded on as necessary
+                    async Task<int> DetermineSplashRadius() => 1;
+
+                    async Task PerformSplashAreaDamage(
+                        CombatAction strike,
+                        Creature strikeTarget,
+                        int range,
+                        string damageExpression,
+                        string? source,
+                        DamageKind kind,
+                        bool isPersistent)
+                    {
+                        CheckResult result = strike.CheckResult;
+
+                        if (result < CheckResult.Failure)
+                            return;
+                        
+                        // Set splash targets.
+                        List<Creature> splashTargets;
+                        if (result < CheckResult.Success)
+                        {
+                            // Only affect target
+                            splashTargets = [strikeTarget];
+                        }
+                        else
+                        {
+                            // Get other creatures. Not full splash integration.
+                            splashTargets = strikeTarget.Battle.AllCreatures
+                                .Where(cr =>
+                                    cr.DistanceTo(strikeTarget) <= range
+                                    // Target was already hit with Xd6.
+                                    && cr != strikeTarget
+                                    // You are immune to your splash
+                                    && cr != strike.Owner)
+                                .ToList();
+                        }
+
+                        // Deal persistent damage
+                        foreach (Creature cr in splashTargets)
+                        {
+                            if (isPersistent)
+                            {
+                                await CommonSpellEffects.DealAttackRollPersistentDamage(
+                                    cr,
+                                    // This is splash persistent, so it's not doubled
+                                    result > CheckResult.Success ? CheckResult.Success : result,
+                                    damageExpression,
+                                    kind);
+                                cr.Battle.Log($"{cr.Name} takes {damageExpression.WithTag("b")} persistent {kind.ToStringOrTechnical().ToLower()} damage.");
+                            }
+                            else
+                                await CommonSpellEffects.DealTrueDirectSplashDamage(
+                                    strike,
+                                    DiceFormula.FromText(damageExpression, source),
+                                    cr,
+                                    kind);
+                        }
+                    }
+                });
+                
+                self.AddQEffect(armQf);
+
+                // Only added so that I could trigger it later, not for it to trigger twice.
+                phialQf.UsedUpPermanently = true;
+            });
+
+        if (isBomb)
+            armPhial.WithAdjustTarget<SelfTarget>(tar => tar
+                .WithAdditionalRestriction(self =>
+                    self.HasFreeHand
+                        ? null
+                        : Usability.CommonReasons.NoFreeHand.UnusableReason));
+        
+        return armPhial;
     }
 }

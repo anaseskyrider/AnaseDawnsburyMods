@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
@@ -26,6 +27,153 @@ public class TrophyData(
     List<Trait>? traditions,
     List<string>? tags)
 {
+    #region Static Data
+
+    /// <summary>
+    /// The string constants which make up the de/serialized data of a trophy.
+    /// </summary>
+    public static class DataConstants
+    {
+        // Design Note: The characters ':' and ',' are illegal to use for trophies.
+        
+        // Example tag:
+        // - quarry*OrcWarrior_traits*Chaotic-Evil-Orc-MetalArmor_damagekinds*Slashing_traditions*Occult
+
+        /// <summary>
+        /// Begins the identifier and tag string of the trophy ItemModificationKind.
+        /// </summary>
+        public const string TROPHY_MODIFICATION = "trophy_";
+        
+        /// <summary>
+        /// Separates each list.
+        /// </summary>
+        public const char LIST_SEPARATOR = '_';
+
+        /// <summary>
+        /// Separates items in a list.
+        /// </summary>
+        public const char ITEM_SEPARATOR = '-';
+        
+        /// <summary>
+        /// The humanized creature name.
+        /// </summary>
+        public const string CREATURE_NAME = "quarry*";
+
+        /// <summary>
+        /// The creature's CreatureId.
+        /// </summary>
+        public const string CREATURE_ID = "crid*";
+
+        /// <summary>
+        /// The underscore character.
+        /// </summary>
+        /// <remarks>This character is checked in a creature ID string and substituted for <see cref="UNDERSCORE_SUBSTITUTE"/>.</remarks>
+        public const string UNDERSCORE = "_";
+
+        /// <summary>
+        /// The character that underscores in creature IDs are substituted for during serialization.
+        /// </summary>
+        public const string UNDERSCORE_SUBSTITUTE = "%";
+        
+        /// <summary>
+        /// The list of the trophy's traits.
+        /// </summary>
+        public const string TRAITS = "traits*";
+
+        /// <summary>
+        /// The list of the trophy's damage kinds.
+        /// </summary>
+        public const string DAMAGE_KINDS = "damagekinds*";
+
+        /// <summary>
+        /// The list of the trophy's associated traditions.
+        /// </summary>
+        public const string TRADITIONS = "tradition*";
+
+        /// <summary>
+        /// Begins a list of any other special tags.
+        /// </summary>
+        public const string TAGS = "tags*";
+
+        /// <summary>
+        /// The fog/smoke special vision.
+        /// </summary>
+        [Description("Smoke Vision")]
+        public const string TAGS_SMOKE_VISION = "SmokeVision";
+
+        /// <summary>
+        /// The All-Around Vision special vision.
+        /// </summary>
+        [Description("All-Around Vision")]
+        public const string TAGS_ALL_AROUND_VISION = "AllAroundVision";
+
+        /// <summary>
+        /// The highest saving throw. This tag can appear more than once, with a different save each time. The Defense is added directly to the end of this constant (implicit invocation of ToString()).
+        /// </summary>
+        [Description("highest save is")]
+        public const string TAGS_HIGHEST_SAVE = "HighestSave";
+    }
+
+    /// <summary>
+    /// Do not include the traits in this list on any trophies.
+    /// </summary>
+    public static readonly List<Trait> TraitBlacklist = [
+        // Size traits
+        /*Trait.Tiny,*/
+        Trait.Small,
+        Trait.Large,
+        Trait.Huge,
+        Trait.Gargantuan,
+        Trait.Colossal5,
+        Trait.Colossal6,
+        Trait.Colossal7,
+        Trait.Colossal8,
+        // Rarity traits
+        Trait.Uncommon,
+        /*Trait.Rare,*/
+        Trait.Unique,
+        // Various technical traits
+        Trait.AnimatedObject,
+        Trait.AssumesDirectControl,
+        Trait.BasicallyNeverWantsToMakeBasicUnarmedStrike,
+        Trait.BecomesVisibleCorpseOnDeath,
+        Trait.DoesNotBreathe,
+        Trait.Farmer,
+        Trait.Female,
+        Trait.Homebrew,
+        Trait.Indestructible,
+        Trait.Male,
+        Trait.MetalArmor,
+        Trait.MetalArmorInvisible,
+#pragma warning disable CS0618 // Type or member is obsolete
+        Trait.Mod,
+#pragma warning restore CS0618 // Type or member is obsolete
+        Trait.MustSurvive,
+        Trait.NativeOutsider,
+        Trait.NeedNotSurvive,
+        Trait.NeverSetsOccupant,
+        Trait.NoDeathOverhead,
+        Trait.NoDeathScream,
+        Trait.NoPhysicalUnarmedAttack,
+        Trait.Object,
+        Trait.PossessedChild,
+        Trait.Pseudocreature,
+        Trait.ThirdParty,
+        Trait.Trap,
+        Trait.UnimportantForVictoryCondition,
+        // Nonsense traits to obviously exclude
+        Trait.Summoned,
+        Trait.NonSummonable,
+        Trait.Conjuration,
+        // Tradition traits (stored elsewhere on a trophy)
+        Trait.Arcane,
+        Trait.Divine,
+        Trait.Primal,
+        Trait.Occult,
+    ];
+
+    #endregion
+    
     /// <summary>
     /// The name of the creature this trophy came from.
     /// </summary>
@@ -418,144 +566,7 @@ public class TrophyData(
 
     #endregion
     
-    #region String Parsing and De/Serialization
-
-    /// <summary>
-    /// The string constants which make up the de/serialized data of a trophy.
-    /// </summary>
-    public static class DataConstants
-    {
-        // Design Note: The characters ':' and ',' are illegal to use for trophies.
-        
-        // Example tag:
-        // - quarry*OrcWarrior_traits*Chaotic-Evil-Orc-MetalArmor_damagekinds*Slashing_traditions*Occult
-
-        /// <summary>
-        /// Begins the identifier and tag string of the trophy ItemModificationKind.
-        /// </summary>
-        public const string TROPHY_MODIFICATION = "trophy_";
-        
-        /// <summary>
-        /// Separates each list.
-        /// </summary>
-        public const char LIST_SEPARATOR = '_';
-
-        /// <summary>
-        /// Separates items in a list.
-        /// </summary>
-        public const char ITEM_SEPARATOR = '-';
-        
-        /// <summary>
-        /// The humanized creature name.
-        /// </summary>
-        public const string CREATURE_NAME = "quarry*";
-
-        /// <summary>
-        /// The creature's CreatureId.
-        /// </summary>
-        public const string CREATURE_ID = "crid*";
-
-        /// <summary>
-        /// The underscore character.
-        /// </summary>
-        /// <remarks>This character is checked in a creature ID string and substituted for <see cref="UNDERSCORE_SUBSTITUTE"/>.</remarks>
-        public const string UNDERSCORE = "_";
-
-        /// <summary>
-        /// The character that underscores in creature IDs are substituted for during serialization.
-        /// </summary>
-        public const string UNDERSCORE_SUBSTITUTE = "%";
-        
-        /// <summary>
-        /// The list of the trophy's traits.
-        /// </summary>
-        public const string TRAITS = "traits*";
-
-        /// <summary>
-        /// The list of the trophy's damage kinds.
-        /// </summary>
-        public const string DAMAGE_KINDS = "damagekinds*";
-
-        /// <summary>
-        /// The list of the trophy's associated traditions.
-        /// </summary>
-        public const string TRADITIONS = "tradition*";
-
-        /// <summary>
-        /// Begins a list of any other special tags.
-        /// </summary>
-        public const string TAGS = "tags*";
-
-        /// <summary>
-        /// The fog/smoke special vision.
-        /// </summary>
-        public const string TAGS_SMOKE_VISION = "SmokeVision";
-
-        /// <summary>
-        /// The All-Around Vision special vision.
-        /// </summary>
-        public const string TAGS_ALL_AROUND_VISION = "AllAroundVision";
-
-        /// <summary>
-        /// The highest saving throw. This tag can appear more than once, with a different save each time. The Defense is added directly to the end of this constant (implicit invocation of ToString()).
-        /// </summary>
-        public const string TAGS_HIGHEST_SAVE = "HighestSave";
-    }
-
-    public static readonly List<Trait> TraitBlacklist = [
-        // Size traits
-        /*Trait.Tiny,*/
-        Trait.Small,
-        Trait.Large,
-        Trait.Huge,
-        Trait.Gargantuan,
-        Trait.Colossal5,
-        Trait.Colossal6,
-        Trait.Colossal7,
-        Trait.Colossal8,
-        // Rarity traits
-        Trait.Uncommon,
-        /*Trait.Rare,*/
-        Trait.Unique,
-        // Various technical traits
-        Trait.AnimatedObject,
-        Trait.AssumesDirectControl,
-        Trait.BasicallyNeverWantsToMakeBasicUnarmedStrike,
-        Trait.BecomesVisibleCorpseOnDeath,
-        Trait.DoesNotBreathe,
-        Trait.Farmer,
-        Trait.Female,
-        Trait.Homebrew,
-        Trait.Indestructible,
-        Trait.Male,
-        Trait.MetalArmor,
-        Trait.MetalArmorInvisible,
-#pragma warning disable CS0618 // Type or member is obsolete
-        Trait.Mod,
-#pragma warning restore CS0618 // Type or member is obsolete
-        Trait.MustSurvive,
-        Trait.NativeOutsider,
-        Trait.NeedNotSurvive,
-        Trait.NeverSetsOccupant,
-        Trait.NoDeathOverhead,
-        Trait.NoDeathScream,
-        Trait.NoPhysicalUnarmedAttack,
-        Trait.Object,
-        Trait.PossessedChild,
-        Trait.Pseudocreature,
-        Trait.ThirdParty,
-        Trait.Trap,
-        Trait.UnimportantForVictoryCondition,
-        // Nonsense traits to obviously exclude
-        Trait.Summoned,
-        Trait.NonSummonable,
-        Trait.Conjuration,
-        // Tradition traits (stored elsewhere on a trophy)
-        Trait.Arcane,
-        Trait.Divine,
-        Trait.Primal,
-        Trait.Occult,
-    ];
+    #region Data Parsing
 
     /// <summary>
     /// Gets the humanized name, description, or entry of a value stored in <see cref="DataConstants.TAGS"/>. This gets a portion of the data from <see cref="ItemModification.Tag"/>, unrelated to the whole tag itself.
@@ -571,6 +582,25 @@ public class TrophyData(
                 ? "highest save is " + defense.ToStringOrTechnical().WithColor(defense.ToColor())
                 : throw new Exception("Unknown Defense for Data Tag HighestSave: " + tag);
         throw new Exception("Unknown Trophy Data Tag: " + tag);
+    }
+
+    public List<Defense> GetHighestSaves()
+    {
+        List<Defense> saves = [];
+        
+        foreach (string saveTag in this.Tags
+                     .Where(tag => tag.Contains(DataConstants.TAGS_HIGHEST_SAVE)))
+        {
+            Defense def = Enum.TryParse(
+                saveTag[DataConstants.TAGS_HIGHEST_SAVE.Length..],
+                true,
+                out Defense defense)
+                ? defense
+                : throw new Exception("Unknown Defense for Data Tag HighestSave: " + saveTag);
+            saves.Add(def);
+        }
+
+        return saves;
     }
 
     #endregion

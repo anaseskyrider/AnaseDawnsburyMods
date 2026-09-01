@@ -94,10 +94,10 @@ public static class ModData
         public static readonly FeatName Bloodscent = ModManager.RegisterFeatName(ID_PREPEND+"Bloodscent", "Bloodscent");
         public static readonly FeatName CrossbowSlayer = ModManager.RegisterFeatName(ID_PREPEND+"CrossbowSlayer", "Crossbow Slayer");
         public static readonly FeatName DrinkAdaptationSerums = ModManager.RegisterFeatName(ID_PREPEND+"DrinkAdaptationSerums", "Drink Adaptation Serums");
-        public static readonly FeatName RepellingShield = ModManager.RegisterFeatName(ID_PREPEND+"RepellingShield", "Repelling Shield");
+        public static FeatName RepellingShield; // Value is determined later
         public static readonly FeatName SpikedSurcoat = ModManager.RegisterFeatName(ID_PREPEND+"SpikedSurcoat", "Spiked Surcoat");
         public static readonly FeatName SuddenPounce = ModManager.RegisterFeatName(ID_PREPEND+"SuddenPounce", "Sudden Pounce");
-        public static readonly FeatName PairedBloodseeker = ModManager.RegisterFeatName(ID_PREPEND+"PairedBloodseeker", "Paired Bloodseeker");
+        public static FeatName PairedBloodseeker; // Value is determined later
         public static readonly FeatName PeculiarWeaponry = ModManager.RegisterFeatName(ID_PREPEND+"PeculiarWeaponry", "Peculiar Weaponry");
 
         #endregion
@@ -128,7 +128,7 @@ public static class ModData
         public static readonly FeatName FinalFlourish = ModManager.RegisterFeatName(ID_PREPEND+"FinalFlourish", "Final Flourish");
         public static readonly FeatName RelentlessCounterstrike = ModManager.RegisterFeatName(ID_PREPEND+"RelentlessCounterstrike", "Relentless Counterstrike");
         public static readonly FeatName ShiftingCombination = ModManager.RegisterFeatName(ID_PREPEND+"ShiftingCombination", "Shifting Combination");
-        public static readonly FeatName SpellSlates = ModManager.RegisterFeatName(ID_PREPEND+"SpellSlates", "Spell Slates");
+        public static FeatName SpellSlates; // This value is determined later
         public static readonly FeatName WallOfWill = ModManager.RegisterFeatName(ID_PREPEND+"WallOfWill", "Wall of Will");
 
         #endregion
@@ -136,7 +136,7 @@ public static class ModData
         #region 8th-Level
 
         public static readonly FeatName ArmoredFortress = ModManager.RegisterFeatName(ID_PREPEND+"ArmoredFortress", "Armored Fortress");
-        public static readonly FeatName CatalyzingFlask = ModManager.RegisterFeatName(ID_PREPEND+"CatalyzingFlask", "Catalyzing Flask");
+        public static FeatName CatalyzingFlask; // Value is determined later
         public static readonly FeatName DefensiveHunt = ModManager.RegisterFeatName(ID_PREPEND+"DefensiveHunt", "Defensive Hunt");
         public static readonly FeatName FieldForgedTools = ModManager.RegisterFeatName(ID_PREPEND+"FieldForgedTools", "Field-forged Tools");
 
@@ -162,7 +162,7 @@ public static class ModData
 
         #region 14th-Level
 
-        public static readonly FeatName ArmBloodburstPhial = ModManager.RegisterFeatName(ID_PREPEND+"ArmBloodburstPhial", "Arm Bloodburst Phial");
+        public static FeatName ArmBloodburstPhial; // Value is determined later
         public static readonly FeatName OpenWound = ModManager.RegisterFeatName(ID_PREPEND+"OpenWound", "Open Wound");
 
         #endregion
@@ -215,8 +215,11 @@ public static class ModData
         public static readonly Illustration HuntingSpike = new ModdedIllustration(MOD_FOLDER + "bone-knife.png");
         public static readonly Illustration WardedMail = new ModdedIllustration(MOD_FOLDER + "heart-armor.png");
 
-        public static readonly Illustration RepellingShield = IllustrationName.ShieldSpell;
+        public static readonly Illustration RepellingShield = new ModdedIllustration(MOD_FOLDER + "vibrating-shield.png"); //IllustrationName.ShieldSpell;
+        public static readonly Illustration PairedBloodseeker = new ModdedIllustration(MOD_FOLDER + "machete.png");
         public static readonly Illustration SpellSlates = new ModdedIllustration(MOD_FOLDER + "rune-stone.png");
+        public static readonly Illustration CatalyzingFlask = new ModdedIllustration(MOD_FOLDER + "fizzing-flask.png");
+        public static readonly Illustration BloodburstPhial = new ModdedIllustration(MOD_FOLDER + "fire-bottle.png");
 
         #endregion
 
@@ -255,6 +258,7 @@ public static class ModData
     public static class PersistentActions
     {
         public const string INSTANT_ENMITY = "InstantEnmity";
+        // Currently unused
         public const string REINFORCED_SPELL = "SpellSlateReinforcedSpell";
     }
 
@@ -264,6 +268,8 @@ public static class ModData
         public static QEffectId ArmoredShelter;
         public static QEffectId CrossbowSlayer;
         public static QEffectId SaltStoneBuff;
+        public static QEffectId CatalyzingFlaskGranter;
+        public static QEffectId ArmBloodburstPhialGranter;
         
         public static void Initialize()
         {
@@ -271,6 +277,8 @@ public static class ModData
             ArmoredShelter = ModManager.SafelyRegisterEnumMember<QEffectId>("ArmoredShelter");
             CrossbowSlayer = ModManager.SafelyRegisterEnumMember<QEffectId>("CrossbowSlayer");
             SaltStoneBuff = ModManager.SafelyRegisterEnumMember<QEffectId>("SaltStoneBuff");
+            CatalyzingFlaskGranter = ModManager.SafelyRegisterEnumMember<QEffectId>("CatalyzingFlaskGranter");
+            ArmBloodburstPhialGranter = ModManager.SafelyRegisterEnumMember<QEffectId>("ArmBloodburstPhialGranter");
         }
     }
 
@@ -313,9 +321,9 @@ public static class ModData
             """);
 
         #endregion
-        
-        #region Slayer Class Features
 
+        #region Slayer Key Concepts
+        
         public static readonly Func<string, string> Relentless = RegisterTooltipInserter(
             ID_PREPEND + "Relentless",
             """
@@ -325,8 +333,7 @@ public static class ModData
             Actions with the relentless trait are special techniques that slayers have trained to use on instinct.
 
             The quickened action you get from On the Hunt {icon:Reaction} can be used for any action with the relentless trait, including to supply 1 action to a 2+ action activity.
-            """
-        );
+            """);
         
         public static readonly Func<string, string> Trophy = RegisterTooltipInserter(
             ID_PREPEND + "Trophy",
@@ -357,15 +364,6 @@ public static class ModData
               For items without an equivalent in {{Illustrations.DdSun.IllustrationAsIconString}} Dawnsbury Days, a unique item is provided for you so that you can attach trophies to them.
               """);
         
-        public static readonly Func<string, string> ChymistPronunciation = RegisterTooltipInserter(
-            ID_PREPEND + "ChymistPronunciation",
-            """
-            {b}Chymist{/b}
-            {i}Etymology{/i}
-
-            Archaic spelling of "chemist". Pronounced {i}KEM-ist{i}, sometimes {i}KIM-ist{/i}.
-            """);
-        
         public static readonly Func<string, string> ReinforcedBenefit = RegisterTooltipInserter(
             ID_PREPEND+"Reinforced",
             """
@@ -373,6 +371,19 @@ public static class ModData
             {i}Slayer mechanic{/i}
 
             You gain this benefit when your hunting tool is reinforced with a trophy.
+            """);
+
+        #endregion
+        
+        #region Slayer Class Features
+        
+        public static readonly Func<string, string> ChymistPronunciation = RegisterTooltipInserter(
+            ID_PREPEND + "ChymistPronunciation",
+            """
+            {b}Chymist{/b}
+            {i}Etymology{/i}
+
+            Archaic spelling of "chemist". Pronounced {i}KEM-ist{i}, sometimes {i}KIM-ist{/i}.
             """);
 
         public static readonly Func<string, string> TipOfTheTongue = RegisterTooltipInserter(
@@ -441,6 +452,15 @@ public static class ModData
         #endregion
         
         #region Rulings
+
+        public static readonly string CriticalHit = RegisterInfoTooltip(
+            ID_PREPEND + "Ruling.CriticalHit",
+            """
+            {b}Critical Hits{/b}
+            {i}Rules Clarification{/i}
+
+            A critical hit is a critical success with an attack roll.
+            """);
         
         public static readonly string SaltStoneHolding = RegisterInfoTooltip(
             ID_PREPEND + "Ruling.SaltStoneHolding",

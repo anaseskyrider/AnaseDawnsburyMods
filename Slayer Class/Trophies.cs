@@ -208,7 +208,7 @@ public static class Trophies
                 return null;
             
             List<ContextMenuItem> options = [];
-            HuntingTools.ToolId? specificTool = HuntingTool.GetToolId(item);
+            ToolId? specificTool = HuntingTool.GetToolId(item);
             
             // Damage Kind selections (all):
             // - (Signature) Bloodseeking Blade
@@ -216,7 +216,10 @@ public static class Trophies
             // - (Secondary) Paired Bloodseeker, as Bloodseeking Blade
             // - (Secondary) Spirit Oil
             if (itemIsTrophyItself
-                || specificTool is HuntingTools.ToolId.BloodseekingBlade or HuntingTools.ToolId.WardedMail or HuntingTools.ToolId.PairedBloodseeker or HuntingTools.ToolId.SpiritOil)
+                || specificTool is ToolId.BloodseekingBlade
+                    or ToolId.WardedMail
+                    or ToolId.PairedBloodseeker
+                    or ToolId.SpiritOil)
             {
                 DamageKind? chosenKind = Trophies.GetChosenDamageKind(trophy);
                 foreach (DamageKind dk in ((TrophyData?)trophy)?.Kinds ?? [])
@@ -227,10 +230,11 @@ public static class Trophies
             // - (Signature) Chymist's Vials (only non-physical types)
             // - (Secondary) Bloodburst Phial (only non-physical types)
             if (itemIsTrophyItself
-                || specificTool is HuntingTools.ToolId.ChymistsVials or HuntingTools.ToolId.BloodburstPhial)
+                || specificTool is ToolId.ChymistsVials
+                    or ToolId.BloodburstPhial)
             {
                 DamageKind? chosenKind = Trophies.GetChosenDamageKind(trophy);
-                foreach (DamageKind dk in ((TrophyData?)trophy)?.Kinds ?? [])
+                foreach (DamageKind dk in ((TrophyData?)trophy)?.Kinds.Where(kind => !kind.IsPhysical()) ?? [])
                     SetDamageKind(dk, dk == chosenKind, true);
             }
             

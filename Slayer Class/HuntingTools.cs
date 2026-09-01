@@ -91,7 +91,7 @@ public static class HuntingTools
         BloodburstPhial = 14,
     }
     
-    public static string GetNameFromToolId (this ToolId value)
+    public static string GetNameFromToolId(this ToolId value)
     {
         Type type = value.GetType();
         FieldInfo? fieldInfo = type.GetField(value.ToString());
@@ -127,8 +127,7 @@ public static class HuntingTools
     //public static ItemName SpiritOil;
     //public static ItemName Cureall;
     public static ItemName SpellSlates;
-    //public static ItemName CatalyzingFlask;
-    //public static ItemName BloodburstPhial;
+    public static ItemName BloodburstPhial;
 
     #endregion
 
@@ -146,18 +145,33 @@ public static class HuntingTools
                 if (!tag.StartsWith("huntingToolDesignation_"))
                     return null;
                 string subTag = tag["huntingToolDesignation_".Length..];
+                ToolId toolId = Enum.Parse<ToolId>(subTag);
+                HuntingTool? tool = AllTools.FirstOrDefault(tool => tool.Id == toolId);
+                bool parenthetical = tool?.ParentheticalNickname == true;
+                string lowercase = toolId.GetNameFromToolId().ToLower();
+                string nickname = parenthetical
+                    ? $"({lowercase})"
+                    : lowercase;
                 return new ItemModification(kind)
                 {
                     Tag = subTag,
                     ModifyItem = item =>
                     {
-                        item.Nickname ??= Enum.Parse<ToolId>(subTag).GetNameFromToolId().ToLower();
+                        // Do not modify if the nickname is not null
+                        if (item.Nickname is not null)
+                            return;
+                        item.Nickname = parenthetical
+                            ? item.ProsaicName.Replace("reinforced ", "") + " " + nickname
+                            : nickname;
+                        tool?.ModifyItem?.Invoke(item); // Prone to not working if a tool were temporary and not stored
                     },
                     UnmodifyItem = item =>
                     {
-                        string nickname = Enum.Parse<ToolId>(subTag).GetNameFromToolId().ToLower();
-                        if (item.Nickname == nickname)
+                        // If the nickname was set to or includes the parenthetical, remove the nickname
+                        if (item.Nickname == nickname
+                            || item.Nickname == item.ProsaicName.Replace("reinforced ", "") + " " + nickname)
                             item.Nickname = null;
+                        tool?.UnmodifyItem?.Invoke(item); // Prone to not working if a tool were temporary and not stored
                     }
                 };
             });
@@ -267,8 +281,7 @@ public static class HuntingTools
             ToolId.ConsecratedPanoply,
             ToolKind.Signature,
             "This harness or coat contains a seemingly endless array of charms and consecrated weapons, whether worn openly or in hidden pockets, and their blessings protect you and skewer your prey in equal measure.",
-            true,
-            null);
+            "You gain a +1 status bonus to saving throws against creatures with any of the trophy's traits and against spells of any of the trophy's traditions. This increases to +2 against your quarry.");
         
         // AdaptationSerums =;
         // SpikedSurcoat =;
@@ -281,11 +294,15 @@ public static class HuntingTools
             ToolId.SpellSlates,
             ToolKind.Secondary,
             "With a set of specially prepared charms or runes, you can expand your magical tricks.",
-            true,
-            null);
+            $"You gain an additional common innate spell of a rank equal to or less than the highest-rank innate spell you have from slayer feats, which you can cast once per day. This additional spell must be of the trophy's traditions{ModData.Tooltips.SpellSlatesTraditions}, and you can swap it for a different spell with the same restrictions when you Reinforce your Arsenal. {{i}}(This swap doesn't affect the restriction on casting the spell once per day.){{/i}}");
         
-        // CatalyzingFlask =;
-        // BloodburstPhial =;
+        BloodburstPhial = Items.CreateBasicToolItem(
+            "BloodburstPhial",
+            ModData.Illustrations.BloodburstPhial,
+            ToolId.BloodburstPhial,
+            ToolKind.Secondary,
+            "This ampoule of volatile monster blood is designed to detonate when attached to a weapon.",
+            "Your bloodburst phial deals an additional 1d6 damage and 1 splash damage of one of the trophy’s nonphysical damage types.");
     }
 
     public static IEnumerable<Feat> CreateSignatureTools()
@@ -316,6 +333,11 @@ public static class HuntingTools
                     "simple or martial weapon",
                     (values, item) => item.HasAnyTraits([Trait.Simple, Trait.Martial]) || (values.HasFeat(ModData.FeatNames.PeculiarWeaponry) && item.HasTrait(Trait.Advanced))
                 ))
+            .WithItemModification(
+                item =>
+                    item.Traits.Add(ModData.Traits.BloodseekingBlade),
+                item =>
+                    item.Traits.Remove(ModData.Traits.BloodseekingBlade))
             .ToSignatureToolFeat(
                 "You have an even closer connection to your weapon than most slayers.",
                 "You can designate a simple or martial weapon as a bloodseeking blade when you Reinforce your Arsenal, gaining the following benefits.",
@@ -1031,6 +1053,7 @@ public static class HuntingTools
         /// <param name="toolId">The tool ID this item is for.</param>
         /// <param name="kind">The kind of tool this item is for.</param>
         /// <param name="flavorText">The flavor text of the item, if any. Usually derived from the feat or feature that adds the item.</param>
+        /// <param name="reinforcedText">The Reinforced entry of the feat or feature associated with this item.</param>
         /// <param name="isWorn">Whether the unique item is a worn item.</param>
         /// <param name="adjustItem">Final adjustments to make to the item, if any.</param>
         /// <returns>The ItemName that was registered with <see cref="ModData.ID_PREPEND"/>+technicalName.</returns>
@@ -1040,8 +1063,9 @@ public static class HuntingTools
             ToolId toolId,
             ToolKind kind,
             string? flavorText,
-            bool isWorn,
-            Action<Item>? adjustItem)
+            string reinforcedText,
+            bool isWorn = true,
+            Action<Item>? adjustItem = null)
         {
             return ModManager.RegisterNewItemIntoTheShop(
                 ModData.ID_PREPEND + technicalName,
@@ -1062,7 +1086,9 @@ public static class HuntingTools
                         .WithItemGreaterGroup(ModData.ItemGreaterGroups.ClassItems)
                         .WithItemGroup("Slayer");
 
-                    string rulesText = $"A slayer can designate this item as their {humanizedName} {kind.ToStringOrTechnical()} tool and reinforce it with trophies.";
+                    if (!reinforcedText.EndsWith('.'))
+                        reinforcedText += ".";
+                    string rulesText = $"A slayer can designate this item as their {humanizedName} {kind.ToStringOrTechnical()} tool and reinforce it with trophies to gain the following benefits.\n\n{{b}}Reinforced{{/b}} {reinforcedText}";
                     
                     if (flavorText is not null)
                         iTool.WithDescription(flavorText, rulesText);
@@ -1097,16 +1123,22 @@ public static class HuntingTools
                     {
                         { 0, values.Sheet.CampaignInventory }
                     };
-                    foreach (var (level, inv) in inventories)
+                    foreach ((int level, Inventory inv) in inventories)
                     {
-                        // If you don't have the free item, add it
+                        // Skip inventories that are lower than when you got this feat.
+                        if (level < values.CurrentLevel)
+                            continue;
+                        
+                        // Check if you already have the item
                         Item? firstFreeItem = inv.AllItems.FirstOrDefault(item => item.ItemName == freeItem);
-                    
                         if (firstFreeItem is not null)
                             continue;
                     
+                        // If you don't have the free item, create it
                         firstFreeItem = Items.CreateNew(freeItem);
-                        if (inv.IsEmpty
+                        
+                        // If your inventory is empty, copy from previous level
+                        /*if (inv.IsEmpty
                             && inventories
                                     .Where(kvp => kvp.Key >= 1 && kvp.Key < level && !kvp.Value.IsEmpty)
                                     .Select(kvp => kvp.Value)
@@ -1114,7 +1146,16 @@ public static class HuntingTools
                                 is {} prevInv)
                         {
                             inv.BecomeFrom(prevInv);
-                        }
+                        }*/
+                        
+                        // Only add the item if your inventory isn't empty. This lets
+                        // you clear your inventory and copy from previous levels.
+                        // Also ensure that if your inventory only contains free items
+                        // from slayer, that you can still empty it.
+                        if (inv.IsEmpty
+                            || inv.AllItems.All(item => item.HasTrait(ModData.Traits.Slayer)))
+                            continue;
+                        
                         inv.AddAtEndOfBackpack(firstFreeItem);
                     }
                 });
@@ -1366,7 +1407,7 @@ public static class HuntingTools
             return (tool, iTool, trophy, null);
         }
         
-        if (data.Kinds is null || data.Kinds.Count == 0)
+        if (data.Kinds.Count == 0)
         {
             slayer.AddQEffect(HuntingTools.ToolWarning(
                 true,
@@ -1379,7 +1420,7 @@ public static class HuntingTools
             return (tool, iTool, trophy, null);
         }
         
-        if (data.Traits is null || data.Traits.Count == 0)
+        if (data.Traits.Count == 0)
         {
             slayer.AddQEffect(HuntingTools.ToolWarning(
                 true,
@@ -1392,7 +1433,7 @@ public static class HuntingTools
             return (tool, iTool, trophy, null);
         }
         
-        if (data.Traditions is null || data.Traditions.Count == 0)
+        if (data.Traditions.Count == 0)
         {
             slayer.AddQEffect(HuntingTools.ToolWarning(
                 true,
