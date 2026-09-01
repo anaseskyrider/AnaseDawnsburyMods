@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- See the template Directory.Builds.props for additional information -->
+
+  <PropertyGroup>
+    <!--Modify This For Each Project-->
+    <ProjectName>JustCrossTheBridge</ProjectName>
+
+    <AssetsFolder>$(ProjectName)Assets</AssetsFolder>
+  </PropertyGroup>
+
+  <!-- Other Dependencies -->
+
+  <!-- Asset Folders -->
+  <ItemGroup>
+    <Assets Include="$(AssetsFolder)\**\*.*"/>
+    <Maps Include="$(MapsFolder)\**\*.*"/>
+  </ItemGroup>
+
+  <!--<ItemGroup>
+    <Folder Include="CustomMaps\" />
+  </ItemGroup>-->
+  
+  <Target Name="CopyToGameModsFolder" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DawnsburyInstall)\CustomMods"/>
+    <Copy SourceFiles="@(Assets)" DestinationFolder="$(DawnsburyInstall)\CustomMods\$(AssetsFolder)\%(RecursiveDir)"/>
+    <Copy SourceFiles="@(Maps)" DestinationFolder="$(DawnsburyInstall)\CustomMaps\%(RecursiveDir)"/>
+
+    <Message Text="Copied to game mod folder." />
+  </Target>
+
+  <Target Name="CopyToWorkshopUploadable" AfterTargets="Build" Condition=" '$(Configuration)'=='Release' ">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopExport)\$(ProjectName)\CustomModsV3"/>
+    <Copy SourceFiles="ORC copyright notice.html" DestinationFolder="$(WorkshopExport)\$(ProjectName)" ContinueOnError="true"/>
+    <Copy SourceFiles="@(Assets)" DestinationFolder="$(WorkshopExport)\$(ProjectName)\CustomModsV3\$(AssetsFolder)\%(RecursiveDir)"/>
+    <Copy SourceFiles="@(Maps)" DestinationFolder="$(WorkshopExport)\$(ProjectName)\CustomMaps\%(RecursiveDir)"/>
+
+    <Message Text="Copied to mod publishing folder." />
+  </Target>
+  
+</Project>
