@@ -231,7 +231,7 @@ public static class Slayer
                         ? values2.Sheet.CampaignInventory
                         : values2.Sheet.Inventory;
                     List<Item> designations = inv.AllItems
-                        .Where(HuntingTool.IsATool)
+                        .Where(HuntingTools.IsATool)
                         .ToList();
                     
                     // Ignore all the items I have that are hunting tools I know

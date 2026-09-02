@@ -254,18 +254,11 @@ public static class ClassFeats
                  """,
                 [ModData.Traits.Slayer])
             .WithOnSheet(values => values.GrantFeat(FeatName.ShieldBlock))
-            .WithOnCreature(self =>
-            {
-                (HuntingTool? repShield, Item? iShield, Item? trophy, TrophyData? trophyData) =
-                    HuntingTools.GetFullHuntingToolData(self, ToolId.RepellingShield);
-                if (repShield is null || iShield is null)
-                    return;
-                
-                QEffect repellQF = new QEffect()
+            .WithOnCreatureHuntingTool(
+                ToolId.RepellingShield,
+                (repShield, _,_,_, qfTool) =>
                 {
-                    // Debugging identifier
-                    Name = "[HUNTING TOOL: REPELLING SHIELD]",
-                    ModifyActionPossibility = (qfThis, action) =>
+                    qfTool.ModifyActionPossibility = (qfThis, action) =>
                     {
                         if (action.ActionId != ActionId.RaiseShield
                             || action.Item is null
@@ -274,33 +267,33 @@ public static class ClassFeats
 
                         action.Description += "\n\n{b}Repelling Shield{/b} You also gain a +2 circumstance bonus to Reflex saving throws against area effects created by your quarry.".WithColor("Blue");
 
-                        if (trophyData?.Kinds is null || trophyData.Kinds.Count == 0)
+                        if (HuntingTools.GetMyItemTool(qfThis.Owner, repShield) is not {} iShield
+                            || HuntingTools.GetTrophyDataOnItemTool(iShield) is not {} data
+                            || data.Kinds.Count == 0)
                             return;
-                        
-                        action.Description += $"\n\n{{b}}Reinforced{{/b}} You can Shield Block with your repelling shield in response to any attack that deals {S.ConstructOrList(trophyData.Kinds.Select(dk => dk.ToStringOrTechnical()))} damage.".WithColor("Blue");
-                    },
-                    BonusToDefenses = (qfThis, action, def) =>
+                            
+                        action.Description += $"\n\n{{b}}Reinforced{{/b}} You can Shield Block with your repelling shield in response to any attack that deals {S.ConstructOrList(data.Kinds.Select(dk => dk.ToStringOrTechnical()))} damage.".WithColor("Blue");
+                    };
+                    qfTool.BonusToDefenses = (qfThis, action, def) =>
                         def is Defense.Reflex
                         && (action?.ChosenTargets.ChosenTile is not null || action?.ChosenTargets.ChosenTiles.Count > 0)
+                        && HuntingTools.GetMyItemTool(qfThis.Owner, repShield) is {} iShield
                         && CommonShieldRules.GetRaisedShields(qfThis.Owner).Contains(iShield)
                         && Slayer.IsMyQuarry(qfThis.Owner, action.Owner)
                             ? new Bonus(2, BonusType.Circumstance, "Repelling shield", true)
-                            : null
-                };
+                            : null;
+                    qfTool.YourShieldBlockWorksAlsoAgainst = (qfThis, dEvent) =>
+                        dEvent.CombatAction is { } action
+                        && action.HasTrait(Trait.Attack)
+                        && action.ActionId != ActionId.Trip
+                        && HuntingTools.GetMyItemTool(qfThis.Owner, repShield) is {} iShield
+                        && (qfThis.Owner.HasFeat(FeatName.ReactiveShield)
+                            || CommonShieldRules.GetBlockableShields(qfThis.Owner).Contains(iShield))
+                        && HuntingTools.GetTrophyDataOnItemTool(iShield) is {} data
+                        && dEvent.KindedDamages.Any(kd => data.Kinds.Contains(kd.DamageKind));
 
-                if (trophy is null || trophyData?.Kinds is null)
-                    return;
-
-                repellQF.YourShieldBlockWorksAlsoAgainst = (qfThis, dEvent) =>
-                    dEvent.CombatAction is { } action
-                    && action.HasTrait(Trait.Attack)
-                    && action.ActionId != ActionId.Trip
-                    && (qfThis.Owner.HasFeat(FeatName.ReactiveShield)
-                        || CommonShieldRules.GetBlockableShields(qfThis.Owner).Contains(iShield))
-                    && dEvent.KindedDamages.Any(kd => trophyData.Kinds.Contains(kd.DamageKind));
-                
-                self.AddQEffect(repellQF);
-            })
+                    return qfTool;
+                })
             .With(feat =>
             {
                 // "SlayerClass.HuntingTool.RepellingShield"
@@ -391,16 +384,10 @@ public static class ClassFeats
                 "The damage die of simple bloodseeking blades increases by one step. You can have advanced bloodseeking blades, and they use your martial proficiency.",
                 qfFeat =>
                 {
-                    if (HuntingToolsTag.GetTool(qfFeat.Owner, ToolId.BloodseekingBlade)
-                        is not { } blade)
-                        return;
-                        
-                    /*if (qfFeat.Owner.AllItems.FirstOrDefault(blade.IsMyTool) is {} bladeItem
-                        && !bladeItem.Traits.Contains(ModData.Traits.BloodseekingBlade))
-                        bladeItem.Traits.Add(ModData.Traits.BloodseekingBlade);*/
-
                     qfFeat.IncreaseItemDamageDie = (qfThis, item) =>
-                        blade.IsMyTool(item) && item.HasTrait(Trait.Simple);
+                        //HuntingTools.GetToolId(item) == ToolId.BloodseekingBlade
+                        item.HasTrait(ModData.Traits.BloodseekingBlade)
+                        && item.HasTrait(Trait.Simple);
                 })
             .WithInappropriateBecauseOfBadInventory((_, inventory) => FeatInventoryRequirements.RequiresOne(
                 inventory,
@@ -1054,21 +1041,22 @@ public static class ClassFeats
                 """,
                 [ModData.Traits.Slayer])
             .WithFreeInventoryItem(HuntingTools.SpellSlates)
-            .WithOnCreature(self =>
-            {
-                if (self.PersistentCharacterSheet is null)
-                    return;
-                (HuntingTool? slates, Item? iSlates, _, _) =
-                    HuntingTools.GetFullHuntingToolData(self, ToolId.SpellSlates);
-                if (slates is null || iSlates is null)
-                    return;
-                
-                // If the bonus spell was expended,
-                // then remove other spells even if your choice was swapped.
-                self.AddQEffect(new QEffect()
+            .WithOnCreatureHuntingTool(
+                ToolId.SpellSlates,
+                (slates, iSlates, _, _, qfTool) =>
                 {
-                    Name = "[SLAYER: SPELL SLATES, REMOVE EXPENDED REINFORCED SPELL]",
-                    StartOfCombatBeforeOpeningCutscene = async qfThis =>
+                    /*if (self.PersistentCharacterSheet is null)
+                        return null;*/
+                    
+                    // The slates are worn and can't move around or be destroyed,
+                    // so it's safe to return if the item isn't found.
+                    // Consequently, it's also safe to reuse all of the above data references.
+                    if (iSlates is null)
+                        return null;
+                    
+                    // If the bonus spell was expended,
+                    // then remove other spells even if your choice was swapped.
+                    qfTool.StartOfCombatBeforeOpeningCutscene = async qfThis =>
                     {
                         if (qfThis.Owner.PersistentUsedUpResources
                             .GetSpellcasting(ModData.Traits.ReinforcedSlateSpell)
@@ -1076,7 +1064,7 @@ public static class ClassFeats
                             .Any(spellsOfRank =>
                                 spellsOfRank.Count > 0))
                         {
-                            var source = qfThis.Owner.Spellcasting
+                            SpellcastingSource? source = qfThis.Owner.Spellcasting
                                 ?.GetSourceByOrigin(ModData.Traits.ReinforcedSlateSpell);
                             if (source is null)
                                 return;
@@ -1084,71 +1072,75 @@ public static class ClassFeats
                                 source.Spellcasting.UseUpSpellcastingResources(action);
                             qfThis.ExpiresAt = ExpirationCondition.Immediately;
                         }
-                    }
-                });
+                    };
 
-                // Find selected bonus spell
-                Spell? reinforcedSpell = (self.PersistentCharacterSheet.SelectedFeats
-                        .FirstOrDefault(choice =>
-                            choice.Value is SpellSelectedChoice
-                            && choice.Key.Contains("SpellSlatesReinforcedSpell"))
-                        .Value as SpellSelectedChoice)
-                    ?.Choices.FirstOrDefault();
-                
-                if (reinforcedSpell is not null)
-                    return;
+                    return qfTool;
 
-                // If no bonus spell is selected, warn the user.
-                // This shouldn't be possible, but it's a good fallback.
-                string toolName = slates.Id.GetNameFromToolId();
-                self.AddQEffect(HuntingTools.ToolWarning(
-                    true, "REINFORCED SPELL",
-                    $$"""
-                      Your {{toolName.WithTag("b")}} has a trophy reinforcing it, but you did not select an additional spell.
-
-                      This error shouldn't be possible, as selecting a reinforced spell is not an optional choice. If you see this error, please report it immediately to the {link:https://steamcommunity.com/sharedfiles/filedetails/?id=3715781137}Slayer Class{/} mod page.
-                      """));
-
-                /*if (self.PersistentUsedUpResources
-                        .GetSpellcasting(ModData.Traits.Slayer)
-                        .PreparedSpellsUsedUp[reinforcedSpell.SpellLevel]
-                        .Any(spell =>
-                            spell.CombatActionSpell == reinforcedSpell.CombatActionSpell)
-                    || self.PersistentUsedUpResources.UsedUpActions
-                        .Contains(ModData.PersistentActions.REINFORCED_SPELL))
-                {
-                    string toolName = slates.Id.GetNameFromToolId();
-                    self.AddQEffect(HuntingTools.ToolWarning(
-                        false, "EXPENDED SPELL",
-                        $"""
-                         Your {toolName.WithTag("b")} has a spell chosen from its reinforced benefits, but that spell has been expended.
-
-                         This is normal. You can only cast the spell from your {toolName.WithTag("b")} once per day, regardless of whether you've changed your choice of spell.
-                         """));
-                    return;
-                }*/
-
-                /*self.AddQEffect(new QEffect()
-                {
-                    Name = "[SLAYER SPELL SLATES REINFORCED SPELL]",
-                    AfterYouExpendSpellcastingResources = (qfThis, action) =>
+                    /*if (self.PersistentUsedUpResources
+                            .GetSpellcasting(ModData.Traits.Slayer)
+                            .PreparedSpellsUsedUp[reinforcedSpell.SpellLevel]
+                            .Any(spell =>
+                                spell.CombatActionSpell == reinforcedSpell.CombatActionSpell)
+                        || self.PersistentUsedUpResources.UsedUpActions
+                            .Contains(ModData.PersistentActions.REINFORCED_SPELL))
                     {
-                        if (GetSuperSpell(action) == GetSuperSpell(reinforcedSpell.CombatActionSpell))
-                            self.PersistentUsedUpResources.UsedUpActions
-                                .Add(ModData.PersistentActions.REINFORCED_SPELL);
-                        
+                        string toolName = slates.Id.GetNameFromToolId();
+                        self.AddQEffect(HuntingTools.ToolWarning(
+                            false, "EXPENDED SPELL",
+                            $"""
+                             Your {toolName.WithTag("b")} has a spell chosen from its reinforced benefits, but that spell has been expended.
+
+                             This is normal. You can only cast the spell from your {toolName.WithTag("b")} once per day, regardless of whether you've changed your choice of spell.
+                             """));
                         return;
-                        
-                        CombatAction GetSuperSpell(CombatAction spellAction)
+                    }*/
+
+                    /*self.AddQEffect(new QEffect()
+                    {
+                        Name = "[SLAYER SPELL SLATES REINFORCED SPELL]",
+                        AfterYouExpendSpellcastingResources = (qfThis, action) =>
                         {
-                            if (spellAction.Superspell is not null
-                                && spellAction.Superspell != spellAction)
-                                return GetSuperSpell(spellAction.Superspell);
-                            return spellAction;
+                            if (GetSuperSpell(action) == GetSuperSpell(reinforcedSpell.CombatActionSpell))
+                                self.PersistentUsedUpResources.UsedUpActions
+                                    .Add(ModData.PersistentActions.REINFORCED_SPELL);
+                            
+                            return;
+                            
+                            CombatAction GetSuperSpell(CombatAction spellAction)
+                            {
+                                if (spellAction.Superspell is not null
+                                    && spellAction.Superspell != spellAction)
+                                    return GetSuperSpell(spellAction.Superspell);
+                                return spellAction;
+                            }
                         }
+                    });*/
+                },
+                [
+                    (self, slates, _, _, _) =>
+                    {
+                        // Find selected bonus spell
+                        Spell? reinforcedSpell = (self.PersistentCharacterSheet?.SelectedFeats
+                                .FirstOrDefault(choice =>
+                                    choice.Value is SpellSelectedChoice
+                                    && choice.Key.Contains("SpellSlatesReinforcedSpell"))
+                                .Value as SpellSelectedChoice)
+                            ?.Choices.FirstOrDefault();
+                    
+                        if (reinforcedSpell is not null)
+                            return null;
+
+                        // If no bonus spell is selected, warn the user.
+                        // This shouldn't be possible, but it's a good fallback.
+                        return HuntingTools.ToolWarning(
+                            true, "REINFORCED SPELL",
+                            $$"""
+                              Your {{slates.Id.GetNameFromToolId().WithTag("b")}} has a trophy reinforcing it, but you did not select an additional spell.
+
+                              This error shouldn't be possible, as selecting a reinforced spell is not an optional choice. If you see this error, please report it immediately to the {link:https://steamcommunity.com/sharedfiles/filedetails/?id=3715781137}Slayer Class{/} mod page.
+                              """);
                     }
-                });*/
-            })
+                ])
             .WithOnSheet(values =>
             {
                 // Skipped proficiency due to Slayer's Tricks prerequisite.
@@ -1197,10 +1189,10 @@ public static class ClassFeats
                             .Value
                           ?? valuesBefore.Sheet.Inventory;
                     
-                    (HuntingTool? slates, Item? iSlates, Item? trophy, var trophyData) =
+                    (HuntingTool? slates, Item? iSlates, Item? trophy, TrophyData? data) =
                         HuntingTools.GetFullHuntingToolData(valuesBefore, inv, ToolId.SpellSlates);
                     if (slates is null || iSlates is null || trophy is null
-                        || trophyData?.Traditions is not { } traditions)
+                        || data?.Traditions is not { } traditions)
                         return;
                     
                     int maxRank = valuesBefore.InnateSpells.GetOrCreate(
@@ -1282,50 +1274,22 @@ public static class ClassFeats
                 {b}Reinforced{/b} When you Activate the elixir within your catalyzing flask, you also a gain a +1 status bonus to Fortitude, Reflex, or Will saves. The save is whichever was the highest saving throw of the creature the trophy was claimed from. This bonus lasts for the rest of the encounter.
                 """,
                 [Trait.Rebalanced, ModData.Traits.Slayer])
-            .WithOnCreature(self =>
-            {
-                (HuntingTool? flask, Item? iFlask, Item? trophy, TrophyData? data) =
-                    HuntingTools.GetFullHuntingToolData(self, ToolId.CatalyzingFlask);
-                if (flask is null || iFlask is null)
-                    return;
-
-                List<Defense> highestDefs = data?.Tags
-                    .Where(tag => tag.Contains(TrophyData.DataConstants.TAGS_HIGHEST_SAVE))
-                    .Select(tag => Enum.TryParse(
-                        tag[TrophyData.DataConstants.TAGS_HIGHEST_SAVE.Length..],
-                        true,
-                        out Defense defense)
-                        ? defense
-                        : throw new Exception("Unknown Defense for Data Tag HighestSave: " + tag))
-                    .ToList() ?? [];
-                
-                if (trophy is not null
-                    && data is not null
-                    && highestDefs.Count == 0)
+            .WithOnCreatureHuntingTool(
+                ToolId.CatalyzingFlask,
+                (flask, _, _, _, qfTool) =>
                 {
-                    string toolName = flask.Id.GetNameFromToolId();
-                    self.AddQEffect(HuntingTools.ToolWarning(
-                        true, "HIGHEST SAVE",
-                        $$"""
-                          Your {{toolName.WithTag("b")}} has a trophy reinforcing it, but the trophy contains no highest saving throws.
-
-                          This isn't supposed to be possible, as even inert object creatures have saving throw statistics in Dawnsbury Days, and a tied saving throw was implemented in the game as an additional option to the slayer. If you see this error, please report it immediately to the {link:https://steamcommunity.com/sharedfiles/filedetails/?id=3715781137}Slayer Class{/} mod page.
-                          """));
-                }
-
-                // Discover how an elixir of life activate action is constructed
-                // in order to look for a way to activate the item as a bonus.
-                
-                QEffect flaskQf = new QEffect()
-                {
-                    Id = ModData.QEffectIds.CatalyzingFlaskGranter,
-                    UsedUpPermanently = false, // is true when the flask is activated
-                    ModifyActionPossibility = (qfFlask, action) =>
+                    qfTool.Id = ModData.QEffectIds.CatalyzingFlaskGranter;
+                    qfTool.UsedUpPermanently = false; // is true when the flask is activated
+                    qfTool.ModifyActionPossibility = (qfFlask, action) =>
                     {
-                        if (action.Item != iFlask)
+                        if (HuntingTools.GetMyItemTool(qfFlask.Owner, ToolId.CatalyzingFlask)
+                                is not { } iFlask
+                            || HuntingTools.GetTrophyDataOnItemTool(iFlask)
+                                is not { } data
+                            || action.Item != iFlask)
                             return;
 
-                        List<Defense>? saves = data?.GetHighestSaves();
+                        List<Defense>? saves = data.GetHighestSaves();
 
                         if (action.ActionId is ActionId.Drink)
                             action.EffectOnChosenTargets = async (drink, self2, _) =>
@@ -1344,7 +1308,7 @@ public static class ClassFeats
                             action.Description += $"\n\n{{Blue}}{{b}}Reinforced{{/b}}{{/Blue}} You gain a +1 status bonus to {S.ConstructOrList(saves.Select(save => save.ToStringOrTechnical()))} saving throws for the rest of the encounter.";
 
                         return;
-                        
+                            
                         async Task Drink(CombatAction activate, Item item, Creature user, Creature target)
                         {
                             // Apply drinkable effects
@@ -1353,25 +1317,25 @@ public static class ClassFeats
                             #pragma warning disable CS0618 // Type or member is obsolete
                             drinkableEffect?.Invoke(activate, target);
                             await item.WhenYouDrink.InvokeIfNotNull(activate, target);
-                            
+                                
                             Sfxs.Play(SfxName.PotionUse2);
-                            
+                                
                             // Free usage
                             if (qfFlask.UsedUpPermanently)
                                 user.HeldItems.Remove(item);
                             else 
                                 qfFlask.UsedUpPermanently = true; // Item is not consumed once per encounter
-                            
+                                
                             foreach (QEffect qf in target.QEffects)
                                 await qf.AfterYouDrink.InvokeIfNotNull(qf, item, activate);
-                            
+                                
                             // Reinforced benefits
-                            if (saves is not null)
+                            if (saves.Count > 0)
                             {
                                 Defense save;
                                 if (saves.Count > 1)
                                 {
-                                    var choice = await user.AskForChoiceAmongButtons(
+                                    ChoiceButtonOption choice = await user.AskForChoiceAmongButtons(
                                         flask.Icon,
                                         """
                                         {b}Catalyzing Flask{/b}
@@ -1399,11 +1363,26 @@ public static class ClassFeats
                                 });
                             }
                         }
+                    };
+
+                    return qfTool;
+                },
+                [
+                    (_, tool, _, _, data) =>
+                    {
+                        if (data is null)
+                            return null;
+                        if (data.GetHighestSaves().Count == 0)
+                            return HuntingTools.ToolWarning(
+                                true, "HIGHEST SAVE",
+                                $$"""
+                                  Your {{tool.Id.GetNameFromToolId().WithTag("b")}} has a trophy reinforcing it, but the trophy contains no highest saving throws.
+
+                                  This isn't supposed to be possible, as even inert object creatures have saving throw statistics in Dawnsbury Days, and a tied saving throw was implemented in the game as an additional option to the slayer. If you see this error, please report it immediately to the {link:https://steamcommunity.com/sharedfiles/filedetails/?id=3715781137}Slayer Class{/} mod page.
+                                  """);
+                        return null;
                     }
-                };
-                
-                self.AddQEffect(flaskQf);
-            })
+                ])
             .With(feat =>
             {
                 // "SlayerClass.HuntingTool.CatalyzingFlask"
@@ -1733,41 +1712,24 @@ public static class ClassFeats
             .WithRulesBlockForCombatAction(self =>
                 ArmPhialActionForTooltips(self, false, null))
             .WithFreeInventoryItem(HuntingTools.BloodburstPhial)
-            .WithOnCreature(self =>
-            {
-                (HuntingTool? phialTool, Item? iPhial, Item? trophy, var trophyData) =
-                    HuntingTools.GetFullHuntingToolData(self, ToolId.BloodburstPhial);
-                if (phialTool is null || iPhial is null)
-                    return;
-
-                DamageKind? chosenKind = null;
-                if (trophy is not null)
+            .WithOnCreatureHuntingTool(
+                ToolId.BloodburstPhial,
+                (tool, iPhial, trophy, data, qfTool) =>
                 {
-                    chosenKind = Trophies.GetChosenDamageKind(trophy);
-                    if (chosenKind is null)
-                    {
-                        string toolName = phialTool.Id.GetNameFromToolId();
-                        self.AddQEffect(HuntingTools.ToolWarning(
-                            false,
-                            "TROPHY DAMAGE TYPE",
-                            $"""
-                             Your {toolName.WithTag("b")} has a trophy reinforcing it, but no damage type was chosen.
+                    // The phial is worn and can't move around or be destroyed,
+                    // so it's safe to return if the item isn't found.
+                    // Consequently, it's also safe to reuse all of the above data references.
+                    if (iPhial is null)
+                        return null;
 
-                             This might have been an accident. Ensure that you have reinforced the tool with a damage type. To do so, while in the inventory screen, right-click the designated item with an attached trophy, and click the damage type you want to gain its reinforced benefits for.
-                             """));
-                    }
-                }
-                
-                QEffect phialQf = new QEffect()
-                {
-                    // Debugging identifier
-                    Name = "[HUNTING TOOL: BLOODBURST PHIAL]",
-                    Id = ModData.QEffectIds.ArmBloodburstPhialGranter,
-                    ProvideMainAction = qfThis =>
+                    DamageKind? chosenKind = Trophies.GetChosenDamageKind(trophy);
+                    
+                    qfTool.Id = ModData.QEffectIds.ArmBloodburstPhialGranter;
+                    qfTool.ProvideMainAction = qfThis =>
                     {
                         if (qfThis.UsedUpPermanently)
                             return null;
-                        
+                            
                         return new SubmenuPossibility(
                             ModData.Illustrations.BloodburstPhial,
                             "Arm Bloodburst Phial")
@@ -1787,14 +1749,33 @@ public static class ClassFeats
                                         },
                                     ]
                                 }
-                            
+                                
                             ]
                         };
-                    }
-                };
+                    };
 
-                self.AddQEffect(phialQf);
-            })
+                    return qfTool;
+                },
+                [
+                    (_, tool, _, trophy, data) =>
+                    {
+                        // Extra check against data being null because if there isn't
+                        // a chosen kind, there probably isn't any data either, and
+                        // I don't want excess warnings in those cases.
+                        if (trophy is null || data is null)
+                            return null;
+                        if (Trophies.GetChosenDamageKind(trophy) is not null)
+                            return null;
+                        return HuntingTools.ToolWarning(
+                            false,
+                            "TROPHY DAMAGE TYPE",
+                            $"""
+                             Your {tool.Id.GetNameFromToolId().WithTag("b")} has a trophy reinforcing it, but no damage type was chosen.
+
+                             This might have been an accident. Ensure that you have reinforced the tool with a damage type. To do so, while in the inventory screen, right-click the designated item with an attached trophy, and click the damage type you want to gain its reinforced benefits for.
+                             """);
+                    }
+                ])
             .With(feat =>
             {
                 // "SlayerClass.HuntingTool.BloodburstPhial"

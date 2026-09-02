@@ -87,7 +87,7 @@ public static class Trophies
                             
                         })
                     .WithCanBeAppliedTo((rune, baseItem) =>
-                        HuntingTool.IsATool(baseItem)
+                        HuntingTools.IsATool(baseItem)
                             ? null
                             : "You can only attach trophies to items designated as one of your hunting tools.")));
         
@@ -208,7 +208,7 @@ public static class Trophies
                 return null;
             
             List<ContextMenuItem> options = [];
-            ToolId? specificTool = HuntingTool.GetToolId(item);
+            ToolId? specificTool = HuntingTools.GetToolIdOnItemTool(item);
             
             // Damage Kind selections (all):
             // - (Signature) Bloodseeking Blade
@@ -528,18 +528,23 @@ public static class Trophies
 
     #region Getting Trophies
 
-    public static Item? GetTrophy(Item item)
+    /// <summary>
+    /// Gets a trophy <see cref="Item"/> from an <see cref="Item"/> which is a known designated <see cref="HuntingTool"/>.
+    /// </summary>
+    public static Item? GetTrophy(Item iTool)
     {
-        return item.ActiveRunes.FirstOrDefault(r => r.HasTrait(ModData.Traits.Trophy));
+        return iTool.ActiveRunes.FirstOrDefault(r => r.HasTrait(ModData.Traits.Trophy));
     }
 
     #endregion
 
     #region Modifying Trophies
 
-    public static DamageKind? GetChosenDamageKind(Item trophy)
+    public static DamageKind? GetChosenDamageKind(Item? trophy)
     {
-        var chosenDamage = trophy.ItemModifications.FirstOrDefault(mod =>
+        if (trophy is null)
+            return null;
+        ItemModification? chosenDamage = trophy.ItemModifications.FirstOrDefault(mod =>
             mod.Kind == ChosenDamageKindModification);
         return chosenDamage?.Tag is DamageKind tag
             ? tag

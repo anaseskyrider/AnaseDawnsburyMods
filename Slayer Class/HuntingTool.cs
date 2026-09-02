@@ -259,34 +259,4 @@ public class HuntingTool
     }
 
     #endregion
-
-    #region Static Functions
-
-    /// <summary>
-    /// Gets whether the given item is a tool of any kind.
-    /// </summary>
-    /// <param name="item"></param>
-    /// <returns></returns>
-    public static bool IsATool(Item item)
-    {
-        return item.ItemModifications.Any(mod =>
-            mod.Kind == HuntingTools.ToolDesignation);
-    }
-
-    /// <summary>
-    /// Gets the hunting tool Id of the given item, if any.
-    /// </summary>
-    /// <param name="item"></param>
-    /// <returns></returns>
-    public static ToolId? GetToolId(Item item)
-    {
-        return item.ItemModifications
-            .FirstOrDefault(mod =>
-                mod.Kind == HuntingTools.ToolDesignation)
-            ?.Tag is string tag
-            ? Enum.Parse<ToolId>(tag)
-            : null;
-    }
-
-    #endregion
 }
