@@ -806,32 +806,6 @@ public static class ClassFeats
                 // This is guaranteed to occur before etching at the start of combat.
                 self.AddQEffectAtPriority(runicTattoo, true);
             });
-
-        // Smithing Weapons Familiarity
-        // Playtest feat
-        /*yield return new TrueFeat(
-                ModData.FeatNames.SmithingWeaponsFamiliarity,
-                2,
-                "Though you are an artisan, you are well versed in using the tools of the trade to fend off enemies.",
-                $$"""
-                  You have familiarity with weapons in the hammer, pick, and knife weapon groups -- for the purposes of proficiency, you treat any of these that are martial weapons as simple weapons and any that are advanced weapons as martial weapons.
-
-                  {{ModData.Illustrations.DdSun.IllustrationAsIconString}} {b}Modding{/b} Other mods which add advanced weapons are required to benefit from this feat.
-                  """,
-                [ModData.Traits.Runesmith])
-            .WithOnSheet(sheet =>
-            {
-                // Treat martials as simple
-                sheet.Proficiencies.AddProficiencyAdjustment(Traits =>
-                        (Traits.Contains(Trait.Hammer) || Traits.Contains(Trait.Pick) || Traits.Contains(Trait.Knife)) && Traits.Contains(Trait.Martial), Trait.Simple
-                );
-
-                // Treat advanced as martials
-                sheet.Proficiencies.AddProficiencyAdjustment(Traits =>
-                        (Traits.Contains(Trait.Hammer) || Traits.Contains(Trait.Pick) || Traits.Contains(Trait.Knife)) && Traits.Contains(Trait.Advanced), Trait.Martial
-                );
-            })
-            .WithOnCreature(cr => new QEffect("Smithing Weapons Familiarity", "You have familiarity with hammer, pick, knife weapons."));*/
         
         #endregion
         
