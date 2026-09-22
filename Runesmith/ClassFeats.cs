@@ -1,6 +1,7 @@
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
+using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
@@ -270,11 +271,7 @@ public static class ClassFeats
                     return remoteDet;
                 };
             })
-            .WithInappropriateBecauseOfBadInventory((values, inventory) =>
-                FeatInventoryRequirements.RequiresOne(
-                    inventory,
-                    item => item.HasTrait(Trait.Ranged) && !item.HasTrait(Trait.Thrown),
-                    "a ranged weapon that uses ammunition"));
+            .WithInappropriateBecauseOfBadInventory(RequiresPhysicalProjectile);
         
         // Rune Ward
         yield return new TrueFeat(
@@ -2330,5 +2327,13 @@ public static class ClassFeats
         modifyTraceAction?.Invoke(knockThisRune);
 
         return knockThisRune;
+    }
+
+    public static string? RequiresPhysicalProjectile(CalculatedCharacterSheetValues values, Inventory inventory)
+    {
+        return FeatInventoryRequirements.RequiresOne(
+            inventory,
+            item => item.HasTrait(Trait.Ranged) && !item.HasTrait(Trait.Thrown),
+            "a ranged weapon that uses ammunition");
     }
 }
