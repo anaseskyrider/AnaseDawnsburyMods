@@ -47,6 +47,8 @@ public static class ClassFeats
     {
         #region 1st-Level
         
+        // TODO: Phase 2, level 1 class feats.
+        
         // Backup Runic Enhancement
         yield return new TrueFeat(
                 ModData.FeatNames.BackupRunicEnhancement, 1,
@@ -163,7 +165,7 @@ public static class ClassFeats
             })
             .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresMeleeWeapon);
         
-        // TODO: Phase 2, Glyph Familiar
+        // Glyph Familiar
         
         // Remote Detonation
         yield return new TrueFeat(
@@ -274,7 +276,7 @@ public static class ClassFeats
                     item => item.HasTrait(Trait.Ranged) && !item.HasTrait(Trait.Thrown),
                     "a ranged weapon that uses ammunition"));
         
-        // TODO: Phase 2, Rune Ward
+        // Rune Ward
         
         // Rune-Singer
         yield return new TrueFeat(
@@ -420,7 +422,7 @@ public static class ClassFeats
                 values => values.HasFeat(FeatName.Performance),
                 "You must be trained in Performance.");
         
-        // TODO: Phase 2, Seek the Hidden Glyphs
+        // Seek the Hidden Glyphs
         
         // Smithing Weapons
         yield return new TrueFeat(
@@ -463,7 +465,9 @@ public static class ClassFeats
         
         #region 2nd-Level
         
-        // TODO: Phase 2, Enhanced Glyph Familiar
+        // TODO: Phase 2, level 2 class feats.
+        
+        // Enhanced Glyph Familiar
         
         // Fortifying Knock
         yield return new TrueFeat(
@@ -673,7 +677,7 @@ public static class ClassFeats
                     ? null
                     : "This feat works best if you can at least add your level to Stealth checks.");
         
-        // TODO: Phase 2, Pattern Flight
+        // Pattern Flight
         
         // Runic Tattoo
         yield return new TrueFeat(
@@ -833,6 +837,8 @@ public static class ClassFeats
         
         #region 4th-Level
         
+        // TODO: Phase 2, level 4 class feats.
+        
         // Artist's Attendance
         // DOC: "within reach of a creature" is interpreted as being YOUR reach
         yield return new TrueFeat(
@@ -990,7 +996,7 @@ public static class ClassFeats
                 return "This feat only works if you know a divine or occult rune; or are trained in Religion or Occultism and know a rune that doesn't have a specific tradition.";
             });
         
-        // TODO: Phase 2, Song of Glorious Invocation
+        // Song of Glorious Invocation
         
         // Terrifying Invocation
         yield return new TrueFeat(
@@ -1208,15 +1214,17 @@ public static class ClassFeats
                 }
             });
         
-        // TODO: Phase 2, Writing on the Wall
+        // Writing on the Wall
         
         #endregion
         
         #region 6th-Level
         
-        // TODO: Phase 2, Diacritic Fluency
+        // TODO: Phase 2, level 6 class feats.
         
-        // TODO: Phase 2, Engraving Maneuver
+        // Diacritic Fluency
+        
+        // Engraving Maneuver
         
         // Runic Reprisal
         yield return new TrueFeat(
@@ -1700,6 +1708,8 @@ public static class ClassFeats
         
         #region 8th-Level
         
+        // TODO: Phase 2, level 8 class feats.
+        
         // Drawn in Vital Ink
         yield return new TrueFeat(
                 ModData.FeatNames.DrawnInVitalInk, 8,
@@ -1868,7 +1878,7 @@ public static class ClassFeats
                     ? null
                     : "This feat only works if you know a rune that's drawn on creatures.");
         
-        // TODO: Phase 2, Edifying Trace
+        // Edifying Trace
         
         // Elemental Revision
         // DOC: This permanently changes the rune.
@@ -2090,17 +2100,19 @@ public static class ClassFeats
                 };
             });
         
-        // TODO: Swiping Trace
+        // Swiping Trace
         
         #endregion
         
         #region 10th-Level
         
-        // TODO: Phase 3, Chain of Words
+        // TODO: Phase 3, level 10 class feats.
         
-        // TODO: Phase 3, Clashing Compound Invocation
+        // Chain of Words
         
-        // TODO: Phase 3, Overloaded Ammunition
+        // Clashing Compound Invocation
+        
+        // Overloaded Ammunition
         
         // Prodigal Rune-Singer
         yield return new TrueFeat(
@@ -2115,13 +2127,15 @@ public static class ClassFeats
                 values => values.HasFeat(FeatName.ExpertPerformance),
                 "You must be an expert in Performance.");
         
-        // TODO: Phase 3, Runic Correspondence
+        // Runic Correspondence
         
         #endregion
         
         #region 12th-Level
         
-        // TODO: Phase 3, Astral Compound Invocation
+        // TODO: Phase 3, level 12 class feats.
+        
+        // Astral Compound Invocation
         
         // Distant Invocation
         yield return new TrueFeat(
@@ -2146,19 +2160,21 @@ public static class ClassFeats
                     2);
             });
 
-        // TODO: Phase 3, Orbiting Runestone
+        // Orbiting Runestone
 
         #endregion
 
         #region 14th-Level
+        
+        // TODO: Phase 3, level 14 class feats.
 
-        // TODO: Phase 3, Dance of Bloody Ink
+        // Dance of Bloody Ink
 
-        // TODO: Phase 3, Define the Canvas
+        // Define the Canvas
 
-        // TODO: Phase 3, Henge Gate
+        // Henge Gate
 
-        // TODO: Phase 3, Unerring Runic Attraction
+        // Unerring Runic Attraction
 
         #endregion
 
