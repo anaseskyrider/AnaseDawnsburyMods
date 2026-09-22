@@ -277,6 +277,59 @@ public static class ClassFeats
                     "a ranged weapon that uses ammunition"));
         
         // Rune Ward
+        yield return new TrueFeat(
+                ModData.FeatNames.RuneWard, 1,
+                "You quickly sketch a rune in the air to gain a modicum of protection against the triggering magic.",
+                """
+                {b}Trigger{/b} You are targeted by a spell and are trained in the skill associated with its tradition.
+                
+                You gain a +1 circumstance bonus to your saving throw and AC against the spell.
+                """,
+                [ModData.Traits.Runesmith])
+            .WithActionCost(-2)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToDefenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " When you are targeted by a spell whose tradition skill you're trained in, gain a +1 circumstance bonus to your defenses against it.";
+                
+                qfFeat.YouAreTargeted = async (qfThis, action) =>
+                {
+                    if (!action.HasTrait(Trait.Spell)
+                        || action.SpellcastingSource is null)
+                        return;
+                    
+                    bool isTrained = action.SpellcastingSource.SpellcastingTradition switch
+                    {
+                        Trait.Arcane when IsTrained(Trait.Arcana) => true,
+                        Trait.Divine when IsTrained(Trait.Religion) => true,
+                        Trait.Primal when IsTrained(Trait.Nature) => true,
+                        Trait.Occult when IsTrained(Trait.Occultism) => true,
+                        _ => false,
+                    };
+                    if (!isTrained)
+                        return;
+
+                    if (await qfThis.Owner.AskToUseReaction(
+                            $$"""
+                              {b}Rune Ward {icon:Reaction}{/b}
+                              You have been targeted by {{action.Owner.ToColoredBoldedName()}}'s {{action.Name.WithColor("Blue")}}. Gain a +1 circumstance bonus to your AC and saving throws against this spell?
+                              """,
+                            ModData.Illustrations.RuneWard))
+                        qfThis.Owner.AddQEffect(new QEffect(ExpirationCondition.ExpiresAtEndOfAnyTurn)
+                        {
+                            BonusToDefenses = (qfDef, action2, def) =>
+                                action2 == action
+                                && (def is Defense.AC || def.IsSavingThrow())
+                                    ? new Bonus(1, BonusType.Circumstance, "Rune Ward")
+                                    : null,
+                        });
+                };
+
+                return;
+
+                bool IsTrained(Trait trait) =>
+                    qfFeat.Owner.Proficiencies.Get(trait) >= Proficiency.Trained;
+            });
         
         // Rune-Singer
         yield return new TrueFeat(

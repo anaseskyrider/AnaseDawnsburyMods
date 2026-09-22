@@ -425,6 +425,7 @@ public static class ModData
         
         #region Feats
         
+        public static readonly Illustration RuneWard = new ModdedIllustration(MOD_FOLDER+"shield.png");
         public static readonly Illustration TransposeEtching = new ModdedIllustration(MOD_FOLDER+"hand.png");
         public static readonly Illustration DrawnInVitalInk = new ModdedIllustration(MOD_FOLDER+"knife.png");
         public static readonly Illustration RuneSinger = new ModdedIllustration(MOD_FOLDER+"musical-note.png");
