@@ -728,6 +728,123 @@ public static class ClassFeats
                     : "This feat works best if you can at least add your level to Stealth checks.");
         
         // Pattern Flight
+        yield return new TrueFeat(
+                ModData.FeatNames.PatternFlight, 2,
+                "You place a bit of magic in a physical projectile, causing it to fly in a runic pattern through the air once you loose it.",
+                "Make a ranged Strike against a target within your weapon's first range increment. Because of the erratic nature of its flight, this Strike ignores any circumstance bonus to AC from cover. After your Strike, you can Trace a Rune on one target in a straight line between you and the target of your Strike (including the original target).",
+                [Trait.Flourish, ModData.Traits.Runesmith])
+            .WithActionCost(2)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.ProvideStrikeModifier = item =>
+                {
+                    if (!item.HasTrait(Trait.Ranged)
+                        || item.HasTrait(Trait.Thrown)
+                        || item.WeaponProperties!.RangeIncrement < 1)
+                        return null;
+
+                    StrikeModifiers strikeMods = new StrikeModifiers()
+                    {
+                        AdditionalTraits = [ModData.ModTrait, Trait.Flourish, ModData.Traits.Runesmith, Trait.IgnoreAllCover]
+                    };
+                    CombatAction strike = StrikeRules.CreateStrike(
+                            qfFeat.Owner, item,
+                            RangeKind.Ranged,
+                            -1, false,
+                            strikeMods)
+                        .WithActionCost(0)
+                        .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
+                            strikeMods,
+                            additionalAttackRollText: "This ignores any circumstance bonus to AC from cover.",
+                            additionalAftertext: "Trace a Rune on one target in a straight line between you and the target of your Strike (including the original target)."));
+                    
+                    CombatAction patternFlight = new CombatAction(
+                            qfFeat.Owner,
+                            item.Illustration,
+                            "Pattern Flight",
+                            [ModData.ModTrait, Trait.Flourish, ModData.Traits.Runesmith],
+                            strike.Description,
+                            Target.Line(item.WeaponProperties!.RangeIncrement)
+                                .WithLesserDistanceIsOkay())
+                        .WithActionCost(2)
+                        .WithStrikeNameAndIllustrationChange(
+                            "Pattern Flight",
+                            ModData.Illustrations.TraceRune,
+                            false)
+                        .WithEffectOnChosenTargets(async (action, caster, lineTargets) =>
+                        {
+                            List<Creature> validStrikes = lineTargets
+                                .GetAllTargetCreatures()
+                                .Where(cr =>
+                                    ((CreatureTarget)strike.Target)
+                                    .IsLegalTarget(strike.Owner, cr))
+                                .ToList();
+
+                            if (validStrikes.Count == 0)
+                            {
+                                action.RevertRequested = true;
+                                return;
+                            }
+                            
+                            strike.WithAdjustTarget<CreatureTarget>(crTar =>
+                                crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
+                                    validStrikes.Contains(d)
+                                        ? Usability.Usable
+                                        : Usability.NotUsableOnThisCreature("Not in the line's area")));
+
+                            Creature? strikeCreature = await caster.Battle.AskToChooseACreature(
+                                caster,
+                                validStrikes,
+                                action.Illustration,
+                                "Choose an enemy to Strike with Pattern Flight.",
+                                cr =>
+                                    CombatActionExecution.BreakdownAttackForTooltip(strike, cr).TooltipDescription,
+                                "Revert");
+
+                            if (strikeCreature is null)
+                            {
+                                action.RevertRequested = true;
+                                return;
+                            }
+                            
+                            strike.WithEffectOnChosenTargets(async (strike2, caster2, strikeTargets) =>
+                            {
+                                if (strikeTargets.ChosenCreature is not { } target)
+                                    return;
+                                
+                                List<Creature> validTraces = lineTargets
+                                    .ChosenTiles
+                                    .TakeWhile(tile => !strikeCreature.Space.Tiles.Contains(tile))
+                                    .Select(tile => tile.PrimaryOccupant)
+                                    .Append(strikeCreature)
+                                    .WhereNotNull()
+                                    .ToList();
+
+                                if (await CommonRuneRules.ChooseACreatureToDrawOn(
+                                        strike.Owner,
+                                        null,
+                                        validTraces.Contains,
+                                        null,
+                                        item.WeaponProperties!.RangeIncrement,
+                                        overridePassButton: "Convert to a simple Strike")
+                                    is null or CancelOption or PassViaButtonOption)
+                                {
+                                    action.RevertRequested = true;
+                                    action.SpentActions = 1;
+                                    action.Traits.Remove(Trait.Flourish);
+                                    strike.Traits.Remove(Trait.Flourish);
+                                    caster.Battle.Log("Pattern Flight converted to a simple Strike.");
+                                    return;
+                                }
+                            });
+
+                            await caster.MakeStrike(strike, strikeCreature);
+                        });
+
+                    return patternFlight;
+                };
+            })
+            .WithInappropriateBecauseOfBadInventory(RequiresPhysicalProjectile);
         
         // Runic Tattoo
         yield return new TrueFeat(

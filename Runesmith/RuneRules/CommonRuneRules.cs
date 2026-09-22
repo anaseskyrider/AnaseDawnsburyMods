@@ -307,6 +307,7 @@ public static class CommonRuneRules
     /// <param name="overrideRange">If this rune should be traced at a specific range, this is that range.</param>
     /// <param name="overridePassButton">(Default: " Confirm no trace action ") If the text of the <see cref="PassViaButtonOption"/> should be different, this is that text.</param>
     /// <param name="canBeCanceled">Whether the attempt to draw the rune can be canceled.</param>
+    /// <param name="doNotImmediatelyExecute">Whether to immediately execute the chosen option, or wait.</param>
     /// <returns>The chosen Option. Use this to decide whether the action should be reverted or not.</returns>
     public static async Task<Option?> ChooseACreatureToDrawOn(
         Creature runesmith,
@@ -315,7 +316,8 @@ public static class CommonRuneRules
         Action<CombatAction>? adjustAction = null,
         int? overrideRange = null,
         string? overridePassButton = null,
-        bool? canBeCanceled = false)
+        bool? canBeCanceled = false,
+        bool? doNotImmediatelyExecute = false)
     {
         // Get available runes
         List<Rune>? knownRunes = RunicRepertoireTag
@@ -372,7 +374,8 @@ public static class CommonRuneRules
             .ChosenOption;
         
         // Execute chosen option
-        await chosenOption.Action();
+        if (doNotImmediatelyExecute != true)
+            await chosenOption.Action();
 
         return chosenOption;
     }
