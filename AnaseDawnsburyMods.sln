@@ -16,7 +16,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dawnsbury.Mods.MoreDedicati
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dawnsbury.Mods.MoreShields", "More Shields\Dawnsbury.Mods.MoreShields.csproj", "{D0215D0E-4D5E-4134-89D3-9BF5C87E96E6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dawnsbury.Mods.RunesmithPlaytest", "Runesmith\Dawnsbury.Mods.RunesmithPlaytest.csproj", "{964C41B1-D9E7-4A3E-8A36-1259214F3BBF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dawnsbury.Mods.RunesmithClass", "Runesmith\Dawnsbury.Mods.RunesmithClass.csproj", "{964C41B1-D9E7-4A3E-8A36-1259214F3BBF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dawnsbury.Mods.SlayerClass", "Slayer Class\Dawnsbury.Mods.SlayerClass.csproj", "{578E43E9-FF69-4B6B-A8AF-ED3027620858}"
 EndProject

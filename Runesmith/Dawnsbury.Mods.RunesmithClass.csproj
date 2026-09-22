@@ -4,7 +4,7 @@
     
     <PropertyGroup>
         <!--Modify This For Each Project-->
-        <ProjectName>Runesmith</ProjectName>
+        <ProjectName>RunesmithClass</ProjectName>
     
         <AssetsFolder>$(ProjectName)Assets</AssetsFolder>
     </PropertyGroup>
@@ -12,6 +12,9 @@
     <!-- Asset Folders -->
     <ItemGroup>
         <Assets Include="$(AssetsFolder)\**\*.*"/>
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\More Shields\Dawnsbury.Mods.MoreShields.csproj" />
     </ItemGroup>
     
     <Target Name="CopyToGameModsFolder" AfterTargets="Build">

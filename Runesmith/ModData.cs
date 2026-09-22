@@ -8,13 +8,14 @@ using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
+using Dawnsbury.Mods.RunesmithClass.RuneRules;
 using Microsoft.Xna.Framework;
 
-namespace Dawnsbury.Mods.RunesmithPlaytest;
+namespace Dawnsbury.Mods.RunesmithClass;
 
 public static class ModData
 {
-    public const string ID_PREPEND = "RunesmithPlaytest.";
+    public const string ID_PREPEND = "RunesmithClass.";
 
     public static Trait ModTrait;
     
@@ -55,7 +56,13 @@ public static class ModData
             UnrestrictedTrace = RegisterBooleanOption(
                 ID_PREPEND+"UnrestrictedTrace",
                 "Runesmith: Less Restrictive Rune Tracing",
-                "Enabling this option removes protections against \"bad decisions\" with tracing certain runes on certain targets.\n\nThe Runesmith is a class on the more advanced end of tactics and creativity. For example, you might want to trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy. Or you might trace Atryl on yourself as a 3rd action so that you can move it with Transpose Etching (just 1 action) on your next turn, because you're a ranged build.\n\nThis option is for those players.",
+                """
+                Enabling this option removes protections against "bad decisions" with tracing certain runes on certain targets.
+
+                The Runesmith is a class on the more advanced end of tactics and creativity. For example, you might want to trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy. Or you might trace Atryl on yourself as a 3rd action so that you can move it with Transpose Etching (just 1 action) on your next turn, because you're a ranged build.
+
+                This option is for those players.
+                """,
                 true);
         }
         
@@ -73,30 +80,16 @@ public static class ModData
             return technicalName;
         }
     }
-    
-    public static class CommonRequirements
-    {
-        /// <summary>Returns whether the Creature has a hand free for the purposes of tracing runes.</summary>
-        public static Usability IsRunesmithHandFree(Creature runesmith)
-        {
-            return runesmith.HasFreeHand
-                   || runesmith.HeldItems.Any(item => item.HasTrait(ModData.Traits.CountsAsRunesmithFreeHand))
-                   || runesmith.HasEffect(ModData.QEffectIds.RuneSinger)
-                ? Usability.Usable
-                : Usability.NotUsable("You must have a free hand to trace a rune");
-        }
-    }
         
     public static class FeatNames
     {
         #region Class
+        
         public static readonly FeatName RunesmithClass = ModManager.RegisterFeatName(ID_PREPEND+"RunesmithClass", "Runesmith");
+        
         #endregion
 
         #region Class Features
-        public static readonly FeatName RunesmithRepertoire = ModManager.RegisterFeatName(ID_PREPEND+"RunesmithRepertoire", "Runic Repertoire");
-        
-        public static readonly FeatName DedicationRepertoire = ModManager.RegisterFeatName(ID_PREPEND+"DedicationRepertoire", "Runic Repertoire");
 
         public static readonly FeatName TraceRune = ModManager.RegisterFeatName(ID_PREPEND+"TraceRune", "Trace Rune {icon:Action}–{icon:TwoActions}");
         
@@ -106,208 +99,529 @@ public static class ModData
         
         public static readonly FeatName RunicCrafter = ModManager.RegisterFeatName(ID_PREPEND+"RunicCrafter", "Runic Crafter");
         
+        public static readonly FeatName RunicOptimization = ModManager.RegisterFeatName(ID_PREPEND+"RunicOptimization", "Runic Optimization");
+        
         public static readonly FeatName AssuredRunicCrafter = ModManager.RegisterFeatName(ID_PREPEND+"AssuredRunicCrafter", "Assured Runic Crafter");
-        public static readonly string AssuredRunicCrafterChoice = ID_PREPEND+"AssuredRunicCrafterChoice";
+        
+        public static readonly FeatName GreaterRunicOptimization = ModManager.RegisterFeatName(ID_PREPEND+"GreaterRunicOptimization", "Greater Runic Optimization");
+        
         #endregion
 
         #region Class Feats
-        public static readonly FeatName BackupRunicEnhancement = ModManager.RegisterFeatName(ID_PREPEND+"FeatBackupRunicEnhancement", "Backup Runic Enhancement");
-        public static readonly FeatName EngravingStrike = ModManager.RegisterFeatName(ID_PREPEND+"FeatEngravingStrike", "Engraving Strike");
-        public static readonly FeatName RemoteDetonation = ModManager.RegisterFeatName(ID_PREPEND+"FeatRemoteDetonation", "Remote Detonation");
-        public static readonly FeatName RuneSinger = ModManager.RegisterFeatName(ID_PREPEND+"FeatRuneSinger", "Rune-Singer");
-        public static readonly FeatName FortifyingKnock = ModManager.RegisterFeatName(ID_PREPEND+"FeatFortifyingKnock", "Fortifying Knock");
-        public static readonly FeatName InvisibleInk = ModManager.RegisterFeatName(ID_PREPEND+"FeatInvisibleInk", "Invisible Ink");
-        public static readonly FeatName RunicTattoo = ModManager.RegisterFeatName(ID_PREPEND+"FeatRunicTattoo", "Runic Tattoo");
-        public static readonly FeatName SmithingWeaponsFamiliarity = ModManager.RegisterFeatName(ID_PREPEND+"FeatSmithingWeaponsFamiliarity", "Smithing Weapons Familiarity");
-        public static readonly FeatName ArtistsAttendance = ModManager.RegisterFeatName(ID_PREPEND+"FeatArtistsAttendance", "Artist's Attendance");
-        public static readonly FeatName GhostlyResonance = ModManager.RegisterFeatName(ID_PREPEND+"FeatGhostlyResonance", "Ghostly Resonance");
-        public static readonly FeatName TerrifyingInvocation = ModManager.RegisterFeatName(ID_PREPEND+"FeatTerrifyingInvocation", "Terrifying Invocation");
-        public static readonly FeatName TransposeEtching = ModManager.RegisterFeatName(ID_PREPEND+"FeatTransposeEtching", "Transpose Etching");
-        public static readonly FeatName RunicReprisal = ModManager.RegisterFeatName(ID_PREPEND+"FeatRunicReprisal", "Runic Reprisal");
-        public static readonly FeatName TracingTrance = ModManager.RegisterFeatName(ID_PREPEND+"FeatTracingTrance", "Tracing Trance");
-        public static readonly FeatName VitalCompositeInvocation = ModManager.RegisterFeatName(ID_PREPEND+"FeatVitalCompositeInvocation", "Vital Composite Invocation");
-        public static readonly FeatName WordsFlyFree = ModManager.RegisterFeatName(ID_PREPEND+"FeatWordsFlyFree", "Words, Fly Free");
-        public static readonly FeatName DrawnInRed = ModManager.RegisterFeatName(ID_PREPEND+"FeatDrawnInRed", "Drawn In Red");
-        public static readonly FeatName ElementalRevision = ModManager.RegisterFeatName(ID_PREPEND+"FeatElementalRevision", "Elemental Revision");
-        public static readonly FeatName ReadTheBones = ModManager.RegisterFeatName(ID_PREPEND+"FeatReadTheBones", "Read the Bones");
-        public static readonly FeatName EarlyAccess = ModManager.RegisterFeatName(ID_PREPEND+"EarlyAccess", "Early Access");
+
+        #region 1st-Level
+
+        public static readonly FeatName BackupRunicEnhancement = ModManager.RegisterFeatName(
+            "BackupRunicEnhancement",
+            "Backup Runic Enhancement");
+        
+        public static readonly FeatName EngravingStrike = ModManager.RegisterFeatName(
+            "EngravingStrike",
+            "Engraving Strike");
+        
+        public static readonly FeatName GlyphFamiliar = ModManager.RegisterFeatName(
+            "GlyphFamiliar",
+            "Glyph Familiar");
+        
+        public static readonly FeatName RemoteDetonation = ModManager.RegisterFeatName(
+            "RemoteDetonation",
+            "Remote Detonation");
+        
+        public static readonly FeatName RuneWard = ModManager.RegisterFeatName(
+            "RuneWard",
+            "Rune Ward");
+        
+        public static readonly FeatName RuneSinger = ModManager.RegisterFeatName(
+            "RuneSinger",
+            "Rune-Singer");
+        
+        public static readonly FeatName SeekTheHiddenGlyphs = ModManager.RegisterFeatName(
+            "SeekTheHiddenGlyphs",
+            "Seek the Hidden Glyphs");
+
+        public static readonly FeatName SmithingWeapons = ModManager.RegisterFeatName(
+            "SmithingWeapons",
+            "Smithing Weapons");
+
+        #endregion
+
+        #region 2nd-Level
+
+        public static readonly FeatName EnhancedGlyphFamiliar = ModManager.RegisterFeatName(
+            "EnhancedGlyphFamiliar",
+            "Enhanced Glyph Familiar");
+        
+        public static readonly FeatName FortifyingKnock = ModManager.RegisterFeatName(
+            "FortifyingKnock",
+            "Fortifying Knock");
+        
+        public static readonly FeatName InvisibleInk = ModManager.RegisterFeatName(
+            "InvisibleInk",
+            "Invisible Ink");
+        
+        public static readonly FeatName PatternFlight = ModManager.RegisterFeatName(
+            "PatternFlight",
+            "Pattern Flight");
+        
+        public static readonly FeatName RunicTattoo = ModManager.RegisterFeatName(
+            "RunicTattoo",
+            "Runic Tattoo");
+
+        #endregion
+
+        #region 4th-Level
+
+        public static readonly FeatName ArtistsAttendance = ModManager.RegisterFeatName(
+            "ArtistsAttendance",
+            "Artist's Attendance");
+        
+        public static readonly FeatName GhostlyResonance = ModManager.RegisterFeatName(
+            "GhostlyResonance",
+            "Ghostly Resonance");
+
+        public static readonly FeatName SongOfGloriousInvocation = ModManager.RegisterFeatName(
+            "SongOfGloriousInvocation",
+            "Song of Glorious Invocation");
+        
+        public static readonly FeatName TerrifyingInvocation = ModManager.RegisterFeatName(
+            "TerrifyingInvocation",
+            "Terrifying Invocation");
+        
+        public static readonly FeatName TransposeEtching = ModManager.RegisterFeatName(
+            "TransposeEtching",
+            "Transpose Etching");
+
+        public static readonly FeatName WritingOnTheWall = ModManager.RegisterFeatName(
+            "WritingOnTheWall",
+            "Writing on the Wall");
+
+        #endregion
+
+        #region 6th-Level
+
+        public static readonly FeatName DiacriticFluency = ModManager.RegisterFeatName(
+            "DiacriticFluency",
+            "Diacritic Fluency");
+        
+        public static readonly FeatName EngravingManeuver = ModManager.RegisterFeatName(
+            "EngravingManeuver",
+            "Engraving Maneuver");
+        
+        public static readonly FeatName RunicReprisal = ModManager.RegisterFeatName(
+            "RunicReprisal",
+            "Runic Reprisal");
+        
+        public static readonly FeatName TracingTrance = ModManager.RegisterFeatName(
+            "TracingTrance",
+            "Tracing Trance");
+        
+        public static readonly FeatName VitalCompoundInvocation = ModManager.RegisterFeatName(
+            "VitalCompoundInvocation",
+            "Vital Compound Invocation");
+        
+        public static readonly FeatName WordsFlyFree = ModManager.RegisterFeatName(
+            "WordsFlyFree",
+            "Words, Fly Free");
+
+        #endregion
+
+        #region 8th-Level
+
+        public static readonly FeatName DrawnInVitalInk = ModManager.RegisterFeatName(
+            "DrawnInVitalInk",
+            "Drawn in Vital Ink");
+        
+        public static readonly FeatName EdifyingTrace = ModManager.RegisterFeatName(
+            "EdifyingTrace",
+            "Edifying Trace");
+        
+        public static readonly FeatName ElementalRevision = ModManager.RegisterFeatName(
+            "ElementalRevision",
+            "Elemental Revision");
+        
+        /*public static readonly FeatName ReadTheBones = ModManager.RegisterFeatName(
+            "ReadTheBones",
+            "Read the Bones");*/
+        
+        /*public static readonly FeatName EarlyAccess = ModManager.RegisterFeatName(
+            "EarlyAccess",
+            "Early Access");*/
+        
+        public static readonly FeatName SwipingTrace = ModManager.RegisterFeatName(
+            "SwipingTrace",
+            "Swiping Trace");
+
+        #endregion
+        
+        #region 10th-Level
+        
+        public static readonly FeatName ChainOfWords = ModManager.RegisterFeatName(
+            "ChainOfWords",
+            "Chain of Words");
+        
+        public static readonly FeatName ClashingCompoundInvocation = ModManager.RegisterFeatName(
+            "ClashingCompoundInvocation",
+            "Clashing Compound Invocation");
+        
+        public static readonly FeatName OverloadedAmmunition = ModManager.RegisterFeatName(
+            "OverloadedAmmunition",
+            "Overloaded Ammunition");
+        
+        public static readonly FeatName ProdigalRuneSinger = ModManager.RegisterFeatName(
+            "ProdigalRuneSinger",
+            "Prodigal Rune-Singer");
+        
+        public static readonly FeatName RunicCorrespondence = ModManager.RegisterFeatName(
+            "RunicCorrespondence",
+            "Runic Correspondence");
+        
+        #endregion
+
+        #region 12th-Level
+
+        public static readonly FeatName AstralCompoundInvocation = ModManager.RegisterFeatName(
+            "AstralCompoundInvocation",
+            "Astral Compound Invocation");
+        
+        public static readonly FeatName DistantInvocation = ModManager.RegisterFeatName(
+            "DistantInvocation",
+            "Distant Invocation");
+        
+        public static readonly FeatName ExpandedGlossary = ModManager.RegisterFeatName(
+            "ExpandedGlossary",
+            "Expanded Glossary");
+        
+        public static readonly FeatName OrbitingRunestone = ModManager.RegisterFeatName(
+            "OrbitingRunestone",
+            "Orbiting Runestone");
+
+        #endregion
+
+        #region 14th-Level
+
+        public static readonly FeatName DanceOfBloodyInk = ModManager.RegisterFeatName(
+            "DanceOfBloodyInk",
+            "Dance of Bloody Ink");
+        
+        public static readonly FeatName DefineTheCanvas = ModManager.RegisterFeatName(
+            "DefineTheCanvas",
+            "Define the Canvas");
+        
+        public static readonly FeatName HengeGate = ModManager.RegisterFeatName(
+            "HengeGate",
+            "Henge Gate");
+        
+        public static readonly FeatName UnerringRunicAttraction = ModManager.RegisterFeatName(
+            "UnerringRunicAttraction",
+            "Unerring Runic Attraction");
+
+        #endregion
+
+        #region 16th-Level
+
+        public static readonly FeatName ByYourName = ModManager.RegisterFeatName(
+            "ByYourName",
+            "By Your Name");
+        
+        public static readonly FeatName MazeOfRunes = ModManager.RegisterFeatName(
+            "MazeOfRunes",
+            "Maze of Runes");
+        
+        public static readonly FeatName ReturnUntoRunes = ModManager.RegisterFeatName(
+            "ReturnUntoRunes",
+            "Return unto Runes");
+        
+        public static readonly FeatName Runesight = ModManager.RegisterFeatName(
+            "Runesight",
+            "Runesight");
+
+        #endregion
+
+        #region 18th-Level
+
+        public static readonly FeatName AnnihilatingCompoundInvocation = ModManager.RegisterFeatName(
+            "AnnihilatingCompoundInvocation",
+            "Annihilating Compound Invocation");
+        
+        public static readonly FeatName LivingLexicon = ModManager.RegisterFeatName(
+            "LivingLexicon",
+            "Living Lexicon");
+        
+        public static readonly FeatName UnboundedInvocations = ModManager.RegisterFeatName(
+            "UnboundedInvocations",
+            "Unbounded Invocations");
+
+        #endregion
+
+        #region 20th-Level
+
+        public static readonly FeatName ForgeNewWord = ModManager.RegisterFeatName(
+            "ForgeNewWord",
+            "Forge New Word");
+        
+        public static readonly FeatName GenerationalRuneSinger = ModManager.RegisterFeatName(
+            "GenerationalRuneSinger",
+            "Generational Rune-Singer");
+        
+        public static readonly FeatName ShadesOfMeaning = ModManager.RegisterFeatName(
+            "ShadesOfMeaning",
+            "Shades of Meaning");
+
+        public static readonly FeatName StoneForgeOfTheFirst = ModManager.RegisterFeatName(
+            "StoneForgeOfTheFirst",
+            "Stone Forge of the First");
+        
+        #endregion
+
+        #endregion
+
+        #region Multiclass
+
+        public static FeatName RunesmithDedication; // Value assigned later
+        public static FeatName BasicRunicMagic; // Value assigned later
+        public static FeatName AdvancedRunicMagic; // Value assigned later
+
+        public static readonly FeatName TracingStudies = ModManager.RegisterFeatName(
+            "TracingStudies",
+            "Tracing Studies");
+
+        public static readonly FeatName ExpandedRepertoire = ModManager.RegisterFeatName(
+            "ExpandedRepertoire",
+            "Expanded Repertoire");
+        
+        public static readonly FeatName RunicExpertise = ModManager.RegisterFeatName(
+            "RunicExpertise",
+            "Runic Expertise");
+        
+        public static readonly FeatName GreaterExpandedRepertoire = ModManager.RegisterFeatName(
+            "GreaterExpandedRepertoire",
+            "Greater Expanded Repertoire");
+
         #endregion
     }
 
     public static class FeatGroups
     {
         public static readonly FeatGroup Level1Rune = new FeatGroup("Level 1", 0);
-        public static readonly FeatGroup Level9Rune = new FeatGroup("Level 9", 1);
-        public static readonly FeatGroup Level17Rune = new FeatGroup("Level 17", 2);
+        public static readonly FeatGroup Level5Rune = new FeatGroup("Level 5", 1);
+        public static readonly FeatGroup Level9Rune = new FeatGroup("Level 9", 2);
+        public static readonly FeatGroup Level13Rune = new FeatGroup("Level 13", 3);
+        public static readonly FeatGroup Level17Rune = new FeatGroup("Level 17", 4);
     }
 
     public static class Illustrations
     {
-        public const string ModFolder = "RunesmithAssets/";
+        public const string MOD_FOLDER = "RunesmithClassAssets/";
         
         #region Class Features
-        public static readonly Illustration TraceRune = new ModdedIllustration(ModFolder+"trace rune.png");
-        public static readonly Illustration InvokeRune = new ModdedIllustration(ModFolder+"invoke rune.png");
-        public static readonly Illustration EtchRune = new ModdedIllustration(ModFolder+"handcraft.png");
+        
+        public static readonly Illustration TraceRune = new ModdedIllustration(MOD_FOLDER+"trace rune.png");
+        public static readonly Illustration InvokeRune = new ModdedIllustration(MOD_FOLDER+"invoke rune.png");
+        public static readonly Illustration EtchRune = new ModdedIllustration(MOD_FOLDER+"rune-stone.png");
+        //public static readonly Illustration AssuredRunicCrafter = new ModdedIllustration(MOD_FOLDER+"handcraft.png");
+        public static readonly Illustration AssuredRunicCrafter = new ModdedIllustration(MOD_FOLDER+"blacksmith.png");
+        
         #endregion
+        
         #region Feats
-        public static readonly Illustration TransposeEtching = new ModdedIllustration(ModFolder+"hand.png");
-        public static readonly Illustration DrawnInRed = new ModdedIllustration(ModFolder+"knife.png");
-        public static readonly Illustration RuneSinger = new ModdedIllustration(ModFolder+"musical-note.png");
+        
+        public static readonly Illustration TransposeEtching = new ModdedIllustration(MOD_FOLDER+"hand.png");
+        public static readonly Illustration DrawnInVitalInk = new ModdedIllustration(MOD_FOLDER+"knife.png");
+        public static readonly Illustration RuneSinger = new ModdedIllustration(MOD_FOLDER+"musical-note.png");
+        
         #endregion
+        
         #region Items
-        public static readonly Illustration ArtisansHammer = new ModdedIllustration(ModFolder+"blacksmith.png");
+        
+        public static readonly Illustration ArtisansHammer = new ModdedIllustration(MOD_FOLDER+"blacksmith.png");
+        
         #endregion
+        
         #region Misc
-        public static readonly Illustration NoSymbol = new ModdedIllustration(ModFolder+"no symbol.png");
-        public static readonly Illustration CheckSymbol = new ModdedIllustration(ModFolder+"check symbol.png");
-        public static readonly Illustration DdSun = new ModdedIllustration(ModFolder+"PatreonSunTransparent.png");
+        
+        public static readonly Illustration NoSymbol = new ModdedIllustration(MOD_FOLDER+"no symbol.png");
+        public static readonly Illustration CheckSymbol = new ModdedIllustration(MOD_FOLDER+"check symbol.png");
+        /// <summary>
+        /// Used to indicate an information tooltip such as documented changes from tabletop.
+        /// </summary>
+        public static readonly Illustration InfoSymbol = new ModdedIllustration(MOD_FOLDER+"information_(raised).png");
+        public static readonly Illustration DdSun = new ModdedIllustration(MOD_FOLDER+"PatreonSunTransparent.png");
+        
         #endregion
     }
 
     public static class PersistentActions
     {
-        public const string RunicTattoo = "RunicTattoo";
-        public const string ElementalRevision = "ElementalRevision";
-        public const string SunDiacritic = "SunDiacritic";
+        public const string RUNESINGER = "RuneSinger";
+        public const string RUNIC_TATTOO = "RunicTattoo";
+        public static string SUN_DIACRITIC = OncePerCombatRune(RuneId.Sun);
+
+        public static string OncePerCombatRune(RuneId runeId)
+        {
+            return $"InvokedRune:{runeId.ToWord()}";
+        }
+
+        public static bool RuneIsUsedUp(Creature runesmith, RuneId runeId)
+        {
+            return runesmith.PersistentUsedUpResources.UsedUpActions.Contains(OncePerCombatRune(runeId));
+        }
+
+        public static void UseUpRune(Creature runesmith, RuneId runeId)
+        {
+            runesmith.PersistentUsedUpResources.UsedUpActions.Add(OncePerCombatRune(runeId));
+        }
     }
     
     public static class PossibilityGroups
     {
-        public const string DrawingRunes = "Draw runes";
-        public const string InvokingRunes = "Invoke runes";
+        public const string DRAWING_RUNES = "Draw runes";
+        public const string INVOKING_RUNES = "Invoke runes";
     }
     
     public static class PossibilitySectionIds
     {
         public static PossibilitySectionId RuneSinger;
+        public static PossibilitySectionId FortifyingKnock;
+        public static PossibilitySectionId RunicReprisal;
         
         public static void Initialize()
         {
             RuneSinger = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("RuneSinger");
+            FortifyingKnock = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("FortifyingKnock");
+            RunicReprisal = ModManager.SafelyRegisterEnumMember<PossibilitySectionId>("RunicReprisal");
         }
     }
     
-    public static class QEffectIds // Technical names are often used directly for the readable name, write accordingly.
+    public static class QEffectIds
     {
+        /// <summary>
+        /// A creature with this effect is immune to the invocation of the <see cref="Rune"/> stored in its <see cref="QEffect.Tag"/>.
+        /// </summary>
+        public static QEffectId ImmuneToInvocation;
         public static QEffectId RunicCrafter;
         public static QEffectId RuneSinger;
         public static QEffectId RuneSingerCreator;
         /// The DrawnRune that is tattooed
         public static QEffectId TattooedRune;
-        public static QEffectId DrawnInRed;
+        public static QEffectId DrawnInVitalInk;
         public static  QEffectId JurrozDamageTracker;
         
         public static void Initialize()
         {
+            ImmuneToInvocation = ModManager.RegisterEnumMember<QEffectId>("ImmuneToInvocation");
             RunicCrafter = ModManager.RegisterEnumMember<QEffectId>("RunicCrafter");
             RuneSinger = ModManager.RegisterEnumMember<QEffectId>("Rune-Singer");
             RuneSingerCreator = ModManager.RegisterEnumMember<QEffectId>("RuneSingerCreator");
             TattooedRune = ModManager.RegisterEnumMember<QEffectId>("TattooedRune");
-            DrawnInRed = ModManager.RegisterEnumMember<QEffectId>("Drawn in Red");
+            DrawnInVitalInk = ModManager.RegisterEnumMember<QEffectId>("DrawnInVitalInk");
             JurrozDamageTracker = ModManager.RegisterEnumMember<QEffectId>("JurrozDamageTracker");
         }
     }
 
     public static class SfxNames
     {
-        public const SfxName TraceRune = SfxName.AncientDust; // TODO: Consider alternative SFX for Trace Rune.
+        // was AncientDust
+        public const SfxName TRACE_RUNE = SfxName.Cast4;
+        // was DazzlingFlash
+        public const SfxName INVOKE_RUNE = SfxName.AuraExpansion;
+        public const SfxName ETCH_RUNE = SfxName.AttachRune;
+        public const SfxName INVOKED_ATRYL = SfxName.FireRay;
+        public const SfxName INVOKED_ESVADIR = SfxName.RayOfFrost;
+        public const SfxName INVOKED_MARSSYL_SHOVE = SfxName.Shove;
+        public const SfxName INVOKED_OLJINEX = SfxName.Fear;
+        public const SfxName INVOKED_PLUUNA = SfxName.MinorAbjuration;
+        // SfxName(ElectricBlast == ShockingGrasp)???
+        public const SfxName PASSIVE_RANSHU = SfxName.ElectricBlast;
+        public const SfxName INVOKED_RANSHU = SfxName.ElectricArc;
+        // Was AuraExpansion
+        public const SfxName INVOKED_SUN = SfxName.DazzlingFlash;
+        public const SfxName INVOKED_ZOHK = SfxName.PhaseBolt;
+        public const SfxName INVOKED_FEIKRIS = SfxName.PhaseBolt;
+        public const SfxName INVOKED_ICHELSU = SfxName.MinorAbjuration;
+        public const SfxName INVOKED_JURROZ = SfxName.AirSpell;
+        public const SfxName INVOKED_KOJASTRI = SfxName.BoneSpray;
+        public const SfxName INVOKED_TROLISTRI = SfxName.Fear;
         // SfxName.AuraExpansion;
-        public const SfxName InvokeRune = SfxName.DazzlingFlash; // TODO: Consider alternative SFX for Invoke Rune.
-        public const SfxName EtchRune = SfxName.AttachRune; // Much more subtle than Trace Rune.
-        public const SfxName InvokedAtryl = SfxName.FireRay;
-        public const SfxName InvokedEsvadir = SfxName.RayOfFrost;
-        public const SfxName InvokedMarssylShove = SfxName.Shove;
-        public const SfxName InvokedOljinex = SfxName.Fear;
-        public const SfxName InvokedPluuna = SfxName.MinorAbjuration;
-        public const SfxName PassiveRanshu = SfxName.ElectricBlast; // SfxName(ElectricBlast == ShockingGrasp)???
-        public const SfxName InvokedRanshu = SfxName.ElectricArc;
-        public const SfxName InvokedSun = SfxName.AuraExpansion;
-        public const SfxName InvokedZohk = SfxName.PhaseBolt;
-        public const SfxName InvokedFeikris = SfxName.PhaseBolt;
-        public const SfxName InvokedIchelsu = SfxName.MinorAbjuration;
-        public const SfxName InvokedJurroz = SfxName.AirSpell;
-        public const SfxName InvokedKojastri = SfxName.BoneSpray;
-        public const SfxName InvokedTrolistri = SfxName.Fear;
-        public const SfxName ToggleRuneSinger = SfxName.OminousActivation; //SfxName.AuraExpansion;
-        public const SfxName SingRune = SfxName.Choir;
-        public const SfxName TransposeEtchingStart = SfxName.OminousActivation;
-        public const SfxName TransposeEtchingEnd = SfxName.GaleBlast;
-        public const SfxName WordsFlyFree = SfxName.AncientDust; // Could be linked to Trace Rune but doesn't have to be.
-        public const SfxName ElementalRevision = SfxName.ShieldSpell;
+        public const SfxName TOGGLE_RUNE_SINGER = SfxName.OminousActivation;
+        public const SfxName SING_RUNE = SfxName.Choir;
+        public const SfxName TRANSPOSE_ETCHING_START = SfxName.OminousActivation;
+        public const SfxName TRANSPOSE_ETCHING_END = SfxName.GaleBlast;
+        public const SfxName WORDS_FLY_FREE = SfxName.AncientDust; // Could be linked to Trace Rune but doesn't have to be.
+        public const SfxName ELEMENTAL_REVISION = SfxName.ShieldSpell;
     }
 
     public static class SubmenuIds
     {
         public static SubmenuId TraceRune;
+        public static SubmenuId FortifyingKnock;
         
         public static void Initialize()
         {
             TraceRune = ModManager.SafelyRegisterEnumMember<SubmenuId>("TraceRune");
+            FortifyingKnock = ModManager.SafelyRegisterEnumMember<SubmenuId>("FortifyingKnock");
         }
     }
     
     public static class Tooltips
     {
+        #region Traits
+
         public static readonly Func<string, string> TraitRune = RegisterTooltipInserter(
             ID_PREPEND+"Trait.Rune",
-            """
-            {b}Rune{/b}
-            {i}Trait{/i}
-            Various magical effects can be applied through runes, and they're affected by things which also affect spells. Runes can be applied via etching or tracing. Etched runes are applied outside of combat and last indefinitely, while traced runes last only until the end of your next turn. Their effects, however, are the same. Several abilities refer to creatures bearing one of your runes, known as rune-bearers: this is any creature who has one of your runes applied to its body or to any gear it is holding.
-            """);
+            $$"""
+              {b}Rune{/b}
+              {i}Trait{/i}
 
-        public static readonly Func<string, string> RuneTradition = RegisterTooltipInserter(
-            ID_PREPEND+"Misc.RuneTradition",
-            """
-            {b}Runesmith Rune Traditions{/b}
-            {i}Runesmith mechanic, deviation from tabletop{/i}
-            Some runes already have a tradition, such as {b}Atryl, Rune of Fire{/b} (a primal rune). For any rune that lacks a tradition, it qualifies as all traditions whose corresponding skills you're trained in for the purposes of runesmith features (you don't have to choose one tradition when you Trace the Rune).
-            {b}Arcane{/b} Arcana
-            {b}Divine{/b} Religion 
-            {b}Nature{/b} Nature
-            {b}Occult{/b} Occultism
-            """);
+              {{CommonRuneRules.TRAIT_DESCRIPTION_RUNE}}
+              """,
+            true);
         
         public static readonly Func<string, string> TraitInvocation = RegisterTooltipInserter(
             ID_PREPEND+"Trait.Invocation",
-            """
-            {b}Invocation{/b}
-            {i}Trait{/i}
-            An invocation action allows a runesmith to surge power through a rune by uttering its true name. Invocation requires you to be able to speak clearly in a strong voice and requires that you be within 30 feet of the target rune or runes unless another ability changes this. The target rune then fades away immediately after the action resolves.
-            """);
-        
-        public static readonly Func<string, string> FeatureRunicCrafter = RegisterTooltipInserter(
-            ID_PREPEND+"Features.RunicCrafter",
-            """
-            {b}Runic Crafter{/b}
-            {i}Level 2 Runesmith feature{/i}
-            Your equipment gains the effects of the highest level fundamental armor and weapon runes for your level.
-            """);
-        
-        public static readonly Func<string, string> FeatureRunicOptimization = RegisterTooltipInserter(
-            ID_PREPEND+"Features.RunicOptimization",
-            """
-            {b}Runic Optimization{/b}
-            {i}Level 7 Runesmith feature{/i}
-            You deal an additional 2 damage with weapons and unarmed attacks in which you have expert proficiency. This damage increases to 3 if you're a master, and 4 if you're legendary.
+            $$"""
+              {b}Invocation{/b}
+              {i}Trait{/i}
 
-            At level 15, you gain Greater Runic Optimization, which increases these bonuses by 2.
-            """);
+              {{CommonRuneRules.TRAIT_DESCRIPTION_INVOCATION}}
+              """,
+            true);
         
-        public static readonly Func<string, string> FeatureAssuredRunicCrafter = RegisterTooltipInserter(
-            ID_PREPEND+"Features.AssuredRunicCrafter",
+        public static readonly Func<string, string> TraitDiacritic = RegisterTooltipInserter(
+            ID_PREPEND+"Trait.Diacritic",
+            $$"""
+              {b}Diacritic{/b}
+              {i}Trait{/i}
+
+              {{CommonRuneRules.TRAIT_DESCRIPTION_DIACRITIC}}
+              """,
+            true);
+
+        #endregion
+
+        #region Rule Mechanics
+
+        public static readonly Func<string, string> RuleRuneTradition = RegisterTooltipInserter(
+            ID_PREPEND+"Misc.RuneTradition",
+            $$"""
+              {b}Runesmith Rune Traditions{/b}
+              {i}Deviation from tabletop{/i}
+
+              {{CommonRuneRules.TRAIT_DESCRIPTION_RUNE_TRADITION}}
+              """,
+            true);
+
+        #endregion
+
+        #region Features
+
+        public static readonly Func<string, string> FeatureForgedEndurance = RegisterTooltipInserter(
+            ID_PREPEND+"Features.ForgedEndurance",
             """
-            {b}Assured Runic Crafter{/b}
-            {i}Level 9 Runesmith feature{/i}
-            You can select one ally to gain the benefits of your Runic Crafter feature as a precombat preparation.
-            """);
-        
-        public static readonly Func<string, string> FeatureSmithsEndurance = RegisterTooltipInserter(
-            ID_PREPEND+"Features.SmithsEndurance",
-            """
-            {b}Smith's Endurance{/b}
+            {b}Forged Endurance{/b}
             {i}Level 11 Runesmith feature{/i}
+
+            {i}Your body is toughened by long days immersed in crafting, without break for food or drink.{/i}
+
             Your proficiency rank for Fortitude saves increases to master. When you roll a success on a Fortitude save, you get a critical success instead.
             """);
         
@@ -316,32 +630,90 @@ public static class ModData
             """
             {b}All-Around Vision{/b}
             {i}Monster ability{/i}
+
             This monster can see in all directions simultaneously and therefore can't be flanked.
             """);
 
-        public static Func<string, string> RegisterTooltipInserter(string tooltipName, string tooltipDescription)
+        #endregion
+
+        #region Info Tooltips
+
+        public static readonly string InfoEngravingStrikeTarget = RegisterInfoTooltip(
+            ID_PREPEND + "EngravingStrikeTarget",
+            """
+            {b}Engraving Strike {icon:Action}{/b}
+            {i}Rules clarification{/i}
+            
+            The target of the Strike is a creature. Runes which are drawn onto non-creature targets, such as {i}Esvadir{/i} which is drawn onto a weapon or unarmed attack, cannot be used with Engraving Strike.
+            """);
+
+        public static readonly string InfoRunicTattooRestrictions = RegisterInfoTooltip(
+            ID_PREPEND + "RunicTattooRestrictions",
+            """
+            {b}Runic Tattoo{/b}
+            {i}Runes clarification{/i}
+            
+            Runic Tattoo applies a rune to your body. This means you can't benefit from runes which are drawn onto items or attacks, limiting your options to runes that are drawn on creatures.
+            
+            Runes with exclusively harmful passive effects to only the rune-bearer are also excluded.
+            """);
+
+        public static readonly string InfoArtistsAttendanceSelfBearer = RegisterInfoTooltip(
+            ID_PREPEND + "ArtistsAttendanceSelfBearer",
+            """
+            {b}Artist's Attendance {icon:TwoActions}{/b}
+            {i}Rules interpretation{/i}
+            
+            If you are bearing one of your runes, then you also qualify as a creature who is bearing one of your runes within your reach, allowing you to Trace a Rune on yourself.
+            """);
+
+        public static readonly string InfoTransposeEtchingName = RegisterInfoTooltip(
+            ID_PREPEND + "TransposeEtchingName",
+            """
+            {b}Transpose Etching {icon:Action}{/b}
+            {i}Rules clarification{/i}
+
+            Despite the name "Etching", this can be used on traced runes as well.
+            """);
+
+        #endregion
+
+        public static Func<string, string> RegisterTooltipInserter(string tooltipName, string tooltipDescription, bool wide = false)
+        {
+            if (wide)
+                ModManager.RegisterWideInlineTooltip(tooltipName, tooltipDescription);
+            else
+                ModManager.RegisterInlineTooltip(tooltipName, tooltipDescription);
+            return input => "{tooltip:" + tooltipName + "}" + input + "{/}";
+        }
+
+        /// <summary>
+        /// Registers a tooltip as <see cref="RegisterTooltipInserter"/> for use with tooltip info icons.
+        /// </summary>
+        /// <param name="tooltipName">The registered name of the tooltip.</param>
+        /// <param name="tooltipDescription">The body text of the tooltip.</param>
+        /// <returns>The tooltip string tag, with a specific arbitrary string: the <see cref="ModData.Illustrations.InfoSymbol"/> illustration.</returns>
+        public static string RegisterInfoTooltip(string tooltipName, string tooltipDescription)
         {
             ModManager.RegisterInlineTooltip(tooltipName, tooltipDescription);
-            return input => "{tooltip:" + tooltipName + "}" + input + "{/}";
+            return "{tooltip:" + tooltipName + "}" + ModData.Illustrations.InfoSymbol.IllustrationAsIconString + "{/}";
         }
     }
     
     public static class Traits
     {
         #region Class
+        
         public static readonly Trait Runesmith = ModManager.RegisterTrait("Runesmith", 
             new TraitProperties("Runesmith", true) { IsClassTrait = true });
-        #endregion
-    
-        #region Features
-        public static readonly Trait RunicRepertoire = ModManager.RegisterTrait("Runic Repertoire",
-            new TraitProperties("Runic Repertoire", false));
+        
         #endregion
         
         #region Mechanics
+        
         public static readonly Trait Rune = ModManager.RegisterTrait("Rune",
             new TraitProperties("Rune", true,
-                "Various magical effects can be applied through runes, and they're affected by things which also affect spells. Runes can be applied via etching or tracing. Etched runes are applied outside of combat and last indefinitely, while traced runes last only until the end of your next turn. Their effects, however, are the same. Several abilities refer to creatures bearing one of your runes, known as rune-bearers: this is any creature who has one of your runes applied to its body or to any gear it is holding.",
+                CommonRuneRules.TRAIT_DESCRIPTION_RUNE,
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
         
         /// <summary>A <see cref="DrawnRune"/> with this trait represents a QEffect which has been temporarily traced.</summary>
@@ -367,96 +739,15 @@ public static class ModData
         /// <summary>An action with this trait represents an invocation action. A QEffect with this trait represents the effects of an invocation, as opposed to an effect that is the result of a rune being applied.</summary>
         public static readonly Trait Invocation = ModManager.RegisterTrait("Invocation",
             new TraitProperties("Invocation", true,
-                "An invocation action allows a runesmith to surge power through a rune by uttering its true name. Invocation requires you to be able to speak clearly in a strong voice and requires that you be within 30 feet of the target rune or runes unless another ability changes this. The target rune then fades away immediately after the action resolves.",
+                CommonRuneRules.TRAIT_DESCRIPTION_INVOCATION,
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
-        
-        // TODO: May have long-term issues. Potentially refactor InvocationBehavior signature and related functionality to use the "Creature target" parameter as an optional "invoke against this guy regardless who the rune-bearer is" functionality.
-        /// <summary>When a rune's invocation has an inaccessible subsidiary targeting action, such as Esvadir, then giving this trait to an invocation action will tell that subsidiary which creature to choose automatically.</summary>
-        public static readonly Trait InvokeAgainstGivenTarget = ModManager.RegisterTrait("InvokeAgainstGivenTarget",
-            new TraitProperties("InvokeAgainstGivenTarget", false)
-                { RelevantOnlyForClass = Runesmith });
-        
-        /// <summary>A technical <see cref="Trait"/> which is used for QEffects representing immunity to a specific rune, used in conjunction with a RuneId trait like <see cref="Atryl"/>.</summary>
-        public static readonly Trait InvocationImmunity = ModManager.RegisterTrait("InvocationImmunity",
-            new TraitProperties("InvocationImmunity", false) { RelevantOnlyForClass = Runesmith });
         
         /// <summary>A diacritic rune is a rune that is drawn onto other runes.</summary>
         public static readonly Trait Diacritic = ModManager.RegisterTrait("Diacritic",
             new TraitProperties("Diacritic", true,
-                "A diacritic is a special type of rune that is not applied directly to a creature or object, but rather to another rune itself, modifying or empowering that base rune. A diacritic can never be applied by itself, and any effect that would remove or invoke the base rune always also removes or invokes the diacritic rune. A rune can have only one diacritic.",
+                CommonRuneRules.TRAIT_DESCRIPTION_DIACRITIC,
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
         
-        /// <summary>An item with this trait doesn't count as occupying a hand for the purposes of tracing a rune.</summary>
-        public static readonly Trait CountsAsRunesmithFreeHand = ModManager.RegisterTrait("CountsAsRunesmithFreeHand",
-            new TraitProperties("CountsAsRunesmithFreeHand", false));
-        #endregion
-        
-        #region Items
-        public static readonly Trait ArtisansHammer = ModManager.RegisterTrait("ArtisansHammer",
-            new TraitProperties("Artisan's Hammer", false)
-            { ProficiencyName = "Artisan's Hammer", });
-        #endregion
-        
-        #region Rune Names
-        // Rune-specific traits. Every rune is granted a trait unique to its type of instance.
-        public static readonly Trait Atryl = ModManager.RegisterTrait("Atryl",
-            new TraitProperties("Atryl", false));
-        
-        public static readonly Trait Esvadir = ModManager.RegisterTrait("Esvadir",
-            new TraitProperties("Esvadir", false));
-        
-        public static readonly Trait Holtrik = ModManager.RegisterTrait("Holtrik",
-            new TraitProperties("Holtrik", false));
-        
-        public static readonly Trait Marssyl = ModManager.RegisterTrait("Marssyl",
-            new TraitProperties("Marssyl", false));
-        
-        public static readonly Trait Oljinex = ModManager.RegisterTrait("Oljinex",
-            new TraitProperties("Oljinex", false));
-        
-        public static readonly Trait Pluuna = ModManager.RegisterTrait("Pluuna",
-            new TraitProperties("Pluuna", false));
-        
-        public static readonly Trait Ranshu = ModManager.RegisterTrait("Ranshu",
-            new TraitProperties("Ranshu", false));
-        
-        public static readonly Trait SunDiacritic = ModManager.RegisterTrait("Sun-",
-            new TraitProperties("Sun-", false));
-        
-        public static readonly Trait UrDiacritic = ModManager.RegisterTrait("Ur-",
-            new TraitProperties("Ur-", false));
-        
-        public static readonly Trait Zohk = ModManager.RegisterTrait("Zohk",
-            new TraitProperties("Zohk", false));
-        
-        // Level 9 rune traits.
-        public static readonly Trait EnDiacritic = ModManager.RegisterTrait("En-",
-            new TraitProperties("En-", false));
-        
-        public static readonly Trait Feikris = ModManager.RegisterTrait("Feikris",
-            new TraitProperties("Feikris", false));
-        
-        public static readonly Trait Ichelsu = ModManager.RegisterTrait("Ichelsu",
-            new TraitProperties("Ichelsu", false));
-        
-        public static readonly Trait InthDiacritic = ModManager.RegisterTrait("Inth-",
-            new TraitProperties("Inth-", false));
-        
-        public static readonly Trait Jurroz = ModManager.RegisterTrait("Jurroz",
-            new TraitProperties("Jurroz", false));
-        
-        public static readonly Trait Kojastri = ModManager.RegisterTrait("Kojastri",
-            new TraitProperties("Kojastri", false));
-        
-        public static readonly Trait Trolistri = ModManager.RegisterTrait("Trolistri",
-            new TraitProperties("Trolistri", false));
-        
-        // Level 17 rune traits, for a future update.
-        public static readonly Trait Aiuen = ModManager.RegisterTrait("Aiuen",
-            new TraitProperties("Aiuen", false));
-        
-        public static readonly Trait Rovan = ModManager.RegisterTrait("Rovan",
-            new TraitProperties("Rovan", false));
         #endregion
     }
 }

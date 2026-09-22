@@ -172,93 +172,22 @@ public static class OldShields
         {
             targe.OnCreature += (_, self) =>
             {
-                self.AddQEffect(CommonShieldRules.BonusToShieldHardness((_, stuff, _, blocker) =>
+                if (self.Level < 15)
+                    return;
+                
+                self.AddQEffect(CommonShieldRules.BonusToShieldHardness((_, stuff, _, blocker, _) =>
                 {
                     if (!CommonShieldRules.DoesSparklingTargeShieldBlockApply(stuff.CombatAction, blocker))
                         return null;
                     return new Bonus(
                         // PETR: Bonus is adding the missing higher level +1 from tabletop
-                        blocker.Level >= 15 ? 1 : 0,
+                        1,
                         /*blocker.Level >= 15 ? 3 : blocker.Level >= 7 ? 2 : 1,*/
                         BonusType.Untyped,
                         "Sparkling targe");
                 }));
             };
         });
-        
-        // Reflexive Shield (More Dedications, Bastion Dedication, modded)
-        /*Feat? reflexiveShield = null;
-        AdjustFeatByName("Reflexive Shield", feat =>
-        {
-            reflexiveShield = feat;
-            feat.OnCreature = null;
-            feat.WithPermanentQEffect(
-                "Raise a Shield benefits your Reflex saves. If you have Shield Block, you can block any damage from a Reflex save.",
-                qfFeat =>
-                {
-                    // Apply best shield AC to Reflex saves.
-                    qfFeat.BonusToDefenses = (qfThis, _, def) =>
-                    {
-                        Creature defender = qfThis.Owner;
-                        
-                        if (def != Defense.Reflex
-                            || CommonShieldRules.GetRaisedShields(defender) is not { Count: > 0 } shields
-                            || shields.MaxBy(CommonShieldRules.GetAC) is not {} bestShield)
-                            return null;
-
-                        bool takingCover = defender.HasEffect(QEffectId.TakingCover)
-                            && shields.Any(shield => shield.HasTrait(ModData.Traits.CoverShield));
-
-                        // Use a higher bonus for the nearly-impossible circumstance you have a better AC from one shield but also have a lower-AC cover shield raised
-                        int acBonus = takingCover
-                            ? 4
-                            : CommonShieldRules.GetAC(bestShield) ?? 0;
-
-                        return new Bonus(acBonus, BonusType.Circumstance, "raised shield" + (takingCover ? " in cover" : null));
-                    };
-
-                    // Shield Block a Reflex save
-                    qfFeat.YouAreDealtDamageReaction = (qfThis, dEvent) =>
-                    {
-                        if (!CommonShieldRules.DoesReflexiveShieldApply(dEvent.CombatAction))
-                            return null;
-
-                        ReactionOptions options = [];
-                        foreach (Item shield in CommonShieldRules.GetRaisedShields(qfThis.Owner))
-                            options.Add(
-                                CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2(
-                                        dEvent,
-                                        dEvent.TargetCreature,
-                                        qfThis.Owner,
-                                        shield,
-                                        react =>
-                                            react.Caption = react.Caption.Replace("Shield Block", "Reflexive Shield"))
-                                    .First());
-
-                        return options;
-                    };
-                        
-                    // Shield Warden compatibility
-                    if (qfFeat.Owner.HasEffect(QEffectId.ShieldWarden))
-                    {
-                        qfFeat.AfterYouAcquireEffect = async (qfFeat2, qfNew) =>
-                        {
-                            // When you raise a shield,
-                            if (qfNew.Id is not QEffectId.RaisingAShield)
-                                return;
-                            // Add the technical effect.
-                            qfNew.AddGrantingOfTechnical(
-                                ally =>
-                                    ally.FriendOfAndNotSelf(qfFeat2.Owner) && ally.IsAdjacentTo(qfFeat2.Owner),
-                                qfAlly =>
-                                    qfAlly.YouAreDealtDamageReaction = (_, dEvent) => 
-                                        CommonShieldRules.DoesReflexiveShieldApply(dEvent.CombatAction)
-                                            ? CommonShieldRules.ShieldBlockYouAreDealtDamageReaction2(dEvent, dEvent.TargetCreature, qfFeat2.Owner, (Item)qfNew.Tag!)
-                                            : null);
-                        };
-                    }
-                });
-        });*/
 
         AdjustFeatByEnum(FeatName.EmergencyTarge, eTarge =>
         {
@@ -494,16 +423,17 @@ public static class OldShields
 
         // Emblazon Shield
         // The feat now adds a bonus to hardness that the game can broadly detect.
-        /*AdjustFeatByEnum(FeatName.EmblazonShield, emblazonShield =>
+        AdjustFeatByEnum(FeatName.EmblazonShield, emblazonShield =>
         {
             emblazonShield.WithOnCreature(self =>
             {
-                QEffect emblazonQf = CommonShieldRules.BonusToShieldHardness(1, "Emblazon shield")
+                QEffect emblazonQf = CommonShieldRules.BonusToShieldHardness(
+                        1, "Emblazon shield", BonusType.Status)
                     .WithName("Emblazon Shield");
                 emblazonQf.Description = "Your Shield Block with a physical shield prevents 1 more damage."; // Original description
                 self.AddQEffect(emblazonQf);
             });
-        });*/
+        });
 
         return;
 

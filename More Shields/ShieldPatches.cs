@@ -250,7 +250,8 @@ public static class ShieldPatches
                     damageEvent.Source,
                     damageEvent,
                     targetedCreature,
-                    blockingCreature);
+                    blockingCreature,
+                    shield);
                 string prevent = block.EffectSummary?
                     .Replace("Prevent ", "")
                     .Replace("{b}", "")

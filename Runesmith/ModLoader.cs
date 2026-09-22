@@ -1,14 +1,16 @@
-using Dawnsbury.Core.CharacterBuilder.Feats;
-using Dawnsbury.Core.CharacterBuilder.FeatsDb;
-using Dawnsbury.Display.Controls;
+global using CommonShieldRules = Dawnsbury.Mods.MoreShields.CommonShieldRules;
+
+using System.ComponentModel;
+using System.Reflection;
 using Dawnsbury.Display.Controls.Statblocks;
 using Dawnsbury.Modding;
+using Dawnsbury.Mods.RunesmithClass.RuneRules;
 
-namespace Dawnsbury.Mods.RunesmithPlaytest;
+namespace Dawnsbury.Mods.RunesmithClass;
 
 public static class ModLoader
 {
-    public static bool MoreShieldsIsLoaded { get; set; }
+    /*public static bool MoreShieldsIsLoaded { get; set; }*/
 
     [DawnsburyDaysModMainMethod]
     public static void LoadMod()
@@ -17,20 +19,25 @@ public static class ModLoader
         // Load Calls //
         ////////////////
         ModData.LoadData();
-        ModItems.LoadItems();
+        //ModItems.LoadItems(); // No need for Artisan's Hammer
         
-        RunesmithClass.LoadClass();
+        Runesmith.LoadClass();
         RunesmithArchetype.LoadArchetype();
         
-        RunesmithRunes.LoadRunes();
-        RunesmithFeats.LoadFeats();
+        AllRunes.LoadRunes();
+        ClassFeats.LoadFeats();
         
         ////////////////////////
         // Modify Stat Blocks //
         ////////////////////////
-        int abilitiesIndex = CreatureStatblock.CreatureStatblockSectionGenerators.FindIndex(gen => gen.Name == "Abilities");
-        CreatureStatblock.CreatureStatblockSectionGenerators.Insert(abilitiesIndex,
-            new CreatureStatblockSectionGenerator("Runic repertoire", CommonRuneRules.DescribeRunicRepertoire));
+        int abilitiesIndex = CreatureStatblock.CreatureStatblockSectionGenerators
+            .FindIndex(gen => gen.Name == "Abilities");
+        CreatureStatblock.CreatureStatblockSectionGenerators
+            .Insert(
+                abilitiesIndex,
+                new CreatureStatblockSectionGenerator(
+                    "Runic repertoire",
+                    RunicRepertoireTag.DescribeRunicRepertoire));
         
         ////////////////////////////
         // Inventory Rune Etching //
@@ -39,11 +46,8 @@ public static class ModLoader
         //InventoryContextMenu.Options.Add(CommonRuneRules.GetEtchRuneOptions());
 
         // Update class language
-        LoadOrder.AtEndOfLoadingSequence += () =>
+        /*LoadOrder.AtEndOfLoadingSequence += () =>
         {
-            Feat? runesmithClass = AllFeats.All.FirstOrDefault(ft => ft.FeatName == ModData.FeatNames.RunesmithClass);
-            runesmithClass!.RulesText = runesmithClass.RulesText.Replace("Ability boosts", "Attribute boosts");
-
             // Some colorful code I felt like messing with :)
             /*foreach (Feat ft in AllFeats.All)
             {
@@ -66,13 +70,41 @@ public static class ModLoader
                         .Replace("ancestry feat", "{Maroon}ancestry feat{/Maroon}")
                         .Replace(className, "{SandyBrown}"+className+"{/SandyBrown}");
                 }
-            }*/
+            }#1#
 
-            MoreShieldsIsLoaded = AppDomain.CurrentDomain
+            /*MoreShieldsIsLoaded = AppDomain.CurrentDomain
                 .GetAssemblies()
                 .Any(a =>
-                    a.GetName().Name?.Contains("MoreShields") ?? false);
-        };
+                    a.GetName().Name?.Contains("MoreShields") ?? false);#1#
+        };*/
+    }
+
+    extension(RuneId id)
+    {
+        /// <summary>
+        /// Gets the word, such as "Atryl", of this rune.
+        /// </summary>
+        public string ToWord() => id.ToStringOrTechnical();
+
+        /// <summary>
+        /// Gets the title, such as "Rune of Fire", of this rune.
+        /// </summary>
+        public string ToTitle()
+        {
+            Type type = id.GetType();
+            FieldInfo? fieldInfo = type.GetField(id.ToString());
+            if (fieldInfo == null)
+                return id.ToString();
+            DescriptionAttribute? attribute = Attribute.GetCustomAttribute(fieldInfo, typeof(DescriptionAttribute)) as DescriptionAttribute;
+            return attribute == null ? id.ToString() : attribute.Description;
+        }
+
+        public string ToFullName()
+        {
+            string word = id.ToWord();
+            string title = id.ToTitle();
+            return word + (title.Contains("Diacritic") ? "-" : null) + ", " + title;
+        }
     }
 }
 

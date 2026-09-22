@@ -93,7 +93,7 @@ public static class CommonShieldRules
     /// <param name="type">(Default: untyped) The bonus type.</param>
     public static QEffect BonusToShieldHardness(int bonus, string bonusSource, BonusType type = BonusType.Untyped)
     {
-        return BonusToShieldHardness((_,_,_,_) =>
+        return BonusToShieldHardness((_,_,_,_,_) =>
             new Bonus(bonus, type, bonusSource));
     }
 
@@ -101,7 +101,7 @@ public static class CommonShieldRules
     /// Adds an invisible QEffect which doesn't expire that adds a Bonus to hardness to Shield Block reaction events.
     /// </summary>
     /// <param name="shouldApply">A lambda function which takes in the ATTACKER, the DAMAGESTUFF, the TARGET of the damage, and the one BLOCKING it. It returns the bonus to apply to the shield block event.</param>
-    public static QEffect BonusToShieldHardness(Func<Creature,DamageEvent,Creature,Creature,Bonus?> shouldApply)
+    public static QEffect BonusToShieldHardness(Func<Creature,DamageEvent,Creature,Creature,Item,Bonus?> shouldApply)
     {
         return new QEffect()
         {
@@ -117,18 +117,20 @@ public static class CommonShieldRules
     /// <param name="dEvent"></param>
     /// <param name="target"></param>
     /// <param name="blocker"></param>
+    /// <param name="shield"></param>
     /// <returns></returns>
     public static int GetShieldBlockHardnessBonuses(
         Creature attacker,
         DamageEvent dEvent,
         Creature target,
-        Creature blocker)
+        Creature blocker,
+        Item shield)
     {
         List<Bonus?> bonuses = [];
         foreach (QEffect qf in blocker.QEffects.Where(qf => qf.Id == ModData.QEffectIds.BonusToHardness))
         {
-            if (qf.Tag is Func<Creature, DamageEvent, Creature, Creature, Bonus?> bonusToHardness)
-                bonuses.Add(bonusToHardness.Invoke(attacker, dEvent, target, blocker));
+            if (qf.Tag is Func<Creature, DamageEvent, Creature, Creature, Item, Bonus?> bonusToHardness)
+                bonuses.Add(bonusToHardness.Invoke(attacker, dEvent, target, blocker, shield));
         }
 
         return Bonus.Sum(bonuses, false).BonusTotal;
@@ -239,7 +241,7 @@ public static class CommonShieldRules
             damageEvent.CombatAction,
             damageEvent.KindedDamages.First().DamageKind);
 
-        int hardness = shield.Hardness + CommonShieldRules.GetShieldBlockHardnessBonuses(damageEvent.Source, damageEvent, targetedCreature, blockingCreature);
+        int hardness = shield.Hardness + CommonShieldRules.GetShieldBlockHardnessBonuses(damageEvent.Source, damageEvent, targetedCreature, blockingCreature, shield);
         int preventHowMuch = Math.Min(hardness, damageStuff.Amount);
 
         CombatAction displayReaction = ShieldBlockAction(damageEvent, targetedCreature, blockingCreature, shield, hardness, preventHowMuch);
