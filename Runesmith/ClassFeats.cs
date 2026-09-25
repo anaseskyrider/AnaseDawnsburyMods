@@ -1401,8 +1401,6 @@ public static class ClassFeats
         
         #region 6th-Level
         
-        // TODO: Phase 2, level 6 class feats.
-        
         // Diacritic Fluency
         yield return new TrueFeat(
                 ModData.FeatNames.DiacriticFluency, 6,
@@ -1555,6 +1553,87 @@ public static class ClassFeats
                 "You must have at least 1 diacritic rune in your repertoire.");
         
         // Engraving Maneuver
+        yield return new TrueFeat(
+                ModData.FeatNames.EngravingManeuver, 6,
+                "After quickly drawing a rune on your weapon, you can transfer the rune to a foe as you knock them down, push them away, or disarm their weapon.",
+                $$"""
+                {b}Requirements{/b} You are wielding a melee weapon with the disarm, shove, or trip trait.
+
+                Attempt to Disarm, Shove, or Trip a target; your weapon must have the corresponding trait. If your skill check is successful, you {{ModData.FeatNames.TraceRune.ToLink("Trace a Rune")}} onto the target of the action even if the target is pushed out of range.
+                """,
+                [Trait.Flourish, Trait.Runesmith])
+            .WithActionCost(1)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " [flourish] Disarm/Shove/Trip with a weapon of that trait. On a success, Trace a Rune on the target.";
+
+                qfFeat.ProvideStrikeModifierAsPossibilities = (qfThis, item) =>
+                {
+                    Trait[] maneuvers = [Trait.Disarm, Trait.Shove, Trait.Trip];
+
+                    return maneuvers
+                        .Where(item.HasTrait)
+                        .Select(Maneuver)
+                        .Select(action => (ActionPossibility)action)
+                        .ToList();
+
+                    CombatAction Maneuver(Trait maneuver)
+                    {
+                        return (maneuver switch
+                            {
+                                Trait.Disarm => CombatManeuverPossibilities
+                                    .CreateDisarmAction(qfThis.Owner, item),
+                                Trait.Shove => CombatManeuverPossibilities
+                                    .CreateShoveAction(qfThis.Owner, item),
+                                Trait.Trip => CombatManeuverPossibilities
+                                    .CreateTripAction(qfThis.Owner, item),
+                                _ => throw new Exception("Trait for Engraving Maneuver must be Disarm, Shove, or Trip.")
+                            })
+                            .WithExtraTrait(0, ModData.ModTrait)
+                            .WithExtraTrait(Trait.Flourish)
+                            .With(ca =>
+                            {
+                                ca.Illustration = new TriplePortraitIllustration(
+                                    item.Illustration,
+                                    ((SideBySideIllustration)ca.Illustration).Left,
+                                    ModData.Illustrations.TraceRune);
+                                ca.WithFullRename($"Engraving Maneuver ({maneuver.ToStringOrTechnical()})");
+                                ca.Description +=
+                                    "\n\n{Blue}{b}Engraving Maneuver{/b} On a success, Trace a Rune onto the target of the action even if the target is pushed out of range.{/Blue}";
+                            })
+                            .WithEffectOnChosenTargets(async (action, self, targets) =>
+                            {
+                                if (targets.ChosenCreature is null)
+                                {
+                                    action.Traits.Remove(Trait.Flourish);
+                                    self.Battle.Log("Engraving Maneuver was converted to a simple action.");
+                                }
+
+                                if (action.CheckResult < CheckResult.Success)
+                                    return;
+                                
+                                if (await CommonRuneRules.TraceAnyRuneOnACreature(
+                                        self,
+                                        runeFilter: rune => rune.DrawProperties.IsDrawnOnlyOnCreatures,
+                                        targetFilter: cr => cr == targets.ChosenCreature,
+                                        overrideRange: 99,
+                                        overridePassButton: $"Convert to simple {maneuver.ToStringOrTechnical()}",
+                                        canBeCanceled: true)
+                                    is null or CancelOption or PassViaButtonOption)
+                                {
+                                    action.Traits.Remove(Trait.Flourish);
+                                    self.Battle.Log("Engraving Maneuver was converted to a simple action.");
+                                }
+                            });
+                    }
+                };
+            })
+            .WithInappropriateBecauseOfBadInventory((values, inventory) =>
+                FeatInventoryRequirements.RequiresOne(
+                    inventory,
+                    item => item.Traits.ContainsOneOf([Trait.Disarm, Trait.Shove, Trait.Trip]),
+                    "a weapon with the disarm, shove, or trip trait"));
         
         // Runic Reprisal
         yield return new TrueFeat(
