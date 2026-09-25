@@ -14,6 +14,7 @@ using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
@@ -225,9 +226,7 @@ public static class Runesmith
                                 .CreateTraceAction(qfThis.Owner, rune, 1)
                                 .WithExtraTrait(Trait.Basic);
                             
-                            traceRuneOne.Description = CommonRuneRules.CreateTraceActionDescription(
-                                traceRuneOne,
-                                rune,
+                            traceRuneOne.Description = CommonRuneRules.CreateTraceActionDescription(rune, qfThis.Owner.Level,
                                 withFlavorText: false,
                                 withUsageText: false);
                             traceRuneOne.ShortName = traceRuneOne.Name; // Combat log asks for ShortName, then ContextMenuName, then Name. This prevents it from printing the action symbols more than once.
@@ -262,9 +261,7 @@ public static class Runesmith
                         traceRuneTwo.ShortName = traceRuneTwo.Name;
                         traceRuneTwo.ContextMenuName = $"{RulesBlock.GetIconTextFromNumberOfActions(traceRuneTwo.ActionCost)} {traceRuneTwo.Name}";
                         traceRuneTwo
-                            .WithDescription(CommonRuneRules.CreateTraceActionDescription(
-                                traceRuneTwo,
-                                rune,
+                            .WithDescription(CommonRuneRules.CreateTraceActionDescription(rune, qfThis.Owner.Level,
                                 withFlavorText: false,
                                 withUsageText: false))
                             .WithAdjustTarget<CreatureTarget>(crTar => crTar
@@ -286,7 +283,7 @@ public static class Runesmith
 
                         SubmenuPossibility specificRuneMenu = new SubmenuPossibility(
                             rune.Illustration,
-                            rune.Name,
+                            rune.FullName,
                             PossibilitySize.Half)
                         {
                             // variable action trace rune
@@ -294,7 +291,7 @@ public static class Runesmith
                             Subsections =
                             {
                                 // rune.Name is how features like Drawn In Vital Ink find these sections.
-                                new PossibilitySection(rune.Name)
+                                new PossibilitySection(rune.FullName)
                                 {
                                     Possibilities = specificRunePossibilities,
                                 }
@@ -452,7 +449,7 @@ public static class Runesmith
                                     .WithExtraTrait(Trait.DoNotShowOverheadOfActionName);
                                 ActionPossibility etchPoss = new ActionPossibility(etchThisRune)
                                 {
-                                    Caption = (etchThisRune.Tag as Rune)!.Name
+                                    Caption = (etchThisRune.Tag as RuneActionTag)?.Rune.FullName ?? "[ERROR]"
                                 };
                                 etchRunes.AddPossibility(etchPoss);
                             }
@@ -748,6 +745,21 @@ public static class Runesmith
             Innate = true,
             // Log of items that were affected, what change was made, and the += adjustment.
             Tag = new List<(Item Item, string Kind, int Difference)>(),
+            /*StartOfCombatAfterInitiativeOrderIsSetUp = async qfThis =>
+            {
+                List<Item> myItems = new List<Item?>([
+                        ..qfThis.Owner.AllItems,
+                        ..qfThis.Owner.Weapons,
+                        qfThis.Owner.BaseArmor,
+                    ])
+                    .WhereNotNull()
+                    .Concat(qfThis.Owner.PersistentCharacterSheet?.InventoryForView.AllItems ?? [])
+                    .Distinct()
+                    .ToList();
+                
+                foreach (Item item in myItems)
+                    ReapplyRunes(item);
+            },*/
             StateCheck = qfThis =>
             {
                 if (qfThis.Tag is not List<(Item Item, string Kind, int Difference)> changes)
@@ -773,10 +785,10 @@ public static class Runesmith
                     }
                     
                     // And here's where I'd put my reinforcing logic, IF I HAD ONE!
-                    if (item.HasTrait(Trait.Shield) && item.Hardness > 0)
+                    /*if (item.HasTrait(Trait.Shield) && item.Hardness > 0)
                     {
                         
-                    }
+                    }*/
 
                     if (item.WeaponProperties is not null)
                     {
@@ -792,17 +804,14 @@ public static class Runesmith
                     .ToList();
 
                 foreach ((Item Item, string Kind, int Difference) change in lostChanges)
-                {
                     RemoveChange(qfThis, change);
-                }
+                
+                /*foreach (Item item in lostChanges
+                             .Select(tup => tup.Item)
+                             .Distinct()
+                             .ToList())
+                    ReapplyRunes(item);*/
             },
-            // TODO: Sheet inventory editing, not just encounters. Increase item bonuses in order to allow property runes.
-            /*WhenYouAcquireThis = qfThis =>
-            {
-                if (qfThis.Owner.PersistentCharacterSheet is not {} sheet)
-                    return;
-                sheet.Inven
-            },*/
         };
         
         int GetAttackBonus(int level)
@@ -845,7 +854,7 @@ public static class Runesmith
                 _ => 0
             };
         }
-        (int Bonus, int Cap) GetReinforcing(int level)
+        /*(int Bonus, int Cap) GetReinforcing(int level)
         {
             return level switch
             {
@@ -857,7 +866,7 @@ public static class Runesmith
                 >= 4 => (3, 9),
                 _ => (0, 0)
             };
-        }
+        }*/
 
         int? GetValue(Item item, string kind)
         {
@@ -952,5 +961,12 @@ public static class Runesmith
             // Return the value to its original value
             SetValue(change.Item, change.Kind, current - change.Difference);
         }
+
+        /*void ReapplyRunes(Item item)
+        {
+            List<Item> runes = item.Runes.ToList();
+            foreach (Item rune in runes)
+                RunestoneRules.AddRuneTo(rune, item);
+        }*/
     }
 }

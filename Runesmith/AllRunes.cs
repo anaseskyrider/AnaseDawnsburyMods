@@ -39,9 +39,11 @@ public static class AllRunes
     public static List<Rune> All { get; } = [];
     public static List<Feat> AllRuneFeats { get; } = [];
 
+    public static bool DEBUG_MODE = false;
+
     public static void LoadRunes()
     {
-        foreach (Feat runeFeat in CreateRuneFeats())
+        foreach (Feat runeFeat in CreateRuneFeats().WhereNotNull())
         {
             All.Add((runeFeat.Tag as Rune)!);
             AllRuneFeats.Add(runeFeat);
@@ -49,7 +51,7 @@ public static class AllRunes
         }
     }
 
-    public static IEnumerable<Feat> CreateRuneFeats()
+    public static IEnumerable<Feat?> CreateRuneFeats()
     {
         /* TODO: Consider altering the way runes apply Item effects based on these Item fields to look into:
          * WithPermanentQEffectWhenWorn
@@ -63,10 +65,11 @@ public static class AllRunes
         
         // Atryl, Rune of Fire
         yield return new Rune(
-                RuneId.Atryl, 1,
-                IllustrationName.FlamingRunestone,
+                RuneId.Atryl,
                 "This rune is often placed on a stone in a hearth, its power ensuring the stone remains warm through the night.",
-                new RuneDrawProperties("drawn on a creature") /*or object*/
+                new RuneDrawProperties(
+                        "drawn on a creature", /*or object*/
+                        drawnOnCreature: true)
                     .WithEnemyRequirement(),
                 new RunePassiveProperties(
                         "The bearer's fire resistance, if any, is reduced by 5. Its immunities are unaffected.",
@@ -156,17 +159,117 @@ public static class AllRunes
                 "+2")
             .ToFeat();
         
-        // TODO: Baruiel, Rune of Hold's Bravery
+        // Baruiel, Rune of Hold's Bravery
+        yield return new Rune(
+                RuneId.Baruiel,
+                "This scratched rune reminds the bearer to stand strong against fear when near allies.",
+                new RuneDrawProperties(
+                        "drawn on a willing creature",
+                        drawnOnCreature: true)
+                    .WithAllyRequirement()
+                    .WithCreatureRequirement((a, d) =>
+                    {
+                        if (d.IsImmuneTo(Trait.Emotion))
+                            return Usability.NotUsableOnThisCreature("Immune to emotion");
+                        if (d.IsImmuneTo(Trait.Mental))
+                            return Usability.NotUsableOnThisCreature("Immune to mental");
+                        return Usability.Usable;
+                    }),
+                new RunePassiveProperties(
+                        "As long as the rune-bearer is within 10 feet of one of its allies, whenever it would reduce its {r}frightened{/r} condition by 1, it instead reduces it by 2",
+                        null)
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        return new DrawnRune(
+                            drawAction,
+                            rune,
+                            "While you're within 10 feet of one of your allies, reduce your frightened condition by 2 instead of 1 whenever you'd reduce its value.")
+                        {
+                            StateCheck = qfThis =>
+                            {
+                                if (qfThis.Owner.Battle.AllCreatures
+                                    .Any(cr =>
+                                        cr.FriendOfAndNotSelf(qfThis.Owner)
+                                        && cr.DistanceTo(qfThis.Owner) <= 2 ))
+                                    qfThis.Owner.AddQEffect(new QEffect(ExpirationCondition.Ephemeral)
+                                        { Id = QEffectId.CalmAndCentered });
+                            },
+                        };
+                    }),
+                new RuneInvocationProperties(
+                        "The essence of the rune is released outward, easing the minds of others. Each ally of the rune-bearer within a 10-foot emanation reduces their {r}frightened{/r} condition by 2.",
+                        null)
+                    .WithAffectsArea()
+                    .WithAdditionalRequirement((a, d) =>
+                        d.Battle.AllCreatures.Any(cr =>
+                            d.FriendOfAndNotSelf(cr)
+                            && cr.DistanceTo(d) <= 2
+                            && !cr.IsImmuneTo(Trait.Emotion)
+                            && !cr.IsImmuneTo(Trait.Mental)
+                            && cr.HasEffect(QEffectId.Frightened))
+                            ? Usability.Usable
+                            : Usability.NotUsableOnThisCreature("No cureable frightened allies within 10 feet"))
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        return await CommonRuneRules.ExecuteInnerInvokeAction(
+                            invokeAction,
+                            invokedRune,
+                            effectTarget,
+                            ((EmanationTarget)Target.AlliesOnlyEmanation(2))
+                            .WithIncludeOnlyIf((tar, cr) =>
+                                cr != tar.OwnerAction.Owner
+                                && !cr.IsImmuneTo(Trait.Emotion)
+                                && !cr.IsImmuneTo(Trait.Mental)
+                                && cr.HasEffect(QEffectId.Frightened)),
+                            false,
+                            ModData.SfxNames.INVOKED_BARUIEL,
+                            false,
+                            async (_, _, target, _) =>
+                            {
+                                /*Fighter.ReduceFrightenedValueOfFrightened(
+                                    target,
+                                    target.FindQEffect(QEffectId.Frightened));
+                                Fighter.ReduceFrightenedValueOfFrightened(
+                                    target,
+                                    target.FindQEffect(QEffectId.Frightened));*/
+                                // Do this manually, treating CalmAndCentered as
+                                // extra -1 value instead of -(2x).
+                                if (target.FindQEffect(QEffectId.Frightened) is not { } frightened)
+                                    return;
+                                int oldValue = frightened.Value;
+                                if (target.HasEffect(QEffectId.DirgeOfDoomFrightenedSustainer))
+                                {
+                                    frightened.Value = Math.Max(1, frightened.Value - 2);
+                                }
+                                else
+                                {
+                                    frightened.Value -= 2;
+                                    if (target.HasEffect(QEffectId.CalmAndCentered))
+                                        frightened.Value -= 3;
+                                }
+
+                                target.Battle.Log($"{target.Name}'s frightened value has been reduced from {oldValue} to {Math.Max(0, frightened.Value)}.");
+
+                                if (frightened.Value > 0)
+                                    return;
+                                
+                                frightened.ExpiresAt = ExpirationCondition.Immediately;
+                            }
+                        );
+                    }),
+                [Trait.Emotion, Trait.Mental])
+            .ToFeat();
         
         // TODO: Camonica, Rune of Perplexity
+        yield return DebugRune(RuneId.Camonica, "This rune of looping swirls is difficult to look straight at and stirs up a psychic cacophony in a foe's mind.");
 
         // Esvadir, Rune of Whetstones
         yield return new Rune(
-                RuneId.Esvadir, 1,
-                IllustrationName.WoundingRunestone,
+                RuneId.Esvadir,
                 "This cuspate rune, when placed on a blade, ensures it won't go dull.",
                 new RuneDrawProperties(
-                        "drawn on a weapon or unarmed attack that deals piercing or slashing damage")
+                        "drawn on a weapon or unarmed attack that deals piercing or slashing damage",
+                        drawnOnItem: true)
                     .WithAllyRequirement(hasEnemyUseCases: true)
                     .WithHoldsItemRequirement(
                         item =>
@@ -178,13 +281,19 @@ public static class AllRunes
                     // this targeting requirement, then this adds a requirement that
                     // there be another enemy adjacent to them to avoid accidents.
                     // This requirement is ignored if you know En to be able to increase the emanation.
-                    .WithAdditionalRequirement((a, d) =>
-                        d.EnemyOf(a)
-                        && (d.Neighbours.Creatures.Any(cr => cr.EnemyOf(a))
-                            || RunicRepertoireTag.GetRepertoire(a)?.IsKnown(RuneId.En, a.Level) == true)
-                            ? Usability.Usable
-                            : Usability.NotUsableOnThisCreature("No enemies in range of invocation")
-                    ),
+                    .WithCreatureRequirement((a, d) =>
+                    {
+                        if (d.EnemyOf(a))
+                        {
+                            if (d.Neighbours.Creatures.Any(cr => cr.EnemyOf(a))
+                                || RunicRepertoireTag.GetRepertoire(a)?.IsKnown(RuneId.En, a.Level) == true)
+                                return Usability.Usable;
+                            else
+                                return Usability.NotUsableOnThisCreature("No enemies in range of invocation");
+                        }
+                        else
+                            return Usability.Usable;
+                    }),
                 new RunePassiveProperties(
                         "Strikes with the weapon or unarmed attack deal an extra 2 persistent bleed damage per weapon damage die.",
                         null)
@@ -304,7 +413,9 @@ public static class AllRunes
                             {
                                 // Invokes from rune-bearer to adjacent target,
                                 // So the rune-bearer is the action owner.
-                                innerInvoke.Owner = invokedRune.Owner;
+                                //innerInvoke.Owner = invokedRune.Owner;
+                                innerInvoke.WithAdjustTarget<CreatureTarget>(crTar =>
+                                    crTar.AlternateTileOfOrigin = invokedRune.Owner.Space.CenterTile);
                                 
                                 // When invoking onto a specific target,
                                 // remove the extra animations.
@@ -322,10 +433,11 @@ public static class AllRunes
 
         // Holtrik, Rune of Dwarven Ramparts
         yield return new Rune(
-                RuneId.Holtrik, 1,
-                IllustrationName.ArmorPotencyRunestone,
+                RuneId.Holtrik,
                 "Similarity in the Dwarven words for “wall” and “shield” ensure that this angular rune, once used to shore up tunnels, can apply equally well in the heat of battle.",
-                new RuneDrawProperties("drawn on a shield")
+                new RuneDrawProperties(
+                        "drawn on a shield",
+                        drawnOnItem: true)
                     .WithAllyRequirement()
                     .WithHoldsItemRequirement(
                         item => item.HasTrait(Trait.Shield),
@@ -425,15 +537,109 @@ public static class AllRunes
             .ToFeat();
 
         // TODO: Ledria, Rune of Appeal
+        yield return DebugRune(RuneId.Ledria, "No matter what skin, shell, or scale this rune is drawn on, it shines like gold.");
         
-        // TODO: Lyskel, Rune of Frost
+        // Lyskel, Rune of Frost
+        yield return new Rune(
+                RuneId.Lyskel,
+                "This rune is often placed on chests and boxes to keep their contents from spoiling, even in the hottest of climates.",
+                new RuneDrawProperties(
+                        "drawn on a creature" /*or object*/,
+                        true)
+                    .WithEnemyRequirement(),
+                new RunePassiveProperties(
+                        "The rune-bearer takes a -5-foot circumstance penalty to its Speeds and becomes so cold that movement becomes dangerous; if the bearer takes a move action, it becomes {r}clumsy 1{/r} until the beginning of its next turn.",
+                        null)
+                    .WithIsDebuff()
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        return new DrawnRune(
+                            drawAction,
+                            rune,
+                            "You have a -5-foot circumstance penalty to your Speeds. If you take a move action, you become {r}clumsy 1{/r} until the beginning of your next turn.")
+                        {
+                            CountsAsADebuff = true,
+                            BonusToAllSpeeds = _ =>
+                                new Bonus(-1, BonusType.Circumstance, rune.Id.ToFullName()),
+                            //AfterYouMoveOneSquare = async (qfThis, action, style, before, after) =>
+                            YouBeginAction = async (qfThis, action) =>
+                            {
+                                if (!action.HasTrait(Trait.Move)
+                                    || (action.Target as TileTarget)?
+                                    .CreatePathfindingDescriptionFunction?
+                                    .Invoke(action.Owner).Style.ForcedMovement == true)
+                                    return;
+                                // Announce if it wasn't already present
+                                if (!qfThis.Owner.HasEffect(QEffectId.Clumsy))
+                                    qfThis.Owner.Battle.Log($"{{b}}Lyskel:{{/b}} {qfThis.Owner.Name} is {{r}}clumsy 1{{/r}} until the beginning of their next turn.");
+                                // But still let the game automate whether it's appropriate
+                                // to add this specific instance, even if this lasts longer.
+                                qfThis.Owner.AddQEffect(QEffect.Clumsy(1)
+                                    .WithExpirationAtStartOfOwnerTurn());
+                            },
+                        };
+                    }),
+                new RuneInvocationProperties(
+                        "The rune-bearer takes 1d4 cold damage, with a basic Fortitude save. All squares on the ground in the bearer's space and adjacent squares are covered in snow, becoming {r}difficult terrain{/r} for 1 round.",
+                        (rune, level) =>
+                        {
+                            (int baseValue, int _, int finalValue) = rune.CalculateHeightening(1, 2, 1, level);
+                            return
+                                $"The rune-bearer takes {S.HeightenedVariable(finalValue, baseValue)}d4 cold damage, with a basic Fortitude save. All squares on the ground in the bearer's space and adjacent squares are covered in snow, becoming {{r}}difficult terrain{{/r}} for 1 round.";
+                        })
+                    .WithDealsDamage()
+                    .WithDefense(Defense.Fortitude)
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        await CommonRuneRules.SaveAgainstInvocation(
+                            invokeAction, invokedRune, effectTarget,
+                            (rune, level) => (
+                                rune.CalculateHeightening(1, 2, 1, level).FinalValue + "d4",
+                                DamageKind.Cold),
+                            async result =>
+                            {
+                                Zone.SpawnStaticAndApply(
+                                    invokedRune.Source!,
+                                    // Space plus adjacent squares
+                                    effectTarget.Space.Tiles
+                                        .SelectMany(tile => tile.Neighbours.TilesPlusSelf)
+                                        .Distinct()
+                                        .ToList(),
+                                    zone =>
+                                    {
+                                        zone.ControllerQEffect.WithExpirationInOneRound(invokeAction.Owner);
+                                        zone.TileEffectCreator = tile =>
+                                            new TileQEffect(tile)
+                                            {
+                                                //Illustration = IllustrationName.NewSnow,
+                                                Illustration = new Illustration[]
+                                                {
+                                                    IllustrationName.SnowTile1,
+                                                    IllustrationName.SnowTile2,
+                                                    IllustrationName.SnowTile3,
+                                                    IllustrationName.SnowTile4
+                                                }.GetRandomVisualOnly(),
+                                                TransformsTileIntoDifficultTerrain = true
+                                            };
+                                    });
+                            });
+
+                        return effectTarget;
+                    })
+                    .WithSoundAfterInvocation(ModData.SfxNames.INVOKED_LYSKEL),
+                [Trait.Cold, Trait.Primal])
+            .WithLevelText(
+                "The damage of the invocation increases by 1d4.",
+                "+2")
+            .ToFeat();
         
         // Marssyl, Rune of Impact
         yield return new Rune(
-                RuneId.Marssyl, 1,
-                IllustrationName.ThunderingRunestone,
+                RuneId.Marssyl,
                 "This rune magnifies force many times over as it passes through the rune's concentric rings.",
-                new RuneDrawProperties("drawn on a weapon or unarmed attack that deals bludgeoning damage")
+                new RuneDrawProperties(
+                        "drawn on a weapon or unarmed attack that deals bludgeoning damage",
+                        drawnOnItem: true)
                     .WithAllyRequirement()
                     .WithHoldsItemRequirement(
                         item =>
@@ -498,7 +704,7 @@ public static class AllRunes
                                         // Determine weapon damage dice count
                                         DiceFormula splashAmount = DiceFormula.FromText(
                                             drawnItem.WeaponProperties!.DamageDieCount.ToString(),
-                                            $"Splash damage ({rune.Name})");
+                                            $"Splash damage ({rune.FullName})");
 
                                         // Get splash targets.
                                         // On a success, this is the adjacent creatures.
@@ -545,7 +751,7 @@ public static class AllRunes
                                 // Determine weapon damage dice count
                                 DiceFormula splashAmount = DiceFormula.FromText(
                                     drawnItem.WeaponProperties.DamageDieCount.ToString(),
-                                    $"Splash damage ({rune.Name})");
+                                    $"Splash damage ({rune.FullName})");
 
                                 return new KindedDamage(splashAmount, DamageKind.Bludgeoning)
                                 {
@@ -604,7 +810,7 @@ public static class AllRunes
                                         
                                         CheckResult pushResult = await CommonSpellEffects.RollSavingThrowAsync(
                                             target,
-                                            CombatAction.CreateSimple(action.Owner, $"Invoked {invokedRune.Rune.Name}"),
+                                            CombatAction.CreateSimple(action.Owner, $"Invoked {invokedRune.Rune.FullName}"),
                                             invokedRune.Rune.InvocationProperties.Defense!.Value,
                                             invokeAction.Owner.ClassDC(ModData.Traits.Runesmith));
                                         
@@ -627,10 +833,11 @@ public static class AllRunes
 
         // Oljinex, Rune of Cowards' Bane
         yield return new Rune(
-                RuneId.Oljinex, 1,
-                IllustrationName.FearsomeRunestone,
+                RuneId.Oljinex,
                 "This rune resembles a broken arrow.",
-                new RuneDrawProperties("drawn on a shield")
+                new RuneDrawProperties(
+                        "drawn on a shield",
+                        drawnOnItem: true)
                     .WithAllyRequirement(true)
                     .WithHoldsItemRequirement(
                         item => item.HasTrait(Trait.Shield),
@@ -685,7 +892,7 @@ public static class AllRunes
                                         && dEvent.CombatAction.Item
                                             .DetermineDamageKinds()
                                             .Any(dk => dk.IsPhysical())
-                                            ? new Bonus(bonusHardness, BonusType.Status, rune.Name)
+                                            ? new Bonus(bonusHardness, BonusType.Status, rune.FullName)
                                             : null)
                                     .WithExpirationEphemeral());
                             };
@@ -807,7 +1014,7 @@ public static class AllRunes
                                             {
                                                 int furthest = qfThis.Owner.Battle.AllCreatures
                                                     .Where(cr => cr.HasEffect(qf =>
-                                                        qf.Name == $"Invoked {invokedRune.Rune.Name}"
+                                                        qf.Name == $"Invoked {invokedRune.Rune.FullName}"
                                                         && qf.Source == invokeAction.Owner))
                                                     .MaxOrZeroInt(cr => cr.DistanceTo(qfThis.Owner));
 
@@ -839,10 +1046,11 @@ public static class AllRunes
 
         // Pluuna, Rune of Illumination
         yield return new Rune(
-                RuneId.Pluuna, 1,
-                IllustrationName.HolyRunestone,
+                RuneId.Pluuna,
                 "While many runes emit a faint glow, illumination is the focus of this simple rune.",
-                new RuneDrawProperties("drawn on a creature" /*or armor*/),
+                new RuneDrawProperties(
+                    "drawn on a creature" /*or armor*/,
+                    drawnOnCreature: true),
                 new RunePassiveProperties(
                         "The rune sheds revealing light in a 20-foot emanation. Creatures in the emanation take a –1 item penalty to Stealth checks, and the rune-bearer can't be undetected.",
                         null)
@@ -872,7 +1080,7 @@ public static class AllRunes
                                         {
                                             Key = "PluunasLight",
                                             BonusToSkills = skill => skill == Skill.Stealth
-                                                ? new Bonus(-1, BonusType.Item, rune.Name)
+                                                ? new Bonus(-1, BonusType.Item, rune.FullName)
                                                 : null
                                         }));
                             },
@@ -930,10 +1138,11 @@ public static class AllRunes
 
         // Ranshu, Rune of Thunder
         yield return new Rune(
-                RuneId.Ranshu, 1,
-                IllustrationName.ShockRunestone,
+                RuneId.Ranshu,
                 "This vertical rune is often carved on tall towers to draw lightning and shield the buildings below it.",
-                new RuneDrawProperties("drawn on a creature" /*or object*/)
+                new RuneDrawProperties(
+                        "drawn on a creature", /*or object*/
+                        drawnOnCreature: true)
                     .WithEnemyRequirement(),
                 new RunePassiveProperties(
                         "If the rune-bearer doesn't take a move action at least once on its turn, a small bolt of static finds it, dealing 3 electricity damage.",
@@ -985,6 +1194,7 @@ public static class AllRunes
                             return $"The preliminary streaks of lightning braid together into a powerful bolt. The rune-bearer takes {heightenedVar}d8 electricity damage with a basic Fortitude save.";
                         })
                     .WithDefense(Defense.Fortitude)
+                    .WithDealsDamage()
                     .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
                     {
                         int numDice = 1 + ((invokeAction.Owner.Level - invokedRune.Rune.BaseLevel) / 2);
@@ -1008,20 +1218,25 @@ public static class AllRunes
             .ToFeat();
 
         // TODO: Rehgog, Rune of Bestial Might
+        yield return DebugRune(RuneId.Rehgog, "The jagged edges of this rune evoke the claws and talons of mighty beasts.");
         
         // TODO: Sertum, Rune of Prepardness
+        yield return DebugRune(RuneId.Sertum, "The wavy lines of this rune evoke fields of reeds, the branches of trees blowing in the wind, or other natural phenomena.");
         
         // TODO: Thullax, Rune of Corrosion
+        yield return DebugRune(RuneId.Thullax, "The swooping lines of this rune seem to melt into each other as if their edges were hazy and indistinct, though the meaning is clear to you.");
         
         // TODO: Tilus, Rune of Vocabulary
+        yield return DebugRune(RuneId.Tilus, "Upon close inspection, this rune comprises hundreds of smaller characters of various runic languages.");
 
         // Zohk, Rune of Homecoming
         yield return new Rune(
-                RuneId.Zohk, 1,
-                IllustrationName.ReturningRunestone,
+                RuneId.Zohk,
                 "This circular mark allows travelers to always find their way home.",
-                new RuneDrawProperties("drawn on a creature")
-                    .WithAdditionalRequirement((a, _) =>
+                new RuneDrawProperties(
+                        "drawn on a creature",
+                        drawnOnCreature: true)
+                    .WithCreatureRequirement((a, _) =>
                         a.Neighbours.Tiles.Any(tile => tile.IsFree)
                             ? Usability.Usable
                             : Usability.NotUsable("No open adjacent spaces")),
@@ -1159,21 +1374,26 @@ public static class AllRunes
         #region 5th-Level
 
         // TODO: Av-, Diacritic Rune of Succession
+        yield return DebugRune(RuneId.Av, "This diacritic surrounds the base rune with similar-looking smaller runes to give the impression of distant echoes.",
+            rune =>
+            {
+                rune.PassiveProperties.PassiveText = "When the base rune is invoked, you can Invoke a single Rune on a different rune-bearer within 15 feet of the original rune-bearer as a {icon:FreeAction} free action.";
+                rune.WithIllustration(new CornerIllustration(
+                    IllustrationName.RunestoneWinged,
+                    ModData.Illustrations.InvokeRune,
+                    Direction.Southwest));
+            });
         
         // En-, Diacritic Rune of Expansion
         yield return new Rune(
-                RuneId.En, 5,
-                IllustrationName.RunestoneEnergyAdaptive, //IllustrationName.UnderwaterRunestone,
+                RuneId.En,
                 "This diacritic surrounds a rune with outward-facing arrows to magnify and direct power outward.",
-                new RuneDrawProperties("drawn on a rune that deals damage")
-                    .WithDiacriticTargetingRequirements(dr =>
-                    {
-                        if (!dr.Rune.InvocationProperties.DealsDamage)
-                            return "Base rune doesn't deal damage";
-                        if (dr.Rune.InvocationProperties.AffectsArea)
-                            return "Base rune already affects an area";
-                        return null;
-                    }),
+                new RuneDrawProperties(
+                        "drawn on a rune that deals damage",
+                        drawnOnRune: true)
+                    .WithDiacriticTargetingRequirements()
+                    .WithBaseRuneDealsDamage()
+                    .WithBaseRuneIsNotArea(),
                 new RunePassiveProperties(
                         "When the base rune is invoked, the rune-bearer is affected by it as usual, and each other creature in a 15-foot emanation around the rune-bearer also takes the damage and other effects from the base rune (and can attempt a saving throw if possible). An individual creature can be affected by the rune only once, even if the rune could normally affect more creatures than just the rune-bearer.",
                         null)
@@ -1259,17 +1479,36 @@ public static class AllRunes
             .ToFeat();
         
         // TODO: Fob-, Diacritic Rune of Doubling
+        yield return DebugRune(RuneId.Fob, "This diacritic consists of pairs of diamonds in opposite positions around the base rune.", 
+            rune =>
+            {
+                rune.PassiveProperties.PassiveText = "When the base rune is invoked, the rune-bearer is affected by it as usual, and you can choose to also be affected by the invocation if possible.";
+                rune.WithIllustration(new DoublePortraitIllustration(
+                    IllustrationName.RunestoneWinged,
+                    IllustrationName.RunestoneWinged));
+            });
         
         // TODO: Kit-, Diacritic Rune of Mercy
+        yield return DebugRune(RuneId.Kit, "This diacritic frames a rune with soft curves that mitigate its deadlier effects but make them harder to resist.");
         
         // TODO: Per-, Diacritic Rune of Continuum
+        yield return DebugRune(RuneId.Per, "This whirling diacritic recirculates the magic of the base rune onto another creature.", 
+            rune =>
+            {
+                rune.PassiveProperties.PassiveText = "After the base rune is invoked, it automatically traces itself on a different target of your choice within 15 feet of the original rune-bearer.";
+                rune.WithIllustration(new CornerIllustration(
+                    IllustrationName.RunestoneWinged,
+                    ModData.Illustrations.TraceRune,
+                    Direction.Southwest));
+            });
         
         // Sun-, Diacritic Rune of Preservation
         yield return new Rune(
-                RuneId.Sun, 5,
-                IllustrationName.RunestoneWinged, //IllustrationName.DisruptingRunestone,
+                RuneId.Sun,
                 "This spiraling diacritic channels the magic of a rune outwards, then back to the same location, allowing a rune to reconstitute itself.",
-                new RuneDrawProperties("drawn on a rune")
+                new RuneDrawProperties(
+                        "drawn on a rune",
+                        drawnOnRune: true)
                     .WithDiacriticTargetingRequirements()
                     .WithInvokeableOncePerCombatRequirement(RuneId.Sun),
                 new RunePassiveProperties(
@@ -1309,7 +1548,7 @@ public static class AllRunes
                                     drawAction,
                                     rune,
                                     (drThis, drOnto) =>
-                                        $"After {drOnto.Illustration!.IllustrationAsIconString} {drOnto.Name!.WithColor("Blue")} is invoked, it traces itself back upon the same target.\n",
+                                        $"After {drOnto.Illustration!.IllustrationAsIconString} {drOnto.Name!.WithColor("Blue")} is invoked, it traces itself back upon the same target.",
                                     drawnOnto)
                                 {
                                     AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
@@ -1355,7 +1594,8 @@ public static class AllRunes
                                                 //invokeAction.RevertRequested = true;
                                                 return;
                                             }
-                                            traceAction.Tag = newDrawnRune;
+
+                                            (traceAction.Tag as RuneActionTag)?.CreatedDrawnRune = newDrawnRune;
                                             ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune.Id);
                                         };
 
@@ -1371,20 +1611,17 @@ public static class AllRunes
             .ToFeat();
 
         // TODO: Ti-, Diacritic Rune of Fundaments
+        yield return DebugRune(RuneId.Ti, "This wavering diacritic encompasses the base rune to slightly change its meaning.");
         
         // Ur-, Diacritic Rune of Intensity
         yield return new Rune(
-                RuneId.Ur, 5,
-                IllustrationName.DemolishingRunestone,
+                RuneId.Ur,
                 "This diacritic accentuates the base rune with bolder lines to give greater weight to its effects.",
-                new RuneDrawProperties("drawn on a rune that deals damage")
-                    .WithDiacriticTargetingRequirements(dr =>
-                    {
-                        if (!dr.Rune.InvocationProperties.DealsDamage
-                            || dr.Rune.Id == RuneId.Marssyl)
-                            return "Base rune doesn't deal damage";
-                        return null;
-                    }),
+                new RuneDrawProperties(
+                        "drawn on a rune that deals damage",
+                        drawnOnRune: true)
+                    .WithDiacriticTargetingRequirements()
+                    .WithBaseRuneDealsDamage(true),
                 new RunePassiveProperties(
                         "When the base rune is invoked, its invocation gains a status bonus to damage equal to 2 plus half your level.",
                         null)
@@ -1428,7 +1665,7 @@ public static class AllRunes
                                     {
                                         // No expiration because it needs to exist longer for invocations such as Esvadir which have hidden subsidiaries going on
                                         // Is removed on its own when the rune is invoked, and it only applies to the same type, so it should be safe to manually expire that way in this callback structure.
-                                        //ExpiresAt = ExpirationCondition.EphemeralAtEndOfImmediateAction,
+                                        ExpiresAt = ExpirationCondition.ExpiresAtEndOfAnyTurn,
                                         BonusToDamage = (qfThis, action, defender) =>
                                         {
                                             if (drThis.Disabled)
@@ -1438,15 +1675,16 @@ public static class AllRunes
                                                 "Ur, Diacritic Rune of Intensity");
 
                                             // Apply to an invocation action's damage
-                                            if (action.HasTrait(ModData.Traits.Invocation)
-                                                && action.Tag is DrawnRune drInvokingDamage
+                                            if ((action.HasTrait(ModData.Traits.Invocation)
+                                                 || action.ActionId == ModData.ActionIds.InvokeRune)
+                                                && (action.Tag as RuneActionTag)?.ChosenDrawnRune is { } drInvokingDamage
                                                 && drInvokingDamage == drInvoked)
                                                 return urBonus;
                                             
                                             // Apply to a Strike being buffed by Marssyl
                                             if (action.HasTrait(Trait.Strike)
                                                 && qfThis.Owner.QEffects.Any(qf =>
-                                                    qf.Traits.Any(tt => tt == ModData.Traits.Invocation)
+                                                    qf.Traits.Contains(ModData.Traits.Invocation)
                                                     && (qf.Name?.ToLower().Contains("marssyl") ?? false)
                                                     && qf.Tag is Item marssylItem 
                                                     && marssylItem == action.Item))
@@ -1454,8 +1692,13 @@ public static class AllRunes
 
                                             return null;
                                         },
+                                        /*AfterYouTakeAction = async (qfThis, action) =>
+                                        {
+                                            if (action == invokeAction)
+                                                qfThis.ExpiresAt = ExpirationCondition.Immediately;
+                                        },*/
                                     };
-                                    drThis.Source!.AddQEffect(invokeBonus);
+                                    invokeAction.Owner.AddQEffect(invokeBonus);
                                 },
                             };
                         }
@@ -1469,15 +1712,18 @@ public static class AllRunes
         #region 9th-Level
         
         // TODO: Astillu, Rune of Submersion
+        yield return DebugRune(RuneId.Astillu, "Originating from ancient runic scripts, this wavy rune is popular with practitioners of rune magic who want to easily traverse their watery environs.");
         
         // TODO: Cruonign, Rune of Leeching
+        yield return DebugRune(RuneId.Cruonign, "The jagged shape of this rune resembles a vampire's fangs.");
         
         // Feikris, Rune of Gravity
         yield return new Rune(
-                RuneId.Feikris, 9,
-                IllustrationName.ResilientRunestone,
+                RuneId.Feikris,
                 "The lines of this rune overlap strangely, making it seem larger than it really is.",
-                new RuneDrawProperties("drawn on a creature wearing armor")
+                new RuneDrawProperties(
+                        "drawn on a creature wearing armor",
+                        drawnOnCreature: true)
                     .WithAllyRequirement(true)
                     .WithWearsArmorRequirement(),
                 new RunePassiveProperties(
@@ -1542,17 +1788,21 @@ public static class AllRunes
 
                     }),
                 [Trait.Arcane])
-            .WithLevelText("The status bonus increases to +3.", "17th")
+            .WithLevelText(
+                "The status bonus increases to +3.",
+                "17th")
             .ToFeat();
 
         // TODO: Germantria, Rune of Partnership
+        yield return DebugRune(RuneId.Germantria, "When drawn, this knobby rune pulses with your own heartbeat, creating a vital connection between you and the bearer.");
         
         // Ichelsu, Rune of Observation
         yield return new Rune(
-                RuneId.Ichelsu, 9,
-                IllustrationName.GhostTouchRunestone,
+                RuneId.Ichelsu,
                 "A ring of dotted circles, this rune allows a creature marked with it to see all.",
-                new RuneDrawProperties("drawn on a creature")
+                new RuneDrawProperties(
+                        "drawn on a creature",
+                        drawnOnCreature: true)
                     .WithAllyRequirement(true),
                 new RunePassiveProperties(
                         $"The target is affected by {SpellId.SeeInvisibility.ToLink("see the unseen", null, null)} and gains {ModData.Tooltips.MiscAllAroundVision("all-around vision")}.",
@@ -1633,10 +1883,11 @@ public static class AllRunes
 
         // Jurroz, Rune of Dragon Fury
         yield return new Rune(
-                RuneId.Jurroz, 9,
-                IllustrationName.CorrosiveRunestone,
+                RuneId.Jurroz,
                 "This craggy rune channels the fury of dragon kind.",
-                new RuneDrawProperties("drawn onto a creature")
+                new RuneDrawProperties(
+                        "drawn onto a creature",
+                        drawnOnCreature: true)
                     .WithAllyRequirement(),
                 new RunePassiveProperties(
                         /*or Steals from*/
@@ -1808,10 +2059,11 @@ public static class AllRunes
         
         // Kojastri, Rune of Insulation
         yield return new Rune(
-                RuneId.Kojastri, 9,
-                IllustrationName.FrostRunestone,
+                RuneId.Kojastri, //IllustrationName.FrostRunestone,
                 "This rune insulates from harmful energy of all kinds.",
-                new RuneDrawProperties("drawn a creature wearing armor") // drawn on armor
+                new RuneDrawProperties(
+                        "drawn a creature wearing armor",
+                        drawnOnCreature: true) // drawn on armor
                     .WithAllyRequirement()
                     .WithWearsArmorRequirement(),
                 new RunePassiveProperties(
@@ -1827,7 +2079,7 @@ public static class AllRunes
                         ChoiceButtonOption choice = await drawAction.Owner.AskForChoiceAmongButtons(
                             rune.Illustration,
                             $$"""
-                              {b}{{rune.Name}}{/b}
+                              {b}{{rune.FullName}}{/b}
                               Choose which damage type to insulate against.
                               """,
                             $"{{icon:RayOfFrost}} {"Cold".WithColor(DamageKind.Cold.DamageKindToColor())}",
@@ -1862,7 +2114,7 @@ public static class AllRunes
                             rune,
                             $"You have resistance {resist.FinalValue.WithColor("Blue")} to {chosenKind.ToStringOrTechnical().ToLower().WithColor(chosenKind.DamageKindToColor())} damage, and creatures take {thorns.FinalValue.WithColor("Blue")} {chosenKind.ToStringOrTechnical().ToLower().WithColor(chosenKind.DamageKindToColor())} damage when they touch you, damage you with an unarmed attack, or damage you with a non-reach melee weapon.")
                         {
-                            Name = $"{rune.Name} ({chosenKind.ToStringOrTechnical().ToLower()})",
+                            Name = $"{rune.FullName} ({chosenKind.ToStringOrTechnical().ToLower()})",
                             Tag = chosenKind,
                             CountsAsABuff = true,
                             StateCheck = qfThis =>
@@ -1909,7 +2161,7 @@ public static class AllRunes
                         {
                             await CommonSpellEffects.DealDirectDamage(
                                 CombatAction.CreateSimple(
-                                        drThis.Owner, rune.Name,
+                                        drThis.Owner, rune.FullName,
                                         [..drThis.Traits])
                                     .WithTag(drThis)
                                     .WithOrigin(new ActionOrigin
@@ -1919,7 +2171,7 @@ public static class AllRunes
                                     }),
                                 DiceFormula.FromText(
                                     thorns.FinalValue.ToString(),
-                                    rune.Name),
+                                    rune.FullName),
                                 enemy,
                                 CheckResult.Success,
                                 chosenKind);
@@ -2031,18 +2283,21 @@ public static class AllRunes
             .ToFeat();
         
         // TODO: Oraloq, Rune of Inarticulateness
+        yield return DebugRune(RuneId.Oraloq, "This hard-to-read rune makes language difficult for the unfortunate rune-bearer.");
         
         // TODO: Piteregrin, Rune of Transposition
+        yield return DebugRune(RuneId.Piteregrin, "The slanted lines and odd curls of this rune give the impression that it is trying to escape. ");
 
         // Trolistri, Rune of Forlorn Sorrow
         // Faction alignment is treated as "enemies to the runesmith", regardless of the rune-bearer's faction.
         // DOC: Changed to a 10-foot size, but always works.
         // BUG: The difficult terrain effect doesn't interact with immunity to emotion or mental effects. No known way to fix this at this time.
         yield return new Rune(
-                RuneId.Trolistri, 9,
-                IllustrationName.NightmareRunestone,
+                RuneId.Trolistri,
                 "This rune calls to mind the beauty hidden in sorrow. While this rune is beautiful, sorrow is best admired from a distance, discouraging approach.",
-                new RuneDrawProperties("drawn onto a creature")
+                new RuneDrawProperties(
+                        "drawn onto a creature",
+                        drawnOnCreature: true)
                     .WithAllyRequirement(true),
                 new RunePassiveProperties(
                         /*"Your enemies within 20 feet of the rune-bearer treat all spaces between them and the rune-bearer as {r}difficult terrain{/r}."*/
@@ -2121,16 +2376,20 @@ public static class AllRunes
             .ToFeat();
         
         // TODO: Ulgatus, Rune of Restraint
+        yield return DebugRune(RuneId.Ulgatus, "A faction of constructed beings developed this rune to avoid the weaknesses of flesh.");
         
         // TODO: Yudici, Rune of Remonstrance
+        yield return DebugRune(RuneId.Yudici, "This majestic rune grants the shield's wielder the conviction to aid their allies.");
 
         #endregion
 
-        #region 13th-Level (skipped for now)
+        #region 13th-Level
         
         // TODO: Eck-, Diacritic Rune of Phantasma
+        yield return DebugRune(RuneId.Eck, "This diacritic frames a base rune with almost invisible lines that turn the rune's effects against the bearer’s soul.");
         
-        // Inth-, Diacritic Rune of Corruption
+        // TODO: Inth-, Diacritic Rune of Corruption
+        yield return DebugRune(RuneId.Inth);
         // "the target takes 1d4 persistent fire damage" has some ambiguity between Esvadir's invocation and Pluuna's invocation.
         // DOC: Wording changed to specify that the rune-bearer takes the persistent damage.
         /*Rune runeInthDiacritic = new Rune(
@@ -2257,6 +2516,7 @@ public static class AllRunes
                                             {
                                                 // The action dealing damage was an invocation of a rune,
                                                 // and the rune invoked was the base rune of this diacritic;
+                                                // (Long term note: use RuneActionTag)
                                                 if (action?.Tag == drawnInth.DrawnOn)
                                                     return true;
                                                 
@@ -2306,20 +2566,30 @@ public static class AllRunes
         inthFeat.RulesText += "\n\n" + ModData.Illustrations.DdSun.IllustrationAsIconString + " {b}Compatibility{/b} For the purposes of being holy, creatures with weakness to evil damage are considered holy, and this diacritic's persistent damage uses the better of fire or evil damage.";*/
         
         // TODO: Nesh-, Diacritic Rune of Contingency
+        yield return DebugRune(RuneId.Nesh, "The wavy lines of this diacritic seem to stretch the base rune into a wider area.");
         
         // TODO: Sar-, Diacritic Rune of Righteousness
+        yield return DebugRune(RuneId.Sar, "Clean arcs of gold faintly glow on the base rune, evoking celestial order and serenity.");
 
         #endregion
 
         #region 17th-Level
 
         // Aiuen, the Elf-Gate Key
+        // This rune almost certainly needs either a new name and/or new description.
+        // "This masterful circular rune is a key to the aiudara network of elf gates that stretch across the stars."
         
         // Ochygholl, the Poisoned Star
+        // This rune almost certainly needs either a new name and/or new description.
+        // "This awe-inspiring rune of pointed curves is rumored to have been part of the magic that alghollthus used to call down the meteoroids of the Earthfall cataclysm."
         
         // Rovan, Seal of the Dead Vault
+        // This rune almost certainly needs either a new name and/or new description.
+        // "This mighty, jagged rune is just one of several that keeps the Destroyer sealed in his prison, deep in Golarion’s core."
         
         // Xinsala, the Well of Virtues
+        // This rune almost certainly needs either a new name and/or new description.
+        // "This complex rune comprises many different ligatures from the ancient Thassilonian runes representing the seven virtues of rule, before they were corrupted by the runelords."
 
         #endregion
     }
@@ -2417,6 +2687,17 @@ public static class AllRunes
         adjustFeat?.Invoke(runeFeat);
 
         return runeFeat;
+    }
+
+    public static Feat? DebugRune(RuneId id, string flavor = "NYI", Action<Rune>? adjustRune = null)
+    {
+        if (DEBUG_MODE)
+        {
+            Rune debugRune = new Rune(id, flavor, new RuneDrawProperties("NYI"), new RunePassiveProperties("NYI", null), new RuneInvocationProperties("NYI", null));
+            adjustRune?.Invoke(debugRune);
+            return debugRune.ToFeat();
+        }
+        return null;
     }
 
     public static HashSet<Creature>? JurrozWhoDamagedMe(Creature me)

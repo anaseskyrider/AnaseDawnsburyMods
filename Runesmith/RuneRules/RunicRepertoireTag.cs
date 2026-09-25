@@ -249,7 +249,7 @@ public class RunicRepertoireTag
         int etchLim = repertoire.GetEtchLimit(runesmith);
         string? tattoo = runesmith.PersistentCharacterSheet?.Calculated
             .GetTag<Rune>(ClassFeats.RUNIC_TATTOO_KEY)?
-            .BaseName.ToLower() ?? null;
+            .WordName.ToLower() ?? null;
         string runesKnown = string.Join("; ",
             repertoire.GetKnownRunes(runesmith)
                 .GroupBy(rune => rune.BaseLevel)
@@ -258,7 +258,7 @@ public class RunicRepertoireTag
                 {
                     string rank = "{b}" + rg.Key.Ordinalize2() + "{/b}";
                     string runes = string.Join(", ",
-                        rg.GroupBy(rn => rn.Name)
+                        rg.GroupBy(rn => rn.FullName)
                             .OrderBy(lg => lg.Key)
                             .Select(runes =>
                             {

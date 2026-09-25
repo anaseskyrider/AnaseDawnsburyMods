@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Dawnsbury.Auxiliary;
 using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
@@ -18,10 +19,10 @@ public class Rune
     public RuneId Id { get; }
     
     /// <summary> The original level of the Rune, before it increases with character level. This corresponds to the CHARACTER LEVEL required to learn the Rune.</summary>
-    public int BaseLevel  { get; }
+    public int BaseLevel { get; private set; }
     
     /// <summary>The Rune's icon.</summary>
-    public Illustration Illustration { get; }
+    public Illustration Illustration { get; private set; }
     
     /// <summary>
     /// Gets the traits associated with the rune. By default, all runes have at least the Rune, Runesmith, and Magical traits.
@@ -51,18 +52,28 @@ public class Rune
     #endregion
     
     #region String Properties
-    
-    /// <summary>
-    /// Gets or sets the full name of the rune.
-    /// </summary>
-    /// <example>"Atryl, Rune of Fire"</example>
-    public string Name { get; set; }
 
     /// <summary>
     /// Gets the base name of the rune.
     /// </summary>
     /// <example>"Atryl"</example>
-    public string BaseName => this.Id.ToWord();
+    public string WordName {
+        get;
+        set => field = value.Capitalize();
+    }
+    
+    /// <summary>
+    /// Gets the title name of the rune.
+    /// </summary>
+    /// <example>"Rune of Fire"</example>
+    public string TitleName { get; set; }
+    
+    /// <summary>
+    /// Gets the full name of the rune.
+    /// </summary>
+    /// <example>"Atryl, Rune of Fire"</example>
+    public string FullName =>
+        this.WordName + (string.IsNullOrEmpty(this.TitleName) ? null : (", " + this.TitleName));
 
     /// <summary>
     /// The unformatted flavor text of the rune.
@@ -102,13 +113,20 @@ public class Rune
     public string? LevelText { get; set; }
     
     /// <summary>
-    /// The numeric part of the formatted level-up text.
+    /// Gets or sets the numeric part of the formatted level-up text.
     /// </summary>
     /// <remarks>
-    /// Don't use any parentheses.
+    /// The set accessor removes "Level", " ", and "(" and ")".
     /// </remarks>
     /// <example>"+2" or "17th"</example>
-    public string? LevelFormat { get; set; }
+    public string? LevelFormat {
+        get;
+        set => field = value?
+            .Replace("Level", "")
+            .Replace(" ", "")
+            .Replace("(", "")
+            .Replace(")", "");
+    }
     
     /// <summary>
     /// Get the rune's <see cref="LevelText"/> with formatting.
@@ -139,11 +157,27 @@ public class Rune
     }
 
     /// <summary>
+    /// Replaces the generated illustration with a custom one.
+    /// </summary>
+    public Rune WithIllustration(Illustration illustration)
+    {
+        this.Illustration = illustration;
+        return this;
+    }
+
+    /// <summary>
     /// Replaces the generated name with a custom name.
     /// </summary>
-    public Rune WithName(string name)
+    public Rune WithName(string word, string title)
     {
-        this.Name = name;
+        this.WordName = word;
+        this.TitleName = title;
+        return this;
+    }
+
+    public Rune WithBaseLevel(int level)
+    {
+        this.BaseLevel = level;
         return this;
     }
     
@@ -165,11 +199,11 @@ public class Rune
         return this;
     }
 
-    public (int BaseValue, int BonusValue, int FinalValue) CalculateHeightening(int baseValue, int levelsPerIncrease, int increasePerLevel, int runesmithLevel)
+    public (int BaseValue, int BonusValue, int FinalValue) CalculateHeightening(int baseValue, int levelsPerIncrease, int amountPerIncrease, int runesmithLevel)
     {
         int levelDelta = Math.Max(runesmithLevel - this.BaseLevel, 0);
         int numIncreases = levelDelta / levelsPerIncrease;
-        int bonusValue = numIncreases * increasePerLevel;
+        int bonusValue = numIncreases * amountPerIncrease;
         return (
             baseValue,
             bonusValue,
@@ -183,9 +217,7 @@ public class Rune
     /// <summary>
     /// Initializes a new Rune object.
     /// </summary>
-    /// <param name="runeId">The unique identifier for this rune. This determines the rune's name (this can be changed later by writing to <see cref="Rune.Name"/> or calling <see cref="WithName"/>).</param>
-    /// <param name="icon">The illustration of the rune.</param>
-    /// <param name="baseLevel">The base level of the Rune, before increasing with character level.</param>
+    /// <param name="runeId">The unique identifier for this rune. This determines the rune's name (this can be changed later by writing to <see cref="FullName"/> or calling <see cref="WithName"/>).</param>
     /// <param name="flavorText">The flavor-text of the Rune.</param>
     /// <param name="drawProperties">This rune's draw properties.</param>
     /// <param name="passiveProperties">This rune's passive effect properties.</param>
@@ -193,18 +225,17 @@ public class Rune
     /// <param name="additionalTraits">(nullable) The list of additional traits associated with the Rune. By default, Runes have the Rune, Runesmith, and Magical traits. To overwrite these, write directly to the Traits field or call <see cref="WithOverrideTraits"/></param>
     public Rune(
         RuneId runeId,
-        int baseLevel,
-        Illustration icon,
         string flavorText,
         RuneDrawProperties drawProperties,
         RunePassiveProperties passiveProperties,
         RuneInvocationProperties invocationProperties,
         List<Trait>? additionalTraits = null)
     {
-        this.Name = runeId.ToFullName();
         this.Id = runeId;
-        this.Illustration = icon;
-        this.BaseLevel = baseLevel;
+        this.Illustration = runeId.ToIcon();
+        this.WordName = runeId.ToWord();
+        this.TitleName = runeId.ToTitle();
+        this.BaseLevel = runeId.ToLevel();
         this.FlavorText = flavorText;
         drawProperties.Self = this;
         this.DrawProperties = drawProperties;
@@ -214,6 +245,30 @@ public class Rune
         this.InvocationProperties = invocationProperties;
         if (additionalTraits != null)
             this.Traits = this.Traits.Concat(additionalTraits).ToList();
+    }
+
+    public Rune(
+        string wordName,
+        string title,
+        int baseLevel,
+        Illustration icon,
+        string flavorText,
+        RuneDrawProperties drawProperties,
+        RunePassiveProperties passiveProperties,
+        RuneInvocationProperties invocationProperties,
+        List<Trait>? additionalTraits = null)
+        : this(
+            RuneId.None,
+            flavorText,
+            drawProperties,
+            passiveProperties,
+            invocationProperties,
+            additionalTraits)
+    {
+        this.WordName = wordName;
+        this.TitleName = title;
+        this.Illustration = icon;
+        this.BaseLevel = baseLevel;
     }
     
     #endregion

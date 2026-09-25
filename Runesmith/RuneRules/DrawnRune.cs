@@ -104,7 +104,7 @@ public class DrawnRune : QEffect
         Rune rune,
         string description)
         : base(
-            rune.Name,
+            rune.FullName,
             description,
             ExpirationCondition.Ephemeral,
             drawAction.Owner,
@@ -548,7 +548,7 @@ public class DrawnRune : QEffect
     {
         QEffect invokedEffect = new QEffect()
         {
-            Name = $"Invoked {this.Rune.Name}",
+            Name = $"Invoked {this.Rune.FullName}",
             Description = description,
             Illustration = new SuperimposedIllustration(
                 this.Illustration ?? IllustrationName.None,

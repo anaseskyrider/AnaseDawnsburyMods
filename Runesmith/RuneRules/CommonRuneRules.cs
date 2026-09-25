@@ -2,6 +2,7 @@ using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.Animations;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines;
 using Dawnsbury.Core.Coroutines.Options;
@@ -9,12 +10,14 @@ using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
+using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.StatBlocks.Monsters.L10;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
 using Dawnsbury.Display.ContextMenu;
@@ -91,13 +94,13 @@ public static class CommonRuneRules
 
     #endregion
     
-    #region Formatted Descriptions
+    #region Action Information
 
     /// <summary>
     /// Generates a description block for this rune's Trace actions.
     /// </summary>
-    /// <param name="traceAction">The CombatAction to check against. Used for owner level.</param>
     /// <param name="rune">The rune being traced.</param>
+    /// <param name="smithLevel">The level of the runesmith tracing the rune.</param>
     /// <param name="withFlavorText">Whether to include flavor text in the description (typically false for dropdown options).</param>
     /// <param name="prologueText">The paragraph to add at the top of the description (includes one line-break after).</param>
     /// <param name="afterFlavorText">The text to add at the end of the flavor text paragraph.</param>
@@ -108,8 +111,8 @@ public static class CommonRuneRules
     /// <param name="epilogueText">The paragraph to add at the bottom of the description (includes one line-break before).</param>
     /// <returns></returns>
     public static string CreateTraceActionDescription(
-        CombatAction traceAction,
         Rune rune,
+        int smithLevel,
         bool withFlavorText = true,
         string? prologueText = null,
         string? afterFlavorText = null,
@@ -119,11 +122,10 @@ public static class CommonRuneRules
         string? afterInvocationText = null,
         string? epilogueText = null)
     {
-        int lvl = traceAction.Owner.Level;
         string usageText = (withUsageText ? rune.DrawProperties.UsageTextWithFormatting : null) + afterUsageText;
         string flavorText = (withFlavorText ? rune.GetFlavorText() : null) + afterFlavorText;
-        string passiveText = rune.PassiveProperties.PassiveTextWithHeightening(rune, lvl) + afterPassiveText;
-        string invocationText = rune.InvocationProperties.InvocationTextWithFormattedHeightening?.Invoke(rune, lvl) + afterInvocationText;
+        string passiveText = rune.PassiveProperties.PassiveTextWithHeightening(rune, smithLevel) + afterPassiveText;
+        string invocationText = rune.InvocationProperties.InvocationTextWithFormattedHeightening?.Invoke(rune, smithLevel) + afterInvocationText;
         //string? levelText = this.WithLevelTextFormatting(); // Should have heightening, so this shouldn't be necessary.
         return (!string.IsNullOrEmpty(prologueText) ? $"{prologueText}\n" : null)
                + (!string.IsNullOrEmpty(flavorText) ? $"{flavorText}\n\n": null)
@@ -150,10 +152,44 @@ public static class CommonRuneRules
             (rune.LevelText != null ? "\n\n" + rune.GetFormattedLevelText() : null);
         return description;
     }
+
+    /// <summary>
+    /// Adds a <see cref="RuneActionTag"/> to this CombatAction.
+    /// </summary>
+    /// <param name="action">The action gaining this information.</param>
+    /// <param name="rune">The inner Rune which is being drawn or invoked.</param>
+    /// <param name="createdRune">The DrawnRune instance created by this action, if any.</param>
+    /// <param name="chosenCreature">The Creature targeted by this rune-drawing CombatAction, if any.</param>
+    /// <param name="chosenRune">The DrawnRune targeted by this invocation or diacritic-drawing action, if any.</param>
+    /// <param name="chosenItem">The Item targeted by this invocation or </param>
+    public static CombatAction WithRuneTag(
+        this CombatAction action,
+        Rune rune,
+        DrawnRune? createdRune = null,
+        Creature? chosenCreature = null,
+        DrawnRune? chosenRune = null,
+        Item? chosenItem = null)
+    {
+        RuneActionTag tag = new RuneActionTag(rune, createdRune, chosenCreature, chosenRune, chosenItem)
+        {
+            Owner = action
+        };
+        return action.WithTag(tag);
+    }
     
     #endregion
 
     #region Drawing Runes
+
+    public static List<Item> GetCommonTargetableItems(Creature itemBearer)
+    {
+        // Armor is handled as a creature property requirement
+        // rather than an item target.
+        return itemBearer.HeldItems
+            .Union(itemBearer.CarriedItems.Where(item => item.IsWorn)) // This will handle certain worn items, such as Bucklers from MoreShields.
+            .Union(itemBearer.Weapons) // This will handle unarmed attacks.
+            .ToList();
+    }
     
     /// <summary>
     /// Creates a generic CombatAction that executes <see cref="DrawRuneOnTarget"/> on each target using this Rune.
@@ -169,65 +205,150 @@ public static class CommonRuneRules
         int actions = 0,
         int? range = 6)
     {
+        #region Determine Range
+
         // Determine range to target (logic maybe expanded later)
         int rangeToTarget = range ?? 6;
 
-        // Determine Target Properties
+        #endregion
+
+        #region Determine Target
+
         CreatureTarget adjacentTarget = Target.AdjacentCreatureOrSelf();
         CreatureTarget rangedTarget = Target.RangedCreature(rangeToTarget);
         DependsOnActionsSpentTarget varyTarget = Target.DependsOnActionsSpent(
             adjacentTarget,
             rangedTarget,
-            null! /*This shouldn't be possible, so this should ideally throw some kind of exception*/);
+            // This shouldn't be possible, so this should ideally throw some kind of exception
+            null!);
 
-        // Add extra usage requirements
-        foreach (Target tar in varyTarget.Targets)
+        // Add extra usage requirements.
+        // Don't add the requirement directly, as any changes to the requirement
+        // will affect the rune as a whole. Checking requirements specific to
+        // the rune should be done by inspecting the rune itself, not any of its
+        // actions.
+        foreach (CreatureTarget crTar in varyTarget.Targets.OfType<CreatureTarget>())
         {
-            if (tar is not CreatureTarget crTar)
-                continue;
-            // Don't add the requirement directly, as any changes to the
-            // requirement will affect the rune as a whole.
-            // Checking requirements specific to the rune should be done
-            // by inspecting the rune itself, not any of its actions.
-            foreach (CreatureTargetingRequirement req in rune.DrawProperties.ActionTargetingRequirements.ToList())
-                crTar.WithAdditionalConditionOnTargetCreature((a,d) =>
-                    req.Satisfied(a,d));
+            // Wrap a new requirement for each creature requirement
+            foreach (var crReq in rune.DrawProperties.CreatureTargetingRequirements)
+                crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
+                    crReq.Satisfied(a, d));
+
+            // Create a new requirement that requires any one item
+            // to meet all item requirements.
+            if (rune.DrawProperties.ItemTargetingRequirements.Count > 0)
+                crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
+                {
+                    List<Item> items = CommonRuneRules.GetCommonTargetableItems(d);
+                    List<Usability> usability = items
+                        .Select(item => rune.DrawProperties.IsLegalTarget(a, item))
+                        .ToList();
+
+                    return usability.Any(use => use.CanBeUsed)
+                        ? Usability.Usable
+                        : (usability.FirstOrDefault(use => !use.CanBeUsed) ?? Usability.NotUsableOnThisCreature("No valid item targets"));
+                });
+
+            // Create a new requirement that requires any one drawn rune
+            // to meet all drawn rune requirements.
+            if (rune.DrawProperties.RuneTargetingRequirements.Count > 0)
+                crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
+                {
+                    List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(null, d/*, true*/);
+                    List<Usability> usability = drawnRunes
+                        .Select(dr => rune.DrawProperties.IsLegalTarget(a, dr))
+                        .ToList();
+
+                    return usability.Any(use => use.CanBeUsed)
+                        ? Usability.Usable
+                        : (usability.FirstOrDefault(use => !use.CanBeUsed) ?? Usability.NotUsableOnThisCreature("No valid rune targets"));
+                });
         }
+            
+        Target drawTarget = actions switch
+        {
+            2 => rangedTarget,
+            1 => adjacentTarget,
+            -3 => varyTarget,
+            _ => Target.Self()
+        };
+
+        #endregion
         
         // Determine traits
         Trait[] traits = [
                 ModData.ModTrait,
                 ..rune.Traits,
-                Trait.Magical,
+                //Trait.Magical, // <- Gained from rune's traits
                 Trait.Spell, // <- Should apply magic immunity.
-                Trait.SomaticOnly, // <- Avoids swallow whole suffocation
+                Trait.CountsAsSpellForImmunities, // <- Should also help.
+                Trait.SomaticOnly, // <- Avoids swallow whole suffocation.
             ];
         
         // Create action
         CombatAction drawRuneAction = new CombatAction(
                 owner,
                 rune.Illustration,
-                "Draw " + rune.Name,
+                $"Draw {rune.FullName}",
                 traits,
                 "ERROR: INCOMPLETE DESCRIPTION",
-                actions switch
-                {
-                    2 => rangedTarget,
-                    1 => adjacentTarget,
-                    -3 => varyTarget,
-                    _ => Target.Self()
-                })
-            .WithTag(rune) // Type is Rune before execution, then DrawnRune after execution.
+                drawTarget)
+            .WithTag(rune) // TODO: Look at .Tag and replace with RuneActionTag instead
             .WithActionCost(actions)
             .WithSoundEffect(ModData.SfxNames.TRACE_RUNE)
-            .WithEffectOnEachTarget(async (thisAction, caster, target, result) =>
+            .WithRuneTag(rune) // Only contains Rune before execution, then DrawnRune after.
+            // Execute subtargeting routine, collect chosen targets
+            .WithPrologueEffectOnChosenTargetsBeforeRolls(async (drawAction, caster, chosenTargets) =>
             {
-                Rune actionRune = (thisAction.Tag as Rune)!;
-                if (await CommonRuneRules.DrawRuneOnTarget(thisAction, target, actionRune)
-                    is not { } newDrawnRune)
-                    thisAction.RevertRequested = true;
+                if (drawAction.Tag is not RuneActionTag tag
+                    // Let diacritics and item-runes handle their subtargeting if this is drawing on everything in the whole area
+                    || drawAction.Target is AreaTarget)
+                    return;
+                
+                // If the subtargets were already chosen before this action began, skip.
+                if (tag.ChosenDrawnRune is not null || tag.ChosenItem is not null)
+                    return;
+                
+                var drawProps = tag.Rune.DrawProperties;
+
+                // If this only targets a creature, then immediately move on.
+                // (This is a temporary implementation, which can be changed
+                // if the base Target of a draw action is ever anything other than
+                // a CreatureTarget)
+                if (drawProps.TargetsCreatures
+                    && !(drawProps.TargetsItems || drawProps.TargetsRunes))
+                {
+                    tag.ChosenCreature = chosenTargets.ChosenCreatures.LastOrDefault();
+                    return;
+                }
+                
+                var subTargets = await tag.Rune.DrawProperties.ChooseRuneSubtargets(
+                    caster,
+                    chosenTargets.ChosenCreatures);
+                
+                if (subTargets is null)
+                {
+                    drawAction.RevertRequested = true;
+                    return;
+                }
+
+                tag.ChosenItem = subTargets.Value.ChosenItem;
+                tag.ChosenDrawnRune = subTargets.Value.ChosenRune;
+            })
+            .WithEffectOnEachTarget(async (drawAction, caster, target, result) =>
+            {
+                if (drawAction.Tag is not RuneActionTag tag 
+                    || tag.IsEmpty
+                    || drawAction.RevertRequested)
+                    return;
+
+                if (await CommonRuneRules.DrawRuneOnTarget(
+                        drawAction, target, tag.Rune,
+                        (object?)tag.ChosenItem ?? tag.ChosenDrawnRune ?? null)
+                    is { } newDrawnRune)
+                    tag.CreatedDrawnRune = newDrawnRune;
                 else
-                    thisAction.Tag = newDrawnRune;
+                    drawAction.RevertRequested = true;
             });
         
         return drawRuneAction;
@@ -256,8 +377,35 @@ public static class CommonRuneRules
         // - or
         // - the rune's draw properties target requirements is legal for this target.
         if (!ignoreUsageRequirements
-            && !rune.DrawProperties.IsLegalTarget(drawAction.Owner, target)) 
-            return null;
+            && !rune.DrawProperties.IsLegalTarget(drawAction.Owner, target))
+        {
+            if (rune.DrawProperties.TargetsCreatures
+                && !rune.DrawProperties.IsLegalTarget(drawAction.Owner, target))
+                return null;
+            if (rune.DrawProperties.TargetsItems)
+            {
+                if (alternativeTarget is Item itemTarget)
+                {
+                    if (!rune.DrawProperties.IsLegalTarget(drawAction.Owner, itemTarget))
+                        return null;
+                }
+                else if (!CommonRuneRules.GetCommonTargetableItems(target).Any(item =>
+                             rune.DrawProperties.IsLegalTarget(drawAction.Owner, item)))
+                    return null;
+            }
+
+            if (rune.DrawProperties.TargetsRunes)
+            {
+                if (alternativeTarget is DrawnRune runeTarget)
+                {
+                    if (!rune.DrawProperties.IsLegalTarget(drawAction.Owner, runeTarget))
+                        return null;
+                }
+                else if (!DrawnRune.GetDrawnRunes(null, target).Any(dr =>
+                             rune.DrawProperties.IsLegalTarget(drawAction.Owner, dr)))
+                    return null;
+            }
+        }
 
         DrawnRune? newDrawnRune = null;
         if (rune.PassiveProperties.DrawnRuneCreator != null)
@@ -309,7 +457,7 @@ public static class CommonRuneRules
     /// <param name="canBeCanceled">Whether the attempt to draw the rune can be canceled.</param>
     /// <param name="doNotImmediatelyExecute">Whether to immediately execute the chosen option, or wait.</param>
     /// <returns>The chosen Option. Use this to decide whether the action should be reverted or not.</returns>
-    public static async Task<Option?> ChooseACreatureToDrawOn(
+    public static async Task<Option?> TraceAnyRuneOnACreature(
         Creature runesmith,
         Func<Rune, bool>? runeFilter = null,
         Func<Creature, bool>? targetFilter = null,
@@ -342,10 +490,8 @@ public static class CommonRuneRules
                     overrideRange == 1 ? 1 : 2,
                     overrideRange)
                 .WithActionCost(0);
-            traceThisRuneAction.Description = CommonRuneRules.CreateTraceActionDescription(
-                traceThisRuneAction,
-                rune,
-                withFlavorText:false);
+            traceThisRuneAction.Description = CommonRuneRules.CreateTraceActionDescription(rune, runesmith.Level,
+                withFlavorText: false);
             adjustAction?.Invoke(traceThisRuneAction);
             GameLoop.AddDirectUsageOnCreatureOptions(traceThisRuneAction, options);
         }
@@ -481,7 +627,7 @@ public static class CommonRuneRules
             
             List<string> choices = drawnRunes
                 .Select(dr =>
-                    $"{dr.Illustration!.IllustrationAsIconString}{dr.Rune.BaseName}")
+                    $"{dr.Illustration!.IllustrationAsIconString}{dr.Rune.WordName}")
                 .ToList();
 
             // Return nothing, no options
@@ -525,28 +671,47 @@ public static class CommonRuneRules
         Rune rune)
     {
         CombatAction etchAction = CommonRuneRules
-            .CreateDrawAction(owner, rune, 2)
+            .CreateDrawAction(
+                owner,
+                rune,
+                2,
+                // Usable across whole map
+                99)
+            .WithName($"Etch {rune.FullName}")
             .WithIllustration(new CornerIllustration(
                 rune.Illustration,
                 ModData.Illustrations.EtchRune,
                 Direction.Southeast))
-            .WithActionId(ModData.ActionIds.EtchRune)
             .WithActionCost(0)
             .WithExtraTrait(ModData.Traits.Etched)
-            .WithSoundEffect(ModData.SfxNames.ETCH_RUNE);
-        etchAction.Name = $"Etch {rune.Name}";
-        etchAction.Description = CommonRuneRules.CreateTraceActionDescription(etchAction, rune, false, prologueText:"{Blue}Etched: lasts until the end of combat.{/Blue}\n");
+            .WithSoundEffect(ModData.SfxNames.ETCH_RUNE)
+            .WithActionId(ModData.ActionIds.EtchRune);
+        etchAction.Description = CommonRuneRules.CreateTraceActionDescription(rune, owner.Level, false,
+            prologueText: "{Blue}Etched: lasts until the end of combat.{/Blue}\n");
         
         // Custom targeting; this "technically" happened "before" combat.
-        etchAction.Target = new CreatureTarget(
+        etchAction.WithAdjustTarget<CreatureTarget>(crTar =>
+        {
+            crTar.CreatureTargetingRequirements.RemoveAll(req =>
+                req is UnblockedLineOfEffectCreatureTargetingRequirement
+                    or NaturalReachCreatureTargetingRequirement
+                    or AdjacencyCreatureTargetingRequirement);
+            // Usable across whole map
+            /*crTar.CreatureTargetingRequirements
+                .Add(new MaximumRangeCreatureTargetingRequirement(99));*/
+            // You could only pre-etch on you or your allies
+            crTar.CreatureTargetingRequirements
+                .Add(new FriendOrSelfCreatureTargetingRequirement());
+        });
+        /*etchAction.Target = new CreatureTarget(
             RangeKind.Ranged,
             [
                 new MaximumRangeCreatureTargetingRequirement(99), // Usable across whole map
                 new FriendOrSelfCreatureTargetingRequirement(),
-                ..rune.DrawProperties.ActionTargetingRequirements, // Repeat rune usage requirements
+                ..rune.DrawProperties.CreatureTargetingRequirements, // Repeat rune usage requirements
                 // No line of effect requirement,
             ],
-            (_,_,_) => int.MinValue);
+            (_,_,_) => int.MinValue);*/
         
         return etchAction;
     }
@@ -614,7 +779,7 @@ public static class CommonRuneRules
                     ? 2
                     : actionVersion,
                 overrideRange)
-            .WithName($"Trace {rune.Name}")
+            .WithName($"Trace {rune.FullName}")
             // Revert the cost back, regardless of what version was made.
             .WithActionCost(actionVersion)
             .WithExtraTrait(Trait.Concentrate)
@@ -634,7 +799,7 @@ public static class CommonRuneRules
                 {
                     //1 => this.CreateTraceActionDescription(traceRune, withFlavorText:false),
                     //2 => this.CreateTraceActionDescription(traceRune, withFlavorText:false),
-                    _ => CommonRuneRules.CreateTraceActionDescription(traceRune, rune, withFlavorText:false)
+                    _ => CommonRuneRules.CreateTraceActionDescription(rune, owner.Level, withFlavorText: false)
                 };
             });
         
@@ -642,16 +807,16 @@ public static class CommonRuneRules
         switch (actionVersion)
         {
             case -3:
-                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(traceRune, rune, afterUsageText:$"\n\n{{icon:Action}} The range is touch.\n{{icon:TwoActions}} The range is {rangeToTarget*5} feet.");
+                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(rune, owner.Level, afterUsageText: $"\n\n{{icon:Action}} The range is touch.\n{{icon:TwoActions}} The range is {rangeToTarget*5} feet.");
                 break;
             case 1:
-                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(traceRune, rune, prologueText:"{b}Range{/b} touch\n");
+                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(rune, owner.Level, prologueText: "{b}Range{/b} touch\n");
                 break;
             case 2:
-                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(traceRune, rune, prologueText:$"{{b}}Range{{/b}} {rangeToTarget*5} feet\n");
+                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(rune, owner.Level, prologueText: $"{{b}}Range{{/b}} {rangeToTarget*5} feet\n");
                 break;
             default:
-                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(traceRune, rune, prologueText:"{b}Range{/b} self\n");
+                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(rune, owner.Level, prologueText: "{b}Range{/b} self\n");
                 break;
         }
 
@@ -754,13 +919,13 @@ public static class CommonRuneRules
                     qfToFind => qfToFind == drawnRune);
                 return foundQf != null
                     ? Usability.Usable
-                    : Usability.NotUsableOnThisCreature($"{rune.Name} not applied");
+                    : Usability.NotUsableOnThisCreature($"{rune.FullName} not applied");
             });
 
         CombatAction invokeThisRune = new CombatAction(
                 runesmith,
                 rune.Illustration,
-                "Invoke " + rune.Name,
+                "Invoke " + rune.FullName,
                 traits.ToArray(),
                 initialDescription
                 + (rune.InvocationProperties.HasInvocationEntry
@@ -769,7 +934,8 @@ public static class CommonRuneRules
                         runesmith.Level)
                     : null),
                 invokeTarget)
-            .WithTag(drawnRune)
+            //.WithTag(drawnRune)
+            .WithRuneTag(drawnRune.Rune, chosenRune: drawnRune)
             .WithActionId(ModData.ActionIds.InvokeRune)
             .WithActionCost(0)
             // Cone animation replaced with splashy target animation below.
@@ -783,10 +949,10 @@ public static class CommonRuneRules
                         runeTarget.Rune.Illustration.IllustrationAsIconString + " {b}"+runeTarget.Rune.BaseName+"!{/b}",
                         null);*/
                 string word =
-                    $"{drawnRune.Rune.Illustration.IllustrationAsIconString}{{b}}{drawnRune.Rune.BaseName}!{{/b}}";
+                    $"{drawnRune.Rune.Illustration.IllustrationAsIconString}{{b}}{drawnRune.Rune.WordName}!{{/b}}";
                 if (drawnRune.AttachedDiacritic is not null)
                     word =
-                        $"{drawnRune.AttachedDiacritic.Rune.Illustration.IllustrationAsIconString}{{b}}{drawnRune.AttachedDiacritic.Rune.BaseName}-{{/b}}{word}";
+                        $"{drawnRune.AttachedDiacritic.Rune.Illustration.IllustrationAsIconString}{{b}}{drawnRune.AttachedDiacritic.Rune.WordName}-{{/b}}{word}";
                 caster.Overhead(word, Color.MediumPurple);
 
                 if (targets.ChosenCreature is null)
@@ -1082,6 +1248,39 @@ public static class CommonRuneRules
         return removals > 0;
     }
 
+    public static async Task<CheckResult> SaveAgainstInvocation(
+        CombatAction invokeAction,
+        DrawnRune invokedRune,
+        Creature effectTarget,
+        Func<Rune,int,(string diceExpression, DamageKind Kind)>? getKindedDamage = null,
+        Func<CheckResult, Task>? onResult = null)
+    {
+        if (invokedRune.Rune.InvocationProperties.Defense is null)
+            throw new NullReferenceException($"Saving throw for invocation of {invokedRune.Rune.Id.ToWord()} was attempted, but no saving throw defense was found. Use InvocationProperties.WithDefense(Defense) to set a defense for this rune's invocations.");
+        
+        CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(
+            effectTarget,
+            invokeAction,
+            invokedRune.Rune.InvocationProperties.Defense.Value,
+            invokeAction.Owner.ClassDC(ModData.Traits.Runesmith));
+        
+        if (getKindedDamage is not null)
+        {
+            var damage = getKindedDamage.Invoke(
+                invokedRune.Rune,
+                invokedRune.Source!.Level);
+            await CommonSpellEffects.DealBasicDamage(
+                invokeAction, invokeAction.Owner,
+                effectTarget, result,
+                damage.diceExpression,
+                damage.Kind);
+        }
+
+        onResult?.Invoke(result);
+        
+        return result;
+    }
+
     /// <summary>
     /// Executes an inner action for invocations that have complex targeting or area effects.
     /// </summary>
@@ -1147,8 +1346,8 @@ public static class CommonRuneRules
         CombatAction innerInvoke = new CombatAction(
                 outerInvoke.Owner,
                 invokedRune.Rune.Illustration,
-                $"Invoke {invokedRune.Rune.Name}",
-                [..invokedRune.Rune.Traits, Trait.DoNotShowInCombatLog, Trait.UnaffectedByConcealment],
+                $"Invoke {invokedRune.Rune.FullName}",
+                [..invokedRune.Rune.Traits, ModData.Traits.Invocation, Trait.DoNotShowInCombatLog, Trait.UnaffectedByConcealment],
                 invokedRune.Rune.InvocationProperties.InvocationTextWithFormattedHeightening?.Invoke(invokedRune.Rune, outerInvoke.Owner.Level) ?? "",
                 target)
             .WithActionCost(0)
@@ -1160,6 +1359,9 @@ public static class CommonRuneRules
             innerInvoke.WithSavingThrow(new SavingThrow(
                 invokedRune.Rune.InvocationProperties.Defense!.Value,
                 outerInvoke.Owner.ClassDC(ModData.Traits.Runesmith)));
+
+        if (outerInvoke.Tag is RuneActionTag outerTag)
+            innerInvoke.WithRuneTag(outerTag.Rune, chosenRune: outerTag.ChosenDrawnRune);
         
         finalAdjustments?.Invoke(innerInvoke);
         
@@ -1191,8 +1393,8 @@ public static class CommonRuneRules
             Illustration = new SuperimposedIllustration(
                 rune.Illustration,
                 ModData.Illustrations.NoSymbol),
-            Name = $"Invocation Immunity: {rune.Name}",
-            Description = $"You cannot be affected by another invocation of a {rune.Name.WithColor("Blue")} rune{(immuneForEncounter ? " for the rest of the encounter" : " until the end of this action")}.",
+            Name = $"Invocation Immunity: {rune.FullName}",
+            Description = $"You cannot be affected by another invocation of a {rune.FullName.WithColor("Blue")} rune{(immuneForEncounter ? " for the rest of the encounter" : " until the end of this action")}.",
             Id = ModData.QEffectIds.ImmuneToInvocation,
             Tag = rune, // The rune that you're immune to
             ExpiresAt = immuneForEncounter
@@ -1305,16 +1507,15 @@ public static class CommonRuneRules
             {
                 options.Add(new CreatureOption(
                     cr,
-                    tooltipText?.Invoke(dr) ?? dr.Description ?? "{i}" + dr.DrawTrait.HumanizeTitleCase2() + "{/i}\n\n" + CommonRuneRules.CreateTraceActionDescription(
-                        CombatAction.CreateSimple(decider, "[NO NAME GIVEN]"), // Action is used to get owner's level, so this is fine
-                        dr.Rune,
+                    tooltipText?.Invoke(dr) ?? dr.Description ?? "{i}" + dr.DrawTrait.HumanizeTitleCase2() + "{/i}\n\n" + CommonRuneRules.CreateTraceActionDescription(// Action is used to get owner's level, so this is fine
+                        dr.Rune, decider.Level,
                         withFlavorText: false),
                     async () => chosenRune = dr,
                     int.MinValue,
                     false)
                 {
                     Illustration = dr.Illustration,
-                    ContextMenuText = tooltipName?.Invoke(dr) ?? $"Choose {{Blue}}{dr.Rune.Name}{{/Blue}}",
+                    ContextMenuText = tooltipName?.Invoke(dr) ?? $"Choose {{Blue}}{dr.Rune.FullName}{{/Blue}}",
                 });
             });
         });

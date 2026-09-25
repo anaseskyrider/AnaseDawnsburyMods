@@ -1,120 +1,124 @@
-using System.ComponentModel;
+using Dawnsbury.Core;
 
 namespace Dawnsbury.Mods.RunesmithClass.RuneRules;
 
 public enum RuneId
 {
     None = 0,
+    
+    // Unused illustrations:
+    // IllustrationName.UnderwaterRunestone
+    
 
     #region Level 1 Runes
 
-    [Description("Rune of Fire")]
+    [RuneId("Rune of Fire", 1, IllustrationName.FlamingRunestone)]
     Atryl = 1,
-    [Description("Rune of Hold’s Bravery")]
+    [RuneId("Rune of Hold’s Bravery", 1, IllustrationName.ResilientRunestone)]
     Baruiel = 2,
-    [Description("Rune of Perplexity")]
+    [RuneId("Rune of Perplexity", 1, IllustrationName.RunestoneImplacable)]
     Camonica = 3,
-    [Description("Rune of Whetstones")]
+    [RuneId("Rune of Whetstones", 1, IllustrationName.WoundingRunestone)]
     Esvadir = 4,
-    [Description("Rune of Dwarven Ramparts")]
+    [RuneId("Rune of Dwarven Ramparts", 1, IllustrationName.ArmorPotencyRunestone)]
     Holtrik = 5,
-    [Description("Rune of Appeal")]
+    [RuneId("Rune of Appeal", 1, IllustrationName.BrilliantRunestone)]
     Ledria = 6,
-    [Description("Rune of Frost")]
+    [RuneId("Rune of Frost", 1, IllustrationName.FrostRunestone)]
     Lyskel = 7,
-    [Description("Rune of Impact")]
+    [RuneId("Rune of Impact", 1, IllustrationName.ThunderingRunestone)]
     Marssyl = 8,
-    [Description("Rune of Cowards’ Bane")]
+    [RuneId("Rune of Cowards’ Bane", 1, IllustrationName.FearsomeRunestone)]
     Oljinex = 9,
-    [Description("Rune of Illumination")]
+    [RuneId("Rune of Illumination", 1, IllustrationName.DisruptingRunestone)]
     Pluuna = 10,
-    [Description("Rune of Thunder")]
+    [RuneId("Rune of Thunder", 1, IllustrationName.ShockRunestone)]
     Ranshu = 11,
-    [Description("Rune of Bestial Might")]
+    [RuneId("Rune of Bestial Might", 1, IllustrationName.GrievousRunestone)]
     Rehgog = 12,
-    [Description("Rune of Preparedness")]
+    [RuneId("Rune of Preparedness", 1, IllustrationName.RunestoneAimAiding)]
     Sertum = 13,
-    [Description("Rune of Corrosion")]
+    [RuneId("Rune of Corrosion", 1, IllustrationName.CorrosiveRunestone)]
     Thullax = 14,
-    [Description("Rune of Vocabulary")]
+    [RuneId("Rune of Vocabulary", 1, IllustrationName.ShiftingRunestone)]
     Tilus = 15,
-    [Description("Rune of Homecoming")]
+    [RuneId("Rune of Homecoming", 1, IllustrationName.ReturningRunestone)]
     Zohk = 16,
 
     #endregion
 
     #region Level 5 Runes
 
-    [Description("Diacritic Rune of Succession")]
+    [RuneId("Diacritic Rune of Succession", 5, IllustrationName.RunestoneWinged)]
     Av = 17,
-    [Description("Diacritic Rune of Expansion")]
+    [RuneId("Diacritic Rune of Expansion", 5, IllustrationName.RunestoneEnergyAdaptive)]
     En = 18,
-    [Description("Diacritic Rune of Doubling")]
+    [RuneId("Diacritic Rune of Doubling", 5, IllustrationName.DoublingRings)]
     Fob = 19,
-    [Description("Diacritic Rune of Mercy")]
+    [RuneId("Diacritic Rune of Mercy", 5, IllustrationName.Silver)]
     Kit = 20,
-    [Description("Diacritic Rune of Continuum")]
+    [RuneId("Diacritic Rune of Continuum", 5, IllustrationName.RunestoneWinged)]
     Per = 21,
-    [Description("Diacritic Rune of Preservation")]
+    [RuneId("Diacritic Rune of Preservation", 5, IllustrationName.RunestoneWinged)]
     Sun = 22,
-    [Description("Diacritic Rune of Fundaments")]
+    [RuneId("Diacritic Rune of Fundaments", 5, IllustrationName.Adamantine)]
     Ti = 23,
-    [Description("Diacritic Rune of Intensity")]
+    [RuneId("Diacritic Rune of Intensity", 5, IllustrationName.DemolishingRunestone)]
     Ur = 24,
 
     #endregion
 
     #region Level 9 Runes
 
-    [Description("Rune of Submersion")]
+    [RuneId("Rune of Submersion", 9, IllustrationName.RunestoneSpellbreaking)]
     Astillu = 25,
-    [Description("Rune of Leeching")]
+    [RuneId("Rune of Leeching", 9, IllustrationName.KeenRunestone)]
     Cruonign = 26,
-    [Description("Rune of Gravity")]
+    [RuneId("Rune of Gravity", 9, IllustrationName.CrushingRunestone)]
     Feikris = 27,
-    [Description("Rune of Partnership")]
+    [RuneId("Rune of Partnership", 9, IllustrationName.AnarchicRunestone)]
     Germantria = 28,
-    [Description("Rune of Observation")]
+    [RuneId("Rune of Observation", 9, IllustrationName.GhostTouchRunestone)]
     Ichelsu = 29,
-    [Description("Rune of Dragon Fury")]
+    [RuneId("Rune of Dragon Fury", 9, IllustrationName.ElementalGem)]
     Jurroz = 30,
-    [Description("Rune of Insulation")]
+    [RuneId("Rune of Insulation", 9, IllustrationName.RunestoneQuenching)]
     Kojastri = 31,
-    [Description("Rune of Inarticulateness")]
+    [RuneId("Rune of Inarticulateness", 9, IllustrationName.RunestoneDread)]
     Oraloq = 32,
-    [Description("Rune of Transposition")]
+    [RuneId("Rune of Transposition", 9, IllustrationName.RunestoneAdvancing)]
     Piteregrin = 33,
-    [Description("Rune of Forlorn Sorrow")]
+    [RuneId("Rune of Forlorn Sorrow", 9, IllustrationName.NightmareRunestone)]
     Trolistri = 34,
-    [Description("Rune of Restraint")]
+    [RuneId("Rune of Restraint", 9, IllustrationName.Fortification)]
     Ulgatus = 35,
-    [Description("Rune of Remonstrance")]
+    [RuneId("Rune of Remonstrance", 9, IllustrationName.RunestoneInvisibility)]
     Yudici = 36,
 
     #endregion
 
     #region Level 13 Runes
 
-    [Description("Diacritic Rune of Phantasma")]
+    [RuneId("Diacritic Rune of Phantasma", 13, IllustrationName.ImpactfulRunestone)]
     Eck = 37,
-    [Description("Diacritic Rune of Corruption")]
+    [RuneId("Diacritic Rune of Corruption", 13, IllustrationName.UnholyRunestone)]
     Inth = 38,
-    [Description("Diacritic Rune of Contingency")]
+    [RuneId("Diacritic Rune of Contingency", 13, IllustrationName.RunestoneAntimagic)]
     Nesh = 39,
-    [Description("Diacritic Rune of Righteousness")]
+    [RuneId("Diacritic Rune of Righteousness", 13, IllustrationName.HolyRunestone)]
     Sar = 40,
 
     #endregion
 
     #region Level 17 Runes
 
-    [Description("the Elf-Gate Key")]
+    [RuneId("the Elf-Gate Key", 17)]
     Aiuen = 41,
-    [Description("the Poisoned Star")]
+    [RuneId("the Poisoned Star", 17)]
     Ochygholl = 42,
-    [Description("Seal of the Dead Vault")]
+    [RuneId("Seal of the Dead Vault", 17, IllustrationName.AxiomaticRunestone)]
     Rovan = 43,
-    [Description("the Well of Virtues")]
+    [RuneId("the Well of Virtues", 17)]
     Xinsala = 44,
 
     #endregion

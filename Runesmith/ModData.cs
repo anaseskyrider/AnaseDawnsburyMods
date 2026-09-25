@@ -427,6 +427,7 @@ public static class ModData
         
         public static readonly Illustration RuneWard = new ModdedIllustration(MOD_FOLDER+"shield.png");
         public static readonly Illustration TransposeEtching = new ModdedIllustration(MOD_FOLDER+"hand.png");
+        public static readonly Illustration DiacriticFluency = new ModdedIllustration(MOD_FOLDER+"esoteric.png");
         public static readonly Illustration DrawnInVitalInk = new ModdedIllustration(MOD_FOLDER+"knife.png");
         public static readonly Illustration RuneSinger = new ModdedIllustration(MOD_FOLDER+"musical-note.png");
         
@@ -504,6 +505,7 @@ public static class ModData
         public static QEffectId RuneSingerCreator;
         /// The DrawnRune that is tattooed
         public static QEffectId TattooedRune;
+        public static QEffectId DiacriticFluency;
         public static QEffectId DrawnInVitalInk;
         public static  QEffectId JurrozDamageTracker;
         
@@ -514,6 +516,7 @@ public static class ModData
             RuneSinger = ModManager.RegisterEnumMember<QEffectId>("Rune-Singer");
             RuneSingerCreator = ModManager.RegisterEnumMember<QEffectId>("RuneSingerCreator");
             TattooedRune = ModManager.RegisterEnumMember<QEffectId>("TattooedRune");
+            DiacriticFluency = ModManager.RegisterEnumMember<QEffectId>("DiacriticFluency");
             DrawnInVitalInk = ModManager.RegisterEnumMember<QEffectId>("DrawnInVitalInk");
             JurrozDamageTracker = ModManager.RegisterEnumMember<QEffectId>("JurrozDamageTracker");
         }
@@ -527,7 +530,9 @@ public static class ModData
         public const SfxName INVOKE_RUNE = SfxName.AuraExpansion;
         public const SfxName ETCH_RUNE = SfxName.AttachRune;
         public const SfxName INVOKED_ATRYL = SfxName.FireRay;
+        public const SfxName INVOKED_BARUIEL = SfxName.MinorHealing;
         public const SfxName INVOKED_ESVADIR = SfxName.RayOfFrost;
+        public const SfxName INVOKED_LYSKEL = SfxName.ChillTouch;
         public const SfxName INVOKED_MARSSYL_SHOVE = SfxName.Shove;
         public const SfxName INVOKED_OLJINEX = SfxName.Fear;
         public const SfxName INVOKED_PLUUNA = SfxName.MinorAbjuration;
@@ -750,5 +755,10 @@ public static class ModData
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
         
         #endregion
+    }
+    
+    extension(Trait)
+    {
+        public static Trait Runesmith => Traits.Runesmith;
     }
 }

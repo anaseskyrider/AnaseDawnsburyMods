@@ -2,7 +2,9 @@ global using CommonShieldRules = Dawnsbury.Mods.MoreShields.CommonShieldRules;
 
 using System.ComponentModel;
 using System.Reflection;
+using Dawnsbury.Core;
 using Dawnsbury.Display.Controls.Statblocks;
+using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Dawnsbury.Mods.RunesmithClass.RuneRules;
 
@@ -82,6 +84,19 @@ public static class ModLoader
     extension(RuneId id)
     {
         /// <summary>
+        /// Gets the rune's icon.
+        /// </summary>
+        public Illustration ToIcon()
+        {
+            Type type = id.GetType();
+            FieldInfo? fieldInfo = type.GetField(id.ToString());
+            if (fieldInfo == null)
+                return IllustrationName.None;
+            RuneIdAttribute? attribute = Attribute.GetCustomAttribute(fieldInfo, typeof(RuneIdAttribute)) as RuneIdAttribute;
+            return attribute?.Icon ?? IllustrationName.None;
+        }
+        
+        /// <summary>
         /// Gets the word, such as "Atryl", of this rune.
         /// </summary>
         public string ToWord() => id.ToStringOrTechnical();
@@ -95,15 +110,31 @@ public static class ModLoader
             FieldInfo? fieldInfo = type.GetField(id.ToString());
             if (fieldInfo == null)
                 return id.ToString();
-            DescriptionAttribute? attribute = Attribute.GetCustomAttribute(fieldInfo, typeof(DescriptionAttribute)) as DescriptionAttribute;
-            return attribute == null ? id.ToString() : attribute.Description;
+            RuneIdAttribute? attribute = Attribute.GetCustomAttribute(fieldInfo, typeof(RuneIdAttribute)) as RuneIdAttribute;
+            return attribute == null ? id.ToString() : attribute.Title;
         }
 
+        /// <summary>
+        /// Get the full name of the rune, such as "Atryl, Rune of Fire".
+        /// </summary>
         public string ToFullName()
         {
             string word = id.ToWord();
             string title = id.ToTitle();
             return word + (title.Contains("Diacritic") ? "-" : null) + ", " + title;
+        }
+        
+        /// <summary>
+        /// Get the rune's base level.
+        /// </summary>
+        public int ToLevel()
+        {
+            Type type = id.GetType();
+            FieldInfo? fieldInfo = type.GetField(id.ToString());
+            if (fieldInfo == null)
+                return 1;
+            RuneIdAttribute? attribute = Attribute.GetCustomAttribute(fieldInfo, typeof(RuneIdAttribute)) as RuneIdAttribute;
+            return attribute?.Level ?? 1;
         }
     }
 }
