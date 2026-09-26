@@ -507,6 +507,7 @@ public static class ModData
         public static QEffectId TattooedRune;
         public static QEffectId DiacriticFluency;
         public static QEffectId DrawnInVitalInk;
+        public static QEffectId EdifyingTraceEffect;
         public static  QEffectId JurrozDamageTracker;
         
         public static void Initialize()
@@ -518,19 +519,31 @@ public static class ModData
             TattooedRune = ModManager.RegisterEnumMember<QEffectId>("TattooedRune");
             DiacriticFluency = ModManager.RegisterEnumMember<QEffectId>("DiacriticFluency");
             DrawnInVitalInk = ModManager.RegisterEnumMember<QEffectId>("DrawnInVitalInk");
+            EdifyingTraceEffect = ModManager.RegisterEnumMember<QEffectId>("EdifyingTraceEffect");
             JurrozDamageTracker = ModManager.RegisterEnumMember<QEffectId>("JurrozDamageTracker");
         }
     }
 
     public static class SfxNames
     {
+        #region Class Features
+
         // was AncientDust
         public const SfxName TRACE_RUNE = SfxName.Cast4;
         // was DazzlingFlash
         public const SfxName INVOKE_RUNE = SfxName.AuraExpansion;
         public const SfxName ETCH_RUNE = SfxName.AttachRune;
+
+        #endregion
+
+        #region Specific Runes
+
+        #region 1st-Level Runes
+
         public const SfxName INVOKED_ATRYL = SfxName.FireRay;
         public const SfxName INVOKED_BARUIEL = SfxName.MinorHealing;
+        public const SfxName PASSIVE_CAMONICA = SfxName.Fear;
+        public const SfxName INVOKED_CAMONICA = SfxName.Mental;
         public const SfxName INVOKED_ESVADIR = SfxName.RayOfFrost;
         public const SfxName INVOKED_LYSKEL = SfxName.ChillTouch;
         public const SfxName INVOKED_MARSSYL_SHOVE = SfxName.Shove;
@@ -539,14 +552,25 @@ public static class ModData
         // SfxName(ElectricBlast == ShockingGrasp)???
         public const SfxName PASSIVE_RANSHU = SfxName.ElectricBlast;
         public const SfxName INVOKED_RANSHU = SfxName.ElectricArc;
+        // Rehgog
+        // Sertum
+        public const SfxName INVOKED_THULLAX = SfxName.AcidSplash;
+        public const SfxName INVOKED_ZOHK = SfxName.PhaseBolt;
+
+        #endregion
+        
         // Was AuraExpansion
         public const SfxName INVOKED_SUN = SfxName.DazzlingFlash;
-        public const SfxName INVOKED_ZOHK = SfxName.PhaseBolt;
         public const SfxName INVOKED_FEIKRIS = SfxName.PhaseBolt;
         public const SfxName INVOKED_ICHELSU = SfxName.MinorAbjuration;
         public const SfxName INVOKED_JURROZ = SfxName.AirSpell;
         public const SfxName INVOKED_KOJASTRI = SfxName.BoneSpray;
         public const SfxName INVOKED_TROLISTRI = SfxName.Fear;
+
+        #endregion
+
+        #region Class Feats
+
         // SfxName.AuraExpansion;
         public const SfxName TOGGLE_RUNE_SINGER = SfxName.OminousActivation;
         public const SfxName SING_RUNE = SfxName.Choir;
@@ -554,6 +578,8 @@ public static class ModData
         public const SfxName TRANSPOSE_ETCHING_END = SfxName.GaleBlast;
         public const SfxName WORDS_FLY_FREE = SfxName.AncientDust; // Could be linked to Trace Rune but doesn't have to be.
         public const SfxName ELEMENTAL_REVISION = SfxName.ShieldSpell;
+
+        #endregion
     }
 
     public static class SubmenuIds

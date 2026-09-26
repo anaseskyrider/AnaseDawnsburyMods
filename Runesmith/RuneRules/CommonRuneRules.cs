@@ -1253,7 +1253,7 @@ public static class CommonRuneRules
         DrawnRune invokedRune,
         Creature effectTarget,
         Func<Rune,int,(string diceExpression, DamageKind Kind)>? getKindedDamage = null,
-        Func<CheckResult, Task>? onResult = null)
+        Func<CombatAction, Creature, CheckResult, Task>? onResult = null)
     {
         if (invokedRune.Rune.InvocationProperties.Defense is null)
             throw new NullReferenceException($"Saving throw for invocation of {invokedRune.Rune.Id.ToWord()} was attempted, but no saving throw defense was found. Use InvocationProperties.WithDefense(Defense) to set a defense for this rune's invocations.");
@@ -1276,7 +1276,7 @@ public static class CommonRuneRules
                 damage.Kind);
         }
 
-        onResult?.Invoke(result);
+        onResult?.Invoke(invokeAction, effectTarget, result);
         
         return result;
     }

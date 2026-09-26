@@ -154,9 +154,7 @@ public static class AllRunes
                     })
                     .WithSoundAfterInvocation(ModData.SfxNames.INVOKED_ATRYL),
                 [Trait.Fire, Trait.Primal])
-            .WithLevelText(
-                "The reduction in fire resistance increases by 1, and the damage of the invocation increases by 1d8.",
-                "+2")
+            .WithLevelText("+2", "The reduction in fire resistance increases by 1, and the damage of the invocation increases by 1d8.")
             .ToFeat();
         
         // Baruiel, Rune of Hold's Bravery
@@ -260,8 +258,102 @@ public static class AllRunes
                 [Trait.Emotion, Trait.Mental])
             .ToFeat();
         
-        // TODO: Camonica, Rune of Perplexity
-        yield return DebugRune(RuneId.Camonica, "This rune of looping swirls is difficult to look straight at and stirs up a psychic cacophony in a foe's mind.");
+        // Camonica, Rune of Perplexity
+        yield return new Rune(
+                RuneId.Camonica,
+                "This rune of looping swirls is difficult to look straight at and stirs up a psychic cacophony in a foe's mind.",
+                new RuneDrawProperties(
+                        "drawn on a creature",
+                        drawnOnCreature: true)
+                    .WithEnemyRequirement()
+                    .WithCreatureRequirement((a, d) =>
+                        d.IsImmuneTo(Trait.Mental)
+                        ? Usability.NotUsableOnThisCreature("Immune to mental")
+                        : Usability.Usable),
+                new RunePassiveProperties(
+                        "The first time each round the rune-bearer takes an action with the concentrate trait, the turmoil increases, dealing it 2 mental damage.",
+                        (rune, level) =>
+                        {
+                            (int baseValue, _, int finalValue) = rune.CalculateHeightening(2, 2, 1, level);
+                            return
+                                $"The first time each round the rune-bearer takes an action with the concentrate trait, the turmoil increases, dealing it {S.HeightenedVariable(finalValue, baseValue)} mental damage.";
+                        })
+                    .WithIsDebuff()
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        (int _, _, int finalValue) = rune.CalculateHeightening(2, 2, 1, drawAction.Owner.Level);
+                        return new DrawnRune(
+                            drawAction,
+                            rune,
+                            $"The first time each round you take a concentrate action, you take {finalValue} mental damage.")
+                        {
+                            UsedThisTurn = false,
+                            AfterYouTakeAction = async (qfThis, action) =>
+                            {
+                                if (qfThis.UsedThisTurn
+                                    || !action.HasTrait(Trait.Concentrate))
+                                    return;
+
+                                qfThis.UsedThisTurn = true;
+
+                                Sfxs.Play(ModData.SfxNames.PASSIVE_CAMONICA);
+                                
+                                await CommonSpellEffects.DealDirectDamage(
+                                    CombatAction.CreateSimple(
+                                            qfThis.Source!,
+                                            rune.FullName,
+                                            [..rune.Traits])
+                                        .WithTag(qfThis),
+                                    DiceFormula.FromText(
+                                        finalValue.ToString(),
+                                        rune.FullName),
+                                    qfThis.Owner,
+                                    CheckResult.Success,
+                                    DamageKind.Mental);
+                            }
+                        };
+                    }),
+                new RuneInvocationProperties(
+                        "The cacophony fragments and expands rapidly in a mental explosion, dealing 1d4 mental damage to the rune-bearer with a basic Will save. On a failure, the rune-bearer is {r}stupefied 1{/r} for 1 round (or {r}stupefied 2{/r} on a critical failure).",
+                        (rune, level) =>
+                        {
+                            (int baseValue, _, int finalValue) = rune.CalculateHeightening(1, 2, 1, level);
+                            return
+                                $"The cacophony fragments and expands rapidly in a mental explosion, dealing {S.HeightenedVariable(finalValue, baseValue)}d4 mental damage to the rune-bearer with a basic Will save. On a failure, the rune-bearer is {{r}}stupefied 1{{/r}} for 1 round (or {{r}}stupefied 2{{/r}} on a critical failure).";
+                        })
+                    .WithDefense(Defense.Will)
+                    .WithDealsDamage()
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        await CommonRuneRules.SaveAgainstInvocation(
+                            invokeAction,
+                            invokedRune,
+                            effectTarget,
+                            (rune, level) => (
+                                $"{rune.CalculateHeightening(1, 2, 1, level).FinalValue}d4",
+                                DamageKind.Mental),
+                            async (invokeAction2, effectTarget2, result) =>
+                            {
+                                if (result > CheckResult.Failure)
+                                    return;
+                                effectTarget2.AddQEffect(QEffect
+                                    .Stupefied(result == CheckResult.CriticalFailure ? 2 : 1)
+                                    .WithExpirationInOneRound(invokeAction2.Owner)
+                                    .With(qf =>
+                                    {
+                                        qf.Source = invokeAction2.Owner;
+                                        qf.SourceAction = invokeAction2;
+                                    }));
+                            });
+
+                        return effectTarget;
+                    })
+                    .WithSoundAfterInvocation(ModData.SfxNames.INVOKED_CAMONICA),
+                [Trait.Mental, Trait.Occult])
+            .WithLevelText(
+                "+2",
+                "The damage from the mental turmoil increases by 1 and the damage of the invocation increases by 1d4.")
+            .ToFeat();
 
         // Esvadir, Rune of Whetstones
         yield return new Rune(
@@ -427,8 +519,8 @@ public static class AllRunes
                             });
                     }))
             .WithLevelText(
-                "The damage of the invocation increases by 1d8.",
-                "+2")
+                "+2",
+                "The damage of the invocation increases by 1d8.")
             .ToFeat();
 
         // Holtrik, Rune of Dwarven Ramparts
@@ -596,18 +688,18 @@ public static class AllRunes
                             (rune, level) => (
                                 rune.CalculateHeightening(1, 2, 1, level).FinalValue + "d4",
                                 DamageKind.Cold),
-                            async result =>
+                            async (invokeAction2, effectTarget2, result) =>
                             {
                                 Zone.SpawnStaticAndApply(
                                     invokedRune.Source!,
                                     // Space plus adjacent squares
-                                    effectTarget.Space.Tiles
+                                    effectTarget2.Space.Tiles
                                         .SelectMany(tile => tile.Neighbours.TilesPlusSelf)
                                         .Distinct()
                                         .ToList(),
                                     zone =>
                                     {
-                                        zone.ControllerQEffect.WithExpirationInOneRound(invokeAction.Owner);
+                                        zone.ControllerQEffect.WithExpirationInOneRound(invokeAction2.Owner);
                                         zone.TileEffectCreator = tile =>
                                             new TileQEffect(tile)
                                             {
@@ -628,9 +720,7 @@ public static class AllRunes
                     })
                     .WithSoundAfterInvocation(ModData.SfxNames.INVOKED_LYSKEL),
                 [Trait.Cold, Trait.Primal])
-            .WithLevelText(
-                "The damage of the invocation increases by 1d4.",
-                "+2")
+            .WithLevelText("+2", "The damage of the invocation increases by 1d4.")
             .ToFeat();
         
         // Marssyl, Rune of Impact
@@ -1039,9 +1129,7 @@ public static class AllRunes
                                  || cr.IsImmuneTo(Trait.Visual));
                     }),
                 additionalTraits: [Trait.Arcane])
-            .WithLevelText(
-                "The status bonus to Hardness increases by 1.",
-                "+4")
+            .WithLevelText("+4", "The status bonus to Hardness increases by 1.")
             .ToFeat();
 
         // Pluuna, Rune of Illumination
@@ -1212,9 +1300,7 @@ public static class AllRunes
                     })
                     .WithSoundAfterInvocation(ModData.SfxNames.INVOKED_RANSHU),
                 [Trait.Electricity, Trait.Primal])
-            .WithLevelText(
-                "The damage from the bolt of static increases by 1, and the damage of the invocation increases by 1d8.",
-                "+2")
+            .WithLevelText("+2", "The damage from the bolt of static increases by 1, and the damage of the invocation increases by 1d8.")
             .ToFeat();
 
         // TODO: Rehgog, Rune of Bestial Might
@@ -1223,8 +1309,83 @@ public static class AllRunes
         // TODO: Sertum, Rune of Prepardness
         yield return DebugRune(RuneId.Sertum, "The wavy lines of this rune evoke fields of reeds, the branches of trees blowing in the wind, or other natural phenomena.");
         
-        // TODO: Thullax, Rune of Corrosion
-        yield return DebugRune(RuneId.Thullax, "The swooping lines of this rune seem to melt into each other as if their edges were hazy and indistinct, though the meaning is clear to you.");
+        // Thullax, Rune of Corrosion
+        yield return new Rune(
+                RuneId.Thullax,
+                "The swooping lines of this rune seem to melt into each other as if their edges were hazy and indistinct, though the meaning is clear to you.",
+                new RuneDrawProperties(
+                        "drawn on a creature", /*or object*/
+                        drawnOnCreature: true)
+                    .WithEnemyRequirement(),
+                new RunePassiveProperties(
+                        "The rune-bearer's resistance to each physical damage type is reduced by 1 (if it has any such resistances). Its immunities are unaffected.",
+                        (rune, level) =>
+                        {
+                            (int baseValue, _, int finalValue) = rune.CalculateHeightening(1, 2, 1, level);
+                            return
+                                $"The rune-bearer's resistance to each physical damage type is reduced by {S.HeightenedVariable(finalValue, baseValue)} (if it has any such resistances). Its immunities are unaffected.";
+                        })
+                    .WithIsDebuff()
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        (_,_, int finalValue) = rune.CalculateHeightening(1, 2, 1, drawAction.Owner.Level);
+                        return new DrawnRune(
+                            drawAction,
+                            rune,
+                            $"Each of your resistances to a physical damage type is reduced by {finalValue}.")
+                        {
+                            StateCheckLayer = 1,
+                            StateCheck = qfThis =>
+                            {
+                                foreach (Resistance res in qfThis.Owner.WeaknessAndResistance
+                                             .Resistances
+                                             .Where(res =>
+                                                 res.DamageKind.IsPhysical()
+                                                 || (res as SpecialResistance)?.Name.ToLower().Contains("physical") == true))
+                                {
+                                    res.Value = Math.Max(0, res.Value - finalValue);
+                                }
+                            }
+                        };
+                    }),
+                new RuneInvocationProperties(
+                        "The bearer takes 1d6 acid damage with a basic Fortitude save; on a critical failure, it takes 1 persistent acid damage.",
+                        (rune, level) =>
+                        {
+                            (int baseValue, _, int finalValue) = rune.CalculateHeightening(1, 2, 1, level);
+                            return
+                                $"The bearer takes {S.HeightenedVariable(finalValue, baseValue)}d6 acid damage with a basic Fortitude save; on a critical failure, it takes {S.HeightenedVariable(finalValue, baseValue)} persistent acid damage.";
+                        })
+                    .WithDealsDamage()
+                    .WithDefense(Defense.Fortitude)
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        await CommonRuneRules.SaveAgainstInvocation(
+                            invokeAction,
+                            invokedRune,
+                            effectTarget,
+                            (rune, level) => (
+                                $"{rune.CalculateHeightening(1, 2, 1, level).FinalValue}d6",
+                                DamageKind.Acid),
+                            async (invokeAction2, effectTarget2, result) =>
+                            {
+                                if (result > CheckResult.CriticalFailure)
+                                    return;
+                                await CommonSpellEffects.DealAttackRollPersistentDamage(
+                                    invokeAction2,
+                                    effectTarget2,
+                                    // Not an attack, but my overload adds source info.
+                                    CheckResult.Success,
+                                    invokedRune.Rune.CalculateHeightening(1, 2, 1, invokedRune.Source!.Level).FinalValue.ToString(),
+                                    DamageKind.Acid);
+                            });
+                        
+                        return effectTarget;
+                    })
+                    .WithSoundAfterInvocation(ModData.SfxNames.INVOKED_THULLAX),
+                [Trait.Acid, Trait.Arcane])
+            .WithLevelText("+2", "The reduction in physical resistance increases by 1, the damage of the invocation increases by 1d6, and the persistent damage increases by 1.")
+            .ToFeat();
         
         // TODO: Tilus, Rune of Vocabulary
         yield return DebugRune(RuneId.Tilus, "Upon close inspection, this rune comprises hundreds of smaller characters of various runic languages.");
@@ -1788,9 +1949,7 @@ public static class AllRunes
 
                     }),
                 [Trait.Arcane])
-            .WithLevelText(
-                "The status bonus increases to +3.",
-                "17th")
+            .WithLevelText("17th", "The status bonus increases to +3.")
             .ToFeat();
 
         // TODO: Germantria, Rune of Partnership
@@ -2277,9 +2436,7 @@ public static class AllRunes
                     })
                     .WithSoundAfterInvocation(ModData.SfxNames.INVOKED_KOJASTRI),
                 [Trait.Arcane])
-            .WithLevelText(
-                "The resistance and damage granted by insulation both increase by 1, and the damage dealt by the invocation increases by 2d4.",
-                "+2")
+            .WithLevelText("+2", "The resistance and damage granted by insulation both increase by 1, and the damage dealt by the invocation increases by 2d4.")
             .ToFeat();
         
         // TODO: Oraloq, Rune of Inarticulateness

@@ -1,8 +1,8 @@
 global using CommonShieldRules = Dawnsbury.Mods.MoreShields.CommonShieldRules;
-
-using System.ComponentModel;
 using System.Reflection;
 using Dawnsbury.Core;
+using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Display.Controls.Statblocks;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
@@ -13,10 +13,29 @@ namespace Dawnsbury.Mods.RunesmithClass;
 public static class ModLoader
 {
     /*public static bool MoreShieldsIsLoaded { get; set; }*/
+    
+    /// <summary>
+    /// Gets or sets the Recall Weakness modded action ActionId.
+    /// </summary>
+    /// <remarks>This works for either DawnniExpanded or Lores and Weaknesses.</remarks>
+    public static ActionId? RecallWeaknessAction { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the FeatName of the <see cref="Feat"/> that grants Recall Weakness.
+    /// </summary>
+    /// <remarks>This works only for Lores and Weaknesses.</remarks>
+    public static FeatName? RecallWeaknessFeat { get; set; }
 
     [DawnsburyDaysModMainMethod]
     public static void LoadMod()
     {
+        RecallWeaknessAction = ModManager.TryParse("RecallWeaknessActionID", out ActionId rwid)
+            ? rwid
+            : null;
+        RecallWeaknessFeat = ModManager.TryParse("LoresAndWeaknesses.RecallWeakness", out FeatName rwFn)
+            ? rwFn
+            : null;
+        
         ////////////////
         // Load Calls //
         ////////////////

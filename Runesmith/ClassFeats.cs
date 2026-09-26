@@ -2286,6 +2286,31 @@ public static class ClassFeats
                     : null);
         
         // Edifying Trace
+        yield return new TrueFeat(
+                ModData.FeatNames.EdifyingTrace, 8,
+                "When you apply a rune to a foe, it reveals something about them to you.",
+                $$"""
+                {{(ModLoader.RecallWeaknessAction is not null && ModLoader.RecallWeaknessFeat is not null
+                    ? null
+                    : "{b}Prerequisites{/b} You must have the {link:https://steamcommunity.com/sharedfiles/filedetails/?id=3710730920}Lores and Weaknesses{/link} mod installed.\n\n")}}{{ModData.FeatNames.TraceRune.ToLink("Trace a Rune")}} onto an adjacent enemy and then attempt a skill check to {{(ModLoader.RecallWeaknessFeat is not null ? ModLoader.RecallWeaknessFeat.Value.ToLink("Recall a Weakness") : "Recall a Weakness")}} on that target. If you succeed, you leverage this knowledge when you invoke any of your runes on that target; that target takes a –1 status penalty to saving throws against your invocations for the rest of the encounter.
+                
+                If you use Edifying Trace on another enemy, the effect ends for the previous enemy.
+                """,
+                [Trait.Flourish, Trait.Runesmith])
+            .WithActionCost(1)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                if (ModLoader.RecallWeaknessAction is null
+                    || ModLoader.RecallWeaknessFeat is null)
+                    return;
+                
+                OptionalDependencies.FinishEdifyingTrace(qfFeat);
+            })
+            .WithInappropriateBecauseOfBadInventory((values, inventory) =>
+                    ModLoader.RecallWeaknessAction is not null
+                    && ModLoader.RecallWeaknessFeat is not null
+                    ? null
+                    : "You must have the {link:https://steamcommunity.com/sharedfiles/filedetails/?id=3710730920}Lores and Weaknesses{/link} mod installed.");
         
         // Elemental Revision
         // DOC: This permanently changes the rune.

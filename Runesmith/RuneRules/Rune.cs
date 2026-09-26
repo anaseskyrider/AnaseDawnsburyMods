@@ -192,7 +192,7 @@ public class Rune
     /// <summary>
     /// Sets <see cref="LevelText"/> and <see cref="LevelFormat"/>.
     /// </summary>
-    public Rune WithLevelText(string? levelText, string? levelFormat)
+    public Rune WithLevelText(string? levelFormat, string? levelText)
     {
         this.LevelText = levelText;
         this.LevelFormat = levelFormat;
