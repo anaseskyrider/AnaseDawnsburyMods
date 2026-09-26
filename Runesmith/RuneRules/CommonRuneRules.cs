@@ -716,8 +716,8 @@ public static class CommonRuneRules
         return etchAction;
     }
 
-    // TODO: Delayed refactorization until full release version of Runesmith.
-    public static InventoryContextMenuOption GetEtchRuneOptions()
+    // TODO: Delayed refactorization.
+    /*public static InventoryContextMenuOption GetEtchRuneOptions()
     {
         return new InventoryContextMenuOption((slot, item, inventory) =>
         {
@@ -738,7 +738,7 @@ public static class CommonRuneRules
             
             return items.ToArray();
         });
-    }
+    }*/
 
     #endregion
 

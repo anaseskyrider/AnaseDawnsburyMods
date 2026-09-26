@@ -40,14 +40,17 @@ public class Rune
     
     public RuneInvocationProperties InvocationProperties { get; }
     
-    /// <summary>
+    // TODO: Delayed refactorization.
+    /*/// <summary>
     /// If a rune can be etched onto players or their items (under practical circumstances), this function provides the ContextMenuItem for that option to etch it.
     /// </summary>
-    /// <param name="Rune">A self-reference to this rune.</param>
-    /// <param name="CalculatedCharacterSheetValues">The player character sheet whose inventory is being inspected.</param>
-    /// <param name="Item">(nullable) The item being inspected.</param>
-    /// <param name="ContextMenuItem">The context menu option for this rune.</param>
-    public Func<Rune, CalculatedCharacterSheetValues, Item?, ContextMenuItem>? EtchOption { get; set; }
+    /// <list type="bullet">
+    /// <item><see cref="Rune"/>: A self-reference to this rune.</item>
+    /// <item><see cref="CalculatedCharacterSheetValues"/>: The player character sheet whose inventory is being inspected.</item>
+    /// <item><see cref="Item"/>: (nullable) The item being inspected.</item>
+    /// </list>
+    /// <returns>(ContextMenuItem) The context menu option for this rune.</returns>
+    public Func<Rune, CalculatedCharacterSheetValues, Item?, ContextMenuItem>? EtchOption { get; set; }*/
     
     #endregion
     
@@ -142,6 +145,9 @@ public class Rune
 
     #region Methods
 
+    /// <summary>
+    /// Make a generic or calculated adjustment.
+    /// </summary>
     public Rune WithAdjustment(Action<Rune> adjustment)
     {
         adjustment(this);
@@ -175,6 +181,9 @@ public class Rune
         return this;
     }
 
+    /// <summary>
+    /// Replaces the rune's base level.
+    /// </summary>
     public Rune WithBaseLevel(int level)
     {
         this.BaseLevel = level;
@@ -199,6 +208,13 @@ public class Rune
         return this;
     }
 
+    /// <summary>
+    /// Helper for basic number-heightening math.
+    /// </summary>
+    /// <param name="baseValue">The initial value, such as 1.</param>
+    /// <param name="levelsPerIncrease">The levels required to apply an increase, such as 2.</param>
+    /// <param name="amountPerIncrease">The amount to increase by for every increase, such as 1.</param>
+    /// <param name="runesmithLevel">The current level of the runesmith.</param>
     public (int BaseValue, int BonusValue, int FinalValue) CalculateHeightening(int baseValue, int levelsPerIncrease, int amountPerIncrease, int runesmithLevel)
     {
         int levelDelta = Math.Max(runesmithLevel - this.BaseLevel, 0);
@@ -215,14 +231,14 @@ public class Rune
     #region Initializers
 
     /// <summary>
-    /// Initializes a new Rune object.
+    /// Creates a Rune for permanent universal rune stat blocks.
     /// </summary>
-    /// <param name="runeId">The unique identifier for this rune. This determines the rune's name (this can be changed later by writing to <see cref="FullName"/> or calling <see cref="WithName"/>).</param>
+    /// <param name="runeId">The unique identifier for this rune. This determines the rune's name (this can be changed later using <see cref="WithName"/>).</param>
     /// <param name="flavorText">The flavor-text of the Rune.</param>
     /// <param name="drawProperties">This rune's draw properties.</param>
     /// <param name="passiveProperties">This rune's passive effect properties.</param>
     /// <param name="invocationProperties">The rune's invocation properties.</param>
-    /// <param name="additionalTraits">(nullable) The list of additional traits associated with the Rune. By default, Runes have the Rune, Runesmith, and Magical traits. To overwrite these, write directly to the Traits field or call <see cref="WithOverrideTraits"/></param>
+    /// <param name="additionalTraits">(nullable) The list of additional traits associated with the Rune. By default, Runes have the Rune, Runesmith, and Magical traits. To overwrite these, write directly to the Traits field or call <see cref="WithOverrideTraits"/>.</param>
     public Rune(
         RuneId runeId,
         string flavorText,
@@ -247,6 +263,18 @@ public class Rune
             this.Traits = this.Traits.Concat(additionalTraits).ToList();
     }
 
+    /// <summary>
+    /// Creates a Rune for custom and temporary rune stat blocks.
+    /// </summary>
+    /// <param name="wordName">The word-name of the rune, such as "Atryl".</param>
+    /// <param name="title">The title of the rune, such as "Rune of Fire".</param>
+    /// <param name="baseLevel">The initial level of the rune, before heightening.</param>
+    /// <param name="icon">The rune's illustration.</param>
+    /// <param name="flavorText">The flavor-text of the Rune.</param>
+    /// <param name="drawProperties">This rune's draw properties.</param>
+    /// <param name="passiveProperties">This rune's passive effect properties.</param>
+    /// <param name="invocationProperties">The rune's invocation properties.</param>
+    /// <param name="additionalTraits">(nullable) The list of additional traits associated with the Rune. By default, Runes have the Rune, Runesmith, and Magical traits. To overwrite these, write directly to the Traits field or call <see cref="WithOverrideTraits"/>.</param>
     public Rune(
         string wordName,
         string title,
