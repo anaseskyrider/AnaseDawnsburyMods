@@ -2422,8 +2422,6 @@ public static class ClassFeats
         
         #region 8th-Level
         
-        // TODO: Phase 2, level 8 class feats.
-        
         // Drawn in Vital Ink
         yield return new TrueFeat(
                 ModData.FeatNames.DrawnInVitalInk, 8,
