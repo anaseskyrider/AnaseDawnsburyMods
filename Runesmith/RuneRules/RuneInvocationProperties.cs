@@ -104,7 +104,7 @@ public class RuneInvocationProperties(
     public List<CreatureTargetingRequirement> TargetingRequirements { get; } = [];
     
     /// <summary>
-    /// Whether this rune can be applied by YOU onto the TARGET.
+    /// Whether this rune can be invoked by YOU onto the TARGET.
     /// </summary>
     public Usability IsLegalTarget(Creature runesmith, Creature target)
     {

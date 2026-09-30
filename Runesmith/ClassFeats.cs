@@ -6,6 +6,7 @@ using Dawnsbury.Core.CharacterBuilder;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Specific;
 using Dawnsbury.Core.CharacterBuilder.Selections;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
@@ -27,6 +28,7 @@ using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
+using Dawnsbury.Display.Controls.Portraits;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Dawnsbury.Mods.RunesmithClass.RuneRules;
@@ -167,6 +169,86 @@ public static class ClassFeats
             .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresMeleeWeapon);
         
         // Glyph Familiar
+        yield return new TrueFeat(
+                ModData.FeatNames.GlyphFamiliar, 1,
+                "You have taken a living rune as a familiar to aid you in your adventures.",
+                $"You gain a {FeatName.ClassFamiliar.ToLink("combat familiar")}. You choose one ability per day instead of two, but it always has three additional familiar abilities prepared: {{link:Familiars.FamiliarAbilityConstruct}}construct{{/}}, {{link:Familiars.FamiliarAbilityFlier}}flier{{/}}, and {{link:Familiars.FamiliarAbilityTough}}tough{{/}}."
+                + (ModLoader.FamiliarCreature.HasValue ? null : $"\n\n{ModData.Illustrations.DdSun} {{b}}Modding{{/b}} This feat is designed to work with the {{link:https://steamcommunity.com/sharedfiles/filedetails/?id=3508129973}}Deployable Familiars{{/}} mod. Without it, this grants two abilities instead of one, but grants no free abilities."),
+                [Trait.Runesmith, ModData.Traits.DeployableFamiliarFeat])
+            .WithIllustration(ModData.Illustrations.RuneFamiliar)
+            .WithEquivalent(values => values.Tags.ContainsKey(Familiars.FAMILIAR_KEY))
+            .WithOnSheet(values =>
+            {
+                FamiliarTag runey = new FamiliarTag()
+                {
+                    // Fewer choices than normal due to pre-selected ability.
+                    // Grants standard 2 abilities if you don't have Deployable Familiars.
+                    FamiliarAbilities = 1 + (ModLoader.FamiliarCreature.HasValue ? 0 : 1),
+                    Illustration = ModData.Illustrations.RuneFamiliar,
+                };
+                values.Tags[Familiars.FAMILIAR_KEY] = runey;
+                // Display
+                values.AddSelectionOptionRightNow(
+                    new SingleFeatSelectionOption(
+                            "FamiliarIllustrationDisplay",
+                            "Show familiar",
+                            -1,
+                            ft => ft.HasTrait(Trait.FamiliarIllustrationDisplay))
+                        .WithIsOptional());
+                // Identity
+                values.AddSelectionOptionRightNow(
+                    new CompanionIdentitySelectionOption(
+                            "FamiliarName",
+                            "Familiar identity",
+                            -1,
+                            "You can name your familiar.\n\nIf you don't choose a name, it will be called {b}Runey{/b}.",
+                            "Runey",
+                            ModData.Illustrations.RuneFamiliar,
+                            [PortraitCategory.Familiars, PortraitCategory.AnimalCompanions, PortraitCategory.Custom],
+                            (val, txt) =>
+                            {
+                                if (!val.Tags.TryGetValue(Familiars.FAMILIAR_KEY, out object? obj)
+                                    || obj is not FamiliarTag famTag)
+                                    return;
+                                CompanionIdentitySelectionOption.SetFamiliarDataFromSection(famTag, txt);
+                            })
+                        .WithIsOptional());
+                values.AtEndOfRecalculationBeforeMorningPreparations += values2 =>
+                {
+                    if (!values2.Tags.TryGetValue(Familiars.FAMILIAR_KEY, out object? obj)
+                        || obj is not FamiliarTag famTag2)
+                        return;
+                    values2.HasMorningPreparations = true;
+                    values2.AddSelectionOption(
+                        new MultipleFeatSelectionOption(
+                            "FamiliarAbilities",
+                            "Familiar abilities",
+                            SelectionOption.MORNING_PREPARATIONS_LEVEL,
+                            (ft, values3) =>
+                            {
+                                if (!ft.HasTrait(Trait.CombatFamiliarAbility))
+                                    return false;
+                                if (ft.Tag is not Trait tag2
+                                    || values3.AdditionalClassTraits.Contains(tag2))
+                                    return true;
+                                ClassSelectionFeat? classSelectionFeat = values3.Class;
+                                return classSelectionFeat != null
+                                       && classSelectionFeat.ClassTrait == tag2;
+                            },
+                            famTag2.FamiliarAbilities)
+                        {
+                            DoNotApplyEffectsInsteadOfRemovingThem = true
+                        });
+                };
+                // Granted abilities
+                //// Grant Tough in order to meet prereqs first.
+                if (ModManager.TryParse("Familiars.FamiliarAbilityTough", out FeatName toughFamiliar))
+                    values.GrantFeat(toughFamiliar);
+                if (ModManager.TryParse("Familiars.FamiliarAbilityFlier", out FeatName flyFamiliar))
+                    values.GrantFeat(flyFamiliar);
+                if (ModManager.TryParse("Familiars.FamiliarAbilityConstruct", out FeatName constructFamiliar))
+                    values.GrantFeat(constructFamiliar);
+            });
         
         // Remote Detonation
         yield return new TrueFeat(
@@ -515,9 +597,82 @@ public static class ClassFeats
         
         #region 2nd-Level
         
-        // TODO: Phase 2, level 2 class feats.
-        
         // Enhanced Glyph Familiar
+        yield return new TrueFeat(
+                ModData.FeatNames.EnhancedGlyphFamiliar, 2,
+                "Your living rune is imbued with more magical power.",
+                $"You can select one additional familiar ability each day. In addition, when you {ModData.FeatNames.TraceRune.ToLink("Trace a Rune")} with {{icon:Action}} a single action, your target can be adjacent to your familiar instead of adjacent to you. Your familiar must be within 30 feet of you for this benefit."
+                + (ModLoader.FamiliarCreature.HasValue ? null : $"\n\n{ModData.Illustrations.DdSun} {{b}}Modding{{/b}} This feat is designed to work with the {{link:https://steamcommunity.com/sharedfiles/filedetails/?id=3508129973}}Deployable Familiars{{/}} mod. Without it, this grants two additional abilities instead of one, but grants no free abilities."),
+                [Trait.Runesmith])
+            // I generally prefer "they" over "it", but the singular
+            // helps remove some amount of ambiguity on the sentence subject.
+            // The familiar must be within 30 feet, not your Trace targets.
+            .WithPermanentQEffect("You can Trace a Rune {icon:Action} from your familiar's space if it's within 30 feet.", qfFeat =>
+            {
+                if (!ModLoader.FamiliarCreature.HasValue)
+                    return;
+                
+                qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+                {
+                    if (AllRunes.All.FirstOrDefault(rune =>
+                                rune.FullName == section.Name)
+                            is not { } foundRune)
+                        return null;
+
+                    Creature? familiar = qfThis.Owner.Battle.AllCreatures.FirstOrDefault(cr =>
+                        cr.QEffects.Any(qf =>
+                            qf.Id == ModLoader.FamiliarCreature.Value
+                            && qf.Source == qfThis.Owner));
+
+                    CombatAction familiarTrace = CommonRuneRules
+                        .CreateTraceAction(qfThis.Owner, foundRune, 1)
+                        .WithStrikeNameAndIllustrationChange(
+                            $"Glyph {foundRune.FullName}",
+                            ModData.Illustrations.RuneFamiliar,
+                            false)
+                        .WithAdjustTarget<CreatureTarget>(crTar =>
+                        {
+                            crTar.CreatureTargetingRequirements.RemoveAll(req =>
+                                req is NaturalReachCreatureTargetingRequirement
+                                    or MaximumRangeCreatureTargetingRequirement);
+                            crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
+                                familiar is null
+                                    ? Usability.NotUsable("Familiar doesn't exist")
+                                    : Usability.Usable);
+                            crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
+                                familiar is null || a.DistanceTo(familiar) > 6
+                                    ? Usability.NotUsable("Familiar out of range")
+                                    : Usability.Usable);
+                            crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
+                                familiar is null || !d.IsAdjacentTo(familiar)
+                                    ? Usability.NotUsableOnThisCreature("Not adjacent to familiar")
+                                    : Usability.Usable);
+                            crTar.AlternateTileOfOrigin = familiar?.Space.CenterTile;
+                        });
+                    familiarTrace.AlternateCreatureOfOrigin = familiar;
+                    familiarTrace.ShortName = familiarTrace.Name; // Combat log asks for ShortName, then ContextMenuName, then Name. This prevents it from printing the action symbols more than once.
+                    familiarTrace.ContextMenuName = "{icon:Action} " + familiarTrace.Name;
+                    familiarTrace.Description = CommonRuneRules.CreateTraceActionDescription(
+                        foundRune,
+                        qfThis.Owner.Level,
+                        withFlavorText: false,
+                        prologueText: "{Blue}{b}Range{/b} Adjacent to your glyph familiar{/Blue}\n");
+
+                    return new ActionPossibility(familiarTrace)
+                    {
+                        Caption = "From Glyph Familiar",
+                        Illustration = ModData.Illustrations.RuneFamiliar,
+                    };
+                };
+            })
+            .WithOnSheet(values =>
+            {
+                if (!values.Tags.TryGetValueAs("CombatFamiliar", out FamiliarTag? famTag)
+                    || famTag is null)
+                    return;
+                famTag.FamiliarAbilities += 1 + (ModLoader.FamiliarCreature.HasValue ? 0 : 1);
+            })
+            .WithPrerequisite(ModData.FeatNames.GlyphFamiliar, "Glyph Familiar");
         
         // Fortifying Knock
         yield return new TrueFeat(
@@ -611,6 +766,7 @@ public static class ClassFeats
                         || action.HasTrait(ModData.Traits.Etched))
                         action.WithExtraTrait(Trait.DoesNotBreakStealth);
                 };
+                
                 qfFeat.ProvideMainAction = qfThis =>
                 {
                     CombatAction inkHide = CreateInvisibleInkAction(
@@ -976,8 +1132,6 @@ public static class ClassFeats
         
         #region 4th-Level
         
-        // TODO: Phase 2, level 4 class feats.
-        
         // Artist's Attendance
         // DOC: "within reach of a creature" is interpreted as being YOUR reach
         yield return new TrueFeat(
@@ -1136,6 +1290,154 @@ public static class ClassFeats
             });
         
         // Song of Glorious Invocation
+        // DOC: Lacked the Invocation trait, and has been added.
+        yield return new TrueFeat(
+                ModData.FeatNames.SongOfGloriousInvocation, 4,
+                "You weave the true names of several runes you've drawn into a beautiful song, invoking them all simultaneously.",
+                $$"""
+                {b}Frequency{/b} Once per encounter.
+
+                Choose up to three rune-bearers within 30 feet and {{ModData.FeatNames.InvokeRune.ToLink("Invoke one Rune")}} on each of them. The song also inspires the rune-bearers, granting them a +1 status bonus to skill checks and saves against fear effects for 1 minute.
+                """,
+                [Trait.Auditory, Trait.Concentrate, Trait.Emotion, ModData.Traits.Invocation, Trait.Mental, Trait.Runesmith])
+            .WithActionCost(1)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " " + UsedUpDescription("[invocation] (Once per combat) Invoke one Rune on each of up to 3 rune-bearers, and grant a +1 status bonus to skill checks and saves against fear for the rest of the encounter.", !qfThis.UsedUpPermanently, "combat");
+                
+                qfFeat.ProvideMainAction = qfThis =>
+                {
+                    if (qfThis.UsedUpPermanently)
+                        return null;
+                    
+                    (int range, string rangeDesc) = CommonRuneRules.GetInvocationRange(qfThis.Owner, 6);
+
+                    CombatAction song = new CombatAction(
+                            qfThis.Owner,
+                            new SuperimposedIllustration(
+                                ModData.Illustrations.RuneSinger,
+                                new BagOfIllustrationsIllustration(
+                                    ModData.Illustrations.TraceRune,
+                                    ModData.Illustrations.TraceRune,
+                                    ModData.Illustrations.TraceRune)),
+                            "Song of Glorious Invocation",
+                            [ModData.ModTrait, Trait.Auditory, Trait.Concentrate, Trait.Emotion, ModData.Traits.Invocation, Trait.Mental, Trait.Runesmith, Trait.Basic],
+                            null!,
+                            Target.Self()
+                                .WithAdditionalRestriction(a =>
+                                    a.Battle.AllCreatures.Any(cr =>
+                                        cr.FriendOf(a)
+                                        && cr.DistanceTo(a) <= range)
+                                        ? null
+                                        : "No allied rune-bearers within range"))
+                        .WithDescription(
+                                "You weave the true names of several runes you've drawn into a beautiful song, invoking them all simultaneously.",
+                                $$"""
+                                  {b}Frequency{/b} Once per encounter.
+
+                                  Choose up to three rune-bearers within {{rangeDesc}} and {{ModData.FeatNames.InvokeRune.ToLink("Invoke one Rune")}} on each of them. The song also inspires the rune-bearers, granting them a +1 status bonus to skill checks and saves against fear effects for 1 minute.
+                                  """)
+                        // Built as WithEffectOnSelf to consolidate choosing
+                        // a creature with choosing a creature option.
+                        .WithEffectOnSelf(async (action, caster) =>
+                        {
+                            List<Creature> allCreatures = caster.Battle.AllCreatures
+                                .Where(cr =>
+                                    DrawnRune.IsARuneBearer(caster, cr)
+                                    && cr.FriendOf(caster)
+                                    && cr.DistanceTo(caster) <= range)
+                                .ToList();
+                            List<DrawnRune> chosenRunes = [];
+                            
+                            // Choose up to 3 invocations, filtering targets each time,
+                            // delaying invocation until afterward.
+                            for (int i=0; i<3; i++)
+                            {
+                                (DrawnRune? chosenRune, Option chosenOption) = await CommonRuneRules.ChooseADrawnRune(
+                                    caster,
+                                    allCreatures.Except(chosenRunes.Select(dr => dr.Owner)),
+                                    action.Illustration,
+                                    $"Choose a rune on an ally to invoke, or right-click to cancel. ({i + 1}/3)",
+                                    dr => $"Invoke {dr.Name}",
+                                    dr => dr.Rune.InvocationProperties.InvocationTextWithFormattedHeightening
+                                        ?.Invoke(dr.Rune, dr.Source!.Level) ?? "[NO INVOCATION DESCRIPTION]",
+                                    i == 0 ? "Revert" : " Confirm no additional invocations ",
+                                    true,
+                                    dr => dr.Rune.InvocationProperties.IsLegalTarget(caster, dr.Owner));
+
+                                // Revert only if it's null on the first choice.
+                                // This is because you choose UP TO 3 allies.
+                                if (chosenRune is null)
+                                {
+                                    if (i == 0 || chosenOption is CancelOption)
+                                    {
+                                        action.RevertRequested = true;
+                                        return;
+                                    }
+                                    if (chosenOption is PassViaButtonOption)
+                                        break;
+                                }
+                                else
+                                {
+                                    chosenRunes.Add(chosenRune);
+                                    Sfxs.Play(SfxName.OminousActivation);
+                                }
+                            }
+                            
+                            // Fallback. This should never execute.
+                            if (chosenRunes.Count == 0)
+                            {
+                                action.RevertRequested = true;
+                                return;
+                            }
+
+                            // End the selection UI that seems to persist during these animations for some reason.
+                            caster.Battle.Request.PostProcess(caster.Battle.Request.AffectedTiles.ToList());
+                            caster.Battle.Request = null!;
+
+                            qfThis.UsedUpPermanently = true;
+
+                            // Play SFX and VFX
+                            Sfxs.Play(ModData.SfxNames.SING_RUNE);
+                            await CommonRuneRules.PlayGroupInvocationOverheadAnimation(caster, chosenRunes);
+                            await CommonRuneRules.PlayGroupInvocationSplashAnimation(
+                                caster.Battle,
+                                chosenRunes.Select(dr =>
+                                        (dr.Owner, dr.Rune.Illustration))
+                                    .ToList());
+                            
+                            // Invoke each rune and buff each bearer
+                            foreach (DrawnRune dr in chosenRunes)
+                            {
+                                // Capture before it gets removed
+                                Creature owner = dr.Owner;
+                                await CommonRuneRules.InvokeDrawnRune(action, dr);
+                                owner.AddQEffect(new QEffect(
+                                    "Glorious Song",
+                                    "You have a +1 status bonus to skill checks as well as saves against fear.",
+                                    action.Illustration)
+                                {
+                                    BonusToSkills = _ =>
+                                        new Bonus(1, BonusType.Status, "Song of Glorious Invocation"),
+                                    BonusToDefenses = (_, fearAction, def) =>
+                                        def.IsSavingThrow()
+                                        && fearAction?.HasTrait(Trait.Fear) == true
+                                            ? new Bonus(1, BonusType.Status, "Song of Glorious Invocation")
+                                            : null,
+                                });
+                            }
+                        });
+
+                    CommonRuneRules.WithImmediatelyRemovesImmunity(song);
+
+                    return new ActionPossibility(song)
+                        .WithPossibilityGroup(ModData.PossibilityGroups.INVOKING_RUNES);
+                };
+            })
+            .WithPrerequisite(
+                ModData.FeatNames.RuneSinger,
+                "Rune-Singer");
         
         // Terrifying Invocation
         yield return new TrueFeat(
@@ -1144,7 +1446,7 @@ public static class ClassFeats
                 $"You attempt to Demoralize a single target within 30 feet, and then {ModData.FeatNames.InvokeRune.ToLink("Invoke one Rune")} upon that target. You don't take a penalty to your check if the creature doesn't understand your language.",
                 [ModData.Traits.Invocation, Trait.Runesmith])
             .WithActionCost(1)
-            .WithPermanentQEffect(null, qfFeat =>
+            .WithPermanentQEffect(qfFeat =>
             {
                 (int range, string rangeDesc) = CommonRuneRules.GetInvocationRange(qfFeat.Owner, 6);
                 
@@ -1312,14 +1614,14 @@ public static class ClassFeats
                                     .Where(cr => cr == target)
                                     .ToList();
                             
-                            DrawnRune? chosenRune = await CommonRuneRules.ChooseADrawnRune(
+                            DrawnRune? chosenRune = (await CommonRuneRules.ChooseADrawnRune(
                                 caster,
                                 possiblePickups,
                                 transposeAction.Illustration,
                                 "Choose one of your runes to move to another creature within 30 feet or right-click to cancel.",
                                 dr => $"Pick up {{Blue}}{dr.Rune.FullName}{{/Blue}}",
                                 null, "Revert", true,
-                                IsTransposableRune);
+                                IsTransposableRune)).ChosenRune;
 
                             if (chosenRune == null)
                             {
@@ -1396,6 +1698,7 @@ public static class ClassFeats
             });
         
         // Writing on the Wall
+        // Not very useful and I don't have homebrew replacement concepts.
         
         #endregion
         
@@ -1415,9 +1718,7 @@ public static class ClassFeats
             .WithPermanentQEffect(qfFeat =>
             {
                 qfFeat.AddToOffenseBlock = qfThis =>
-                    qfThis.Name!.WithTag("b") + " " + (qfFeat.UsedUpPermanently
-                        ? "{strike}(Used this combat){/strike}"
-                        : "[concentrate] (Once per combat) The next time you Trace a Rune this turn, Trace a diacritic Rune on it.");
+                    qfThis.Name!.WithTag("b") + " " + UsedUpDescription("[concentrate] (Once per combat) The next time you Trace a Rune this turn, Trace a diacritic Rune on it.", !qfFeat.UsedUpPermanently, "combat");
 
                 // Yes, yes, yes, I know it's already false.
                 // "Initializing" it like this just helps me to see that
@@ -1570,6 +1871,9 @@ public static class ClassFeats
 
                 qfFeat.ProvideStrikeModifierAsPossibilities = (qfThis, item) =>
                 {
+                    if (item.HasTrait(Trait.Unarmed))
+                        return [];
+                    
                     Trait[] maneuvers = [Trait.Disarm, Trait.Shove, Trait.Trip];
 
                     return maneuvers
@@ -2131,7 +2435,7 @@ public static class ClassFeats
                   """,
                 [Trait.Runesmith])
             .WithActionCost(0)
-            .WithPermanentQEffect(null, qfFeat =>
+            .WithPermanentQEffect(qfFeat =>
             {
                 qfFeat.AddToOffenseBlock = _ =>
                     "{b}Drawn in Vital Ink {icon:FreeAction}{/b} (After a successful physical melee Strike) Collect the target's blood to Trace Runes on them up to 60 feet away as a single action.";
@@ -2533,6 +2837,189 @@ public static class ClassFeats
             });
         
         // Swiping Trace
+        yield return new TrueFeat(
+                ModData.FeatNames.SwipingTrace, 8,
+                "You prepare a rune on the end of your weapon so that it transfers to your enemies.",
+                // Like DD's swipe instead. Damage for each, attack for each.
+                $$"""
+                Make a melee Strike against two enemies within your reach. You can {{ModData.FeatNames.TraceRune.ToLink("Trace a Rune")}} on each creature you hit and deal damage to, but they must be the same rune. A Swiping Trace counts as two attacks for your multiple attack penalty.
+
+                If you're using a weapon with the sweep trait, its bonus applies to these attacks.
+                """,
+                [Trait.Flourish, Trait.Runesmith])
+            .WithActionCost(3)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " [flourish] Make a melee Strike on two enemies. On each hit, Trace the same Rune on them.";
+
+                qfFeat.ProvideStrikeModifier = item =>
+                {
+                    if (!item.HasTrait(Trait.Melee)
+                        || RunicRepertoireTag.GetRepertoire(qfFeat.Owner)
+                            is not {} repertoire)
+                        return null;
+
+                    List<Rune> traceableRunes = repertoire.GetTraceableRunes(qfFeat.Owner)
+                        .Where(rune => rune.DrawProperties.IsDrawnOnlyOnCreatures)
+                        .ToList();
+                    
+                    CombatAction swipingTrace = new CombatAction(
+                            qfFeat.Owner,
+                            new TriplePortraitIllustration(
+                                item.Illustration,
+                                IllustrationName.Swipe,
+                                ModData.Illustrations.TraceRune),
+                            "Swiping Trace",
+                            [ModData.ModTrait, Trait.Flourish, Trait.Runesmith, Trait.IsHostile, Trait.AlwaysHits],
+                            null!,
+                            Target.MultipleCreatureTargets(
+                                    Target.Reach(item),
+                                    Target.Reach(item))
+                                .WithMinimumTargets(2)
+                                .WithAdditionalRestrictionsOnEachTarget((caster, prev, next) =>
+                                    prev.All(cr => cr != next)
+                                    && traceableRunes.Any(rune =>
+                                        rune.DrawProperties.IsLegalTarget(caster, next))))
+                        .WithActionCost(3)
+                        .WithDescription(
+                            "You prepare a rune on the end of your weapon so that it transfers to your enemies.",
+                            """
+                            Make a melee Strike against two enemies within your reach. You can Trace a Rune on each creature you hit and deal damage to, but they must be the same rune. A Swiping Trace counts as two attacks for your multiple attack penalty.
+
+                            If you're using a weapon with the sweep trait, its bonus applies to your Swiping Trace attacks.
+                            """)
+                        .WithTargetingTooltip((action, target, _) =>
+                            CombatActionExecution
+                                .BreakdownAttackForTooltip(
+                                    StrikeRules.CreateStrike(
+                                        action.Owner, item, RangeKind.Melee, -1),
+                                    target)
+                                .TooltipDescription)
+                        .WithEffectOnChosenTargets(async (action, caster, targets) =>
+                        {
+                            if (targets.ChosenCreatures.Count < 2)
+                            {
+                                action.RevertRequested = true;
+                                return;
+                            }
+
+                            // Choose a rune to trace
+                            Rune? chosenRune = null;
+                            List<Option> options = [];
+                            foreach (Rune rune in traceableRunes)
+                            {
+                                CombatAction traceAction = CommonRuneRules
+                                    .CreateTraceAction(caster, rune, 2)
+                                    .WithActionCost(0);
+                                List<Option> newOptions = targets.ChosenCreatures
+                                    .Where(cr =>
+                                        (traceAction.Target as CreatureTarget)?.IsLegalTarget(caster, cr) ?? false)
+                                    .Select(cr =>
+                                        new CreatureOption(
+                                            cr,
+                                            // Also excludes the range description
+                                            CommonRuneRules.CreateTraceActionDescription(
+                                                rune,
+                                                caster.Level,
+                                                withFlavorText: false),
+                                            async () => chosenRune = rune,
+                                            0f, false)
+                                        {
+                                            Illustration = rune.Illustration,
+                                            ContextMenuText = traceAction.Name,
+                                        })
+                                    .Cast<Option>()
+                                    .ToList();
+                                if (newOptions.Count == targets.ChosenCreatures.Count)
+                                    options.AddRange(newOptions);
+                            }
+                            
+                            options.Add(new CancelOption(true));
+                            options.Add(new PassViaButtonOption("Revert"));
+
+                            Option chosenOption = (await caster.Battle.SendRequest(new AdvancedRequest(
+                                caster,
+                                "Choose which rune to trace on all targets of Swiping Trace, or right-click to cancel.",
+                                options)
+                            {
+                                TopBarIcon = action.Illustration,
+                                TopBarText = "Choose which rune to trace on all targets of Swiping Trace, or right-click to cancel.",
+                            })).ChosenOption;
+                            
+                            await chosenOption.Action();
+                            
+                            if (chosenOption is CancelOption or PassViaButtonOption
+                                || chosenRune is null)
+                            {
+                                action.RevertRequested = true;
+                                return;
+                            }
+
+                            // Make attacks
+                            int map = caster.Actions.AttackedThisManyTimesThisTurn;
+                            bool hasSweep = item.HasTrait(Trait.Sweep);
+                            List<Creature> hits = [];
+                            foreach (Creature cr in targets.ChosenCreatures)
+                            {
+                                caster.Actions.AttackedThisManyTimesThisTurn = map;
+                                await CommonCombatActions.StrikeCreature(
+                                    caster,
+                                    strike =>
+                                        strike.HasTrait(Trait.Melee) && strike.Item == item,
+                                    strike =>
+                                    {
+                                        if (hasSweep)
+                                            strike.StrikeModifiers.QEffectForStrike = new QEffect()
+                                            {
+                                                BonusToAttackRolls = (_, strike2, _) =>
+                                                    action == strike
+                                                        ? new Bonus(1, BonusType.Circumstance, "Sweep")
+                                                        : null
+                                            };
+                                        strike.WithHitAndDealDamage(async (caster2, strike2, target) =>
+                                            hits.Add(target));
+                                    },
+                                    target =>
+                                        target == cr,
+                                    action.Illustration,
+                                    "Choose a creature to Strike and Trace a Rune on.",
+                                    false,
+                                    null);
+                            }
+
+                            caster.Actions.AttackedThisManyTimesThisTurn = map + targets.ChosenCreatures.Count;
+                            
+                            // Play custom animation
+                            Sfxs.Play(ModData.SfxNames.TRACE_RUNE);
+                            await caster.Battle.WaitForProjectiles(hits
+                                .SelectMany(cr =>
+                                    cr.Battle.SpawnOvercreatureProjectileParticles(
+                                        1, caster, cr, Color.White, chosenRune.Illustration, true))
+                                .ToList());
+                            
+                            // Trace the runes
+                            bool overheadOnce = false; // Show overhead just the first time
+                            foreach (Creature cr in hits)
+                            {
+                                CombatAction traceAction = CommonRuneRules
+                                    .CreateTraceAction(caster, chosenRune, 2)
+                                    .WithActionCost(0)
+                                    .WithExtraTrait(Trait.AlwaysHits)
+                                    .WithExtraTrait(Trait.ProxyAttack);
+                                traceAction.SoundEffectName = null;
+                                traceAction.ProjectileKind = ProjectileKind.None;
+                                if (overheadOnce)
+                                    traceAction.WithExtraTrait(Trait.DoNotShowOverheadOfActionName);
+
+                                await caster.Battle.GameLoop.FullCast(traceAction, ChosenTargets.CreateSingleTarget(cr));
+                                overheadOnce = true;
+                            }
+                        });
+
+                    return swipingTrace;
+                };
+            });
         
         #endregion
         
@@ -2659,6 +3146,11 @@ public static class ClassFeats
         // Stone Forge of the First
 
         #endregion
+    }
+
+    public static string UsedUpDescription(string textIfUsable, bool isUsable, string usableHowOften = "day")
+    {
+        return isUsable ? textIfUsable : $"(Used this {usableHowOften})".WithTag("strike");
     }
 
     public static CombatAction CreateFortifyingKnockAction(

@@ -1737,7 +1737,7 @@ public static class AllRunes
                                                 if (targets.ChosenCreature is null)
                                                     return;
                                                 // Animation on rune-bearer
-                                                await CommonRuneRules.PlayInvocationAnimation(targets.ChosenCreature, drThis.Rune.Illustration);
+                                                await CommonRuneRules.PlayInvocationSplashAnimation(targets.ChosenCreature, drThis.Rune.Illustration);
                                             });
 
                                         sunRedraw.Name = sunRedraw.Name.Replace("Trace", "Retrace");

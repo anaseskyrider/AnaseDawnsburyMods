@@ -169,8 +169,8 @@ public class RunicRepertoireTag
     public List<Rune> GetTraceableRunes(Creature runesmith)
     {
         return GetKnownRunes(runesmith, true)
-            /*.Where(rune =>
-                !rune.DrawProperties.IsEtchedOnly)*/
+            .Where(rune =>
+                !ModData.PersistentActions.RuneIsUsedUp(runesmith, rune.Id))
             .ToList();
     }
 

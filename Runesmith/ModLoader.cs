@@ -3,6 +3,7 @@ using System.Reflection;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CombatActions;
+using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Display.Controls.Statblocks;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
@@ -25,6 +26,8 @@ public static class ModLoader
     /// </summary>
     /// <remarks>This works only for Lores and Weaknesses.</remarks>
     public static FeatName? RecallWeaknessFeat { get; set; }
+    
+    public static QEffectId? FamiliarCreature { get; set; }
 
     [DawnsburyDaysModMainMethod]
     public static void LoadMod()
@@ -34,6 +37,9 @@ public static class ModLoader
             : null;
         RecallWeaknessFeat = ModManager.TryParse("LoresAndWeaknesses.RecallWeakness", out FeatName rwFn)
             ? rwFn
+            : null;
+        FamiliarCreature = ModManager.TryParse("FamiliarCreature", out QEffectId fCrId)
+            ? fCrId
             : null;
         
         ////////////////

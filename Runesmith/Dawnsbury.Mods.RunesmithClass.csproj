@@ -12,6 +12,7 @@
     <!-- Asset Folders -->
     <ItemGroup>
         <Assets Include="$(AssetsFolder)\**\*.*"/>
+        <Tokens2 Include="$(Tokens2Folder)\**\*.*"/>
     </ItemGroup>
     <ItemGroup>
       <ProjectReference Include="..\Lores and Weaknesses\Dawnsbury.Mods.LoresAndWeaknesses.csproj" />
@@ -21,6 +22,7 @@
     <Target Name="CopyToGameModsFolder" AfterTargets="Build">
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DawnsburyInstall)\CustomMods"/>
         <Copy SourceFiles="@(Assets)" DestinationFolder="$(DawnsburyInstall)\CustomMods\$(AssetsFolder)\%(RecursiveDir)"/>
+        <Copy SourceFiles="@(Tokens2)" DestinationFolder="$(DawnsburyInstall)\$(Tokens2Folder)\%(RecursiveDir)"/>
     
         <Message Text="Copied to game mod folder." />
     </Target>
@@ -30,6 +32,7 @@
         <Copy SourceFiles="ORC copyright notice.html" DestinationFolder="$(WorkshopExport)\$(ProjectName)" ContinueOnError="true"/>
         <Copy SourceFiles="optional-dependencies.txt" DestinationFolder="$(WorkshopExport)\$(ProjectName)" ContinueOnError="true"/>
         <Copy SourceFiles="@(Assets)" DestinationFolder="$(WorkshopExport)\$(ProjectName)\CustomModsV3\$(AssetsFolder)\%(RecursiveDir)"/>
+        <Copy SourceFiles="@(Tokens2)" DestinationFolder="$(WorkshopExport)\$(ProjectName)\$(Tokens2Folder)\%(RecursiveDir)"/>
     
         <Message Text="Copied to mod publishing folder." />
     </Target>

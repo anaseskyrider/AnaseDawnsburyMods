@@ -243,9 +243,18 @@ public class DrawnRune : QEffect
 
     #region Methods
 
+    private static bool IsADrawnRune(Creature? runesmith, QEffect qf, bool includeDisabled = false)
+    {
+        return qf is DrawnRune dr
+               && (runesmith == null || dr.Source == runesmith)
+               && dr.Traits.Contains(ModData.Traits.Rune)
+               && !dr.Traits.Contains(ModData.Traits.Invocation)
+               && (!dr.Disabled || includeDisabled);
+    }
+
     public static bool IsARuneBearer(Creature? runesmith, Creature runeBearer, bool includeDisabled = false)
     {
-        return GetDrawnRunes(runesmith, runeBearer, includeDisabled).Count > 0;
+        return runeBearer.QEffects.Any(qf => IsADrawnRune(runesmith, qf, includeDisabled));
     }
 
     /// <summary>
@@ -257,12 +266,7 @@ public class DrawnRune : QEffect
     public static List<DrawnRune> GetDrawnRunes(Creature? runesmith, Creature runeBearer, bool includeDisabled = false)
     {
         List<DrawnRune> drawnRunes = runeBearer.QEffects
-            .Where(qf =>
-                qf is DrawnRune dr
-                && (runesmith == null || dr.Source == runesmith)
-                && dr.Traits.Contains(ModData.Traits.Rune)
-                && !dr.Traits.Contains(ModData.Traits.Invocation)
-                && (!dr.Disabled || includeDisabled))
+            .Where(qf => IsADrawnRune(runesmith, qf, includeDisabled))
             .Cast<DrawnRune>()
             .ToList();
         return drawnRunes;

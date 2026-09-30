@@ -40,6 +40,7 @@ namespace Dawnsbury.Mods.RunesmithClass;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
+/// <item>v2.8: Add string.AddIfNotNull().</item>
 /// <item>v2.7: Add Creature.AskForChoiceAmongItems(), CommonSpellEffects.DealAttackRollPersistentDamage(), CombatAction.WithAdjustTarget().</item>
 /// <item>v2.6: Updated functionality of both GameLoop.OfferOptions2 extensions, changed their returns to Task{bool}, and added shortcuts to them as Creature.OfferOptions2(). Remove CombatAction.CreatePass(). Added LongMovement.GetCostOfPath() as instanced and static functions.</item>
 /// <item>v2.5: Add CombatAction.Fullcast(Creature, QEffect).</item>
@@ -59,7 +60,7 @@ namespace Dawnsbury.Mods.RunesmithClass;
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
-/// <value>v2.7</value>
+/// <value>v2.8</value>
 public static class LibraryOfAnase
 {
     extension(Creature cr)
@@ -923,6 +924,20 @@ public static class LibraryOfAnase
         public string PluralizeIf(string? addSingular, string addPlural, int count)
         {
             return text + (count == 1 ? addSingular : addPlural);
+        }
+
+        /// <summary>
+        /// Conditionally prepend or append text if the source string is not null. Otherwise, return null.
+        /// </summary>
+        public string? AddIfNotNull(string? prepend, string? append)
+        {
+            if (string.IsNullOrEmpty(text))
+                return null;
+            if (prepend is not null)
+                text = prepend + text;
+            if (append is not null)
+                text += append;
+            return text;
         }
     }
 

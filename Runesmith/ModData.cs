@@ -425,6 +425,8 @@ public static class ModData
         
         #region Feats
         
+        public static readonly Illustration RuneFamiliar = new ModdedIllustration(
+            MOD_FOLDER+"RuneFamiliar.png");
         public static readonly Illustration RuneWard = new ModdedIllustration(MOD_FOLDER+"shield.png");
         public static readonly Illustration TransposeEtching = new ModdedIllustration(MOD_FOLDER+"hand.png");
         public static readonly Illustration DiacriticFluency = new ModdedIllustration(MOD_FOLDER+"esoteric.png");
@@ -780,6 +782,15 @@ public static class ModData
                 CommonRuneRules.TRAIT_DESCRIPTION_DIACRITIC,
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
         
+        #endregion
+
+        #region Misc
+        
+        /// <summary>
+        /// Trait from Deployable Familiars. Makes the feat into a deployable familiar feat.
+        /// </summary>
+        public static readonly Trait DeployableFamiliarFeat = ModManager.RegisterTrait("DeployableFamiliarFeat", new TraitProperties("Deployable Familiar Feat", false));
+
         #endregion
     }
     

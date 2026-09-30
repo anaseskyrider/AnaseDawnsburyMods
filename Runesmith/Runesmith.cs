@@ -226,9 +226,10 @@ public static class Runesmith
                                 .CreateTraceAction(qfThis.Owner, rune, 1)
                                 .WithExtraTrait(Trait.Basic);
                             
-                            traceRuneOne.Description = CommonRuneRules.CreateTraceActionDescription(rune, qfThis.Owner.Level,
-                                withFlavorText: false,
-                                withUsageText: false);
+                            traceRuneOne.Description = CommonRuneRules.CreateTraceActionDescription(
+                                rune,
+                                traceRuneOne,
+                                withFlavorText: false);
                             traceRuneOne.ShortName = traceRuneOne.Name; // Combat log asks for ShortName, then ContextMenuName, then Name. This prevents it from printing the action symbols more than once.
                             traceRuneOne.ContextMenuName = $"{{icon:Action}} {traceRuneOne.Name}";
                             traceRuneOne.WithAdjustTarget<CreatureTarget>(crTar => crTar
@@ -261,14 +262,15 @@ public static class Runesmith
                         traceRuneTwo.ShortName = traceRuneTwo.Name;
                         traceRuneTwo.ContextMenuName = $"{RulesBlock.GetIconTextFromNumberOfActions(traceRuneTwo.ActionCost)} {traceRuneTwo.Name}";
                         traceRuneTwo
-                            .WithDescription(CommonRuneRules.CreateTraceActionDescription(rune, qfThis.Owner.Level,
-                                withFlavorText: false,
-                                withUsageText: false))
                             .WithAdjustTarget<CreatureTarget>(crTar => crTar
                                 .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
                                     attacker.FindQEffect(ModData.QEffectIds.DrawnInVitalInk)?.Tag == defender
                                         ? Usability.NotUsableOnThisCreature("use Drawn in Vital Ink")
-                                        : Usability.Usable));
+                                        : Usability.Usable))
+                            .WithDescription(CommonRuneRules.CreateTraceActionDescription(
+                                rune,
+                                traceRuneTwo,
+                                withFlavorText: false));
                         
                         ActionPossibility tracePossTwo = new ActionPossibility(traceRuneTwo)
                         {
@@ -287,7 +289,7 @@ public static class Runesmith
                             PossibilitySize.Half)
                         {
                             // variable action trace rune
-                            SpellIfAny = CommonRuneRules.CreateTraceAction(qfThis.Owner, rune, -3),
+                            SpellIfAny = CommonRuneRules.CreateTraceActionForDisplay(qfThis.Owner, rune),
                             Subsections =
                             {
                                 // rune.Name is how features like Drawn In Vital Ink find these sections.
@@ -515,7 +517,7 @@ public static class Runesmith
                 [], null)
             .WithOnSheet(values =>
             {
-                values.AtEndOfRecalculationBeforeMorningPreparations = valuesBefore =>
+                values.AtEndOfRecalculationBeforeMorningPreparations += valuesBefore =>
                 {
                     List<CharacterSheet?> heroes;
                     if (CampaignState.Instance?.Heroes is { } apHeroes)
@@ -558,7 +560,8 @@ public static class Runesmith
                                 };
                             })
                             .WhereNotNull()
-                            .ToArray()));
+                            .ToArray())
+                        .WithIsOptional());
                 };
             })
             .WithPermanentQEffect(
@@ -588,10 +591,10 @@ public static class Runesmith
         
         // Greater Runic Optimization
         yield return new Feat(
-            ModData.FeatNames.GreaterRunicOptimization,
-            "Your weapon runes harmonize with your own innate magic, multiplying their damage even further.",
-            $"Your extra damage from {ModData.FeatNames.RunicOptimization.ToLink("runic optimization")} increases to 4 with weapons bearing a {ItemName.StrikingRunestone.ToLink("striking rune").WithTag("i")}, 6 for a {ItemName.GreaterStrikingRunestone.ToLink("greater striking rune").WithTag("i")}, and 8 for a {ItemName.MajorStrikingRunestone.ToLink("major striking rune").WithTag("i")}.",
-            [], null)
+                ModData.FeatNames.GreaterRunicOptimization,
+                "Your weapon runes harmonize with your own innate magic, multiplying their damage even further.",
+                $"Your extra damage from {ModData.FeatNames.RunicOptimization.ToLink("runic optimization")} increases to 4 with weapons bearing a {ItemName.StrikingRunestone.ToLink("striking rune").WithTag("i")}, 6 for a {ItemName.GreaterStrikingRunestone.ToLink("greater striking rune").WithTag("i")}, and 8 for a {ItemName.MajorStrikingRunestone.ToLink("major striking rune").WithTag("i")}.",
+                [], null)
             .WithLevel(15);
     }
 
@@ -626,12 +629,6 @@ public static class Runesmith
                         return NumRunesInRange(caster) > 0 ? null : "No rune-bearers within range";
                     }))
             .WithTag((range, rangeDesc)) // Store the range info to make the archetype easier to adjust
-            /*.WithShortDescription($"Invoke {maxInvocations switch
-            {
-                1 => "1 rune",
-                2 => "up to 2 runes",
-                _ => "up to any number of runes"
-            }} within {rangeDesc}.")*/
             .WithActionCost(1)
             .WithEffectOnEachTarget(async (thisAction, self, _,_) =>
             {
@@ -654,7 +651,8 @@ public static class Runesmith
                                 ? $" You should avoid invoking the same rune on the same creature more than once.{(maxInvocations < 99 ? $" ({invoked + 1}/{maxInvocations})" : null)}"
                                 : null))
                     {
-                        thisAction.RevertRequested = true;
+                        if (invoked < 1)
+                            thisAction.RevertRequested = true;
                         return;
                     }
                     whileProtection++;

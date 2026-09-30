@@ -137,6 +137,59 @@ public static class CommonRuneRules
     }
 
     /// <summary>
+    /// Generates a description block for this rune's Trace actions.
+    /// </summary>
+    /// <remarks>This overload is suitable for including range information in actions and tooltips.</remarks>
+    /// <param name="rune">The rune being traced.</param>
+    /// <param name="traceAction">The Trace Action being described.</param>
+    /// <param name="withFlavorText">Whether to include flavor text in the description (typically false for dropdown options).</param>
+    /// <param name="afterFlavorText">The text to add at the end of the flavor text paragraph.</param>
+    /// <param name="withRangeText">Whether to include the range display of the action.</param>
+    /// <param name="withUsageText">Whether to include the usage text in the description (typically false for dropdown options).</param>
+    /// <param name="afterUsageText">The text to add at the end of the usage text paragraph.</param>
+    /// <param name="prologueText">The paragraph to add at the top of the description (includes one line-break after).</param>
+    /// <param name="afterPassiveText">The text to add at the end of the passive text paragraph.</param>
+    /// <param name="afterInvocationText">The text to add at the end of the invocation text paragraph.</param>
+    /// <param name="epilogueText">The paragraph to add at the bottom of the description (includes one line-break before).</param>
+    /// <returns></returns>
+    public static string CreateTraceActionDescription(
+        Rune rune,
+        CombatAction traceAction,
+        bool withFlavorText = true,
+        string? afterFlavorText = null,
+        bool withRangeText = true,
+        bool withUsageText = true,
+        string? afterUsageText = null,
+        string? prologueText = null,
+        string? afterPassiveText = null,
+        string? afterInvocationText = null,
+        string? epilogueText = null)
+    {
+        // Flavor
+        string flavorText = (withFlavorText ? rune.GetFlavorText() : null) + afterFlavorText;
+        
+        // Entry text block
+        string? rangeText = withRangeText ? traceAction.Target.ToDescription() : null;
+        string usageText = (withUsageText ? rune.DrawProperties.UsageTextWithFormatting : null) + afterUsageText;
+        string? entryText = null;
+        if (!string.IsNullOrEmpty(rangeText))
+            entryText += rangeText + "\n";
+        if (!string.IsNullOrEmpty(usageText))
+            entryText += usageText + "\n";
+        
+        // Mechanics
+        string passiveText = rune.PassiveProperties.PassiveTextWithHeightening(rune, traceAction.Owner.Level) + afterPassiveText;
+        string invocationText = rune.InvocationProperties.InvocationTextWithFormattedHeightening?.Invoke(rune, traceAction.Owner.Level) + afterInvocationText;
+        
+        return (!string.IsNullOrEmpty(flavorText) ? $"{flavorText}\n\n" : null)
+               + (!string.IsNullOrEmpty(entryText) ? $"{entryText}\n" : null)
+               + (!string.IsNullOrEmpty(prologueText) ? $"{prologueText}\n" : null)
+               + passiveText
+               + (!string.IsNullOrEmpty(invocationText) ? $"\n\n{invocationText}" : null)
+               + (!string.IsNullOrEmpty(epilogueText) ? $"\n{epilogueText}" : null);
+    }
+
+    /// <summary>
     /// Gets the full description block for the Rune with formatting, optionally with the flavor text.
     /// </summary>
     /// <param name="rune">The rune to use.</param>
@@ -744,6 +797,35 @@ public static class CommonRuneRules
 
     #region Tracing Runes
 
+    public static CombatAction CreateTraceActionForDisplay(
+        Creature owner,
+        Rune rune)
+    {
+        CombatAction traceAction = new CombatAction(
+                owner,
+                rune.Illustration,
+                $"Trace {rune.FullName}",
+                [ModData.ModTrait, Trait.Concentrate, Trait.Magical, Trait.Manipulate, Trait.Runesmith],
+                CommonRuneRules.CreateTraceActionDescription(
+                    rune, owner.Level,
+                    afterUsageText: $"\n\n{{icon:Action}} The range is touch.\n{{icon:TwoActions}} The range is 30 feet."),
+                Target.Self())
+            .WithActionCost(-3);
+        
+        /*traceAction.WithCreateVariantDescription((actions2, spellVariant) =>
+        { 
+            // Just having this gives the variant range information.
+            return actions2 switch
+            {
+                //1 => this.CreateTraceActionDescription(traceRune, withFlavorText:false),
+                //2 => this.CreateTraceActionDescription(traceRune, withFlavorText:false),
+                _ => CommonRuneRules.CreateTraceActionDescription(rune, owner.Level, withFlavorText: false)
+            };
+        });*/
+        
+        return traceAction;
+    }
+
     /// <summary>
     /// Creates a version of <see cref="CreateDrawAction"/> designed for Tracing runes.
     /// </summary>
@@ -791,34 +873,8 @@ public static class CommonRuneRules
             //traceRune.WithProjectileCone(VfxStyle.BasicProjectileCone(rune.Illustration));
             traceRune.WithProjectileCone(rune.Illustration, 1, ProjectileKind.Arrow);
         
-        if (actionVersion == -3)
-            traceRune.WithCreateVariantDescription((actions2, spellVariant) =>
-            { 
-                // Just having this gives the variant range information.
-                return actions2 switch
-                {
-                    //1 => this.CreateTraceActionDescription(traceRune, withFlavorText:false),
-                    //2 => this.CreateTraceActionDescription(traceRune, withFlavorText:false),
-                    _ => CommonRuneRules.CreateTraceActionDescription(rune, owner.Level, withFlavorText: false)
-                };
-            });
-        
-        // Determine description based on actions preset
-        switch (actionVersion)
-        {
-            case -3:
-                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(rune, owner.Level, afterUsageText: $"\n\n{{icon:Action}} The range is touch.\n{{icon:TwoActions}} The range is {rangeToTarget*5} feet.");
-                break;
-            case 1:
-                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(rune, owner.Level, prologueText: "{b}Range{/b} touch\n");
-                break;
-            case 2:
-                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(rune, owner.Level, prologueText: $"{{b}}Range{{/b}} {rangeToTarget*5} feet\n");
-                break;
-            default:
-                traceRune.Description = CommonRuneRules.CreateTraceActionDescription(rune, owner.Level, prologueText: "{b}Range{/b} self\n");
-                break;
-        }
+        // Set description
+        traceRune.Description = CommonRuneRules.CreateTraceActionDescription(rune, traceRune);
 
         // Modify according to Rune-Singer
         if (hasRuneSinger)
@@ -866,13 +922,15 @@ public static class CommonRuneRules
     /// <param name="overrideRange">The range of this specific invocation. If a value isn't given, the range is 30 feet and can be increased by runesmith effects and features.</param>
     /// <param name="immediatelyRemoveImmunity">If true, then <see cref="WithImmediatelyRemovesImmunity"/> is called on the new CombatAction.</param>
     /// <param name="requiresTargetHasDrawnRune">If true, this action can only be used against creatures who own the supplied runeTarget.</param>
+    /// <param name="skipInvocationAnimation">Whether to skip the standard invocation animation. Used for feats with custom animations.</param>
     /// <returns></returns>
     public static CombatAction? CreateInvokeAction(
         Creature runesmith,
         DrawnRune drawnRune,
         int? overrideRange = null,
         bool immediatelyRemoveImmunity = false,
-        bool requiresTargetHasDrawnRune = true)
+        bool requiresTargetHasDrawnRune = true,
+        bool skipInvocationAnimation = false)
     {
         Rune rune = drawnRune.Rune;
         if (rune.InvocationProperties.EffectOnOneTarget == null)
@@ -934,43 +992,44 @@ public static class CommonRuneRules
                         runesmith.Level)
                     : null),
                 invokeTarget)
-            //.WithTag(drawnRune)
             .WithRuneTag(drawnRune.Rune, chosenRune: drawnRune)
             .WithActionId(ModData.ActionIds.InvokeRune)
             .WithActionCost(0)
-            // Cone animation replaced with splashy target animation below.
-            //.WithProjectileCone(VfxStyle.BasicProjectileCone(rune.Illustration))
             .WithSoundEffect(ModData.SfxNames.INVOKE_RUNE)
             .WithPrologueEffectOnChosenTargetsBeforeRolls(async (invokeAction, caster, targets) =>
             {
-                /*if (!PlayerProfile.Instance.IsBooleanOptionEnabled(ModData.BooleanOptions.HideRuneDialogs))
-                    await caster2.Battle.Cinematics.ShowQuickBubble(
-                        caster2,
-                        runeTarget.Rune.Illustration.IllustrationAsIconString + " {b}"+runeTarget.Rune.BaseName+"!{/b}",
-                        null);*/
-                string word =
-                    $"{drawnRune.Rune.Illustration.IllustrationAsIconString}{{b}}{drawnRune.Rune.WordName}!{{/b}}";
-                if (drawnRune.AttachedDiacritic is not null)
-                    word =
-                        $"{drawnRune.AttachedDiacritic.Rune.Illustration.IllustrationAsIconString}{{b}}{drawnRune.AttachedDiacritic.Rune.WordName}-{{/b}}{word}";
-                caster.Overhead(word, Color.MediumPurple);
+                if (invokeAction.Tag is not RuneActionTag tag
+                    || tag.ChosenDrawnRune is null)
+                {
+                    invokeAction.RevertRequested = true;
+                    return;
+                }
 
                 if (targets.ChosenCreature is null)
                     return;
+
+                if (skipInvocationAnimation)
+                    return;
+                
+                // Animation on runesmith
+                await PlayInvocationOverheadAnimation(caster, tag.ChosenDrawnRune);
                 
                 // Animation on rune-bearer
-                await PlayInvocationAnimation(targets.ChosenCreature!, rune.Illustration);
+                await PlayInvocationSplashAnimation(targets.ChosenCreature!, rune.Illustration);
             })
-            .WithEffectOnEachTarget(async (invocation, caster2, target, result) =>
+            .WithEffectOnEachTarget(async (invokeAction, caster2, target, result) =>
             {
-                if (!await CommonRuneRules.InvokeDrawnRune(invocation, drawnRune, target))
-                    invocation.RevertRequested = true;
+                if (invokeAction.Tag is not RuneActionTag tag
+                    || tag.ChosenDrawnRune is null
+                    || invokeAction.RevertRequested)
+                {
+                    invokeAction.RevertRequested = true;
+                    return;
+                }
+                
+                if (!await CommonRuneRules.InvokeDrawnRune(invokeAction, tag.ChosenDrawnRune, target))
+                    invokeAction.RevertRequested = true;
             });
-            /*.WithEffectOnChosenTargets(async (invocation, caster2, targets) =>
-            {
-                foreach (Creature target in targets.GetAllTargetCreatures())
-                    await CommonRuneRules.InvokeDrawnRune(invocation, caster2, runeTarget, target);
-            });*/
 
         // Saving Throw Tooltip Creator
         if (rune.InvocationProperties is { Defense: {} def, HideBreakdownTooltip: false })
@@ -1002,7 +1061,33 @@ public static class CommonRuneRules
         return invokeThisRune;
     }
 
-    public static async Task PlayInvocationAnimation(Creature target, Illustration runeIcon)
+    #region Invocation Animations
+
+    public static string RuneToOverhead(DrawnRune drawnRune)
+    {
+        string word =
+            $"{drawnRune.Rune.Illustration.IllustrationAsIconString}{{b}}{drawnRune.Rune.WordName}!{{/b}}";
+        if (drawnRune.AttachedDiacritic is not null)
+            word =
+                $"{drawnRune.AttachedDiacritic.Rune.Illustration.IllustrationAsIconString}{{b}}{drawnRune.AttachedDiacritic.Rune.WordName}-{{/b}}{word}";
+        return word;
+    }
+
+    public static async Task PlayInvocationOverheadAnimation(Creature runesmith, DrawnRune drawnRune)
+    {
+        runesmith.Overhead(RuneToOverhead(drawnRune), Color.MediumPurple);
+    }
+
+    public static async Task PlayGroupInvocationOverheadAnimation(Creature runesmith, List<DrawnRune> drawnRunes)
+    {
+        foreach (DrawnRune dr in drawnRunes)
+        {
+            await PlayInvocationOverheadAnimation(runesmith, dr);
+            await new SleepRequest(250);
+        }
+    }
+
+    public static async Task PlayInvocationSplashAnimation(Creature target, Illustration runeIcon)
     {
         int numParticles = 6; // was 10
         
@@ -1019,6 +1104,26 @@ public static class CommonRuneRules
         }
         await target.Battle.WaitForProjectiles(projectiles);
     }
+
+    public static async Task PlayGroupInvocationSplashAnimation(TBattle battle, List<(Creature Target, Illustration runeIcon)> animations)
+    {
+        int numParticles = 6; // was 10
+        List<Particle> projectiles = [];
+        foreach ((Creature target, Illustration runeIcon) in animations)
+        {
+            List<Tile> splashedTiles = battle.Map.AllTiles
+                .Where(tl => target.DistanceTo(tl) <= 0)
+                .ToList();
+            foreach (Tile splashedTile in splashedTiles)
+            {
+                projectiles.AddRange(battle.SpawnOvercreatureProjectileParticles(
+                    numParticles, target, splashedTile, Color.White, runeIcon));
+            }
+        }
+        await battle.WaitForProjectiles(projectiles);
+    }
+
+    #endregion
     
     /// <summary>
     /// Gets the range of an invocation from its original range after applying common modifiers.
@@ -1141,6 +1246,7 @@ public static class CommonRuneRules
     /// <param name="canBeCanceled">Whether the attempt to invoke the rune can be canceled.</param>
     /// <param name="passText">String to use for the pass text. If no value is given, you cannot pass.</param>
     /// <param name="additionalTopText">Additional text to display after "Choose a rune to invoke."</param>
+    /// <param name="skipInvocationAnimation">Whether to skip the standard invocation animation. Used for feats with custom animations.</param>
     /// <returns>(bool) False if the action was canceled or passed, otherwise true.</returns>
     public static async Task<bool> ChooseARuneToInvoke(
         Creature caster,
@@ -1150,7 +1256,8 @@ public static class CommonRuneRules
         int? overrideRange = null,
         bool? canBeCanceled = false,
         string? passText = null,
-        string? additionalTopText = null)
+        string? additionalTopText = null,
+        bool skipInvocationAnimation = false)
     {
         // Get available runes
         List<Rune>? knownRunes = RunicRepertoireTag
@@ -1174,8 +1281,8 @@ public static class CommonRuneRules
                              .ToList())
                 {
                     CombatAction? newInvokeAction = (overrideRange.HasValue
-                            ? CommonRuneRules.CreateInvokeAction(caster, dr, overrideRange.Value)
-                            : CommonRuneRules.CreateInvokeAction(caster, dr))
+                            ? CommonRuneRules.CreateInvokeAction(caster, dr, overrideRange.Value, skipInvocationAnimation: skipInvocationAnimation)
+                            : CommonRuneRules.CreateInvokeAction(caster, dr, skipInvocationAnimation: skipInvocationAnimation))
                         ?.WithActionCost(0);
                     
                     if (newInvokeAction == null)
@@ -1483,7 +1590,7 @@ public static class CommonRuneRules
     /// <param name="canBeCanceled">Whether you can right-click to cancel the request.</param>
     /// <param name="runeFilter">A function which filters out valid choices (such as drawn runes the decider owns, runes that aren't disabled, or preventing Transpose Etching from selecting a tattoo or runic reprisal trap).</param>
     /// <returns>The chosen drawn rune.</returns>
-    public static async Task<DrawnRune?> ChooseADrawnRune(
+    public static async Task<(DrawnRune? ChosenRune, Option ChosenOption)> ChooseADrawnRune(
         Creature decider,
         IEnumerable<Creature> possibleTargets,
         Illustration illustration,
@@ -1528,9 +1635,9 @@ public static class CommonRuneRules
             TopBarText = question,
         });
         if (requestResult.ChosenOption is PassViaButtonOption or CancelOption)
-            return null;
+            return (null, requestResult.ChosenOption);
         await requestResult.ChosenOption.Action();
-        return chosenRune;
+        return (chosenRune, requestResult.ChosenOption);
 
     }
 
