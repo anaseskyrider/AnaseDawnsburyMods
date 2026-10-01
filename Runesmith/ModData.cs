@@ -551,6 +551,7 @@ public static class ModData
         public const SfxName INVOKED_MARSSYL_SHOVE = SfxName.Shove;
         public const SfxName INVOKED_OLJINEX = SfxName.Fear;
         public const SfxName INVOKED_PLUUNA = SfxName.MinorAbjuration;
+        public const SfxName INVOKED_REHGOG = SfxName.BeastRoar;
         // SfxName(ElectricBlast == ShockingGrasp)???
         public const SfxName PASSIVE_RANSHU = SfxName.ElectricBlast;
         public const SfxName INVOKED_RANSHU = SfxName.ElectricArc;
@@ -560,14 +561,23 @@ public static class ModData
         public const SfxName INVOKED_ZOHK = SfxName.PhaseBolt;
 
         #endregion
-        
+
+        #region 5th-Level Runes
+
         // Was AuraExpansion
         public const SfxName INVOKED_SUN = SfxName.DazzlingFlash;
+
+        #endregion
+
+        #region 9th-Level Runes
+
         public const SfxName INVOKED_FEIKRIS = SfxName.PhaseBolt;
         public const SfxName INVOKED_ICHELSU = SfxName.MinorAbjuration;
         public const SfxName INVOKED_JURROZ = SfxName.AirSpell;
         public const SfxName INVOKED_KOJASTRI = SfxName.BoneSpray;
         public const SfxName INVOKED_TROLISTRI = SfxName.Fear;
+
+        #endregion
 
         #endregion
 

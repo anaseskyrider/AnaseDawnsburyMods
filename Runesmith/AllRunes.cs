@@ -629,7 +629,9 @@ public static class AllRunes
             .ToFeat();
 
         // TODO: Ledria, Rune of Appeal
-        yield return DebugRune(RuneId.Ledria, "No matter what skin, shell, or scale this rune is drawn on, it shines like gold.");
+        yield return DebugRune(
+            RuneId.Ledria,
+            "No matter what skin, shell, or scale this rune is drawn on, it shines like gold.");
         
         // Lyskel, Rune of Frost
         yield return new Rune(
@@ -1303,11 +1305,80 @@ public static class AllRunes
             .WithLevelText("+2", "The damage from the bolt of static increases by 1, and the damage of the invocation increases by 1d8.")
             .ToFeat();
 
-        // TODO: Rehgog, Rune of Bestial Might
-        yield return DebugRune(RuneId.Rehgog, "The jagged edges of this rune evoke the claws and talons of mighty beasts.");
+        // Rehgog, Rune of Bestial Might
+        yield return new Rune(
+                RuneId.Rehgog,
+                "The jagged edges of this rune evoke the claws and talons of mighty beasts.",
+                new RuneDrawProperties(
+                        "drawn on a willing creature",
+                        drawnOnCreature: true)
+                    .WithAllyRequirement(),
+                new RunePassiveProperties(
+                        "The target's nose becomes an animal-like snout, giving the rune-bearer an imprecise scent with a range of 30 feet.",
+                        null)
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        return new DrawnRune(
+                            drawAction,
+                            rune,
+                            "As a morph effect, you gain a snout. You have an imprecise scent with a range of 30 feet {i}(creatures within that range can't be undetected){/i}.")
+                        {
+                            StateCheck = qfThis =>
+                            {
+                                DrawnRune drThis = (qfThis as DrawnRune)!;
+                                if (drThis.Disabled)
+                                    return;
+                                drThis.Owner.AddQEffect(QEffect.Tremorsense(6)
+                                    .With(qf =>
+                                    {
+                                        qf.Innate = false;
+                                        qf.Description = null;
+                                        qf.ExpiresAt = ExpirationCondition.Ephemeral;
+                                    }));
+                            }
+                        };
+                    }),
+                new RuneInvocationProperties(
+                        "The rune-bearer's muscles bulge with the strength of a ferocious beast. The bearer can immediately Step as a {icon:FreeAction} free action. The next unarmed Strike the bearer attempts before the start of your next turn deals an additional die of damage.",
+                        null)
+                    .WithSoundBeforeInvocation(SfxName.Footsteps)
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        await effectTarget.StepAsync(
+                            $"Choose where to Step as part of invoking {invokedRune.Rune.Illustration} {invokedRune.Rune.FullName.WithColor("Blue")}, or right-click to cancel.",
+                            true, true);
+
+                        effectTarget.AddQEffect(invokedRune.NewInvocationEffect(
+                            $"The next unarmed Strike you attempt before the start of {invokedRune.Source!.ToColoredBoldedName()}'s next turn deals an additional die of damage.",
+                            ExpirationCondition.ExpiresAtStartOfSourcesTurn,
+                            qf =>
+                            {
+                                qf.IncreaseItemDamageDieCount = (qfThis, item) =>
+                                    item.HasTrait(Trait.Unarmed);
+                                qf.AfterYouTakeAction = async (qfThis, action) =>
+                                {
+                                    if (action.HasTrait(Trait.Strike)
+                                        && action.HasTrait(Trait.Unarmed))
+                                        qfThis.ExpiresAt = ExpirationCondition.Immediately;
+                                };
+                            }));
+                        
+                        return effectTarget;
+                    })
+                    .WithSoundAfterInvocation(ModData.SfxNames.INVOKED_REHGOG),
+                [Trait.Morph, Trait.Primal])
+            .ToFeat();
         
         // TODO: Sertum, Rune of Prepardness
         yield return DebugRune(RuneId.Sertum, "The wavy lines of this rune evoke fields of reeds, the branches of trees blowing in the wind, or other natural phenomena.");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         
         // Thullax, Rune of Corrosion
         yield return new Rune(
@@ -1389,6 +1460,14 @@ public static class AllRunes
         
         // TODO: Tilus, Rune of Vocabulary
         yield return DebugRune(RuneId.Tilus, "Upon close inspection, this rune comprises hundreds of smaller characters of various runic languages.");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
 
         // Zohk, Rune of Homecoming
         yield return new Rune(
@@ -1544,6 +1623,14 @@ public static class AllRunes
                     ModData.Illustrations.InvokeRune,
                     Direction.Southwest));
             });
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         
         // En-, Diacritic Rune of Expansion
         yield return new Rune(
@@ -1648,9 +1735,25 @@ public static class AllRunes
                     IllustrationName.RunestoneWinged,
                     IllustrationName.RunestoneWinged));
             });
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         
         // TODO: Kit-, Diacritic Rune of Mercy
         yield return DebugRune(RuneId.Kit, "This diacritic frames a rune with soft curves that mitigate its deadlier effects but make them harder to resist.");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         
         // TODO: Per-, Diacritic Rune of Continuum
         yield return DebugRune(RuneId.Per, "This whirling diacritic recirculates the magic of the base rune onto another creature.", 
@@ -1662,6 +1765,14 @@ public static class AllRunes
                     ModData.Illustrations.TraceRune,
                     Direction.Southwest));
             });
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         
         // Sun-, Diacritic Rune of Preservation
         yield return new Rune(
@@ -1773,6 +1884,14 @@ public static class AllRunes
 
         // TODO: Ti-, Diacritic Rune of Fundaments
         yield return DebugRune(RuneId.Ti, "This wavering diacritic encompasses the base rune to slightly change its meaning.");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         
         // Ur-, Diacritic Rune of Intensity
         yield return new Rune(
@@ -1874,9 +1993,25 @@ public static class AllRunes
         
         // TODO: Astillu, Rune of Submersion
         yield return DebugRune(RuneId.Astillu, "Originating from ancient runic scripts, this wavy rune is popular with practitioners of rune magic who want to easily traverse their watery environs.");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         
         // TODO: Cruonign, Rune of Leeching
         yield return DebugRune(RuneId.Cruonign, "The jagged shape of this rune resembles a vampire's fangs.");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         
         // Feikris, Rune of Gravity
         yield return new Rune(
@@ -1954,6 +2089,14 @@ public static class AllRunes
 
         // TODO: Germantria, Rune of Partnership
         yield return DebugRune(RuneId.Germantria, "When drawn, this knobby rune pulses with your own heartbeat, creating a vital connection between you and the bearer.");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         
         // Ichelsu, Rune of Observation
         yield return new Rune(
@@ -2441,9 +2584,25 @@ public static class AllRunes
         
         // TODO: Oraloq, Rune of Inarticulateness
         yield return DebugRune(RuneId.Oraloq, "This hard-to-read rune makes language difficult for the unfortunate rune-bearer.");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         
         // TODO: Piteregrin, Rune of Transposition
         yield return DebugRune(RuneId.Piteregrin, "The slanted lines and odd curls of this rune give the impression that it is trying to escape. ");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
 
         // Trolistri, Rune of Forlorn Sorrow
         // Faction alignment is treated as "enemies to the runesmith", regardless of the rune-bearer's faction.
@@ -2534,9 +2693,25 @@ public static class AllRunes
         
         // TODO: Ulgatus, Rune of Restraint
         yield return DebugRune(RuneId.Ulgatus, "A faction of constructed beings developed this rune to avoid the weaknesses of flesh.");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         
         // TODO: Yudici, Rune of Remonstrance
         yield return DebugRune(RuneId.Yudici, "This majestic rune grants the shield's wielder the conviction to aid their allies.");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
 
         #endregion
 
@@ -2544,9 +2719,25 @@ public static class AllRunes
         
         // TODO: Eck-, Diacritic Rune of Phantasma
         yield return DebugRune(RuneId.Eck, "This diacritic frames a base rune with almost invisible lines that turn the rune's effects against the bearer’s soul.");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         
         // TODO: Inth-, Diacritic Rune of Corruption
         yield return DebugRune(RuneId.Inth);
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         // "the target takes 1d4 persistent fire damage" has some ambiguity between Esvadir's invocation and Pluuna's invocation.
         // DOC: Wording changed to specify that the rune-bearer takes the persistent damage.
         /*Rune runeInthDiacritic = new Rune(
@@ -2724,9 +2915,25 @@ public static class AllRunes
         
         // TODO: Nesh-, Diacritic Rune of Contingency
         yield return DebugRune(RuneId.Nesh, "The wavy lines of this diacritic seem to stretch the base rune into a wider area.");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
         
         // TODO: Sar-, Diacritic Rune of Righteousness
         yield return DebugRune(RuneId.Sar, "Clean arcs of gold faintly glow on the base rune, evoking celestial order and serenity.");
+        /*yield return new Rune(
+                ,
+                ,
+                new RuneDrawProperties(),
+                new RunePassiveProperties(),
+                new RuneInvocationProperties(),
+                [])
+            .ToFeat();*/
 
         #endregion
 
