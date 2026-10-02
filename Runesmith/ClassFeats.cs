@@ -3051,6 +3051,7 @@ public static class ClassFeats
                 "You must be an expert in Performance.");
         
         // Runic Correspondence
+        // Has no discernible DD-gameplay value.
         
         #endregion
         
