@@ -3174,7 +3174,12 @@ public static class ClassFeats
             .WithName($"Knock {rune.FullName}")
             .WithActionCost(1)
             .WithExtraTrait(Trait.Flourish)
-            .WithNewTarget(Target.Self());
+            .WithNewTarget(Target.Self((self, ai) =>
+                ai.GainBonusToAC(
+                    CommonShieldRules.GetAC(shield)!.Value
+                    + 1 // Always better than standard Raise a Shield
+                    + (rune.Id is RuneId.Holtrik && !self.HasEffect(qf => qf is DrawnRune dr && dr.Rune.Id == RuneId.Holtrik) ? 1 : 0) // Include status bonus from Holtrik
+                    )));
         
         knockThisRune.Description = CommonRuneRules
             .CreateTraceActionDescription(rune, runesmith.Level, withFlavorText: false)
