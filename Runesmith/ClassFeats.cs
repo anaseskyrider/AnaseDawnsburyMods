@@ -2861,6 +2861,9 @@ public static class ClassFeats
                     List<Rune> traceableRunes = repertoire.GetTraceableRunes(qfFeat.Owner)
                         .Where(rune => rune.DrawProperties.IsDrawnOnlyOnCreatures)
                         .ToList();
+
+                    CombatAction thisStrike = StrikeRules.CreateStrike(
+                        qfFeat.Owner, item, RangeKind.Melee, -1);
                     
                     CombatAction swipingTrace = new CombatAction(
                             qfFeat.Owner,
@@ -2894,6 +2897,9 @@ public static class ClassFeats
                                         action.Owner, item, RangeKind.Melee, -1),
                                     target)
                                 .TooltipDescription)
+                        .WithGoodness((t, a, d) =>
+                            thisStrike.TrueDamageFormula.ExpectedValueMinimumOne
+                            + (item.HasTrait(Trait.Sweep) ? 0.2f : 0.0f))
                         .WithEffectOnChosenTargets(async (action, caster, targets) =>
                         {
                             if (targets.ChosenCreatures.Count < 2)
