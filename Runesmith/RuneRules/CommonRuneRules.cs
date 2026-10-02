@@ -247,13 +247,13 @@ public static class CommonRuneRules
     /// <summary>
     /// Creates a generic CombatAction that executes <see cref="DrawRuneOnTarget"/> on each target using this Rune.
     /// </summary>
-    /// <param name="owner">The creature (Runesmith) who is using this action.</param>
+    /// <param name="runesmith">The creature (Runesmith) who is using this action.</param>
     /// <param name="rune">The rune to create an action for.</param>
     /// <param name="actions">The number of actions for this variant. If actions==-3, a 1-2 action variable target is used. If actions==1, an adjacent target is used. If actions==2, a ranged target is used (6 tiles). Otherwise, a Self target is used. The action cost can still be altered afterward (such as for use in subsidiary actions).</param>
     /// <param name="range">The range (in tiles) to use for the 2-action version. Default is 6.</param>
     /// <returns>(CombatAction) The action which draws the given rune on the target.</returns>
     internal static CombatAction CreateDrawAction(
-        Creature owner,
+        Creature runesmith,
         Rune rune,
         int actions = 0,
         int? range = 6)
@@ -340,7 +340,7 @@ public static class CommonRuneRules
         
         // Create action
         CombatAction drawRuneAction = new CombatAction(
-                owner,
+                runesmith,
                 rune.Illustration,
                 $"Draw {rune.FullName}",
                 traits,
@@ -716,16 +716,16 @@ public static class CommonRuneRules
 
     /// <summary>Creates a variant of <see cref="CreateDrawAction"/> with modified mechanics for Etching a Rune, such as the <see cref="ModData.Traits.Etched"/> trait and a map-sized range limit, and only applying runes to allies.
     /// </summary>
-    /// <param name="owner">The creature (Runesmith) who is using this action.</param>
+    /// <param name="runesmith">The creature (Runesmith) who is using this action.</param>
     /// <param name="rune">The rune to create an etch action for.</param>
     /// <returns>(CombatAction) The action which etches the given rune on the target.</returns>
     public static CombatAction CreateEtchAction(
-        Creature owner,
+        Creature runesmith,
         Rune rune)
     {
         CombatAction etchAction = CommonRuneRules
             .CreateDrawAction(
-                owner,
+                runesmith,
                 rune,
                 2,
                 // Usable across whole map
@@ -739,7 +739,7 @@ public static class CommonRuneRules
             .WithExtraTrait(ModData.Traits.Etched)
             .WithSoundEffect(ModData.SfxNames.ETCH_RUNE)
             .WithActionId(ModData.ActionIds.EtchRune);
-        etchAction.Description = CommonRuneRules.CreateTraceActionDescription(rune, owner.Level, false,
+        etchAction.Description = CommonRuneRules.CreateTraceActionDescription(rune, runesmith.Level, false,
             prologueText: "{Blue}Etched: lasts until the end of combat.{/Blue}\n");
         
         // Custom targeting; this "technically" happened "before" combat.
@@ -798,16 +798,16 @@ public static class CommonRuneRules
     #region Tracing Runes
 
     public static CombatAction CreateTraceActionForDisplay(
-        Creature owner,
+        Creature runesmith,
         Rune rune)
     {
         CombatAction traceAction = new CombatAction(
-                owner,
+                runesmith,
                 rune.Illustration,
                 $"Trace {rune.FullName}",
                 [ModData.ModTrait, Trait.Concentrate, Trait.Magical, Trait.Manipulate, Trait.Runesmith],
                 CommonRuneRules.CreateTraceActionDescription(
-                    rune, owner.Level,
+                    rune, runesmith.Level,
                     afterUsageText: $"\n\n{{icon:Action}} The range is touch.\n{{icon:TwoActions}} The range is 30 feet."),
                 Target.Self())
             .WithActionCost(-3);
@@ -832,13 +832,13 @@ public static class CommonRuneRules
     /// <remarks>
     /// This adds <see cref="ModData.Traits.Traced"/> and <see cref="Trait.Manipulate"/>.
     /// </remarks>
-    /// <param name="owner">The runesmith tracing the rune.</param>
+    /// <param name="runesmith">The runesmith tracing the rune.</param>
     /// <param name="rune">The rune being traced.</param>
     /// <param name="actionVersion">The 1 action or 2 action version of Trace Rune.</param>
     /// <param name="overrideRange">If this version has a specific range, this is that range. Otherwise, the range is calculated from the action version and with your feats.</param>
     ///// <exception cref="Exception"><see cref="RuneDrawProperties.IsEtchedOnly"/> must be false.</exception>
     public static CombatAction CreateTraceAction(
-        Creature owner,
+        Creature runesmith,
         Rune rune,
         int actionVersion = 0,
         int? overrideRange = null)
@@ -846,15 +846,15 @@ public static class CommonRuneRules
         /*if (rune.DrawProperties.IsEtchedOnly)
             throw new Exception($"You can't create a Trace Rune action with rune {rune.Name} because it can only be etched at the start of combat.");*/
         
-        bool hasRuneSinger = owner.HasEffect(ModData.QEffectIds.RuneSinger);
-        bool isGenerational = owner.HasFeat(ModData.FeatNames.GenerationalRuneSinger);
+        bool hasRuneSinger = runesmith.HasEffect(ModData.QEffectIds.RuneSinger);
+        bool isGenerational = runesmith.HasFeat(ModData.FeatNames.GenerationalRuneSinger);
         
         // Determine range to target.
         // Uses given range, or increased range if not specified.
         int rangeToTarget = overrideRange ?? (isGenerational ? 12 : 6);
         
         CombatAction traceRune = CreateDrawAction(
-                owner,
+                runesmith,
                 rune,
                 // Make it the 2-action version with Rune-Singer
                 hasRuneSinger
@@ -888,7 +888,7 @@ public static class CommonRuneRules
                 .WithSoundEffect(ModData.SfxNames.SING_RUNE);
             //drawRuneAction.Illustration = new SideBySideIllustration(drawRuneAction.Illustration, ModData.Illustrations.RuneSinger);
             traceRune.Traits.Remove(Trait.Manipulate);
-            if (!owner.HasFeat(ModData.FeatNames.GenerationalRuneSinger))
+            if (!runesmith.HasFeat(ModData.FeatNames.GenerationalRuneSinger))
                 traceRune.WithEffectOnSelf(self =>
                 {
                     if (self.HasFeat(ModData.FeatNames.ProdigalRuneSinger))
