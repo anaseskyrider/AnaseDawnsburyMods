@@ -8,6 +8,7 @@ using Dawnsbury.Core.Coroutines;
 using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
+using Dawnsbury.Core.Intelligence;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Damage;
@@ -17,6 +18,7 @@ using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.StatBlocks.Monsters.L10;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
@@ -403,6 +405,30 @@ public static class CommonRuneRules
                 else
                     drawAction.RevertRequested = true;
             });
+
+        // Add an expectation of future damage from this rune when invoked.
+        // AI avoids tracing this rune again if the target already has the effect.
+        if (rune.InvocationProperties is { DealsDamage: true, GetKindedDamage: { } damageGetter })
+        {
+            if (rune.InvocationProperties.Defense is { } def)
+                drawRuneAction.WithGoodnessAgainstEnemy((tar, self, enemy) =>
+                    enemy.HasEffect(qf =>
+                        qf is DrawnRune dr && dr.Rune.Id == rune.Id)
+                        ? AIConstants.BASICALLY_NEVER
+                        : DiceFormula.FromText(
+                                damageGetter(rune, runesmith.Level).DiceExpression,
+                                rune.FullName)
+                            .ExpectedValue);
+            else
+                drawRuneAction.WithGoodness((tar, self, enemy) =>
+                    enemy.HasEffect(qf =>
+                        qf is DrawnRune dr && dr.Rune.Id == rune.Id)
+                        ? AIConstants.BASICALLY_NEVER
+                        : DiceFormula.FromText(
+                                damageGetter(rune, runesmith.Level).DiceExpression,
+                                rune.FullName)
+                            .ExpectedValue);
+        }
         
         return drawRuneAction;
     }
@@ -1057,6 +1083,31 @@ public static class CommonRuneRules
         {
             invokeThisRune = CommonRuneRules.WithImmediatelyRemovesImmunity(invokeThisRune);
         }
+        
+        // Add an expectation of damage from this rune when invoked.
+        // AI avoids invoking this rune if the target isn't a bearer.
+        // Unlike drawing runes, this has a +1 value to incentivize invoking.
+        if (rune.InvocationProperties is { DealsDamage: true, GetKindedDamage: { } damageGetter })
+        {
+            if (rune.InvocationProperties.Defense is { } def2)
+                invokeThisRune.WithGoodnessAgainstEnemy((tar, self, enemy) =>
+                    enemy.HasEffect(qf =>
+                        qf is DrawnRune dr && dr.Rune.Id == rune.Id)
+                        ? (DiceFormula.FromText(
+                                damageGetter(rune, runesmith.Level).DiceExpression,
+                                rune.FullName)
+                            .ExpectedValue + 1)
+                        : AIConstants.NEVER);
+            else
+                invokeThisRune.WithGoodness((tar, self, enemy) =>
+                    enemy.HasEffect(qf =>
+                        qf is DrawnRune dr && dr.Rune.Id == rune.Id)
+                        ? (DiceFormula.FromText(
+                                damageGetter(rune, runesmith.Level).DiceExpression,
+                                rune.FullName)
+                            .ExpectedValue + 1)
+                        : AIConstants.NEVER);
+        }
 
         return invokeThisRune;
     }
@@ -1359,8 +1410,8 @@ public static class CommonRuneRules
         CombatAction invokeAction,
         DrawnRune invokedRune,
         Creature effectTarget,
-        Func<Rune,int,(string diceExpression, DamageKind Kind)>? getKindedDamage = null,
-        Func<CombatAction, Creature, CheckResult, Task>? onResult = null)
+        Func<CombatAction, Creature, CheckResult, Task>? onResult = null,
+        bool skipDamage = false)
     {
         if (invokedRune.Rune.InvocationProperties.Defense is null)
             throw new NullReferenceException($"Saving throw for invocation of {invokedRune.Rune.Id.ToWord()} was attempted, but no saving throw defense was found. Use InvocationProperties.WithDefense(Defense) to set a defense for this rune's invocations.");
@@ -1370,8 +1421,9 @@ public static class CommonRuneRules
             invokeAction,
             invokedRune.Rune.InvocationProperties.Defense.Value,
             invokeAction.Owner.ClassDC(ModData.Traits.Runesmith));
-        
-        if (getKindedDamage is not null)
+
+        if (!skipDamage
+            && invokedRune.Rune.InvocationProperties.GetKindedDamage is {} getKindedDamage )
         {
             var damage = getKindedDamage.Invoke(
                 invokedRune.Rune,
@@ -1379,7 +1431,7 @@ public static class CommonRuneRules
             await CommonSpellEffects.DealBasicDamage(
                 invokeAction, invokeAction.Owner,
                 effectTarget, result,
-                damage.diceExpression,
+                damage.DiceExpression,
                 damage.Kind);
         }
 

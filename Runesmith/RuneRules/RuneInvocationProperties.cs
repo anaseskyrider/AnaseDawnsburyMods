@@ -226,11 +226,17 @@ public class RuneInvocationProperties(
     public bool DealsDamage { get; set; }
 
     /// <summary>
-    /// Sets <see cref="DealsDamage"/> to true.
+    /// This determines the invocation's damage, with a reference to the template Rune itself and the current level of the rune.
     /// </summary>
-    public RuneInvocationProperties WithDealsDamage()
+    public Func<Rune, int, (string DiceExpression, DamageKind Kind)>? GetKindedDamage { get; set; }
+
+    /// <summary>
+    /// Sets <see cref="DealsDamage"/> to true. If this deals direct damage on invocation, this should also set <see cref="GetKindedDamage"/>.
+    /// </summary>
+    public RuneInvocationProperties WithDealsDamage(Func<Rune, int, (string DiceExpression, DamageKind Kind)>? kindedDamageGetter)
     {
         this.DealsDamage = true;
+        this.GetKindedDamage = kindedDamageGetter;
         return this;
     }
 

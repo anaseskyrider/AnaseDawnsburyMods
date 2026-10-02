@@ -116,40 +116,30 @@ public static class AllRunes
                         "The bearer takes 1d8 fire damage, with a basic Fortitude save. On a critical failure, it's also {r}dazzled{/r} for 1 round.",
                         (rune, level) =>
                         {
-                            const int baseNumDice = 1;
-                            int bonusNumDice = (level - rune.BaseLevel) / 2; // +1d8 every 2 levels
-                            int finalNumDice = baseNumDice + bonusNumDice;
-                            string heightenedVar = S.HeightenedVariable(finalNumDice, baseNumDice);
-                            return $"The bearer takes {heightenedVar}d8 fire damage, with a basic Fortitude save. On a critical failure, it's also dazzled for 1 round.";
+                            (int baseValue, _, int finalValue) = rune.CalculateHeightening(1, 2, 1, level);
+                            return $"The bearer takes {S.HeightenedVariable(finalValue, baseValue)}d8 fire damage, with a basic Fortitude save. On a critical failure, it's also dazzled for 1 round.";
                         })
-                    .WithDealsDamage()
+                    .WithDealsDamage((rune, level) =>
+                        ($"{rune.CalculateHeightening(1, 2, 1, level).FinalValue}d8", DamageKind.Fire))
                     .WithDefense(Defense.Fortitude)
                     .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
                     {
-                        CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(
-                            effectTarget,
+                        await CommonRuneRules.SaveAgainstInvocation(
                             invokeAction,
-                            invokedRune.Rune.InvocationProperties.Defense!.Value,
-                            invokeAction.Owner.ClassDC(ModData.Traits.Runesmith));
-                        
-                        // 1d8 per rank
-                        int numDice = 1 + (invokeAction.Owner.Level / 2);
-                        
-                        await CommonSpellEffects.DealBasicDamage(
-                            invokeAction, invokeAction.Owner, effectTarget, result,
-                            numDice + "d8",
-                            DamageKind.Fire);
-                        
-                        if (result is CheckResult.CriticalFailure)
-                        {
-                            effectTarget.AddQEffect(QEffect.Dazzled()
-                                .WithExpirationOneRoundOrRestOfTheEncounter(invokeAction.Owner, false)
-                                .With(qf =>
-                                {
-                                    qf.Source = invokedRune.Source;
-                                    qf.SourceAction = invokeAction;
-                                }));
-                        }
+                            invokedRune,
+                            effectTarget,
+                            async (invokeAction2, effectTarget2, result) =>
+                            {
+                                if (result > CheckResult.CriticalFailure)
+                                    return;
+                                effectTarget.AddQEffect(QEffect.Dazzled()
+                                    .WithExpirationOneRoundOrRestOfTheEncounter(invokeAction.Owner, false)
+                                    .With(qf =>
+                                    {
+                                        qf.Source = invokedRune.Source;
+                                        qf.SourceAction = invokeAction;
+                                    }));
+                            });
 
                         return effectTarget;
                     })
@@ -323,16 +313,15 @@ public static class AllRunes
                                 $"The cacophony fragments and expands rapidly in a mental explosion, dealing {S.HeightenedVariable(finalValue, baseValue)}d4 mental damage to the rune-bearer with a basic Will save. On a failure, the rune-bearer is {{r}}stupefied 1{{/r}} for 1 round (or {{r}}stupefied 2{{/r}} on a critical failure).";
                         })
                     .WithDefense(Defense.Will)
-                    .WithDealsDamage()
+                    .WithDealsDamage((rune, level) => (
+                        $"{rune.CalculateHeightening(1, 2, 1, level).FinalValue}d4",
+                        DamageKind.Mental))
                     .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
                     {
                         await CommonRuneRules.SaveAgainstInvocation(
                             invokeAction,
                             invokedRune,
                             effectTarget,
-                            (rune, level) => (
-                                $"{rune.CalculateHeightening(1, 2, 1, level).FinalValue}d4",
-                                DamageKind.Mental),
                             async (invokeAction2, effectTarget2, result) =>
                             {
                                 if (result > CheckResult.Failure)
@@ -448,15 +437,13 @@ public static class AllRunes
                     }),
                 new RuneInvocationProperties(
                         "A blast of cutting energy is released outward from the rune, dealing 1d8 slashing damage to a creature adjacent to the rune-bearer, with a basic Reflex save.",
-                        (thisRune, level) =>
+                        (rune, level) =>
                         {
-                            const int baseValue = 1;
-                            int bonusValue = (level - thisRune.BaseLevel) / 2;
-                            int numDice = baseValue + bonusValue;
-                            string heightenedVar = S.HeightenedVariable(numDice, baseValue);
-                            return $"The essence of sharpness is released outwards from the rune, dealing {heightenedVar}d8 slashing damage to a creature adjacent to the rune-bearer, with a basic Fortitude save.";
+                            (int baseValue, _, int finalValue) = rune.CalculateHeightening(1, 2, 1, level);
+                            return $"The essence of sharpness is released outwards from the rune, dealing {S.HeightenedVariable(finalValue, baseValue)}d8 slashing damage to a creature adjacent to the rune-bearer, with a basic Fortitude save.";
                         })
-                    .WithDealsDamage()
+                    .WithDealsDamage((rune, level) =>
+                        ($"{rune.CalculateHeightening(1, 2, 1, level).FinalValue}d8", DamageKind.Slashing))
                     .WithHideTooltip()
                     .WithDefense(Defense.Reflex)
                     .WithAdditionalRequirement((runesmith, runeBearer) =>
@@ -682,15 +669,14 @@ public static class AllRunes
                             return
                                 $"The rune-bearer takes {S.HeightenedVariable(finalValue, baseValue)}d4 cold damage, with a basic Fortitude save. All squares on the ground in the bearer's space and adjacent squares are covered in snow, becoming {{r}}difficult terrain{{/r}} for 1 round.";
                         })
-                    .WithDealsDamage()
+                    .WithDealsDamage((rune, level) => (
+                        rune.CalculateHeightening(1, 2, 1, level).FinalValue + "d4",
+                        DamageKind.Cold))
                     .WithDefense(Defense.Fortitude)
                     .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
                     {
                         await CommonRuneRules.SaveAgainstInvocation(
                             invokeAction, invokedRune, effectTarget,
-                            (rune, level) => (
-                                rune.CalculateHeightening(1, 2, 1, level).FinalValue + "d4",
-                                DamageKind.Cold),
                             async (invokeAction2, effectTarget2, result) =>
                             {
                                 Zone.SpawnStaticAndApply(
@@ -1280,24 +1266,18 @@ public static class AllRunes
                         "The preliminary streaks of lightning braid together into a powerful bolt. The rune-bearer takes 1d8 electricity damage with a basic Fortitude save.",
                         (rune, level) =>
                         {
-                            int numDice = 1 + ((level - rune.BaseLevel) / 2);
-                            string heightenedVar = S.HeightenedVariable(numDice, 2);
-                            return $"The preliminary streaks of lightning braid together into a powerful bolt. The rune-bearer takes {heightenedVar}d8 electricity damage with a basic Fortitude save.";
+                            (int baseValue, _, int finalValue) = rune.CalculateHeightening(1, 2, 1, level);
+                            return $"The preliminary streaks of lightning braid together into a powerful bolt. The rune-bearer takes {S.HeightenedVariable(finalValue, baseValue)}d8 electricity damage with a basic Fortitude save.";
                         })
                     .WithDefense(Defense.Fortitude)
-                    .WithDealsDamage()
+                    .WithDealsDamage((rune, level) =>
+                        ($"{rune.CalculateHeightening(1, 2, 1, level).FinalValue}d8", DamageKind.Electricity))
                     .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
                     {
-                        int numDice = 1 + ((invokeAction.Owner.Level - invokedRune.Rune.BaseLevel) / 2);
-                        DiceFormula invocationDamage = DiceFormula.FromText($"{numDice}d8", "Ranshu, Rune of Thunder");
-                        
-                        CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(
-                            effectTarget,
+                        await CommonRuneRules.SaveAgainstInvocation(
                             invokeAction,
-                            invokedRune.Rune.InvocationProperties.Defense!.Value,
-                            invokeAction.Owner.ClassDC(ModData.Traits.Runesmith));
-                        
-                        await CommonSpellEffects.DealBasicDamage(invokeAction, invokeAction.Owner, effectTarget, result, invocationDamage, DamageKind.Electricity);
+                            invokedRune,
+                            effectTarget);
                         
                         return effectTarget;
                     })
@@ -1497,7 +1477,9 @@ public static class AllRunes
                             return
                                 $"The bearer takes {S.HeightenedVariable(finalValue, baseValue)}d6 acid damage with a basic Fortitude save; on a critical failure, it takes {S.HeightenedVariable(finalValue, baseValue)} persistent acid damage.";
                         })
-                    .WithDealsDamage()
+                    .WithDealsDamage((rune, level) => (
+                        $"{rune.CalculateHeightening(1, 2, 1, level).FinalValue}d6",
+                        DamageKind.Acid))
                     .WithDefense(Defense.Fortitude)
                     .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
                     {
@@ -1505,9 +1487,6 @@ public static class AllRunes
                             invokeAction,
                             invokedRune,
                             effectTarget,
-                            (rune, level) => (
-                                $"{rune.CalculateHeightening(1, 2, 1, level).FinalValue}d6",
-                                DamageKind.Acid),
                             async (invokeAction2, effectTarget2, result) =>
                             {
                                 if (result > CheckResult.CriticalFailure)
@@ -2555,9 +2534,9 @@ public static class AllRunes
                         "Any creature that has the armor's wearer engulfed, grabbed, restrained, or swallowed whole takes 8d4 damage of the rune's chosen type with a basic Reflex save. On a failure, it also releases the armor's wearer.",
                         (rune, level) =>
                         {
-                            var numDice = rune.CalculateHeightening(8, 2, 2, level);
+                            (int baseValue, _, int finalValue) = rune.CalculateHeightening(8, 2, 2, level);
                             return
-                                $"Any creature that has the armor's wearer engulfed, grabbed, restrained, or swallowed whole takes {S.HeightenedVariable(numDice.FinalValue, numDice.BaseValue)}d4 damage of the rune's chosen type with a basic Reflex save. On a failure, it also releases the armor's wearer.";
+                                $"Any creature that has the armor's wearer engulfed, grabbed, restrained, or swallowed whole takes {S.HeightenedVariable(finalValue, baseValue)}d4 damage of the rune's chosen type with a basic Reflex save. On a failure, it also releases the armor's wearer.";
                         })
                     .WithAdditionalRequirement((a, d) =>
                         d.HasEffect(qf =>
@@ -2565,7 +2544,8 @@ public static class AllRunes
                         || d.Space.Surface?.Swallower != null
                             ? Usability.Usable
                             : Usability.NotUsableOnThisCreature("Not grappled or swallowed whole by a creature"))
-                    .WithDealsDamage()
+                    .WithDealsDamage((rune, level) =>
+                        ($"{rune.CalculateHeightening(8, 2, 2, level).FinalValue}d4", DamageKind.Untyped))
                     .WithDefense(Defense.Reflex)
                     .WithHideTooltip()
                     .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
@@ -2576,8 +2556,6 @@ public static class AllRunes
                             return null;
                         }
                         
-                        var numDice = invokedRune.Rune.CalculateHeightening(8, 2, 2, invokeAction.Owner.Level);
-                        string damageExpression = $"{numDice.FinalValue}d4";
                         List<Creature> targets = [];
                         
                         // Grapplers
@@ -2629,7 +2607,7 @@ public static class AllRunes
                                 invokeAction.Owner,
                                 enemy,
                                 result,
-                                damageExpression,
+                                invokedRune.Rune.InvocationProperties.GetKindedDamage!.Invoke(invokedRune.Rune, invokedRune.Source!.Level).DiceExpression,
                                 chosenKind);
                             
                             if (result < CheckResult.Success)
