@@ -720,6 +720,15 @@ public static class ModData
             Despite the name "Etching", this can be used on traced runes as well.
             """);
 
+        public static readonly string InfoSertumReroll = RegisterInfoTooltip(
+            ID_PREPEND + "SertumInitiative",
+            """
+            {b}Sertum, Rune of Preparedness{/b}
+            {i}Implementation{/i}
+
+            In order to apply these effects, initiative must be rerolled just before combat begins. This occurs each time the rune is applied.
+            """);
+
         #endregion
 
         public static Func<string, string> RegisterTooltipInserter(string tooltipName, string tooltipDescription, bool wide = false)

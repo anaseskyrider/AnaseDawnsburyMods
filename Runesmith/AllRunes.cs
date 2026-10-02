@@ -8,6 +8,7 @@ using Dawnsbury.Core.Animations.Movement;
 using Dawnsbury.Core.CharacterBuilder.Feats;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb.Specific;
 using Dawnsbury.Core.CharacterBuilder.Selections;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
@@ -1369,16 +1370,85 @@ public static class AllRunes
                 [Trait.Morph, Trait.Primal])
             .ToFeat();
         
-        // TODO: Sertum, Rune of Prepardness
-        yield return DebugRune(RuneId.Sertum, "The wavy lines of this rune evoke fields of reeds, the branches of trees blowing in the wind, or other natural phenomena.");
-        /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
-            .ToFeat();*/
+        // Sertum, Rune of Preparedness
+        yield return new Rune(
+                RuneId.Sertum,
+                "The wavy lines of this rune evoke fields of reeds, the branches of trees blowing in the wind, or other natural phenomena.",
+                new RuneDrawProperties(
+                        "drawn on a creature",
+                        drawnOnCreature: true)
+                    .WithAllyRequirement(),
+                new RunePassiveProperties(
+                        $"The rune-bearer gains a +1 status bonus to Survival checks. While in natural terrain, you this bonus also applies to any Lore checks. If etched at the beginning of an encounter, the rune-bearer can use Survival to roll initiative, and the status bonus applies to this roll{ModData.Tooltips.InfoSertumReroll}.",
+                        (rune, level) =>
+                        {
+                            return
+                                $"The rune-bearer gains a +{S.HeightenedVariable(level >= 17 ? 3 : level >= 9 ? 2 : 1, 1)} status bonus to Survival checks. While in natural terrain, you this bonus also applies to any Lore checks. The rune-bearer can use Survival to roll initiative, and the status bonus applies to this roll.";
+                        })
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        int bonus = drawAction.Owner.Level >= 17 ? 3 : drawAction.Owner.Level >= 9 ? 2 : 1;
+                        return new DrawnRune(
+                            drawAction,
+                            rune,
+                            $"You gain a +1 status bonus to Survival checks{(target.Battle.Map.FinalTerrain is TerrainKind.Civilization ? "." : ", as well as to Lore checks.")}")
+                        {
+                            OfferAlternateSkillForInitiative = qfThis => Skill.Survival,
+                            BonusToSkills = skill =>
+                            {
+                                if (skill is Skill.Survival)
+                                    return new Bonus(bonus, BonusType.Status, rune.FullName);
+                                if (skill.ToStringOrTechnical().ToLower().Contains("lore")
+                                    && target.Battle.Map.FinalTerrain
+                                        is not TerrainKind.Civilization)
+                                    return new Bonus(bonus, BonusType.Status, rune.FullName);
+                                return null;
+                            },
+                            WhenYouAcquireThis = qfThis =>
+                            {
+                                if (qfThis.Owner.Battle.RoundNumber > 0)
+                                    return;
+
+                                // Redo initiative order
+                                List<Creature> oldList = qfThis.Owner.Battle.InitiativeOrder.ToList();
+                                qfThis.Owner.Battle.InitiativeOrder.Clear();
+                                oldList.ForEach(cr =>
+                                {
+                                    if (cr.EntersInitiativeOrder)
+                                        cr.EnterInitiativeOrderNow();
+                                });
+                            },
+                        };
+                    }),
+                new RuneInvocationProperties(
+                        "The rune reaches out to the surrounding terrain, shifting it to the rune-bearer's advantage. The rune-bearer can Step up to three times as a {icon:FreeAction} free action.",
+                        null)
+                    .WithAdditionalRequirement((a, d) =>
+                    {
+                        var step = CombatAction.CreateSimple(
+                                d, "Step", [Trait.Move, Trait.DoesNotProvoke])
+                            .WithActionCost(0)
+                            .WithActionId(ActionId.Step);
+                        bool canStep = d.QEffects.All(qf => qf.PreventTakingAction?.Invoke(step) == null);
+                        return canStep
+                            ? Usability.Usable
+                            : Usability.NotUsableOnThisCreature("Can't Step");
+                    })
+                    .WithSoundBeforeInvocation(SfxName.Footsteps)
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        for (int i=0; i<3; i++)
+                        {
+                            await effectTarget.StepAsync(
+                                $"Choose where to Step as part of invoking {invokedRune.Rune.Illustration} {invokedRune.Rune.FullName.WithColor("Blue")}{(i==0 ? ", or right-click to cancel" : null)}. ({i+1}/3)",
+                                i==0, true);
+                        }
+
+                        return effectTarget;
+                    }),
+                [Trait.Primal])
+            .WithLevelText("9th", "The bonus increases to +2.\n{b}Level (17th){/b} The bonus increases to +3.")
+            .ToFeat();
         
         // Thullax, Rune of Corrosion
         yield return new Rune(
@@ -1461,7 +1531,7 @@ public static class AllRunes
         // TODO: Tilus, Rune of Vocabulary
         yield return DebugRune(RuneId.Tilus, "Upon close inspection, this rune comprises hundreds of smaller characters of various runic languages.");
         /*yield return new Rune(
-                ,
+                RuneId.Tilus,
                 ,
                 new RuneDrawProperties(),
                 new RunePassiveProperties(),
