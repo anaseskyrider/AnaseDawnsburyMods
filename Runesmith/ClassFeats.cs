@@ -3231,6 +3231,27 @@ public static class ClassFeats
         return knockThisRune;
     }
 
+    public static QEffect TemporaryRunicRepertoire(Creature? runesmith, RuneId[] runesKnown)
+    {
+        if (runesmith?.FindQEffect(ModData.QEffectIds.TemporaryRunicRepertoire)
+            is { Tag: List<Rune> tempRunes } tempRep)
+        {
+            tempRep.Tag = tempRunes
+                .Union(ToRunes(runesKnown))
+                .ToList();
+            return tempRep;
+        }
+        
+        return new QEffect()
+        {
+            Id = ModData.QEffectIds.TemporaryRunicRepertoire,
+            Tag = ToRunes(runesKnown),
+        };
+
+        List<Rune> ToRunes(RuneId[] ids) =>
+            ids.Select(AllRunes.GetRune).WhereNotNull().ToList();
+    }
+
     public static string? RequiresPhysicalProjectile(CalculatedCharacterSheetValues values, Inventory inventory)
     {
         return FeatInventoryRequirements.RequiresOne(

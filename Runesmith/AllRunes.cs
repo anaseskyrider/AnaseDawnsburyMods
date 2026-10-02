@@ -3134,6 +3134,11 @@ public static class AllRunes
         return null;
     }
 
+    public static Rune? GetRune(RuneId runeId)
+    {
+        return All.FirstOrDefault(rune => rune.Id == runeId);
+    }
+
     public static HashSet<Creature>? JurrozWhoDamagedMe(Creature me)
     {
         return (me.Battle

@@ -510,7 +510,11 @@ public static class ModData
         public static QEffectId DiacriticFluency;
         public static QEffectId DrawnInVitalInk;
         public static QEffectId EdifyingTraceEffect;
-        public static  QEffectId JurrozDamageTracker;
+        public static QEffectId JurrozDamageTracker;
+        /// <summary>
+        /// This effect's Tag contains a <see cref="List{Rune}"/>, representing temporarily known runes for this combat.
+        /// </summary>
+        public static QEffectId TemporaryRunicRepertoire;
         
         public static void Initialize()
         {
@@ -523,6 +527,7 @@ public static class ModData
             DrawnInVitalInk = ModManager.RegisterEnumMember<QEffectId>("DrawnInVitalInk");
             EdifyingTraceEffect = ModManager.RegisterEnumMember<QEffectId>("EdifyingTraceEffect");
             JurrozDamageTracker = ModManager.RegisterEnumMember<QEffectId>("JurrozDamageTracker");
+            TemporaryRunicRepertoire = ModManager.RegisterEnumMember<QEffectId>("TemporaryRunicRepertoire");
         }
     }
 

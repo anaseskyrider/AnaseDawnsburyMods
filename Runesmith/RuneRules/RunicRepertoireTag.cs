@@ -53,9 +53,24 @@ public class RunicRepertoireTag
     /// </summary>
     public static RunicRepertoireTag? GetRepertoire(Creature runesmith)
     {
-        return runesmith.PersistentCharacterSheet is null
-            ? null
-            : GetRepertoire(runesmith.PersistentCharacterSheet.Calculated);
+        // PCs
+        if (runesmith.PersistentCharacterSheet is not null)
+            return GetRepertoire(runesmith.PersistentCharacterSheet.Calculated);
+        
+        // NPCs
+        if (runesmith.FindQEffect(ModData.QEffectIds.TemporaryRunicRepertoire) is { } tempRunes)
+        {
+            RunicRepertoireTag rep = new RunicRepertoireTag()
+            {
+                ClassOfOrigin = Trait.Runesmith,
+            };
+            (tempRunes.Tag as List<Rune>)?.ForEach(rune =>
+                rep.AddRune(runesmith.Level, rune));
+            return rep;
+        }
+
+        // Fallback
+        return null;
     }
 
     /// <summary>
@@ -186,8 +201,11 @@ public class RunicRepertoireTag
             .Where(learnedAt => learnedAt.Key <= runesmith.Level)
             .SelectMany(learnedAt => learnedAt.Value)
             .ToList();
-        
-        // TODO: Temporary encounter runes on the smith, probably with like a QEffectId.
+
+        if (includeTemporaryRunes
+            && runesmith.FindQEffect(ModData.QEffectIds.TemporaryRunicRepertoire)?
+                .Tag is List<Rune> tempRunes)
+            runes = runes.Union(tempRunes).ToList();
 
         return runes;
     }
