@@ -36,7 +36,7 @@ public static class FamiliarMaster
                 "You gain a {link:ClassFamiliar}combat familiar{/}. If you already have one, you gain the {link:DawnsburyEnhancedFamiliar}Enhanced Familiar{/} feat.")
             .WithOnSheet(values =>
             {
-                values.GrantFeat(values.HasFeat(FeatName.ClassFamiliar)
+                values.GrantFeat(values.Tags.ContainsKey(Familiars.FAMILIAR_KEY)
                     ? FeatName.DawnsburyEnhancedFamiliar
                     : FeatName.ClassFamiliar);
             });
