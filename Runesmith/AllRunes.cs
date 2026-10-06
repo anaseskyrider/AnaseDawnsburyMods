@@ -176,6 +176,9 @@ public static class AllRunes
                         {
                             StateCheck = qfThis =>
                             {
+                                DrawnRune drThis = (qfThis as DrawnRune)!;
+                                if (drThis.Disabled || !drThis.IsFirstInstanceOf())
+                                    return;
                                 if (qfThis.Owner.Battle.AllCreatures
                                     .Any(cr =>
                                         cr.FriendOfAndNotSelf(qfThis.Owner)
@@ -281,6 +284,9 @@ public static class AllRunes
                             UsedThisTurn = false,
                             AfterYouTakeAction = async (qfThis, action) =>
                             {
+                                DrawnRune drThis = (qfThis as DrawnRune)!;
+                                if (drThis.Disabled || !drThis.IsFirstInstanceOf())
+                                    return;
                                 if (qfThis.UsedThisTurn
                                     || !action.HasTrait(Trait.Concentrate))
                                     return;
@@ -440,19 +446,19 @@ public static class AllRunes
                         (rune, level) =>
                         {
                             (int baseValue, _, int finalValue) = rune.CalculateHeightening(1, 2, 1, level);
-                            return $"The essence of sharpness is released outwards from the rune, dealing {S.HeightenedVariable(finalValue, baseValue)}d8 slashing damage to a creature adjacent to the rune-bearer, with a basic Fortitude save.";
+                            return $"The essence of sharpness is released outwards from the rune, dealing {S.HeightenedVariable(finalValue, baseValue)}d8 slashing damage to a creature adjacent to the rune-bearer, with a basic Reflex save.";
                         })
-                    .WithDealsDamage((rune, level) =>
-                        ($"{rune.CalculateHeightening(1, 2, 1, level).FinalValue}d8", DamageKind.Slashing))
-                    .WithHideTooltip()
-                    .WithDefense(Defense.Reflex)
                     .WithAdditionalRequirement((runesmith, runeBearer) =>
                     {
-                        if (runeBearer.Space.GetNeighbours()
-                            .All(tile => tile.PrimaryOccupant?.EnemyOf(runesmith) != true))
-                            return Usability.NotUsableOnThisCreature("No enemy adjacent to the target");
-                        return Usability.Usable;
+                        return runeBearer.Space.GetNeighbours()
+                            .Any(tile => tile.PrimaryOccupant?.EnemyOf(runesmith) == true)
+                            ? Usability.Usable
+                            : Usability.NotUsableOnThisCreature("No enemy adjacent to the target");
                     })
+                    .WithDealsDamage((rune, level) =>
+                        ($"{rune.CalculateHeightening(1, 2, 1, level).FinalValue}d8", DamageKind.Slashing))
+                    .WithDefense(Defense.Reflex)
+                    .WithHideTooltip()
                     .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
                     {
                         return await CommonRuneRules.ExecuteInnerInvokeAction(
@@ -470,40 +476,11 @@ public static class AllRunes
                             true,
                             async (innerInvoke, runeBearer, innerTarget, result) =>
                             {
-                                const int baseValue = 1;
-                                int bonusValue = (invokeAction.Owner.Level - invokedRune.Rune.BaseLevel) / 2;
-                                int numDice = baseValue + bonusValue;
-                                await CommonSpellEffects.DealBasicDamage(
+                                await CommonRuneRules.SaveAgainstInvocation(
                                     innerInvoke,
-                                    invokeAction.Owner,
+                                    invokedRune,
                                     innerTarget,
-                                    result,
-                                    numDice + "d8",
-                                    DamageKind.Slashing);
-                            },
-                            // The effect target is normally the rune bearer, so you
-                            // go through the target-choosing routine as normal.
-                            // If a different target is passed by a more specific ability,
-                            // then this means the rune is being invoked onto a specific target
-                            // instead of being invoked normally.
-                            effectTarget == invokedRune.Owner
-                                ? null
-                                : ChosenTargets.CreateSingleTarget(effectTarget),
-                            innerInvoke =>
-                            {
-                                // Invokes from rune-bearer to adjacent target,
-                                // So the rune-bearer is the action owner.
-                                //innerInvoke.Owner = invokedRune.Owner;
-                                innerInvoke.WithAdjustTarget<CreatureTarget>(crTar =>
-                                    crTar.AlternateTileOfOrigin = invokedRune.Owner.Space.CenterTile);
-                                
-                                // When invoking onto a specific target,
-                                // remove the extra animations.
-                                if (effectTarget != invokedRune.Owner)
-                                {
-                                    innerInvoke.ProjectileKind = ProjectileKind.None;
-                                    innerInvoke.ProjectileCount = 0;
-                                }
+                                    knownResult: result);
                             });
                     }))
             .WithLevelText(
@@ -628,7 +605,16 @@ public static class AllRunes
                 new RuneDrawProperties(
                         "drawn on a creature" /*or object*/,
                         true)
-                    .WithEnemyRequirement(),
+                    .WithEnemyRequirement()
+                    .WithAdjustments(drawProps => drawProps.AdditionalGoodness = (tar, self, defender) =>
+                    {
+                        float value = 0f;
+                        // Incentivize Lyskel when the target will probably want to Stand.
+                        if (defender.HasEffect(QEffectId.Prone))
+                            // Sicken and Enfeeble is worth *1, Fear is worth *5.
+                            value += self.AiLevelMinimum1;
+                        return value;
+                    }),
                 new RunePassiveProperties(
                         "The rune-bearer takes a -5-foot circumstance penalty to its Speeds and becomes so cold that movement becomes dangerous; if the bearer takes a move action, it becomes {r}clumsy 1{/r} until the beginning of its next turn.",
                         null)
@@ -642,10 +628,13 @@ public static class AllRunes
                         {
                             CountsAsADebuff = true,
                             BonusToAllSpeeds = _ =>
-                                new Bonus(-1, BonusType.Circumstance, rune.Id.ToFullName()),
+                                new Bonus(-1, BonusType.Circumstance, rune.FullName),
                             //AfterYouMoveOneSquare = async (qfThis, action, style, before, after) =>
                             YouBeginAction = async (qfThis, action) =>
                             {
+                                DrawnRune drThis = (qfThis as DrawnRune)!;
+                                if (drThis.Disabled || !drThis.IsFirstInstanceOf())
+                                    return;
                                 if (!action.HasTrait(Trait.Move)
                                     || (action.Target as TileTarget)?
                                     .CreatePathfindingDescriptionFunction?
@@ -1220,7 +1209,15 @@ public static class AllRunes
                 new RuneDrawProperties(
                         "drawn on a creature", /*or object*/
                         drawnOnCreature: true)
-                    .WithEnemyRequirement(),
+                    .WithEnemyRequirement()
+                    .WithAdjustments(drawProps => drawProps.AdditionalGoodness = (tar, self, defender) =>
+                    {
+                        int value = 0;
+                        // Is more valuable if you know the target cannot move
+                        if (defender.HasEffect(QEffectId.Immobilized))
+                            value += drawProps.Self.CalculateHeightening(3, 2, 1, self.Level).FinalValue;
+                        return value;
+                    }),
                 new RunePassiveProperties(
                         "If the rune-bearer doesn't take a move action at least once on its turn, a small bolt of static finds it, dealing 3 electricity damage.",
                         (rune, level) =>
@@ -1307,7 +1304,7 @@ public static class AllRunes
                             StateCheck = qfThis =>
                             {
                                 DrawnRune drThis = (qfThis as DrawnRune)!;
-                                if (drThis.Disabled)
+                                if (drThis.Disabled || !drThis.IsFirstInstanceOf())
                                     return;
                                 drThis.Owner.AddQEffect(QEffect.Tremorsense(6)
                                     .With(qf =>
@@ -1326,7 +1323,7 @@ public static class AllRunes
                     .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
                     {
                         await effectTarget.StepAsync(
-                            $"Choose where to Step as part of invoking {invokedRune.Rune.Illustration} {invokedRune.Rune.FullName.WithColor("Blue")}, or right-click to cancel.",
+                            $"Choose where to Step as part of invoking {invokedRune.Rune.Illustration.IllustrationAsIconString} {invokedRune.Rune.FullName.WithColor("Blue")}, or right-click to cancel.",
                             true, true);
 
                         effectTarget.AddQEffect(invokedRune.NewInvocationEffect(
@@ -1420,7 +1417,7 @@ public static class AllRunes
                         for (int i=0; i<3; i++)
                         {
                             await effectTarget.StepAsync(
-                                $"Choose where to Step as part of invoking {invokedRune.Rune.Illustration} {invokedRune.Rune.FullName.WithColor("Blue")}{(i==0 ? ", or right-click to cancel" : null)}. ({i+1}/3)",
+                                $"Choose where to Step as part of invoking {invokedRune.Rune.Illustration.IllustrationAsIconString} {invokedRune.Rune.FullName.WithColor("Blue")}{(i==0 ? ", or right-click to cancel" : null)}. ({i+1}/3)",
                                 i==0, true);
                         }
 
@@ -1437,7 +1434,23 @@ public static class AllRunes
                 new RuneDrawProperties(
                         "drawn on a creature", /*or object*/
                         drawnOnCreature: true)
-                    .WithEnemyRequirement(),
+                    .WithEnemyRequirement()
+                    .WithAdjustments(drawProps => drawProps.AdditionalGoodness = (target, self, defender) =>
+                    {
+                        float value = 0;
+                        int reduction = drawProps.Self.CalculateHeightening(1, 2, 1, self.Level).FinalValue;
+                        foreach (Resistance res in defender.WeaknessAndResistance
+                                     .Resistances
+                                     .Where(res =>
+                                         res.DamageKind.IsPhysical()
+                                         || (res as SpecialResistance)?.Name.ToLower().Contains("physical") == true))
+                        {
+                            // Add the amount you reduce, up to that reduction amount
+                            value += Math.Min(res.Value, reduction);
+                        }
+                        
+                        return value;
+                    }),
                 new RunePassiveProperties(
                         "The rune-bearer's resistance to each physical damage type is reduced by 1 (if it has any such resistances). Its immunities are unaffected.",
                         (rune, level) =>
@@ -1458,6 +1471,9 @@ public static class AllRunes
                             StateCheckLayer = 1,
                             StateCheck = qfThis =>
                             {
+                                DrawnRune drThis = (qfThis as DrawnRune)!;
+                                if (drThis.Disabled || !drThis.IsFirstInstanceOf())
+                                    return;
                                 foreach (Resistance res in qfThis.Owner.WeaknessAndResistance
                                              .Resistances
                                              .Where(res =>
@@ -1508,7 +1524,9 @@ public static class AllRunes
             .ToFeat();
         
         // TODO: Tilus, Rune of Vocabulary
-        yield return DebugRune(RuneId.Tilus, "Upon close inspection, this rune comprises hundreds of smaller characters of various runic languages.");
+        yield return DebugRune(
+            RuneId.Tilus,
+            "Upon close inspection, this rune comprises hundreds of smaller characters of various runic languages.");
         /*yield return new Rune(
                 RuneId.Tilus,
                 ,
@@ -2040,27 +2058,275 @@ public static class AllRunes
 
         #region 9th-Level
         
-        // TODO: Astillu, Rune of Submersion
-        yield return DebugRune(RuneId.Astillu, "Originating from ancient runic scripts, this wavy rune is popular with practitioners of rune magic who want to easily traverse their watery environs.");
-        /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
-            .ToFeat();*/
+        // Astillu, Rune of Submersion
+        yield return new Rune(
+                RuneId.Astillu,
+                "Originating from ancient runic scripts, this wavy rune is popular with practitioners of rune magic who want to easily traverse their watery environs.",
+                new RuneDrawProperties(
+                        "drawn on a creature",
+                        drawnOnCreature: true)
+                    .WithAllyRequirement(),
+                new RunePassiveProperties(
+                        "The rune-bearer gains {r}swimming{/r}. Its melee Strikes don't take the usual circumstance penalty for passing through water.",
+                        null)
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        return new DrawnRune(
+                            drawAction,
+                            rune,
+                            "You gain swimming, and your melee Strikes don't take the usual circumstance penalty for passing through water.")
+                        {
+                            /*BeforeBonusesAreFlattened = (qfThis, bonuses, reason, action, defender) =>
+                            {
+                                if (reason is not BonusCalculationReason.AttackRoll
+                                    || action?.Owner != qfThis.Owner
+                                    || !action.HasTrait(Trait.Melee)
+                                    || !action.HasTrait(Trait.Strike))
+                                    return;
+                                bonuses.RemoveAll(bonus =>
+                                    bonus.BonusSource == "Aquatic Combat"
+                                    && bonus.BonusType is BonusType.Circumstance);
+                            }*/
+                            StateCheck = qfThis =>
+                            {
+                                if (DrawnRune.ShouldNotPerformPassiveEffect(qfThis))
+                                    return;
+                                qfThis.Owner.AddQEffect(QEffect.Swimming()
+                                    .WithExpirationEphemeral());
+                                // All this does is remove the attack penalties
+                                qfThis.Owner.AddQEffect(new QEffect()
+                                    { Id = QEffectId.ReturnToTheSea }
+                                    .WithExpirationEphemeral());
+                            }
+                        };
+                    }),
+                new RuneInvocationProperties(
+                        "The rune's power pushes the bearer forward in a surprising surge of speed. The rune-bearer can Stride underwater up to 60 feet as a free action, and this movement doesn't trigger reactions.",
+                        null)
+                    .WithAdditionalRequirement((a, d) =>
+                        d.Space.AnyTile(tile => tile.IsWater)
+                        || d.Battle.Map.FinalTerrain == TerrainKind.Aquatic
+                            ? Usability.Usable
+                            : Usability.NotUsableOnThisCreature("Not in water"))
+                    .WithAdditionalRequirement((a, d) =>
+                        d.WouldBeAbleToStride()
+                            ? Usability.Usable
+                            : Usability.NotUsableOnThisCreature("Can't Stride"))
+                    .WithSoundBeforeInvocation(SfxName.Footsteps)
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        QEffect mobility = new QEffect()
+                        {
+                            Id = QEffectId.IgnoreAoOWhenMoving
+                        };
+                        effectTarget.AddQEffect(mobility);
+                        await effectTarget.StrideOrStepAdvancedAsync(
+                            $"Choose where to Stride underwater as part of invoking {invokedRune.Rune.Illustration.IllustrationAsIconString} {invokedRune.Rune.FullName.WithColor("Blue")}, or right-click to cancel.",
+                            permissibleTarget: tile =>
+                                tile.IsWater
+                                || tile.Battle.Map.FinalTerrain == TerrainKind.Aquatic,
+                            allowCancel: true,
+                            allowPass: true);
+                        effectTarget.RemoveAllQEffects(qf => qf == mobility);
+                        
+                        return effectTarget;
+                    })
+                    .WithSoundAfterInvocation(SfxName.TidalSurge),
+                [Trait.Water])
+            .ToFeat();
         
-        // TODO: Cruonign, Rune of Leeching
-        yield return DebugRune(RuneId.Cruonign, "The jagged shape of this rune resembles a vampire's fangs.");
-        /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
-            .ToFeat();*/
+        // Cruonign, Rune of Leeching
+        yield return new Rune(
+                RuneId.Cruonign,
+                "The jagged shape of this rune resembles a vampire's fangs.",
+                new RuneDrawProperties(
+                        "drawn on a slashing or piercing weapon",
+                        drawnOnItem: true)
+                    .WithAllyRequirement(hasEnemyUseCases: true)
+                    .WithHoldsItemRequirement(
+                        item =>
+                            item.WeaponProperties is not null
+                            && !item.HasTrait(Trait.Unarmed)
+                            && item.DetermineDamageKinds().Any(kind =>
+                                kind is DamageKind.Piercing or DamageKind.Slashing),
+                        "no piercing or slashing weapon")
+                    // If you are able to draw this on an enemy, and can therefore see
+                    // this targeting requirement, then this adds a requirement that
+                    // there be another enemy within 30 feet and line of sight to avoid accidents.
+                    // This requirement is ignored if you know En to be able to increase the emanation.
+                    .WithCreatureRequirement((a, d) =>
+                    {
+                        if (d.EnemyOf(a))
+                        {
+                            if (d.Battle.AllCreatures.Any(cr =>
+                                    cr.EnemyOf(a)
+                                    && a.HasLineOfEffectTo(cr) < CoverKind.Blocked
+                                    && cr.DistanceTo(a) <= 6)
+                                || RunicRepertoireTag.GetRepertoire(a)?.IsKnown(RuneId.En, a.Level) == true)
+                                return Usability.Usable;
+                            else
+                                return Usability.NotUsableOnThisCreature("No enemies in range of invocation");
+                        }
+                        else
+                            return Usability.Usable;
+                    }),
+                new RunePassiveProperties(
+                        "Strikes with the rune-bearing weapon deal an additional 3 void damage. Whenever a living creature is damaged by one of these Strikes, the rune-bearer gains temporary Hit Points equal to the void damage the target took (after applying resistances and the like).",
+                        (rune, level) =>
+                        {
+                            (int baseValue, _, int finalValue) = rune.CalculateHeightening(3, 2, 1, level);
+                            return
+                                $"Strikes with the rune-bearing weapon deal an additional {S.HeightenedVariable(finalValue, baseValue)} void damage. Whenever a living creature is damaged by one of these Strikes, the rune-bearer gains temporary Hit Points equal to the void damage the target took (after applying resistances and the like).";
+                        })
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        int bonusDamage = rune.CalculateHeightening(3, 2, 1, drawAction.Owner.Level).FinalValue;
+                        
+                        return await CommonRuneRules.ChooseAnItemToDrawOn(
+                            drawAction,
+                            drawAction.Owner,
+                            target,
+                            subTarget is Item itemTarget
+                                ? item => item == itemTarget
+                                : item =>
+                                    item.WeaponProperties is not null
+                                    && !item.HasTrait(Trait.Unarmed)
+                                    && item.DetermineDamageKinds().Any(kind =>
+                                        kind is DamageKind.Piercing or DamageKind.Slashing),
+                            MakeCruonignPassive,
+                            $"Choose a weapon whose Strikes will deal additional {bonusDamage} void damage and generate temporary Hit Points.",
+                            rune);
+
+                        DrawnRune? MakeCruonignPassive(Item? targetItem)
+                        {
+                            if (targetItem is null)
+                                return null;
+                            
+                            DrawnRune cruonignPassive = new DrawnRune(
+                                    drawAction,
+                                    rune,
+                                    (drThis, item) => $"Strikes with {item.Illustration.IllustrationAsIconString} {item.Name.WithColor("Blue")} deal an additional {bonusDamage} void damage, and you gain temporary Hit Points equal to the void damage taken by the target of the Strike.",
+                                    targetItem)
+                                {
+                                    AfterYouDealDamageAgainstPrimaryTargetQ = async (qfThis, action, attacker, defender, result, dEvent) =>
+                                    {
+                                        DrawnRune drThis = (qfThis as DrawnRune)!;
+                                        if (drThis.Disabled || !drThis.IsFirstInstanceOf())
+                                            return;
+                                        
+                                        // Must deal damage using a strike with the item this is drawn on
+                                        if (action.HasTrait(Trait.Strike) != true
+                                            || result < CheckResult.Success
+                                            || drThis.DrawnOn is not Item drawnItem
+                                            || action.Item != drawnItem
+                                            || drawnItem.WeaponProperties is null
+                                            || !defender.IsLivingCreature)
+                                            return;
+                                        
+                                        // Determine weapon damage dice count
+                                        int voidAmount = dEvent.KindedDamages
+                                            .FirstOrDefault(kd => kd.DamageKind is DamageKind.Negative)
+                                            ?.ResolvedDamage ?? 0;
+
+                                        if (voidAmount == 0)
+                                            return;
+
+                                        attacker.GainTemporaryHP(
+                                            DiceFormula.FromText(
+                                                voidAmount.ToString(),
+                                                rune.FullName));
+                                    },
+                                };
+                            // Done separately to capture references
+                            cruonignPassive.AddExtraKindedDamageOnStrike = (strike, defender) =>
+                            {
+                                if (DrawnRune.ShouldNotPerformPassiveEffect(cruonignPassive))
+                                    return null;
+                                return new KindedDamage(
+                                    DiceFormula.FromText(
+                                        bonusDamage.ToString(),
+                                        rune.FullName),
+                                    DamageKind.Negative);
+                            };
+
+                            return cruonignPassive;
+                        }
+                    }),
+                new RuneInvocationProperties(
+                        "The rune lashes out in a 30-foot cone from the wielder of the weapon, dealing 4d10 void damage to each creature in the area, with a basic Fortitude save. If any creatures take damage, the wielder regains 12 Hit Points.",
+                        (rune, level) =>
+                        {
+                            var damage = rune.CalculateHeightening(4, 2, 1, level);
+                            var healing = rune.CalculateHeightening(12, 2, 3, level);
+                            return
+                                $"The rune lashes out in a 30-foot cone from the wielder of the weapon, dealing {S.HeightenedVariable(damage.FinalValue, damage.BaseValue)}d10 void damage to each creature in the area, with a basic Fortitude save. If any creatures take damage, the wielder regains {S.HeightenedVariable(healing.FinalValue, healing.BaseValue)} Hit Points.";
+                        })
+                    .WithDealsDamage((rune, level) =>
+                        ($"{rune.CalculateHeightening(4, 2, 1, level).FinalValue}d10", DamageKind.Negative))
+                    .WithDefense(Defense.Fortitude)
+                    .WithAffectsArea()
+                    .WithHideTooltip()
+                    .WithAdditionalRequirement((runesmith, runeBearer) =>
+                    {
+                        if (runeBearer.Battle.AllCreatures
+                                .Any(cr =>
+                                    cr.EnemyOf(runesmith)
+                                    && cr.DistanceTo(runeBearer) <= 6))
+                            return Usability.Usable;
+                        return Usability.NotUsableOnThisCreature("No enemy within range of the target");
+                    })
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        QEffect healAfter = new QEffect(ExpirationCondition.ExpiresAtEndOfAnyTurn)
+                        {
+                            AfterYouDealDamageQ = async (qfThis, attacker, damagingAction, defender) =>
+                            {
+                                if (damagingAction.Tag is not RuneActionTag tag
+                                    || tag.ChosenDrawnRune != invokedRune
+                                    || qfThis.UsedUpPermanently)
+                                    return;
+                                
+                                int healingAmount = invokedRune.Rune.CalculateHeightening(12, 2, 3, invokedRune.Source!.Level).FinalValue;
+                                await qfThis.Owner.HealAsync(
+                                    DiceFormula.FromText(
+                                        healingAmount.ToString(),
+                                        invokedRune.Rune.FullName),
+                                    damagingAction);
+
+                                qfThis.UsedUpPermanently = true;
+                                qfThis.ExpiresAt = ExpirationCondition.Immediately;
+                            },
+                        };
+                        invokeAction.Owner.AddQEffect(healAfter);
+                        
+                        var affectedCreatures = await CommonRuneRules.ExecuteInnerInvokeAction(
+                            invokeAction,
+                            invokedRune,
+                            effectTarget,
+                            // After a bunch of refactors, this might not be needed,
+                            // but I'll keep it anyway just in case.
+                            effectTarget != invokedRune.Owner 
+                                ? Target.Ranged(6)
+                                : Target.Cone(6),
+                            false,
+                            SfxName.MajorNegative,
+                            true,
+                            async (innerInvoke, runeBearer, innerTarget, result) =>
+                            {
+                                await CommonRuneRules.SaveAgainstInvocation(
+                                    innerInvoke,
+                                    invokedRune,
+                                    innerTarget,
+                                    knownResult: result);
+                            });
+
+                        invokeAction.Owner.RemoveAllQEffects(qf => qf == healAfter);
+
+                        return affectedCreatures;
+                    }),
+                [Trait.Death, Trait.Negative])
+            .WithLevelText("+2", "The additional void damage increases by 1, the damage of the invocation increases by 1d10, and the healing increases by 3.")
+            .ToFeat();
         
         // Feikris, Rune of Gravity
         yield return new Rune(
@@ -2137,7 +2403,9 @@ public static class AllRunes
             .ToFeat();
 
         // TODO: Germantria, Rune of Partnership
-        yield return DebugRune(RuneId.Germantria, "When drawn, this knobby rune pulses with your own heartbeat, creating a vital connection between you and the bearer.");
+        yield return DebugRune(
+            RuneId.Germantria,
+            "When drawn, this knobby rune pulses with your own heartbeat, creating a vital connection between you and the bearer.");
         /*yield return new Rune(
                 ,
                 ,
@@ -2254,6 +2522,9 @@ public static class AllRunes
                         {
                             AfterYouTakeDamage = async (qfThis, amount, _, action, _) =>
                             {
+                                DrawnRune drThis = (qfThis as DrawnRune)!;
+                                if (drThis.Disabled || !drThis.IsFirstInstanceOf())
+                                    return;
                                 if (amount < 1 || action?.HasTrait(Trait.Strike) != true)
                                     return;
                                 action.Owner.AddQEffect(QEffect
@@ -2631,7 +2902,9 @@ public static class AllRunes
             .ToFeat();
         
         // TODO: Oraloq, Rune of Inarticulateness
-        yield return DebugRune(RuneId.Oraloq, "This hard-to-read rune makes language difficult for the unfortunate rune-bearer.");
+        yield return DebugRune(
+            RuneId.Oraloq,
+            "This hard-to-read rune makes language difficult for the unfortunate rune-bearer.");
         /*yield return new Rune(
                 ,
                 ,
@@ -2642,7 +2915,9 @@ public static class AllRunes
             .ToFeat();*/
         
         // TODO: Piteregrin, Rune of Transposition
-        yield return DebugRune(RuneId.Piteregrin, "The slanted lines and odd curls of this rune give the impression that it is trying to escape. ");
+        yield return DebugRune(
+            RuneId.Piteregrin,
+            "The slanted lines and odd curls of this rune give the impression that it is trying to escape.");
         /*yield return new Rune(
                 ,
                 ,
@@ -2740,7 +3015,9 @@ public static class AllRunes
             .ToFeat();
         
         // TODO: Ulgatus, Rune of Restraint
-        yield return DebugRune(RuneId.Ulgatus, "A faction of constructed beings developed this rune to avoid the weaknesses of flesh.");
+        yield return DebugRune(
+            RuneId.Ulgatus,
+            "A faction of constructed beings developed this rune to avoid the weaknesses of flesh.");
         /*yield return new Rune(
                 ,
                 ,
@@ -2751,7 +3028,9 @@ public static class AllRunes
             .ToFeat();*/
         
         // TODO: Yudici, Rune of Remonstrance
-        yield return DebugRune(RuneId.Yudici, "This majestic rune grants the shield's wielder the conviction to aid their allies.");
+        yield return DebugRune(
+            RuneId.Yudici,
+            "This majestic rune grants the shield's wielder the conviction to aid their allies.");
         /*yield return new Rune(
                 ,
                 ,

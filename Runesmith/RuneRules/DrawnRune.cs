@@ -243,6 +243,18 @@ public class DrawnRune : QEffect
 
     #region Methods
 
+    public static bool ShouldNotPerformPassiveEffect(QEffect qf)
+    {
+        if (qf is not DrawnRune dr)
+            return false;
+        return ShouldNotPerformPassiveEffect(dr);
+    }
+
+    public static bool ShouldNotPerformPassiveEffect(DrawnRune dr)
+    {
+        return dr.Disabled || !dr.IsFirstInstanceOf();
+    }
+
     private static bool IsADrawnRune(Creature? runesmith, QEffect qf, bool includeDisabled = false)
     {
         return qf is DrawnRune dr
@@ -297,8 +309,29 @@ public class DrawnRune : QEffect
                && (!dr.Disabled || includeDisabled)
                && (dr.Rune.InvocationProperties.TargetingRequirements.Count == 0
                    || runesmith is null
-                   || runesmith.Battle.AllCreatures.Any(cr =>
-                       dr.Rune.InvocationProperties.IsLegalTarget(runesmith, cr)));
+                   /*|| runesmith.Battle.AllCreatures.Any(cr =>
+                       dr.Rune.InvocationProperties.IsLegalTarget(runesmith, cr)
+                       )*/
+                   || dr.Rune.InvocationProperties.IsLegalTarget(runesmith, dr.Owner)
+                   );
+        /*if (qf is not DrawnRune dr)
+            return false;
+        if (runesmith is not null && dr.Source != runesmith)
+            return false;
+        if (!dr.Traits.Contains(ModData.Traits.Rune))
+            return false;
+        if (dr.Traits.Contains(ModData.Traits.Invocation))
+            return false;
+        if (dr.Traits.Contains(ModData.Traits.Diacritic))
+            return false;
+        if (dr.Disabled && !includeDisabled)
+            return false;
+        if (dr.Rune.InvocationProperties.TargetingRequirements.Count == 0)
+            return true;
+        if (runesmith is null)
+            return true;
+        if (runesmith.Battle.AllCreatures.Any(cr =>
+                dr.Rune.InvocationProperties.IsLegalTarget(runesmith, cr)))*/
     }
     
     /// <summary>
@@ -463,10 +496,12 @@ public class DrawnRune : QEffect
             }
             
             // Disable the rune if it's not in play
-            if (holder is not null)
+            // Don't enable it if it's a Runic Reprisal rune.
+            if (holder is not null
+                && !drThis.Traits.Contains(ModData.Traits.Reprised))
                 this.EnableRune(true);
             else
-                this.DisableRune(false);
+                this.DisableRune(drThis.Traits.Contains(ModData.Traits.Reprised));
         };
         
         return this;
@@ -530,7 +565,9 @@ public class DrawnRune : QEffect
             }
             
             // Disable the rune if it's not in play
-            if (bearer is not null)
+            // Don't enable it if it's a Runic Reprisal rune.
+            if (bearer is not null
+                && !drThis.Traits.Contains(ModData.Traits.Reprised))
                 this.EnableRune(true);
             else
                 this.DisableRune(false);

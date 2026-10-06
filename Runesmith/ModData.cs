@@ -34,12 +34,14 @@ public static class ModData
         public static ActionId TraceRune;
         public static ActionId EtchRune;
         public static ActionId InvokeRune;
+        public static ActionId EngravingStrike;
         
         public static void Initialize()
         {
             TraceRune = ModManager.RegisterEnumMember<ActionId>("TraceRune");
             EtchRune = ModManager.RegisterEnumMember<ActionId>("EtchRune");
             InvokeRune = ModManager.RegisterEnumMember<ActionId>("InvokeRune");
+            EngravingStrike = ModManager.RegisterEnumMember<ActionId>("EngravingStrike");
         }
     }
     

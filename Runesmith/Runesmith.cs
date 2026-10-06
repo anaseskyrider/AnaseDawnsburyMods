@@ -11,14 +11,16 @@ using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Creatures;
+using Dawnsbury.Core.Intelligence;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
-using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.StatBlocks.Monsters.L15;
 using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
@@ -40,6 +42,9 @@ public static class Runesmith
         
         // Class
         ModManager.AddFeat(CreateClass());
+        
+        // Mirror Entity
+        LoadMirrorEntity();
     }
 
     public static Feat CreateClass()
@@ -598,6 +603,250 @@ public static class Runesmith
             .WithLevel(15);
     }
 
+    public static void LoadMirrorEntity()
+    {
+        MirrorEntity.RegisterClassTemplate(
+            Trait.Runesmith,
+            MirrorEntity.MirrorEntityBaseStatblock.Fighter,
+            cr =>
+            {
+                // Base stats.
+                // Increase INT by 2 by sacrificing -1 DEX and -1 CHA.
+                // This class template does not get +7 attack accuracy.
+                cr.Abilities.Intelligence += 2;
+                cr.Abilities.Dexterity -= 1;
+                cr.Abilities.Charisma -= 1;
+                
+                // Skills.
+                // Needs to have at least one magic tradition skill.
+                // These are Arcana and Religion for dwarven runesmith vibes.
+                cr.Skills.Set(Skill.Arcana, 25);
+                cr.Skills.Set(Skill.Religion, 23);
+                
+                // Held items.
+                // Wields a pick and a shield.
+                // Both should be well-runed for flavor.
+                cr.HeldItems.Clear();
+                cr.HeldItems.Add(Items.CreateNew(ItemName.Pick)
+                    .WithModificationRune(ItemName.WeaponPotencyRunestone2)
+                    .WithModificationRune(ItemName.GreaterStrikingRunestone)
+                    .WithModificationRune(ItemName.FrostRunestoneGreater)
+                    .WithModificationRune(ItemName.FlamingRunestoneGreater));
+                cr.HeldItems.Add(Items.CreateNew(ItemName.SturdyShield15)
+                    .WithModificationRune(ItemName.WeaponPotencyRunestone2)
+                    .WithModificationRune(ItemName.GreaterStrikingRunestone)
+                    .WithModificationRune(ItemName.CorrosiveRunestoneGreater)
+                    .WithModificationRune(ItemName.ShockRunestoneGreater));
+                
+                // NPC repertoire.
+                // - Atryl (fire damage)
+                // - Lyskel (cold damage)
+                // - Thullax (acid damage)
+                // - Ranshu (electricity damage)
+                cr.AddQEffect(ClassFeats
+                    .TemporaryRunicRepertoire(
+                        cr,
+                        [RuneId.Atryl, RuneId.Lyskel, RuneId.Thullax, RuneId.Ranshu])
+                    .With(qf =>
+                    {
+                        // Etch equipment, as if they knew Esvadir and Holtrik.
+                        qf.StartOfCombat = async qfThis =>
+                        {
+                            foreach (Rune rune in (Rune[])[AllRunes.GetRune(RuneId.Esvadir)!, AllRunes.GetRune(RuneId.Holtrik)!])
+                            {
+                                if (await CommonRuneRules.DrawRuneOnTarget(
+                                        CommonRuneRules.CreateEtchAction(cr, rune)
+                                            .WithExtraTrait(Trait.DoNotShowOverheadOfActionName),
+                                        cr, rune, cr.HeldItems[0], true, true)
+                                    is { } drawnRune)
+                                {
+                                    qfThis.Owner.AddQEffect(drawnRune
+                                        .With(dr => dr.DoNotShowUpOverhead = true));
+                                }
+                            }
+                        };
+
+                        // Modify Engraving Strike to be non-flourish so that it
+                        // can be repeated and doesn't compete with Runic Reprisal
+                        qf.ModifyActionPossibility = (qfThis, action) =>
+                        {
+                            if (action.ActionId == ModData.ActionIds.EngravingStrike)
+                                action.Traits.Remove(Trait.Flourish);
+                        };
+                        
+                        // Adjust AI
+                        qf.AdditionalGoodness = (qfThis, action, defender) =>
+                        {
+                            // Modify goodness of Invoke Rune
+                            if (action.ActionId == ModData.ActionIds.InvokeRune)
+                            {
+                                // Do not ever attempt to invoke an etched rune
+                                if (action.Tag is RuneActionTag tag
+                                    && tag.ChosenDrawnRune!.DrawTrait == ModData.Traits.Etched)
+                                    return AIConstants.NEVER;
+                                
+                                var runes = GetInvokeableRunes(action.Owner);
+                        
+                                // Incentivize invoking when there's 2+ runes, or invoking
+                                // if it's free.
+                                if (runes.Count >= 2
+                                    || runes.Count >= 1 && action.ActionCost == 0)
+                                    return AIConstants.VERY_PREFERRED;
+                                
+                                // If you have 1 action left and have a rune that's about to expire,
+                                // It's preferable to invoke it than waste it.
+                                if (action.Owner.Actions.ActionsLeft == 1
+                                    && runes.Count(dr =>
+                                        dr.DrawTrait == ModData.Traits.Traced
+                                        && !dr.CannotExpireThisTurn) == 1)
+                                    return AIConstants.VERY_PREFERRED;
+                                
+                                return AIConstants.SPECIAL_DO_THIS_IF_NOTHING_ELSE;
+                            }
+                            
+                            // Modify goodness of Trace Rune
+                            if (action.ActionId == ModData.ActionIds.TraceRune)
+                            {
+                                // If it's free, incentivize it.
+                                if (action.ActionCost == 0)
+                                    return AIConstants.VERY_PREFERRED;
+                                // If you've already made 1+ attacks, Trace Rune is good value.
+                                if (action.Owner.Actions.AttackedThisManyTimesThisTurn > 0)
+                                    return 0f;
+                                // Otherwise, almost never Trace a Rune on its own.
+                                return AIConstants.SPECIAL_DO_THIS_IF_NOTHING_ELSE;
+                            }
+
+                            return 0f;
+                        };
+                    }));
+                
+                // Tracing Runes
+                cr.WithFeat(ModData.FeatNames.TraceRune);
+                
+                // Invoking Runes.
+                cr.AddQEffect(new QEffect()
+                {
+                    AddToOffenseBlock = _ =>
+                        "{b}Invoke Rune {icon:Action}{/b} [invocation] Invoke 2 runes within 30 feet.",
+                    
+                    // Simplified. You do direct Invoke Rune actions.
+                    // When UsedThisTurn is true, Invoke Rune is free.
+                    /*AfterYouTakeAction = async (qfThis, action) =>
+                    {
+                        if (action.ActionId == ModData.ActionIds.InvokeRune)
+                            qfThis.UsedThisTurn = action.ActionCost == 1;
+                    },
+                    ProvideMainAction = qfThis =>
+                    {
+                        List<DrawnRune> allDrawnRunes = GetInvokeableRunes(qfThis.Owner);
+                        // Only desire invoking them once you have expiring runes,
+                        // 2+ runes to invoke, or can invoke for free.
+                        if (!allDrawnRunes.Any(dr =>
+                                dr.DrawTrait == ModData.Traits.Traced
+                                && !dr.CannotExpireThisTurn)
+                            && allDrawnRunes.Count < 2
+                            && !qfThis.UsedThisTurn)
+                            return null;
+                        
+                        return new SubmenuPossibility(
+                                ModData.Illustrations.InvokeRune,
+                                "Invoke Rune")
+                            {
+                                Subsections =
+                                [
+                                    new PossibilitySection("Invoke Rune")
+                                    {
+                                        Possibilities = allDrawnRunes
+                                            .Select(drawnRune =>
+                                                CommonRuneRules.CreateInvokeAction(
+                                                        qfThis.Owner,
+                                                        drawnRune,
+                                                        immediatelyRemoveImmunity: true)
+                                                    ?.WithActionCost(qfThis.UsedThisTurn ? 0 : 1)
+                                                    .With(ca =>
+                                                        ca.Traits.Remove(Trait.DoNotShowInCombatLog)))
+                                            .WhereNotNull()
+                                            .Select(action => new ActionPossibility(action))
+                                            .Cast<Possibility>()
+                                            .ToList()
+                                    }
+                                ]
+                            }
+                            .WithPossibilityGroup(ModData.PossibilityGroups.INVOKING_RUNES);
+                    },*/
+                
+                    ProvideMainAction = qfThis =>
+                    {
+                        CombatAction invokeRune = InvokeRuneActivity(qfThis.Owner);
+                        
+                        Possibility invokePoss = new ActionPossibility(invokeRune)
+                            .WithPossibilityGroup(ModData.PossibilityGroups.INVOKING_RUNES);
+                        
+                        return invokePoss;
+                    },
+                });
+
+                List<DrawnRune> GetInvokeableRunes(Creature runesmith)
+                {
+                    return DrawnRune
+                        .GetAllDrawnRunes(runesmith)
+                        // Offensive invocations only.
+                        // Will not consume etched runes.
+                        .Where(dr =>
+                            dr.Rune.InvocationProperties.EffectOnOneTarget is not null
+                            && !dr.Rune.InvocationProperties.TargetingRequirements.Any(req =>
+                                req is FriendCreatureTargetingRequirement
+                                    or FriendOrSelfCreatureTargetingRequirement)
+                            && dr.DrawTrait != ModData.Traits.Etched
+                            && !dr.Disabled
+                            && dr.Owner.DistanceTo(runesmith) <= 6
+                        )
+                        .ToList();
+                }
+
+                // Feats (4-5)
+                // 1. Engraving Strike
+                cr.AddQEffect(new QEffect(
+                    "Engraving Strikes",
+                    "When you successfully hit with a Strike, your next 1-action Trace Rune is a free action.")
+                {
+                    AfterYouTakeAction = async (qfThis, action) =>
+                    {
+                        if (action.HasTrait(Trait.Strike)
+                            && action.CheckResult > CheckResult.Failure)
+                            qfThis.UsedThisTurn = true;
+
+                        if (qfThis.UsedThisTurn
+                            && action.ActionId == ModData.ActionIds.TraceRune
+                            && action.ActionCost == 0)
+                            qfThis.UsedThisTurn = false;
+                    },
+                    AdjustEachPossibility = (qfThis, possibility) =>
+                    {
+                        if (possibility is not ActionPossibility ap
+                            || ap.CombatAction.ActionId != ModData.ActionIds.TraceRune)
+                            return;
+                        if (!qfThis.UsedThisTurn
+                            || ap.CombatAction.ActionCost != 1)
+                            return;
+                        ap.CombatAction.ActionCost = 0;
+                        ap.Illustration = IllustrationName.Action;
+                        ap.CombatAction.ContextMenuName = ap.CombatAction.ContextMenuName?.Replace("{icon:Action}", "{icon:FreeAction}");
+                    },
+                });
+                //cr.WithFeat(ModData.FeatNames.EngravingStrike);
+                // 2. Shield Block
+                cr.AddQEffect(QEffect.ShieldBlock());
+                // 3. Fortifying Knock
+                cr.WithFeat(ModData.FeatNames.FortifyingKnock);
+                // 4. Runic Reprisal
+                cr.WithFeat(ModData.FeatNames.RunicReprisal);
+                // 5. Swiping Trace
+                cr.WithFeat(ModData.FeatNames.SwipingTrace);
+            });
+    }
+
     public static CombatAction InvokeRuneActivity(Creature runesmith, int maxInvocations = 2)
     {
         const int baseRange = 6;
@@ -618,7 +867,29 @@ public static class Runesmith
                 
                 {{CommonRuneRules.ACTION_DESCRIPTION_INVOKE_RUNE.RULES.Replace("30 feet", rangeDesc)}}
                 """,
-                Target.Self()
+                Target.Self((self, ai) =>
+                    {
+                        // The goodness is the highest 2 of all simple, usable invoke actions
+                        return DrawnRune.GetAllDrawnRunes(self)
+                            .Where(dr =>
+                                DrawnRune.IsInvokeableRune(self, dr)
+                                && self.DistanceTo(dr.Owner) <= range)
+                            .Select(dr =>
+                            {
+                                if (CommonRuneRules.CreateInvokeAction(self, dr) is not { } invokeAction)
+                                    return null;
+                                return (invokeAction.Target as CreatureTarget)?
+                                    .CreatureGoodness.Invoke(
+                                        invokeAction.Target,
+                                        invokeAction.Owner,
+                                        dr.Owner);
+                            })
+                            .Where(goodness => goodness.HasValue)
+                            .Cast<float>()
+                            .OrderByDescending(goodness => goodness)
+                            .Take(2)
+                            .Sum(goodness => goodness);
+                    })
                     .WithAdditionalRestriction(caster =>
                     {
                         // PETR: Can't use if Silenced.
@@ -660,20 +931,19 @@ public static class Runesmith
                     numberOfRunes = NumRunesInRange(self); // Regenerate the list of runes.
                 }
             });
+        
         CommonRuneRules.WithImmediatelyRemovesImmunity(invokeRunes); 
         
         return invokeRunes;
 
         int NumRunesInRange(Creature caster)
         {
-            return caster.Battle.AllCreatures
-                .Where(cr =>
-                    caster.DistanceTo(cr) <= range) // Must be within range.
-                .Sum(cr =>
-                    DrawnRune.GetDrawnRunes(caster, cr)
-                        .Where(dr => DrawnRune.IsInvokeableRune(caster, dr))
-                        .ToList()
-                        .Count);
+            return DrawnRune.GetAllDrawnRunes(caster)
+                .Where(dr =>
+                    dr.Owner.DistanceTo(caster) <= range
+                    && DrawnRune.IsInvokeableRune(caster, dr))
+                .ToList()
+                .Count;
         }
     }
     

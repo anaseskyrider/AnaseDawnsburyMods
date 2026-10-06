@@ -15,6 +15,7 @@ using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
+using Dawnsbury.Core.Intelligence;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Damage;
@@ -137,30 +138,44 @@ public static class ClassFeats
                         .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
                                 strikeMods,
                                 additionalSuccessText: "Trace a Rune onto the target."))
+                        .WithActionId(ModData.ActionIds.EngravingStrike)
                         .WithEffectOnEachTarget(async (action, caster, target, result) =>
                         {
-                            if (result >= CheckResult.Success)
+                            if (result < CheckResult.Success)
+                                return;
+                            
+                            // So that you aren't blocking the target's square during the trace await
+                            await caster.FictitiousSingleTileMoveBack();
+
+                            // If this Strike kills the target, don't trace a rune,
+                            // but also don't get the chance to convert to a simple Strike 
+                            if (!target.DeathScheduledForNextStateCheck)
                             {
-                                // So that you aren't blocking the target's square during the trace await
-                                await caster.FictitiousSingleTileMoveBack();
-                                
-                                // If this Strike kills the target, don't trace a rune,
-                                // but also don't get the chance to convert to a simple Strike 
-                                if (!target.DeathScheduledForNextStateCheck)
+                                if (await CommonRuneRules.TraceAnyRuneOnACreature(caster,
+                                            // Must target creatures
+                                            runeFilter: rune => rune.DrawProperties.IsDrawnOnlyOnCreatures,
+                                            targetFilter: cr => cr == target,
+                                            canBeCanceled: true)
+                                        is not { } chosenOption
+                                    || chosenOption is CancelOption or PassViaButtonOption)
                                 {
-                                    if (await CommonRuneRules.TraceAnyRuneOnACreature(caster,
-                                                // Must target creatures
-                                                runeFilter: rune => rune.DrawProperties.IsDrawnOnlyOnCreatures,
-                                                targetFilter: cr => cr == target,
-                                                canBeCanceled: true)
-                                            is not { } chosenOption
-                                        || chosenOption is CancelOption or PassViaButtonOption)
-                                    {
-                                        caster.Battle.Log("Engraving Strike was converted to a simple Strike.");
-                                        action.Traits.Remove(Trait.Flourish);
-                                    }
+                                    caster.Battle.Log("Engraving Strike was converted to a simple Strike.");
+                                    action.Traits.Remove(Trait.Flourish);
                                 }
                             }
+                        })
+                        .WithAdjustTarget<CreatureTarget>(crTar =>
+                        {
+                            var cache = crTar.CreatureGoodness;
+                            crTar.CreatureGoodness = AI.CreateModifiedGoodness((target, self, defender) =>
+                            {
+                                // Minimum invokeable rune damage of 1d4, or 2.5 avg.
+                                // Doesn't account for saving throw accuracy but this
+                                // is a high-value action anyway.
+                                float bonus = self.MaximumSpellRank * 2.5f;
+                                return cache(target, self, defender)
+                                       + bonus;
+                            });
                         });
                     
                     return engravingStrike;
@@ -2045,7 +2060,7 @@ public static class ClassFeats
                         .Select(reprisalDr => new CombatAction(
                                 action.Owner,
                                 ModData.Illustrations.InvokeRune,
-                                "Runic Reprisal",
+                                $"Runic Reprisal ({reprisalDr.Rune.WordName})",
                                 [ModData.Traits.Invocation, Trait.Runesmith, Trait.UnaffectedByConcealment, Trait.ProxyAttack],
                                 $$"""
                                   {i}When you Raise your Shield, you can bury a runic trap into it, which is set off by the clash of an enemy weapon.{/i}
@@ -2071,7 +2086,7 @@ public static class ClassFeats
                                                 1,
                                                 true,
                                                 false)?
-                                            .WithName($"Reprise ({reprisalDr.Name})");
+                                            .WithName($"Reprise ({reprisalDr.Rune.WordName})");
 
                                         if (invokeThisRune == null)
                                             return;
@@ -2898,7 +2913,8 @@ public static class ClassFeats
                                     target)
                                 .TooltipDescription)
                         .WithGoodness((t, a, d) =>
-                            thisStrike.TrueDamageFormula.ExpectedValueMinimumOne
+                            thisStrike.TrueDamageFormula!.ExpectedValueMinimumOne
+                            + a.AiLevelMinimum1 // Trace Rune is worth at least 1 point per level
                             + (item.HasTrait(Trait.Sweep) ? 0.2f : 0.0f))
                         .WithEffectOnChosenTargets(async (action, caster, targets) =>
                         {
@@ -2994,30 +3010,34 @@ public static class ClassFeats
 
                             caster.Actions.AttackedThisManyTimesThisTurn = map + targets.ChosenCreatures.Count;
                             
-                            // Play custom animation
-                            Sfxs.Play(ModData.SfxNames.TRACE_RUNE);
-                            await caster.Battle.WaitForProjectiles(hits
-                                .SelectMany(cr =>
-                                    cr.Battle.SpawnOvercreatureProjectileParticles(
-                                        1, caster, cr, Color.White, chosenRune.Illustration, true))
-                                .ToList());
-                            
-                            // Trace the runes
-                            bool overheadOnce = false; // Show overhead just the first time
-                            foreach (Creature cr in hits)
+                            if (hits.Count > 0)
                             {
-                                CombatAction traceAction = CommonRuneRules
-                                    .CreateTraceAction(caster, chosenRune, 2)
-                                    .WithActionCost(0)
-                                    .WithExtraTrait(Trait.AlwaysHits)
-                                    .WithExtraTrait(Trait.ProxyAttack);
-                                traceAction.SoundEffectName = null;
-                                traceAction.ProjectileKind = ProjectileKind.None;
-                                if (overheadOnce)
-                                    traceAction.WithExtraTrait(Trait.DoNotShowOverheadOfActionName);
+                                // Play custom animation
+                                Sfxs.Play(ModData.SfxNames.TRACE_RUNE);
+                                await caster.Battle.WaitForProjectiles(hits
+                                    .SelectMany(cr =>
+                                        cr.Battle.SpawnOvercreatureProjectileParticles(
+                                            1, caster, cr, Color.White, chosenRune.Illustration, true))
+                                    .ToList());
 
-                                await caster.Battle.GameLoop.FullCast(traceAction, ChosenTargets.CreateSingleTarget(cr));
-                                overheadOnce = true;
+                                // Trace the runes
+                                bool overheadOnce = false; // Show overhead just the first time
+                                foreach (Creature cr in hits)
+                                {
+                                    CombatAction traceAction = CommonRuneRules
+                                        .CreateTraceAction(caster, chosenRune, 2)
+                                        .WithActionCost(0)
+                                        .WithExtraTrait(Trait.AlwaysHits)
+                                        .WithExtraTrait(Trait.ProxyAttack);
+                                    traceAction.SoundEffectName = null;
+                                    traceAction.ProjectileKind = ProjectileKind.None;
+                                    if (overheadOnce)
+                                        traceAction.WithExtraTrait(Trait.DoNotShowOverheadOfActionName);
+
+                                    await caster.Battle.GameLoop.FullCast(traceAction,
+                                        ChosenTargets.CreateSingleTarget(cr));
+                                    overheadOnce = true;
+                                }
                             }
                         });
 
@@ -3171,7 +3191,7 @@ public static class ClassFeats
             .WithIllustration(new SideBySideIllustration(
                 shield.Illustration,
                 rune.Illustration))
-            .WithName($"Knock {rune.FullName}")
+            .WithName($"Fortifying Knock ({rune.WordName})")
             .WithActionCost(1)
             .WithExtraTrait(Trait.Flourish)
             .WithNewTarget(Target.Self((self, ai) =>
@@ -3186,6 +3206,8 @@ public static class ClassFeats
             .Replace(
                 rune.DrawProperties.UsageText,
                 "{Blue}drawn on your raised shield{/Blue}");
+        knockThisRune.Traits.Remove(Trait.DoNotShowInCombatLog);
+        knockThisRune.SoundEffectName = null;
 
         bool hasManipulate = knockThisRune.Traits.Remove(Trait.Manipulate);
         
@@ -3205,13 +3227,16 @@ public static class ClassFeats
             {
                 // Raise a shield
                 Fighter.RaiseShield(caster, shield, caster, false);
+                caster.Battle.Log($"{caster.Name} raises their {shield.ShortName}.");
+                Sfxs.Play(SfxName.RaiseShield);
                 
                 // Now disrupt it
                 if (hasManipulate)
                 {
                     CombatAction phantomManipulate = CombatAction.CreateSimple(
-                            knockAction.Owner, "Manipulate",
+                            knockAction.Owner, knockAction.Name,
                             Trait.Manipulate, Trait.DoNotShowInCombatLog)
+                        .WithIllustration(knockAction.Illustration)
                         .WithActionCost(0);
                     await phantomManipulate.Fullcast(phantomManipulate.Owner);
                     if (phantomManipulate.Disrupted)
@@ -3221,10 +3246,13 @@ public static class ClassFeats
                     }
                 }
 
+                Sfxs.Play(ModData.SfxNames.TRACE_RUNE);
                 target.AddQEffect(drawnRune);
                 
                 drawnRune.DrawnOn = shield;
                 doWhatIfDrawn?.Invoke(drawnRune);
+                
+                CommonRuneRules.LogRune(caster, knockAction, drawnRune, target, shield);
             }
             // If the rune failed to apply due to an error, do not raise the shield
             else
@@ -3261,7 +3289,11 @@ public static class ClassFeats
     {
         return FeatInventoryRequirements.RequiresOne(
             inventory,
-            item => item.HasTrait(Trait.Ranged) && !item.HasTrait(Trait.Thrown),
+            item =>
+                item.HasTrait(Trait.Weapon)
+                && item.HasTrait(Trait.Ranged)
+                // Apparently I've been misinterpreting it.
+                /*&& !item.HasTrait(Trait.Thrown)*/,
             "a ranged weapon that uses ammunition");
     }
 }

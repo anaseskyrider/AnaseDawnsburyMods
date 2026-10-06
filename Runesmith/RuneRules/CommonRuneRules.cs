@@ -338,17 +338,17 @@ public static class CommonRuneRules
                 Trait.Spell, // <- Should apply magic immunity.
                 Trait.CountsAsSpellForImmunities, // <- Should also help.
                 Trait.SomaticOnly, // <- Avoids swallow whole suffocation.
+                //Trait.DoNotShowInCombatLog, // Has its own log event
             ];
         
         // Create action
         CombatAction drawRuneAction = new CombatAction(
                 runesmith,
                 rune.Illustration,
-                $"Draw {rune.FullName}",
+                $"Draw Rune ({rune.WordName})",
                 traits,
                 "ERROR: INCOMPLETE DESCRIPTION",
                 drawTarget)
-            .WithTag(rune) // TODO: Look at .Tag and replace with RuneActionTag instead
             .WithActionCost(actions)
             .WithSoundEffect(ModData.SfxNames.TRACE_RUNE)
             .WithRuneTag(rune) // Only contains Rune before execution, then DrawnRune after.
@@ -397,38 +397,80 @@ public static class CommonRuneRules
                     || drawAction.RevertRequested)
                     return;
 
+                object? subTarget = (object?)tag.ChosenItem ?? tag.ChosenDrawnRune ?? null;
+                
                 if (await CommonRuneRules.DrawRuneOnTarget(
                         drawAction, target, tag.Rune,
-                        (object?)tag.ChosenItem ?? tag.ChosenDrawnRune ?? null)
+                        subTarget)
                     is { } newDrawnRune)
                     tag.CreatedDrawnRune = newDrawnRune;
                 else
+                {
                     drawAction.RevertRequested = true;
+                    return;
+                }
+                
+                CommonRuneRules.LogRune(caster, drawAction, newDrawnRune, target, subTarget);
             });
 
+        #region Goodness
+        
         // Add an expectation of future damage from this rune when invoked.
-        // AI avoids tracing this rune again if the target already has the effect.
-        if (rune.InvocationProperties is { DealsDamage: true, GetKindedDamage: { } damageGetter })
+        // Invoke actions do not themselves directly call saving throws.
+        // This code is an attempt to evaluate accordingly.
+        Func<Rune, int, (string DiceExpression, DamageKind Kind)>? damageGetter = rune.InvocationProperties.GetKindedDamage;
+        Func<Target, Creature, Creature, float>? addGood = rune.DrawProperties.AdditionalGoodness;
+        if (damageGetter is not null || addGood is not null)
         {
-            if (rune.InvocationProperties.Defense is { } def)
-                drawRuneAction.WithGoodnessAgainstEnemy((tar, self, enemy) =>
-                    enemy.HasEffect(qf =>
-                        qf is DrawnRune dr && dr.Rune.Id == rune.Id)
-                        ? AIConstants.BASICALLY_NEVER
-                        : DiceFormula.FromText(
-                                damageGetter(rune, runesmith.Level).DiceExpression,
-                                rune.FullName)
-                            .ExpectedValue);
+            Func<Target, Creature, Creature, float> drawGoodness = (tar, self, defender) =>
+            {
+                // AI avoids tracing this rune again if the target already has it.
+                if (defender.HasEffect(qf =>
+                        qf is DrawnRune dr && dr.Rune.Id == rune.Id))
+                    return AIConstants.BASICALLY_NEVER;
+
+                // Start at 0. No particular value.
+                float value = 0;
+                
+                if (addGood is not null)
+                    value += addGood(tar, self, defender);
+                
+                // If deals damage
+                if (damageGetter is not null)
+                {
+                    float invocationDmgValue = DiceFormula.FromText(
+                            damageGetter(rune, runesmith.Level).DiceExpression,
+                            rune.FullName) 
+                        .ExpectedValue;
+
+                    if (rune.InvocationProperties.Defense is { } def)
+                        invocationDmgValue = self.AI.DealDamageWithBasicSave(
+                            tar.OwnerAction,
+                            new SavingThrow(def, self.ClassDC(ModData.Traits.Runesmith)),
+                            defender.Defenses.GetSavingThrow(def, tar.OwnerAction).Bonus,
+                            defender,
+                            invocationDmgValue);
+
+                    value += invocationDmgValue;
+                }
+
+                // Tracing it has a slight nudge down compared to invoking it.
+                value -= 0.1f;
+                
+                return value;
+            };
+            
+            // Prioritize the rune's invocation or avoiding debuffs on allies.
+            if (rune.InvocationProperties.Defense is not null
+                || rune.InvocationProperties.DealsDamage
+                || rune.PassiveProperties.PassiveEffectIsDebuff)
+                drawRuneAction.WithGoodnessAgainstEnemy(drawGoodness);
             else
-                drawRuneAction.WithGoodness((tar, self, enemy) =>
-                    enemy.HasEffect(qf =>
-                        qf is DrawnRune dr && dr.Rune.Id == rune.Id)
-                        ? AIConstants.BASICALLY_NEVER
-                        : DiceFormula.FromText(
-                                damageGetter(rune, runesmith.Level).DiceExpression,
-                                rune.FullName)
-                            .ExpectedValue);
+                drawRuneAction.WithGoodness(drawGoodness);
+
         }
+        
+        #endregion
         
         return drawRuneAction;
     }
@@ -756,7 +798,7 @@ public static class CommonRuneRules
                 2,
                 // Usable across whole map
                 99)
-            .WithName($"Etch {rune.FullName}")
+            .WithName($"Etch Rune ({rune.WordName})")
             .WithIllustration(new CornerIllustration(
                 rune.Illustration,
                 ModData.Illustrations.EtchRune,
@@ -830,7 +872,7 @@ public static class CommonRuneRules
         CombatAction traceAction = new CombatAction(
                 runesmith,
                 rune.Illustration,
-                $"Trace {rune.FullName}",
+                $"Trace Rune ({rune.WordName})",
                 [ModData.ModTrait, Trait.Concentrate, Trait.Magical, Trait.Manipulate, Trait.Runesmith],
                 CommonRuneRules.CreateTraceActionDescription(
                     rune, runesmith.Level,
@@ -862,16 +904,12 @@ public static class CommonRuneRules
     /// <param name="rune">The rune being traced.</param>
     /// <param name="actionVersion">The 1 action or 2 action version of Trace Rune.</param>
     /// <param name="overrideRange">If this version has a specific range, this is that range. Otherwise, the range is calculated from the action version and with your feats.</param>
-    ///// <exception cref="Exception"><see cref="RuneDrawProperties.IsEtchedOnly"/> must be false.</exception>
     public static CombatAction CreateTraceAction(
         Creature runesmith,
         Rune rune,
         int actionVersion = 0,
         int? overrideRange = null)
     {
-        /*if (rune.DrawProperties.IsEtchedOnly)
-            throw new Exception($"You can't create a Trace Rune action with rune {rune.Name} because it can only be etched at the start of combat.");*/
-        
         bool hasRuneSinger = runesmith.HasEffect(ModData.QEffectIds.RuneSinger);
         bool isGenerational = runesmith.HasFeat(ModData.FeatNames.GenerationalRuneSinger);
         
@@ -887,7 +925,7 @@ public static class CommonRuneRules
                     ? 2
                     : actionVersion,
                 overrideRange)
-            .WithName($"Trace {rune.FullName}")
+            .WithName($"Trace Rune ({rune.WordName})")
             // Revert the cost back, regardless of what version was made.
             .WithActionCost(actionVersion)
             .WithExtraTrait(Trait.Concentrate)
@@ -978,7 +1016,9 @@ public static class CommonRuneRules
                 ModData.Traits.Invocation,
                 Trait.UnaffectedByConcealment,
                 Trait.Spell, // <- Should apply magic immunity.
+                Trait.CountsAsSpellForImmunities, // <- Should also help.
                 Trait.DoNotShowOverheadOfActionName,
+                Trait.DoNotShowInCombatLog, // Has its own log event
             ])
             .ToList();
         traits.Sort(
@@ -987,7 +1027,9 @@ public static class CommonRuneRules
                 StringComparison.Ordinal));
         if (!traits.Contains(ModData.ModTrait))
             traits.Insert(0, ModData.ModTrait);
-        
+
+        #region Target and requirements
+
         CreatureTarget invokeTarget = Target.RangedCreature(finalRange);
         // Don't add the requirement directly, as any changes to the
         // requirement will affect the rune as a whole.
@@ -1006,10 +1048,12 @@ public static class CommonRuneRules
                     : Usability.NotUsableOnThisCreature($"{rune.FullName} not applied");
             });
 
+        #endregion
+
         CombatAction invokeThisRune = new CombatAction(
                 runesmith,
                 rune.Illustration,
-                "Invoke " + rune.FullName,
+                $"Invoke Rune ({rune.WordName})",
                 traits.ToArray(),
                 initialDescription
                 + (rune.InvocationProperties.HasInvocationEntry
@@ -1053,8 +1097,14 @@ public static class CommonRuneRules
                     return;
                 }
                 
+                CommonRuneRules.LogRune(caster2, invokeAction, tag.ChosenDrawnRune, target);
+                
                 if (!await CommonRuneRules.InvokeDrawnRune(invokeAction, tag.ChosenDrawnRune, target))
+                {
                     invokeAction.RevertRequested = true;
+                    return;
+                }
+                
             });
 
         // Saving Throw Tooltip Creator
@@ -1080,34 +1130,62 @@ public static class CommonRuneRules
         }
 
         if (immediatelyRemoveImmunity)
-        {
             invokeThisRune = CommonRuneRules.WithImmediatelyRemovesImmunity(invokeThisRune);
-        }
-        
-        // Add an expectation of damage from this rune when invoked.
-        // AI avoids invoking this rune if the target isn't a bearer.
-        // Unlike drawing runes, this has a +1 value to incentivize invoking.
-        if (rune.InvocationProperties is { DealsDamage: true, GetKindedDamage: { } damageGetter })
+
+        #region Goodness
+
+        // Add an expectation of future damage from this rune when invoked.
+        // Invoke actions do not themselves directly call saving throws.
+        // This code is an attempt to evaluate accordingly.
+        Func<Rune, int, (string DiceExpression, DamageKind Kind)>? damageGetter = rune.InvocationProperties.GetKindedDamage;
+        Func<Target, Creature, Creature, float>? addGood = rune.InvocationProperties.AdditionalGoodness;
+        if (damageGetter is not null || addGood is not null)
         {
-            if (rune.InvocationProperties.Defense is { } def2)
-                invokeThisRune.WithGoodnessAgainstEnemy((tar, self, enemy) =>
-                    enemy.HasEffect(qf =>
-                        qf is DrawnRune dr && dr.Rune.Id == rune.Id)
-                        ? (DiceFormula.FromText(
-                                damageGetter(rune, runesmith.Level).DiceExpression,
-                                rune.FullName)
-                            .ExpectedValue + 1)
-                        : AIConstants.NEVER);
+            Func<Target, Creature, Creature, float> invokeGoodness = (tar, self, defender) =>
+            {
+                // AI avoids invoking this rune if the target isn't a bearer.
+                if (!defender.HasEffect(qf =>
+                        qf is DrawnRune dr && dr.Rune.Id == rune.Id))
+                    return AIConstants.NEVER;
+
+                // Start at 0. No particular value.
+                float value = 0;
+
+                if (addGood is not null)
+                    value += addGood(tar, self, defender);
+
+                // If deals damage
+                if (damageGetter is not null)
+                {
+                    float invocationDmgValue = DiceFormula.FromText(
+                            damageGetter(rune, runesmith.Level).DiceExpression,
+                            rune.FullName)
+                        .ExpectedValue;
+
+                    if (rune.InvocationProperties.Defense is { } def2)
+                        invocationDmgValue = self.AI.DealDamageWithBasicSave(
+                            tar.OwnerAction,
+                            new SavingThrow(def2, self.ClassDC(ModData.Traits.Runesmith)),
+                            defender.Defenses.GetSavingThrow(def2, tar.OwnerAction).Bonus,
+                            defender,
+                            invocationDmgValue);
+
+                    value += invocationDmgValue;
+                }
+
+                return value;
+            };
+
+            // Prioritize the rune's invocation or avoiding debuffs on allies.
+            if (rune.InvocationProperties.Defense is not null
+                || rune.InvocationProperties.DealsDamage
+                || rune.PassiveProperties.PassiveEffectIsDebuff)
+                invokeThisRune.WithGoodnessAgainstEnemy(invokeGoodness);
             else
-                invokeThisRune.WithGoodness((tar, self, enemy) =>
-                    enemy.HasEffect(qf =>
-                        qf is DrawnRune dr && dr.Rune.Id == rune.Id)
-                        ? (DiceFormula.FromText(
-                                damageGetter(rune, runesmith.Level).DiceExpression,
-                                rune.FullName)
-                            .ExpectedValue + 1)
-                        : AIConstants.NEVER);
+                invokeThisRune.WithGoodness(invokeGoodness);
         }
+
+        #endregion
 
         return invokeThisRune;
     }
@@ -1340,7 +1418,26 @@ public static class CommonRuneRules
                         continue;
                     
                     adjustInvocation?.Invoke(newInvokeAction);
-                    GameLoop.AddDirectUsageOnCreatureOptions(newInvokeAction, options);
+
+                    // Capture new options
+                    List<Option> newOptions = [];
+                    GameLoop.AddDirectUsageOnCreatureOptions(newInvokeAction, newOptions);
+                    
+                    // Modify them for their actual goodness value
+                    newOptions.ForEach(opt =>
+                    {
+                        float? goodness = (newInvokeAction.Target as CreatureTarget)?
+                            .CreatureGoodness.Invoke(
+                                newInvokeAction.Target,
+                                newInvokeAction.Owner,
+                                (opt as CreatureOption)?.Creature ?? cr);
+                        if (goodness is null)
+                            return;
+                        opt.AiUsefulness.MainActionUsefulness = goodness.Value;
+                    });
+                    
+                    // Add them
+                    options.AddRange(newOptions);
                 }
             }
         }
@@ -1411,12 +1508,13 @@ public static class CommonRuneRules
         DrawnRune invokedRune,
         Creature effectTarget,
         Func<CombatAction, Creature, CheckResult, Task>? onResult = null,
-        bool skipDamage = false)
+        bool skipDamage = false,
+        CheckResult? knownResult = null)
     {
         if (invokedRune.Rune.InvocationProperties.Defense is null)
             throw new NullReferenceException($"Saving throw for invocation of {invokedRune.Rune.Id.ToWord()} was attempted, but no saving throw defense was found. Use InvocationProperties.WithDefense(Defense) to set a defense for this rune's invocations.");
         
-        CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(
+        CheckResult result = knownResult ?? await CommonSpellEffects.RollSavingThrowAsync(
             effectTarget,
             invokeAction,
             invokedRune.Rune.InvocationProperties.Defense.Value,
@@ -1445,15 +1543,15 @@ public static class CommonRuneRules
     /// </summary>
     /// <param name="outerInvoke">The outer action invoking this rune.</param>
     /// <param name="invokedRune">The rune being invoked.</param>
-    /// <param name="invokeTarget">The creature targeted by the effect of the invocation.</param>
-    /// <param name="target">The inner action's Target. Always includes a requirement that a creature is not immune to this invocation. If this is a <see cref="EmanationTarget"/>, the alternate origin is the invokeTarget.</param>
+    /// <param name="invokeTarget">The creature targeted by the effect of the invocation. This is usually the rune-bearer, but if it's not, then a ChosenTarget is created with the invokeTarget.</param>
+    /// <param name="target">The inner action's Target. Always includes a requirement that a creature is not immune to this invocation. If this is an <see cref="AreaTarget"/>, the alternate origin is the rune-bearer.</param>
     /// <param name="includeRuneBearer">Whether to include the rune-bearer as a valid target of the effect.</param>
     /// <param name="soundEffect">The sound effect to play on invocation, if any.</param>
     /// <param name="hasSavingThrow">Whether to include <see cref="RuneInvocationProperties.Defense"/> in a saving throw on each target.</param>
     /// <param name="effectOnEachTarget">What to do on each target of the invocation's effect.</param>
     /// <param name="chosen">If this action has a predetermined effect target, then FullCast against this target instead of deciding.</param>
     /// <param name="finalAdjustments">Changes to make to the inner invocation.</param>
-    /// <returns></returns>
+    /// <returns>The list of affected creatures.</returns>
     public static async Task<List<Creature>?> ExecuteInnerInvokeAction(
         CombatAction outerInvoke,
         DrawnRune invokedRune,
@@ -1466,38 +1564,44 @@ public static class CommonRuneRules
         ChosenTargets? chosen = null,
         Action<CombatAction>? finalAdjustments = null)
     {
+        bool invokeOntoTarget = invokedRune.Owner != invokeTarget || chosen is not null;
+        
         // Automate target behavior
         switch (target)
         {
-            // Emanation targets always emit from the invoke target
+            // Area targets always emit from the rune-bearer
             // and cannot affect anyone immune to the invocation.
-            case EmanationTarget emanationTarget:
+            case AreaTarget arTar:
             {
-                emanationTarget
-                    .WithAlternateCreatureOfOrigin(invokeTarget)
-                    .WithIncludeOnlyIf((tar, cr) =>
-                        !CommonRuneRules.IsImmuneToThisInvocation(cr, invokedRune.Rune));
+                arTar.WithIncludeOnlyIf((tar, cr) =>
+                    !CommonRuneRules.IsImmuneToThisInvocation(cr, invokedRune.Rune));
 
-                if (!includeRuneBearer)
-                    emanationTarget.WithIncludeOnlyIf((tar, cr) =>
-                        cr != invokedRune.Owner);
+                if (!invokeOntoTarget)
+                    arTar.WithAlternateCreatureOfOrigin(invokedRune.Owner);
+                
+                if (arTar is EmanationTarget emTar)
+                {
+                    if (!includeRuneBearer)
+                        emTar.WithIncludeOnlyIf((tar, cr) =>
+                            cr != invokedRune.Owner);
+                }
                 break;
             }
             // Creature targets cannot affect anyone immune to the
             // invocation.
-            case CreatureTarget creatureTarget:
+            case CreatureTarget crTar:
             {
-                creatureTarget
-                    .WithAdditionalConditionOnTargetCreature(
-                        new IsNotImmuneToInvocation(invokedRune.Rune));
+                crTar.AlternateTileOfOrigin = invokedRune.Owner.Space.CenterTile;
+                crTar.WithAdditionalConditionOnTargetCreature(
+                    new IsNotImmuneToInvocation(invokedRune.Rune));
 
                 if (!includeRuneBearer)
-                    creatureTarget.WithAdditionalConditionOnTargetCreature((a, d) =>
+                    crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
                         d == invokedRune.Owner
                             ? Usability.NotUsableOnThisCreature("Cannot target rune-bearer")
                             : Usability.Usable);
-            }
                 break;
+            }
         }
         
         // Create action wrapper.
@@ -1510,7 +1614,6 @@ public static class CommonRuneRules
                 invokedRune.Rune.InvocationProperties.InvocationTextWithFormattedHeightening?.Invoke(invokedRune.Rune, outerInvoke.Owner.Level) ?? "",
                 target)
             .WithActionCost(0)
-            .WithProjectileCone(VfxStyle.BasicProjectileCone(invokedRune.Rune.Illustration))
             .WithSoundEffect(soundEffect!)
             .WithEffectOnEachTarget(effectOnEachTarget);
 
@@ -1522,11 +1625,27 @@ public static class CommonRuneRules
         if (outerInvoke.Tag is RuneActionTag outerTag)
             innerInvoke.WithRuneTag(outerTag.Rune, chosenRune: outerTag.ChosenDrawnRune);
         
+        // When invoking generally, include an extra animation.
+        // Otherwise when invoking onto a specific target, like
+        // for Runic Reprisal, don't add the extra animations.
+        if (!invokeOntoTarget)
+        {
+            innerInvoke.WithProjectileCone(
+                VfxStyle.BasicProjectileCone(invokedRune.Rune.Illustration));
+        }
+        
         finalAdjustments?.Invoke(innerInvoke);
         
-        bool result = chosen is null
-            ? await outerInvoke.Owner.Battle.GameLoop.FullCast(innerInvoke)
-            : await outerInvoke.Owner.Battle.GameLoop.FullCast(innerInvoke, chosen);
+        // The effect target is normally the rune-bearer, so you go
+        // through the target-choosing routine as normal. If a different
+        // target is passed by a more specific ability, then this means
+        // the rune is being invoked onto a specific target instead of
+        // being invoked normally.
+        bool result = invokeOntoTarget
+            ? await outerInvoke.Owner.Battle.GameLoop.FullCast(
+                innerInvoke,
+                chosen ?? ChosenTargets.CreateSingleTarget(invokeTarget))
+            : await outerInvoke.Owner.Battle.GameLoop.FullCast(innerInvoke);
 
         if (!result)
         {
@@ -1701,6 +1820,29 @@ public static class CommonRuneRules
         {
             CommonRuneRules.RemoveDrawnRune(dr);
         }
+    }
+
+    public static void LogRune(Creature runesmith, CombatAction runeAction, DrawnRune affectedRune, Creature target, object? subTarget = null)
+    {
+        string who = runesmith.Name;
+        string rune = $"{affectedRune.Rune.Illustration.IllustrationAsIconString} {affectedRune.Rune.WordName}";
+        string whom = target.Name;
+        string? whom2 = subTarget switch
+        {
+            Item subItem => $"{subItem.Illustration.IllustrationAsIconString} {subItem.ShortName}",
+            DrawnRune subRune => $"{subRune.Illustration!.IllustrationAsIconString} {subRune.Rune.WordName}",
+            _ => null
+        };
+        string doesWhat =
+            runeAction.ActionId == ModData.ActionIds.InvokeRune
+                ? $"invokes {affectedRune.Owner.Name}'s {rune}{(affectedRune.Owner != target ? $" onto {whom}" : null)}"
+                : $"{(affectedRune.DrawTrait == ModData.Traits.Traced ? "traces" : affectedRune.DrawTrait == ModData.Traits.Etched ? "etches" : affectedRune.DrawTrait == ModData.Traits.Tattooed ? "tattoos" : "draws")} {rune} onto {whom}{(whom2 is null ? null : $"'s {whom2}")}";
+        
+        runesmith.Battle.Log(
+            $"{who} {doesWhat}.",
+            affectedRune.Rune.FullName,
+            CommonRuneRules.CreateTraceActionDescription(affectedRune.Rune, runeAction, withRangeText: false),
+            new Traits(affectedRune.Rune.Traits));
     }
     
     #endregion

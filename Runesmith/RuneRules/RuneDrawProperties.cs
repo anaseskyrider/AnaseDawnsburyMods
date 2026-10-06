@@ -1,10 +1,12 @@
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
+using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
@@ -468,12 +470,6 @@ public class RuneDrawProperties(
     #endregion
 
     #region Additional Properties
-
-    /*/// <summary>
-    /// Gets whether the rune can only be etched at the start of combat.
-    /// </summary>
-    public bool IsEtchedOnly => this.TargetingRequirements.Any(req =>
-        req is EtchedAtStartOfCombatRequirement);*/
     
     public bool IsDrawnOnlyOnCreatures =>
         this.TargetsCreatures
@@ -497,6 +493,12 @@ public class RuneDrawProperties(
         && !this.CreatureTargetingRequirements.Any(req =>
             req is TargetWieldsItemCreatureTargetingRequirement
                 or TargetWearsArmorCreatureTargetingRequirement);
+    
+    /// <summary>
+    /// Additional goodness for drawing this rune.
+    /// </summary>
+    /// <remarks>Used for Trace Rune <see cref="CombatAction"/>s.</remarks>
+    public Func<Target,Creature,Creature,float>? AdditionalGoodness { get; set; }
 
     #endregion
 

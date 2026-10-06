@@ -3,6 +3,7 @@ using Dawnsbury.Auxiliary;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Possibilities;
 
@@ -229,6 +230,12 @@ public class RuneInvocationProperties(
     /// This determines the invocation's damage, with a reference to the template Rune itself and the current level of the rune.
     /// </summary>
     public Func<Rune, int, (string DiceExpression, DamageKind Kind)>? GetKindedDamage { get; set; }
+    
+    /// <summary>
+    /// Additional goodness for invoking this rune.
+    /// </summary>
+    /// <remarks>Used for Trace Rune <see cref="CombatAction"/>s.</remarks>
+    public Func<Target,Creature,Creature,float>? AdditionalGoodness { get; set; }
 
     /// <summary>
     /// Sets <see cref="DealsDamage"/> to true. If this deals direct damage on invocation, this should also set <see cref="GetKindedDamage"/>.
