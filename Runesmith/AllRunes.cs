@@ -3027,18 +3027,144 @@ public static class AllRunes
                 [])
             .ToFeat();*/
         
-        // TODO: Yudici, Rune of Remonstrance
-        yield return DebugRune(
-            RuneId.Yudici,
-            "This majestic rune grants the shield's wielder the conviction to aid their allies.");
-        /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
-            .ToFeat();*/
+        // Yudici, Rune of Remonstrance
+        yield return new Rune(
+                RuneId.Yudici,
+                "This majestic rune grants the shield's wielder the conviction to aid their allies.",
+                new RuneDrawProperties(
+                        "drawn on a shield",
+                        drawnOnItem: true)
+                    .WithAllyRequirement()
+                    .WithHoldsItemRequirement(
+                        item => item.HasTrait(Trait.Shield),
+                        "no shield"),
+                new RunePassiveProperties(
+                        "While a shield bearing this rune is raised, its bearer emits an aura in a 10-foot emanation that grants their allies a +1 circumstance bonus to AC.",
+                        null)
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        return await CommonRuneRules.ChooseAnItemToDrawOn(
+                            drawAction,
+                            drawAction.Owner,
+                            target,
+                            subTarget is Item itemTarget
+                                ? item => item == itemTarget
+                                : item => item.HasTrait(Trait.Shield),
+                            MakeYudiciPassive,
+                            "Choose a shield to radiate a 10-foot aura that grants your allies a +1 circumstance bonus to AC it's while raised.",
+                            rune);
+                        
+                        DrawnRune? MakeYudiciPassive(Item? targetItem)
+                        {
+                            if (targetItem is null)
+                                return null;
+                            
+                            DrawnRune drawnYudici = new DrawnRune(
+                                drawAction,
+                                rune,
+                                (drThis, item) => $"While your {item.Illustration.IllustrationAsIconString} {item.Name.WithColor("Blue")} is raised, your allies in a 10-foot emanation gain a +1 circumstance bonus to AC.",
+                                targetItem)
+                            {
+                                SpawnsAura = qfThis =>
+                                {
+                                    DrawnRune dr = (qfThis as DrawnRune)!;
+                                    if (dr.Disabled || dr.DrawnOn is null)
+                                        return null;
+                                    return new MagicCircleAuraAnimation(
+                                        IllustrationName.BlessCircle,
+                                        Color.White,
+                                        qfThis.Owner.QEffects.Any(qf =>
+                                            qf.Id is QEffectId.RaisingAShield
+                                            && qf.Tag == dr.DrawnOn)
+                                            ? 2.15f
+                                            : 0f);
+                                },
+                                StateCheck = qfThis =>
+                                {
+                                    DrawnRune dr = (qfThis as DrawnRune)!;
+                                    if (dr.Disabled || dr.DrawnOn is null)
+                                        return;
+
+                                    if (!qfThis.Owner.QEffects.Any(qf =>
+                                            qf.Id == QEffectId.RaisingAShield
+                                            && qf.Tag == dr.DrawnOn))
+                                    {
+                                        qfThis.AssociatedAura?.MoveTo(0f);
+                                        return;
+                                    }
+                                    
+                                    qfThis.AssociatedAura?.MoveTo(2.2f);
+                                    
+                                    foreach (Creature ally in qfThis.Owner.Battle.AllCreatures
+                                                 .Where(qfThis.Owner.FriendOfAndNotSelf)
+                                                 .Where(ally => ally.DistanceTo(qfThis.Owner) <= 2)
+                                                 .ToList())
+                                    {
+                                        ally.AddQEffect(new QEffect(
+                                            "Yudici's Majesty",
+                                            $"You have a +1 circumstance bonus to AC while in the aura emanating from {qfThis.Owner.ToColoredBoldedName()}'s {rune.Illustration.IllustrationAsIconString} {rune.FullName.WithColor("Blue")}.",
+                                            ExpirationCondition.Ephemeral,
+                                            qfThis.Owner,
+                                            IllustrationName.Shield)
+                                        {
+                                            BonusToDefenses = (_, _, _) =>
+                                                new Bonus(1, BonusType.Circumstance,
+                                                    $"{rune.WordName} (raised shield)")
+                                        });
+                                    }
+                                },
+                                BonusToDefenses = (qfThis,_,_) =>
+                                {
+                                    DrawnRune dr = (qfThis as DrawnRune)!;
+                                    if (dr.Disabled || dr.DrawnOn is null)
+                                        return null;
+
+                                    // Must be raising a shield.
+                                    if (!qfThis.Owner.QEffects.Any(qf =>
+                                            qf.Id == QEffectId.RaisingAShield
+                                            && qf.Tag == dr.DrawnOn))
+                                        return null;
+
+                                    return new Bonus(1, BonusType.Status, "Holtrik (raised shield)");
+                                },
+                            };
+
+                            return drawnYudici;
+                        }
+                    }),
+                new RuneInvocationProperties(
+                        "All of the bearer's allies in a 10-foot emanation gain a +1 status bonus to attack rolls and skill checks for 1 round.",
+                        null)
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        const int emanationSize = 2;
+                        return await CommonRuneRules.ExecuteInnerInvokeAction(
+                            invokeAction,
+                            invokedRune,
+                            invokedRune.Owner,
+                            Target.AlliesOnlyEmanation(emanationSize),
+                            false,
+                            SfxName.HolyWard,
+                            false,
+                            async (innerInvoke, caster, target, _) =>
+                            {
+                                target.AddQEffect(invokedRune.NewInvocationEffect(
+                                    "You have a +1 status bonus to attack rolls and skill checks.",
+                                    ExpirationCondition.ExpiresAtStartOfSourcesTurn,
+                                    qf =>
+                                    {
+                                        qf.Key = "YudiciInvocation";
+                                        qf.WithExpirationInOneRound(invokeAction.Owner);
+                                        qf.BonusToAttackRolls = (_, action, _) =>
+                                            action.HasTrait(Trait.Attack)
+                                            || action.ActiveRollSpecification?.TaggedDetermineBonus.InvolvedSkill is not null
+                                                ? new Bonus(1, BonusType.Status, invokedRune.Rune.FullName)
+                                                : null;
+                                    }));
+                            });
+                    }),
+                [Trait.Aura, Trait.Divine])
+            .ToFeat();
 
         #endregion
 
