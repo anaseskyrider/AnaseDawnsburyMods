@@ -1365,10 +1365,10 @@ public static class CommonRuneRules
     }
 
     /// <summary>
-    /// The CASTING creature uses the SOURCE combat action to INVOKE a DrawnRune on the TARGET creature.
+    /// Generate and choose options for invoking a single rune.
     /// </summary>
     /// <param name="caster">The Creature invoking the DrawnRune.</param>
-    /// <param name="targetFilter">The Creature whose DrawnRune will be invoked. If null, you'll be asked to select a Creature with a DrawnRune.</param>
+    /// <param name="targetFilter">(nullable) A lambda which filters what rune-bearing creatures you're allowed to invoke a rune from.</param>
     /// <param name="runeFilter">(nullable) A lambda which returns true if the Rune is a valid option to invoke.</param>
     /// <param name="adjustInvocation">Adjustments to make to each invocation action as they're being created.</param>
     /// <param name="overrideRange">If this invocation occurs at a specific range, this is that range. Otherwise, use default rules for determining the range.</param>

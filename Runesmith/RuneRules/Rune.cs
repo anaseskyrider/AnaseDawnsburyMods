@@ -244,21 +244,29 @@ public class Rune
         string flavorText,
         RuneDrawProperties drawProperties,
         RunePassiveProperties passiveProperties,
-        RuneInvocationProperties invocationProperties,
+        RuneInvocationProperties? invocationProperties,
         List<Trait>? additionalTraits = null)
     {
         this.Id = runeId;
+        
         this.Illustration = runeId.ToIcon();
+        
         this.WordName = runeId.ToWord();
         this.TitleName = runeId.ToTitle();
+        
         this.BaseLevel = runeId.ToLevel();
+        
         this.FlavorText = flavorText;
-        drawProperties.Self = this;
+        
         this.DrawProperties = drawProperties;
-        passiveProperties.Self = this;
+        this.DrawProperties.Self = this;
+        
         this.PassiveProperties = passiveProperties;
-        invocationProperties.Self = this;
-        this.InvocationProperties = invocationProperties;
+        this.PassiveProperties.Self = this;
+        
+        this.InvocationProperties = invocationProperties ?? new RuneInvocationProperties(null, null);
+        this.InvocationProperties.Self = this;
+        
         if (additionalTraits != null)
             this.Traits = this.Traits.Concat(additionalTraits).ToList();
     }

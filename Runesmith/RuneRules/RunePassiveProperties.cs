@@ -110,4 +110,12 @@ public class RunePassiveProperties(
         adjustments(this);
         return this;
     }
+
+    public static RunePassiveProperties Diacritic(string passiveText, string? invokeableOnceRuneName = null, Func<Rune,int,string>? heightening = null)
+    {
+        return new RunePassiveProperties(
+            passiveText
+            + (invokeableOnceRuneName is not null ? $"\n\n{{b}}Special{{/b}}You can only have one copy of {invokeableOnceRuneName} applied at a given time, and once you invoke it, you cannot Etch or Trace it again for the rest of this encounter." : null),
+            heightening);
+    }
 }

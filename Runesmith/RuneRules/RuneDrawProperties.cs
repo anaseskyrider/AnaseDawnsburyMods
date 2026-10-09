@@ -432,7 +432,7 @@ public class RuneDrawProperties(
         return this;
     }
 
-    public RuneDrawProperties WithBaseRuneDealsDamage(bool includeMarssyl = false)
+    public RuneDrawProperties WithBaseRuneMustDealDamage(bool includeMarssyl = false)
     {
         this.RuneTargetingRequirements.Add(new LegacyRuneTargetingRequirement((a, dr) =>
             dr.Rune.InvocationProperties.DealsDamage
@@ -442,7 +442,7 @@ public class RuneDrawProperties(
         return this;
     }
 
-    public RuneDrawProperties WithBaseRuneIsNotArea()
+    public RuneDrawProperties WithBaseRuneMustNotBeArea()
     {
         this.RuneTargetingRequirements.Add(new LegacyRuneTargetingRequirement((a, dr) =>
             dr.Rune.InvocationProperties.AffectsArea
@@ -520,5 +520,23 @@ public class RuneDrawProperties(
     {
         adjustments(this);
         return this;
+    }
+
+    /// <summary>
+    /// Create a new RuneDrawProperties instance for diacritic runes.
+    /// </summary>
+    /// <param name="drawnOnARuneWhat">What to text, if any, to add to the Usage entry after "drawn on a rune".</param>
+    /// <param name="invokeableOncePerCombatRuneId">If this rune can only be invoked once per combat, this is that requirement. You must still call <see cref="ModData.PersistentActions.UseUpRune"/> on its own.</param>
+    public static RuneDrawProperties Diacritic(string? drawnOnARuneWhat = null, RuneId? invokeableOncePerCombatRuneId = null)
+    {
+        if (drawnOnARuneWhat is not null)
+            drawnOnARuneWhat = " " + drawnOnARuneWhat;
+        var props = new RuneDrawProperties(
+                "drawn on a rune" + drawnOnARuneWhat,
+                drawnOnRune: true)
+            .WithDiacriticTargetingRequirements();
+        if (invokeableOncePerCombatRuneId.HasValue)
+            props.WithInvokeableOncePerCombatRequirement(invokeableOncePerCombatRuneId.Value);
+        return props;
     }
 }

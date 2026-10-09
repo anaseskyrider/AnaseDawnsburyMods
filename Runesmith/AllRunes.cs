@@ -1680,24 +1680,79 @@ public static class AllRunes
 
         #region 5th-Level
 
-        // TODO: Av-, Diacritic Rune of Succession
-        yield return DebugRune(RuneId.Av, "This diacritic surrounds the base rune with similar-looking smaller runes to give the impression of distant echoes.",
-            rune =>
-            {
-                rune.PassiveProperties.PassiveText = "When the base rune is invoked, you can Invoke a single Rune on a different rune-bearer within 15 feet of the original rune-bearer as a {icon:FreeAction} free action.";
-                rune.WithIllustration(new CornerIllustration(
-                    IllustrationName.RunestoneWinged,
-                    ModData.Illustrations.InvokeRune,
-                    Direction.Southwest));
-            });
-        /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
-            .ToFeat();*/
+        // Av-, Diacritic Rune of Succession
+        yield return new Rune(
+                RuneId.Av,
+                "This diacritic surrounds the base rune with similar-looking smaller runes to give the impression of distant echoes.",
+                RuneDrawProperties.Diacritic(null, RuneId.Av),
+                RunePassiveProperties.Diacritic(
+                        "When the base rune is invoked, you can Invoke a single Rune on a different rune-bearer within 15 feet of the original rune-bearer as a {icon:FreeAction} free action.",
+                        "av-, diacritic rune of succession")
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        DrawnRune? avPassive = await CommonRuneRules.ChooseARuneToDrawOn(
+                            drawAction,
+                            drawAction.Owner,
+                            target,
+                            subTarget is DrawnRune runeTarget
+                                ? drOnto =>
+                                    drOnto == runeTarget
+                                : drOnto =>
+                                    !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune.Id),
+                            CreateAvPassive,
+                            "Choose a rune that, when invoked, causes you to Invoke a single Rune {icon:FreeAction} on a different rune-bearer within 15 feet of the original rune.",
+                            rune);
+
+                        // Only one instance allowed when drawn
+                        if (avPassive is not null)
+                            CommonRuneRules.RemoveAllOtherInstancesOf(drawAction.Owner, rune.Id);
+
+                        return avPassive;
+
+                        DrawnRune? CreateAvPassive(DrawnRune? drawnOnto)
+                        {
+                            if (drawnOnto is null)
+                                return null;
+                            
+                            return new DrawnRune(
+                                    drawAction,
+                                    rune,
+                                    (drThis, drOnto) =>
+                                        $"After {drOnto.Illustration!.IllustrationAsIconString} {drOnto.Name!.WithColor("Blue")} is invoked, {drThis.Source!.ToColoredBoldedName()} can Invoke a single Rune {{icon:FreeAction}} on a different rune-bearer within 15 feet of this one.",
+                                    drawnOnto)
+                                {
+                                    AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
+                                    {
+                                        if (drThis.Disabled
+                                            || drInvoked != drThis.DrawnOn)
+                                            return;
+
+                                        // For generosity-sake, not following through on the invocation
+                                        // doesn't waste your usage of the diacritic for this encounter.
+                                        if (!await CommonRuneRules.ChooseARuneToInvoke(
+                                                drThis.Source!, // Whoever applied the diacritic gets the invoke.
+                                                targetFilter: cr => cr != drInvoked.Owner, // Different rune-bearer
+                                                overrideRange: 3, // 15 feet
+                                                passText: " Confirm no additional invocation ",
+                                                additionalTopText:
+                                                $" This rune-bearer must be a different bearer within 15 feet of {drInvoked.Owner.ToColoredName()}."
+                                            ))
+                                        {
+                                            return;
+                                        }
+                                        
+                                        ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune.Id);
+                                    },
+                                };
+                        }
+                    }),
+                null,
+                [Trait.Diacritic])
+            .WithIllustration(new CornerIllustration(
+                IllustrationName.RunestoneWinged,
+                ModData.Illustrations.InvokeRune,
+                Direction.Southwest))
+            .ToFeat();
         
         // En-, Diacritic Rune of Expansion
         yield return new Rune(
@@ -1707,8 +1762,8 @@ public static class AllRunes
                         "drawn on a rune that deals damage",
                         drawnOnRune: true)
                     .WithDiacriticTargetingRequirements()
-                    .WithBaseRuneDealsDamage()
-                    .WithBaseRuneIsNotArea(),
+                    .WithBaseRuneMustDealDamage()
+                    .WithBaseRuneMustNotBeArea(),
                 new RunePassiveProperties(
                         "When the base rune is invoked, the rune-bearer is affected by it as usual, and each other creature in a 15-foot emanation around the rune-bearer also takes the damage and other effects from the base rune (and can attempt a saving throw if possible). An individual creature can be affected by the rune only once, even if the rune could normally affect more creatures than just the rune-bearer.",
                         null)
@@ -1968,7 +2023,7 @@ public static class AllRunes
                         "drawn on a rune that deals damage",
                         drawnOnRune: true)
                     .WithDiacriticTargetingRequirements()
-                    .WithBaseRuneDealsDamage(true),
+                    .WithBaseRuneMustDealDamage(true),
                 new RunePassiveProperties(
                         "When the base rune is invoked, its invocation gains a status bonus to damage equal to 2 plus half your level.",
                         null)

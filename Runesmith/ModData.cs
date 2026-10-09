@@ -823,5 +823,8 @@ public static class ModData
     extension(Trait)
     {
         public static Trait Runesmith => Traits.Runesmith;
+        public static Trait Rune => Traits.Rune;
+        public static Trait Diacritic => Traits.Diacritic;
+        public static Trait Invocation => Traits.Invocation;
     }
 }
