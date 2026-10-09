@@ -31,6 +31,7 @@ using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
 using Dawnsbury.Display.Controls.Portraits;
 using Dawnsbury.Display.Illustrations;
+using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
 using Dawnsbury.Mods.RunesmithClass.RuneRules;
 using Dawnsbury.Mods.RunesmithClass.TargetingRequirements;
@@ -2203,32 +2204,20 @@ public static class ClassFeats
                 
                 qfFeat.ProvideMainAction = qfThis =>
                 {
-                    CombatAction vci = new CombatAction(
-                        qfThis.Owner,
-                        new BagOfIllustrationsIllustration(
+                    CombatAction vci = CompoundInvocation(
+                            qfThis.Owner,
                             IllustrationName.Heal,
                             IllustrationName.Bless,
-                            ModData.Illustrations.InvokeRune),
-                        "Vital Compound Invocation",
-                        [ModData.ModTrait, Trait.Healing, ModData.Traits.Invocation, Trait.Runesmith, Trait.Positive],
-                        $$"""
-                        {i}You can invoke runes from traditions that manipulate vital energy to restore flesh.{/i}
-
-                        You Invoke two Runes — one must be a divine rune, and one must be a primal rune. In addition to the runes' normal effects, one creature that's within {{/*invokeDesc*/ "range"}} of both invoked runes regains {{healing.WithColor("Blue")}} Hit Points.
-                        """,
-                        Target.RangedFriend(invokeRange)
-                            .WithAdditionalConditionOnTargetCreature((a, d) =>
+                            "Vital Compound Invocation",
+                            [ModData.ModTrait, Trait.Healing, ModData.Traits.Invocation, Trait.Runesmith, Trait.Positive],
+                            "You can invoke runes from traditions that manipulate vital energy to restore flesh.",
+                            $"You Invoke two Runes — one must be a divine rune, and one must be a primal rune. In addition to the runes' normal effects, one creature that's within {/*invokeDesc*/ "range"} of both invoked runes regains {healing.WithColor("Blue")} Hit Points.",
+                            $"Invoke a divine and primal rune, then heal an ally within {invokeDesc} of both.",
+                            Target.RangedFriend(invokeRange),
+                            (a, d, runesInRange) =>
                             {
                                 if (d.Damage == 0)
                                     return Usability.NotUsableOnThisCreature("healthy");
-                                List<DrawnRune> allRunes = DrawnRune.GetAllDrawnRunes(a);
-                                if (allRunes.Count == 0)
-                                    return Usability.NotUsable("No runes");
-                                List<DrawnRune> runesInRange = allRunes
-                                    .Where(dr => dr.Owner.DistanceTo(d) <= invokeRange)
-                                    .ToList();
-                                if (runesInRange.Count == 0)
-                                    return Usability.NotUsableOnThisCreature("No runes within range");
                                 bool hasDivine = runesInRange.Any(dr => dr.Traditions.Contains(Trait.Divine));
                                 bool hasPrimal = runesInRange.Any(dr => dr.Traditions.Contains(Trait.Primal));
                                 if (!hasDivine && !hasPrimal)
@@ -2238,132 +2227,17 @@ public static class ClassFeats
                                 if (!hasPrimal)
                                     return Usability.NotUsableOnThisCreature("No primal runes within range");
                                 return Usability.Usable;
-                            }))
-                        .WithActionCost(1)
-                        .WithShortDescription($"Invoke a divine and primal rune, then heal an ally within {invokeDesc} of both.")
-                        .WithEffectOnEachTarget(async (action, caster, target, _) =>
-                        {
-                            List<DrawnRune> runesInRange = DrawnRune.GetAllDrawnRunes(caster)
-                                .Where(dr => dr.Owner.DistanceTo(target) <= invokeRange)
-                                .ToList();
-                            List<DrawnRune> divineRunes = runesInRange
-                                .Where(dr => dr.IsDivine)
-                                .ToList();
-                            List<DrawnRune> primalRunes = runesInRange
-                                .Where(dr => dr.IsPrimal)
-                                .ToList();
-                            List<DrawnRune> allRunes = divineRunes
-                                .Concat(primalRunes)
-                                .Distinct()
-                                .ToList();
-                                
-                            // Revert if you can't begin the invocation.
-                            if (allRunes.Count < 2
-                                || divineRunes.Count == 0
-                                || primalRunes.Count == 0)
+                            },
+                            invokeRange,
+                            Trait.Divine, Trait.Primal,
+                            "Choose a divine and a primal rune to invoke",
+                            async (action, caster, target, _) =>
                             {
-                                action.RevertRequested = true;
-                                return;
-                            }
-
-                            // Choose two runes to invoke
-                            (Option Option, DrawnRune DrawnRune)? firstRune = null;
-                            (Option Option, DrawnRune DrawnRune)? secondRune = null;
-                            for (int i=0; i < 2; i++)
-                            {
-                                // List of options linked to drawn runes
-                                List<(Option Option, DrawnRune DrawnRune)> runeOptions = [];
-                                
-                                // Filter valid options if second execution
-                                List<DrawnRune> validRunes;
-                                if (firstRune is null)
-                                    validRunes = allRunes.ToList();
-                                else
-                                {
-                                    bool isDivine = firstRune.Value.DrawnRune.IsDivine;
-                                    bool isPrimal = firstRune.Value.DrawnRune.IsPrimal;
-                                    if (isDivine && !isPrimal)
-                                        validRunes = primalRunes.ToList();
-                                    else if (isPrimal && !isDivine)
-                                        validRunes = divineRunes.ToList();
-                                    else
-                                        validRunes = allRunes.ToList();
-                                    validRunes.Remove(firstRune.Value.DrawnRune);
-                                }
-
-                                // Transform DrawnRune into CreatureOption
-                                foreach (DrawnRune dr in validRunes)
-                                {
-                                    // Create action to execute on the bearer
-                                    if (CommonRuneRules.CreateInvokeAction(caster, dr)
-                                        is not { } invokeThis)
-                                        continue;
-                                    
-                                    invokeThis.WithActionCost(0);
-                                    invokeThis.ContextMenuName = $"{invokeThis.Name} ({string.Join(", ", dr.Traditions.Select(trait => trait.ToStringOrTechnical()))})";
-                                    
-                                    // Collect the new options and link them to a DrawnRune
-                                    List<Option> thisOptions = [];
-                                    GameLoop.AddDirectUsageOnCreatureOptions(invokeThis, thisOptions);
-                                    runeOptions.AddRange(thisOptions.Select(opt => (opt, dr)));
-                                }
-                                
-                                // Reverts if insufficient options
-                                if (runeOptions.Count == 0)
-                                    break;
-
-                                Sfxs.Play(SfxName.OminousActivation);
-                                caster.Overhead($"Choose a rune ({i+1}/2)", Color.White);
-
-                                List<Option> awaitableOptions = runeOptions
-                                    .Select(pair => pair.Option)
-                                    .Append(new CancelOption(true))
-                                    .Append(new PassViaButtonOption(" Revert action "))
-                                    .ToList();
-                                
-                                // Select an invocation
-                                Option chosenOption = (await caster.Battle.SendRequest(
-                                    new AdvancedRequest(
-                                        caster,
-                                        "Choose a divine and a primal rune to invoke.",
-                                        awaitableOptions)
-                                    {
-                                        TopBarText = $"Choose a divine and a primal rune to invoke, or right-click to cancel ({i+1}/2)",
-                                        TopBarIcon = action.Illustration,
-                                    })).ChosenOption;
-
-                                // Revert if canceled
-                                if (chosenOption is CancelOption or PassViaButtonOption)
-                                {
-                                    action.RevertRequested = true;
-                                    return;
-                                }
-
-                                // Get rune option from chosen option
-                                (Option Option, DrawnRune DrawnRune) runeOption =
-                                    runeOptions[awaitableOptions.IndexOf(chosenOption)];
-
-                                if (firstRune is null)
-                                    firstRune = runeOption;
-                                else
-                                    secondRune = runeOption;
-                            }
-                            
-                            // Revert if choices were not made
-                            if (firstRune is null || secondRune is null)
-                            {
-                                action.RevertRequested = true;
-                                return;
-                            }
-                            
-                            // Invoke runes
-                            await firstRune.Value.Option.Action();
-                            await secondRune.Value.Option.Action();
-
-							// Do healing
-                            Sfxs.Play(SfxName.Healing);
-                            await target.HealAsync(healing.ToString(), action);
-                        });
+                                // Do healing
+                                Sfxs.Play(SfxName.Healing);
+                                await target.HealAsync(healing.ToString(), action);
+                            });
+                    
                     CommonRuneRules.WithImmediatelyRemovesImmunity(vci);
                     
                     return new ActionPossibility(vci)
@@ -3054,6 +2928,166 @@ public static class ClassFeats
         // Chain of Words
         
         // Clashing Compound Invocation
+        yield return new TrueFeat(
+                ModData.FeatNames.ClashingCompoundInvocation, 10,
+                "As you invoke runes from disparate traditions of magic, their diametrically opposed effects repel each other in a destructive backlash.",
+                $"You {ModData.FeatNames.InvokeRune.ToLink("Invoke two Runes")}, which must be from opposed {ModData.Tooltips.RuleRuneTradition("traditions")} of magic; either 1 arcane and 1 divine rune, or 1 occult and 1 primal rune. In addition to the runes' normal effects, one creature within 30 feet of both invoked runes must also attempt a Fortitude saving throw as destructive magical harmonics clash.{S.FourDegreesOfSuccess(
+                    "The target is unaffected.",
+                    "The target is {r}sickened 1{/r}, but automatically succeeds on any check to retch.",
+                    "The target is {r}sickened 1{/r}.",
+                    "The target is {r}sickened 2{/r}")}",
+                [Trait.Invocation, Trait.Runesmith])
+            .WithActionCost(1)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                (int invokeRange, string invokeDesc) = CommonRuneRules.GetInvocationRange(qfFeat.Owner, (30 / 5));
+                
+                qfFeat.ProvideMainAction = qfThis =>
+                {
+                    CombatAction cciOne = CCI(
+                        IllustrationName.MagicMissile, IllustrationName.Bless,
+                        Trait.Arcane, Trait.Divine);
+                    CommonRuneRules.WithImmediatelyRemovesImmunity(cciOne);
+                    CombatAction cciTwo = CCI(
+                        IllustrationName.Bane,
+                        IllustrationName.ElementalForm,
+                        Trait.Occult, Trait.Primal);
+                    CommonRuneRules.WithImmediatelyRemovesImmunity(cciOne);
+                    
+                    return new SubmenuPossibility(
+                            new SideBySideIllustration(
+                                IllustrationName.Sickened,
+                                ModData.Illustrations.InvokeRune),
+                            "Clashing Compound Invocation")
+                        {
+                            SpellIfAny = new CombatAction(
+                                    qfThis.Owner,
+                                    new SideBySideIllustration(
+                                        IllustrationName.Sickened,
+                                        ModData.Illustrations.InvokeRune),
+                                    "Clashing Compound Invocation",
+                                    [ModData.ModTrait, Trait.Invocation, Trait.Runesmith],
+                                    null!,
+                                    Target.Self())
+                                .WithDescription(
+                                    "As you invoke runes from disparate traditions of magic, their diametrically opposed effects repel each other in a destructive backlash.",
+                                    $"You {ModData.FeatNames.InvokeRune.ToLink("Invoke two Runes")}, which must be from opposed {ModData.Tooltips.RuleRuneTradition("traditions")} of magic; either 1 arcane, and 1 divine rune, or 1 occult and 1 primal rune. In addition to the runes' normal effects, one creature within 30 feet of both invoked runes must also attempt a Fortitude saving throw as destructive magical harmonics clash.{S.FourDegreesOfSuccess(
+                                        "The target is unaffected.",
+                                        "The target is {r}sickened 1{/r}, but automatically succeeds on any check to retch.",
+                                        "The target is {r}sickened 1{/r}.",
+                                        "The target is {r}sickened 2{/r}")}"),
+                            Subsections = [
+                                new PossibilitySection("Clashing Compound Invocation")
+                                {
+                                    Possibilities = [
+                                        new ActionPossibility(cciOne)
+                                        {
+                                            Caption = "Arcane & Divine"
+                                        },
+                                        new ActionPossibility(cciTwo)
+                                        {
+                                            Caption = "Occult & Primal"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                        .WithPossibilityGroup(ModData.PossibilityGroups.INVOKING_RUNES);
+
+                    CombatAction CCI(Illustration left, Illustration right, Trait tradition1, Trait tradition2)
+                    {
+                        return CompoundInvocation(
+                            qfThis.Owner,
+                            left, right,
+                            "Clashing Compound Invocation",
+                            [ModData.ModTrait, Trait.Invocation, Trait.Runesmith],
+                            "As you invoke runes from disparate traditions of magic, their diametrically opposed effects repel each other in a destructive backlash.",
+                            $"You {ModData.FeatNames.InvokeRune.ToLink("Invoke two Runes")}, which must be from opposed {ModData.Tooltips.RuleRuneTradition("traditions")} of magic; either 1 arcane and 1 divine rune, or 1 occult and 1 primal rune. In addition to the runes' normal effects, one creature within 30 feet of both invoked runes must also attempt a Fortitude saving throw as destructive magical harmonics clash.{S.FourDegreesOfSuccess(
+                                "The target is unaffected.",
+                                "The target is {r}sickened 1{/r}, but automatically succeeds on any check to retch.",
+                                "The target is {r}sickened 1{/r}.",
+                                "The target is {r}sickened 2{/r}")}",
+                            $"Invoke either an arcane and divine rune, or an occult and primal rune, then make an enemy within {invokeDesc} of both {{r}}sickened{{/r}} with a Fortitude save.",
+                            Target.RangedCreature(invokeRange)
+                                .WithAdditionalConditionOnTargetCreature(new EnemyCreatureTargetingRequirement()),
+                            (a, d, runesInRange) =>
+                            {
+                                bool hasTrad1 = runesInRange.Any(dr => dr.Traditions.Contains(tradition1));
+                                bool hasTrad2 = runesInRange.Any(dr => dr.Traditions.Contains(tradition2));
+                                if (!hasTrad1 && !hasTrad2)
+                                    return Usability.NotUsableOnThisCreature($"No {tradition1.ToStringOrTechnical().ToLower()} or {tradition2.ToStringOrTechnical().ToLower()} runes within range");
+                                if (!hasTrad1)
+                                    return Usability.NotUsableOnThisCreature($"No {tradition1.ToStringOrTechnical().ToLower()} runes within range");
+                                if (!hasTrad2)
+                                    return Usability.NotUsableOnThisCreature($"No {tradition2.ToStringOrTechnical().ToLower()} runes within range");
+                                return Usability.Usable;
+                            },
+                            invokeRange,
+                            tradition1, tradition2,
+                            $"Choose a {tradition1.ToStringOrTechnical().ToLower()} rune and a {tradition2.ToStringOrTechnical().ToLower()} rune to invoke",
+                            async (action, caster, target, _) =>
+                            {
+                                Sfxs.Play(SfxName.Mental);
+                                
+                                int dc = caster.ClassDC(Trait.Runesmith);
+                                CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(
+                                    target,
+                                    action,
+                                    new SavingThrow(Defense.Fortitude, dc));
+
+                                if (result == CheckResult.CriticalSuccess)
+                                    return;
+
+                                QEffect sickened = QEffect.Sickened(
+                                        result == CheckResult.CriticalFailure ? 2 : 1,
+                                        dc)
+                                    .With(qf =>
+                                    {
+                                        qf.Source = caster;
+                                        qf.SourceAction = action;
+
+                                        // Encourage automatically-succeeding Retch action.
+                                        if (result == CheckResult.Success)
+                                        {
+                                            qf.Description += "\n\nYou automatically succeed if you Retch.";
+                                            qf.ModifyActionPossibility = (_, combatAction) =>
+                                            {
+                                                if (combatAction.ActionId is not ActionId.Retch)
+                                                    return;
+                                                (combatAction.Target as SelfTarget)?.SelfGoodness = _ =>
+                                                    AIConstants.VERY_PREFERRED;
+                                            };
+                                            /*qf.AdditionalGoodness = (_, combatAction, _) =>
+                                            {
+                                                if (combatAction.ActionId is ActionId.Retch)
+                                                    return AIConstants.VERY_PREFERRED;
+                                                else
+                                                    return 0f;
+                                            };*/
+                                            qf.AdjustSavingThrowCheckResult = (_,_, combatAction, checkResult) =>
+                                            {
+                                                if (combatAction.ActionId is ActionId.Retch)
+                                                    return CheckResult.Success;
+                                                else
+                                                    return checkResult;
+                                            };
+                                        }
+                                    });
+
+                                target.AddQEffect(sickened);
+                            })
+                            .WithTargetingTooltip((action, target, _) =>
+                            {
+                                int dc = action.Owner.ClassDC(Trait.Runesmith);
+                                return CombatActionExecution.BreakdownSavingThrowForTooltip(
+                                        action,
+                                        target,
+                                        new SavingThrow(Defense.Fortitude, dc))
+                                    .TooltipDescription;
+                            });
+                    }
+                };
+            });
         
         // Overloaded Ammunition
         
@@ -3262,6 +3296,179 @@ public static class ClassFeats
         modifyTraceAction?.Invoke(knockThisRune);
 
         return knockThisRune;
+    }
+
+    public static CombatAction CompoundInvocation(
+        Creature runesmith,
+        Illustration iconLeft,
+        Illustration iconRight,
+        string name,
+        Trait[] traits,
+        string flavorText,
+        string rulesText,
+        string shortDescription,
+        CreatureTarget creatureTarget,
+        Func<Creature,Creature,List<DrawnRune>,Usability> additionalRequirement,
+        int invokeRange,
+        Trait tradition1,
+        Trait tradition2,
+        string topBarText,
+        Delegates.EffectOnEachTarget toTargetOnInvocation)
+    {
+        CombatAction compound = new CombatAction(
+                runesmith,
+                new BagOfIllustrationsIllustration(
+                    iconLeft,
+                    iconRight,
+                    ModData.Illustrations.InvokeRune),
+                name,
+                traits,
+                $$"""
+                {i}{{flavorText}}{/i}
+
+                {{rulesText}}
+                """,
+                creatureTarget.WithAdditionalConditionOnTargetCreature((a, d) =>
+                {
+                    List<DrawnRune> allRunes = DrawnRune.GetAllDrawnRunes(a);
+                    if (allRunes.Count == 0)
+                        return Usability.NotUsable("No runes");
+                    List<DrawnRune> runesInRange = allRunes
+                        .Where(dr => dr.Owner.DistanceTo(d) <= invokeRange)
+                        .ToList();
+                    if (runesInRange.Count == 0)
+                        return Usability.NotUsableOnThisCreature("No runes within range");
+                    return additionalRequirement(a, d, runesInRange);
+                }))
+            .WithActionCost(1)
+            .WithShortDescription(shortDescription)
+            .WithEffectOnEachTarget(async (action, caster, target, result) =>
+            {
+                List<DrawnRune> runesInRange = DrawnRune.GetAllDrawnRunes(caster)
+                    .Where(dr =>
+                        dr.Traditions.Count > 0
+                        && dr.Owner.DistanceTo(target) <= invokeRange)
+                    .ToList();
+                List<DrawnRune> runesOfTrad1 = runesInRange
+                    .Where(dr => dr.Traditions.Contains(tradition1))
+                    .ToList();
+                List<DrawnRune> runesOfTrad2 = runesInRange
+                    .Where(dr => dr.Traditions.Contains(tradition2))
+                    .ToList();
+                List<DrawnRune> allRunes = runesOfTrad1
+                    .Concat(runesOfTrad2)
+                    .Distinct()
+                    .ToList();
+                    
+                // Revert if you can't begin the invocation.
+                if (allRunes.Count < 2
+                    || runesOfTrad1.Count == 0
+                    || runesOfTrad2.Count == 0)
+                {
+                    action.RevertRequested = true;
+                    return;
+                }
+
+                // Choose two runes to invoke
+                (Option Option, DrawnRune DrawnRune)? firstRune = null;
+                (Option Option, DrawnRune DrawnRune)? secondRune = null;
+                for (int i=0; i < 2; i++)
+                {
+                    // List of options linked to drawn runes
+                    List<(Option Option, DrawnRune DrawnRune)> runeOptions = [];
+                    
+                    // Filter valid options if second execution
+                    List<DrawnRune> validRunes;
+                    if (firstRune is null)
+                        validRunes = allRunes.ToList();
+                    else
+                    {
+                        bool isTrad1 = runesOfTrad1.Contains(firstRune.Value.DrawnRune);
+                        bool isTrad2 = runesOfTrad2.Contains(firstRune.Value.DrawnRune);
+                        if (isTrad1 && !isTrad2)
+                            validRunes = runesOfTrad2.ToList();
+                        else if (isTrad2 && !isTrad1)
+                            validRunes = runesOfTrad1.ToList();
+                        else
+                            validRunes = allRunes.ToList();
+                        validRunes.Remove(firstRune.Value.DrawnRune);
+                    }
+
+                    // Transform DrawnRune into CreatureOption
+                    foreach (DrawnRune dr in validRunes)
+                    {
+                        // Create action to execute on the bearer
+                        if (CommonRuneRules.CreateInvokeAction(caster, dr)
+                            is not { } invokeThis)
+                            continue;
+                        
+                        invokeThis.WithActionCost(0);
+                        invokeThis.ContextMenuName = $"{invokeThis.Name} ({string.Join(", ", dr.Traditions.Select(trait => trait.ToStringOrTechnical()))})";
+                        
+                        // Collect the new options and link them to a DrawnRune
+                        List<Option> thisOptions = [];
+                        GameLoop.AddDirectUsageOnCreatureOptions(invokeThis, thisOptions);
+                        runeOptions.AddRange(thisOptions.Select(opt => (opt, dr)));
+                    }
+                    
+                    // Reverts if insufficient options
+                    if (runeOptions.Count == 0)
+                        break;
+
+                    Sfxs.Play(SfxName.OminousActivation);
+                    caster.Overhead($"Choose a rune ({i+1}/2)", Color.White);
+
+                    List<Option> awaitableOptions = runeOptions
+                        .Select(pair => pair.Option)
+                        .Append(new CancelOption(true))
+                        .Append(new PassViaButtonOption(" Revert action "))
+                        .ToList();
+                    
+                    // Select an invocation
+                    Option chosenOption = (await caster.Battle.SendRequest(
+                        new AdvancedRequest(
+                            caster,
+                            $"{topBarText.Trim('.')}.",
+                            awaitableOptions)
+                        {
+                            TopBarText = $"{topBarText.Trim('.')}, or right-click to cancel ({i+1}/2)",
+                            TopBarIcon = action.Illustration,
+                        })).ChosenOption;
+
+                    // Revert if canceled
+                    if (chosenOption is CancelOption or PassViaButtonOption)
+                    {
+                        action.RevertRequested = true;
+                        return;
+                    }
+
+                    // Get rune option from chosen option
+                    (Option Option, DrawnRune DrawnRune) runeOption =
+                        runeOptions[awaitableOptions.IndexOf(chosenOption)];
+
+                    if (firstRune is null)
+                        firstRune = runeOption;
+                    else
+                        secondRune = runeOption;
+                }
+                
+                // Revert if choices were not made
+                if (firstRune is null || secondRune is null)
+                {
+                    action.RevertRequested = true;
+                    return;
+                }
+                
+                // Invoke runes
+                await firstRune.Value.Option.Action();
+                await secondRune.Value.Option.Action();
+
+				// Then the thing it does after invocation
+                await toTargetOnInvocation(action, caster, target, result);
+            });
+        CommonRuneRules.WithImmediatelyRemovesImmunity(compound);
+
+        return compound;
     }
 
     public static QEffect TemporaryRunicRepertoire(Creature? runesmith, RuneId[] runesKnown)
