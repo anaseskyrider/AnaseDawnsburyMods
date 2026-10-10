@@ -3253,6 +3253,97 @@ public static class ClassFeats
         // TODO: Phase 3, level 12 class feats.
         
         // Astral Compound Invocation
+        yield return new TrueFeat(
+                ModData.FeatNames.AstralCompoundInvocation, 12,
+                "Invoking runes from two schools of magic that both manipulate the intangible realm of thought results in waves of mental interference that stagger your foes.",
+                $"You {ModData.FeatNames.InvokeRune.ToLink("Invoke two Runes")}; one must be an {ModData.Tooltips.RuleRuneTradition("arcane rune")}, and one must be an {ModData.Tooltips.RuleRuneTradition("occult rune")}. In addition to the runes' normal effects, one creature within 30 feet of both invoked runes must attempt a Will saving throw.{S.FourDegreesOfSuccess(
+                    "The target is unaffected.",
+                    "The target is {r}stupefied 1{/r} until the end of your next turn.",
+                    "The target is {r}stupefied 2{/r} until the end of your next turn.",
+                    "The target is {r}stupefied 3{/r} until the end of your next turn.")}",
+                [Trait.Invocation, Trait.Mental, Trait.Runesmith])
+            .WithActionCost(1)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                (int invokeRange, string invokeDesc) = CommonRuneRules.GetInvocationRange(qfFeat.Owner, 6);
+                
+                qfFeat.ProvideMainAction = qfThis =>
+                {
+                    CombatAction aci = CompoundInvocation(
+                            qfThis.Owner,
+                            IllustrationName.MagicMissile,
+                            IllustrationName.Bane,
+                            "Astral Compound Invocation",
+                            [ModData.ModTrait, Trait.Invocation, Trait.Mental, Trait.Runesmith],
+                            "Invoking runes from two schools of magic that both manipulate the intangible realm of thought results in waves of mental interference that stagger your foes.",
+                            $"You Invoke two Runes; one must be an arcane rune, and one must be an occult rune. In addition to the runes' normal effects, one creature within 30 feet of both invoked runes must attempt a Will saving throw.{S.FourDegreesOfSuccess(
+                                "The target is unaffected.",
+                                "The target is {r}stupefied 1{/r} until the end of your next turn.",
+                                "The target is {r}stupefied 2{/r} until the end of your next turn.",
+                                "The target is {r}stupefied 3{/r} until the end of your next turn.")}",
+                            $"Invoke an arcane and occult rune, then stupefy an enemy within {invokeDesc} of both.",
+                            Target.RangedCreature(invokeRange)
+                                .WithAdditionalConditionOnTargetCreature(new EnemyCreatureTargetingRequirement()),
+                            (a, d, runesInRange) =>
+                            {
+                                bool hasArcane = runesInRange.Any(dr => dr.Traditions.Contains(Trait.Arcane));
+                                bool hasOccult = runesInRange.Any(dr => dr.Traditions.Contains(Trait.Occult));
+                                if (!hasArcane && !hasOccult)
+                                    return Usability.NotUsableOnThisCreature("No arcane or occult runes within range");
+                                if (!hasArcane)
+                                    return Usability.NotUsableOnThisCreature("No arcane runes within range");
+                                if (!hasOccult)
+                                    return Usability.NotUsableOnThisCreature("No occult runes within range");
+                                return Usability.Usable;
+                            },
+                            invokeRange,
+                            Trait.Arcane, Trait.Occult,
+                            "Choose an arcane and an occult rune to invoke",
+                            async (action, caster, target, _) =>
+                            {
+                                Sfxs.Play(SfxName.Mental);
+                                
+                                int dc = caster.ClassDC(Trait.Runesmith);
+                                CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(
+                                    target,
+                                    action,
+                                    new SavingThrow(Defense.Will, dc));
+
+                                if (result == CheckResult.CriticalSuccess)
+                                    return;
+
+                                QEffect stupefy = QEffect.Stupefied(
+                                        result switch
+                                        {
+                                            CheckResult.CriticalFailure => 3,
+                                            CheckResult.Failure => 2,
+                                            _ => 1
+                                        })
+                                    .WithExpirationAtEndOfSourcesNextTurn(caster, false)
+                                    .With(qf =>
+                                    {
+                                        qf.Source = caster;
+                                        qf.SourceAction = action;
+                                    });
+
+                                target.AddQEffect(stupefy);
+                            })
+                        .WithTargetingTooltip((action, target, _) =>
+                        {
+                            int dc = action.Owner.ClassDC(Trait.Runesmith);
+                            return CombatActionExecution.BreakdownSavingThrowForTooltip(
+                                    action,
+                                    target,
+                                    new SavingThrow(Defense.Will, dc))
+                                .TooltipDescription;
+                        });
+                    
+                    CommonRuneRules.WithImmediatelyRemovesImmunity(aci);
+                    
+                    return new ActionPossibility(aci)
+                        .WithPossibilityGroup(ModData.PossibilityGroups.INVOKING_RUNES);
+                };
+            });
         
         // Distant Invocation
         yield return new TrueFeat(
