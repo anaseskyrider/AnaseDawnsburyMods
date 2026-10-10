@@ -3136,85 +3136,85 @@ public static class ClassFeats
                     CombatAction CCI(Illustration left, Illustration right, Trait tradition1, Trait tradition2)
                     {
                         return CompoundInvocation(
-                            qfThis.Owner,
-                            left, right,
-                            "Clashing Compound Invocation",
-                            [ModData.ModTrait, Trait.Invocation, Trait.Runesmith],
-                            "As you invoke runes from disparate traditions of magic, their diametrically opposed effects repel each other in a destructive backlash.",
-                            $"You {ModData.FeatNames.InvokeRune.ToLink("Invoke two Runes")}, which must be from opposed {ModData.Tooltips.RuleRuneTradition("traditions")} of magic; either 1 arcane and 1 divine rune, or 1 occult and 1 primal rune. In addition to the runes' normal effects, one creature within 30 feet of both invoked runes must also attempt a Fortitude saving throw as destructive magical harmonics clash.{S.FourDegreesOfSuccess(
-                                "The target is unaffected.",
-                                "The target is {r}sickened 1{/r}, but automatically succeeds on any check to retch.",
-                                "The target is {r}sickened 1{/r}.",
-                                "The target is {r}sickened 2{/r}")}",
-                            $"Invoke either an arcane and divine rune, or an occult and primal rune, then make an enemy within {invokeDesc} of both {{r}}sickened{{/r}} with a Fortitude save.",
-                            Target.RangedCreature(invokeRange)
-                                .WithAdditionalConditionOnTargetCreature(new EnemyCreatureTargetingRequirement()),
-                            (a, d, runesInRange) =>
-                            {
-                                bool hasTrad1 = runesInRange.Any(dr => dr.Traditions.Contains(tradition1));
-                                bool hasTrad2 = runesInRange.Any(dr => dr.Traditions.Contains(tradition2));
-                                if (!hasTrad1 && !hasTrad2)
-                                    return Usability.NotUsableOnThisCreature($"No {tradition1.ToStringOrTechnical().ToLower()} or {tradition2.ToStringOrTechnical().ToLower()} runes within range");
-                                if (!hasTrad1)
-                                    return Usability.NotUsableOnThisCreature($"No {tradition1.ToStringOrTechnical().ToLower()} runes within range");
-                                if (!hasTrad2)
-                                    return Usability.NotUsableOnThisCreature($"No {tradition2.ToStringOrTechnical().ToLower()} runes within range");
-                                return Usability.Usable;
-                            },
-                            invokeRange,
-                            tradition1, tradition2,
-                            $"Choose a {tradition1.ToStringOrTechnical().ToLower()} rune and a {tradition2.ToStringOrTechnical().ToLower()} rune to invoke",
-                            async (action, caster, target, _) =>
-                            {
-                                Sfxs.Play(SfxName.Mental);
-                                
-                                int dc = caster.ClassDC(Trait.Runesmith);
-                                CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(
-                                    target,
-                                    action,
-                                    new SavingThrow(Defense.Fortitude, dc));
+                                qfThis.Owner,
+                                left, right,
+                                "Clashing Compound Invocation",
+                                [ModData.ModTrait, Trait.Invocation, Trait.Runesmith],
+                                "As you invoke runes from disparate traditions of magic, their diametrically opposed effects repel each other in a destructive backlash.",
+                                $"You {ModData.FeatNames.InvokeRune.ToLink("Invoke two Runes")}, which must be from opposed {ModData.Tooltips.RuleRuneTradition("traditions")} of magic; either 1 arcane and 1 divine rune, or 1 occult and 1 primal rune. In addition to the runes' normal effects, one creature within 30 feet of both invoked runes must also attempt a Fortitude saving throw as destructive magical harmonics clash.{S.FourDegreesOfSuccess(
+                                    "The target is unaffected.",
+                                    "The target is {r}sickened 1{/r}, but automatically succeeds on any check to retch.",
+                                    "The target is {r}sickened 1{/r}.",
+                                    "The target is {r}sickened 2{/r}")}",
+                                $"Invoke either an arcane and divine rune, or an occult and primal rune, then make an enemy within {invokeDesc} of both {{r}}sickened{{/r}} with a Fortitude save.",
+                                Target.RangedCreature(invokeRange)
+                                    .WithAdditionalConditionOnTargetCreature(new EnemyCreatureTargetingRequirement()),
+                                (a, d, runesInRange) =>
+                                {
+                                    bool hasTrad1 = runesInRange.Any(dr => dr.Traditions.Contains(tradition1));
+                                    bool hasTrad2 = runesInRange.Any(dr => dr.Traditions.Contains(tradition2));
+                                    if (!hasTrad1 && !hasTrad2)
+                                        return Usability.NotUsableOnThisCreature($"No {tradition1.ToStringOrTechnical().ToLower()} or {tradition2.ToStringOrTechnical().ToLower()} runes within range");
+                                    if (!hasTrad1)
+                                        return Usability.NotUsableOnThisCreature($"No {tradition1.ToStringOrTechnical().ToLower()} runes within range");
+                                    if (!hasTrad2)
+                                        return Usability.NotUsableOnThisCreature($"No {tradition2.ToStringOrTechnical().ToLower()} runes within range");
+                                    return Usability.Usable;
+                                },
+                                invokeRange,
+                                tradition1, tradition2,
+                                $"Choose a {tradition1.ToStringOrTechnical().ToLower()} rune and a {tradition2.ToStringOrTechnical().ToLower()} rune to invoke",
+                                async (action, caster, target, _) =>
+                                {
+                                    Sfxs.Play(SfxName.Mental);
+                                    
+                                    int dc = caster.ClassDC(Trait.Runesmith);
+                                    CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(
+                                        target,
+                                        action,
+                                        new SavingThrow(Defense.Fortitude, dc));
 
-                                if (result == CheckResult.CriticalSuccess)
-                                    return;
+                                    if (result == CheckResult.CriticalSuccess)
+                                        return;
 
-                                QEffect sickened = QEffect.Sickened(
-                                        result == CheckResult.CriticalFailure ? 2 : 1,
-                                        dc)
-                                    .With(qf =>
-                                    {
-                                        qf.Source = caster;
-                                        qf.SourceAction = action;
-
-                                        // Encourage automatically-succeeding Retch action.
-                                        if (result == CheckResult.Success)
+                                    QEffect sickened = QEffect.Sickened(
+                                            result == CheckResult.CriticalFailure ? 2 : 1,
+                                            dc)
+                                        .With(qf =>
                                         {
-                                            qf.Description += "\n\nYou automatically succeed if you Retch.";
-                                            qf.ModifyActionPossibility = (_, combatAction) =>
-                                            {
-                                                if (combatAction.ActionId is not ActionId.Retch)
-                                                    return;
-                                                (combatAction.Target as SelfTarget)?.SelfGoodness = _ =>
-                                                    AIConstants.VERY_PREFERRED;
-                                            };
-                                            /*qf.AdditionalGoodness = (_, combatAction, _) =>
-                                            {
-                                                if (combatAction.ActionId is ActionId.Retch)
-                                                    return AIConstants.VERY_PREFERRED;
-                                                else
-                                                    return 0f;
-                                            };*/
-                                            qf.AdjustSavingThrowCheckResult = (_,_, combatAction, checkResult) =>
-                                            {
-                                                if (combatAction.ActionId is ActionId.Retch)
-                                                    return CheckResult.Success;
-                                                else
-                                                    return checkResult;
-                                            };
-                                        }
-                                    });
+                                            qf.Source = caster;
+                                            qf.SourceAction = action;
 
-                                target.AddQEffect(sickened);
-                            })
+                                            // Encourage automatically-succeeding Retch action.
+                                            if (result == CheckResult.Success)
+                                            {
+                                                qf.Description += "\n\nYou automatically succeed if you Retch.";
+                                                qf.ModifyActionPossibility = (_, combatAction) =>
+                                                {
+                                                    if (combatAction.ActionId is not ActionId.Retch)
+                                                        return;
+                                                    (combatAction.Target as SelfTarget)?.SelfGoodness = _ =>
+                                                        AIConstants.VERY_PREFERRED;
+                                                };
+                                                /*qf.AdditionalGoodness = (_, combatAction, _) =>
+                                                {
+                                                    if (combatAction.ActionId is ActionId.Retch)
+                                                        return AIConstants.VERY_PREFERRED;
+                                                    else
+                                                        return 0f;
+                                                };*/
+                                                qf.AdjustSavingThrowCheckResult = (_,_, combatAction, checkResult) =>
+                                                {
+                                                    if (combatAction.ActionId is ActionId.Retch)
+                                                        return CheckResult.Success;
+                                                    else
+                                                        return checkResult;
+                                                };
+                                            }
+                                        });
+
+                                    target.AddQEffect(sickened);
+                                })
                             .WithTargetingTooltip((action, target, _) =>
                             {
                                 int dc = action.Owner.ClassDC(Trait.Runesmith);
