@@ -873,7 +873,8 @@ public static class Runesmith
                         return DrawnRune.GetAllDrawnRunes(self)
                             .Where(dr =>
                                 DrawnRune.IsInvokeableRune(self, dr)
-                                && self.DistanceTo(dr.Owner) <= range)
+                                && self.DistanceTo(dr.Owner) <= range
+                                && self.HasLineOfEffectTo(dr.Owner) < CoverKind.Blocked)
                             .Select(dr =>
                             {
                                 if (CommonRuneRules.CreateInvokeAction(self, dr) is not { } invokeAction)
