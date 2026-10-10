@@ -1376,6 +1376,7 @@ public static class CommonRuneRules
     /// <param name="passText">String to use for the pass text. If no value is given, you cannot pass.</param>
     /// <param name="additionalTopText">Additional text to display after "Choose a rune to invoke."</param>
     /// <param name="skipInvocationAnimation">Whether to skip the standard invocation animation. Used for feats with custom animations.</param>
+    /// <param name="skipConfirmation">If true, skip confirming the invocation if only one option is available.</param>
     /// <returns>(bool) False if the action was canceled or passed, otherwise true.</returns>
     public static async Task<bool> ChooseARuneToInvoke(
         Creature caster,
@@ -1386,7 +1387,8 @@ public static class CommonRuneRules
         bool? canBeCanceled = false,
         string? passText = null,
         string? additionalTopText = null,
-        bool skipInvocationAnimation = false)
+        bool skipInvocationAnimation = false,
+        bool skipConfirmation = false)
     {
         // Get available runes
         List<Rune>? knownRunes = RunicRepertoireTag
@@ -1449,12 +1451,16 @@ public static class CommonRuneRules
                 && !targetFilter(crOpt.Creature));
         
         // Add bells and whistles to options
-        if (options.Count <= 0)
+        if (options.Count == 0)
             return false;
-        if (canBeCanceled == true)
-            options.Add(new CancelOption(true));
-        if (passText is not null)
-            options.Add(new PassViaButtonOption(passText));
+        // Ask to confirm
+        if (options.Count > 1 || !skipConfirmation)
+        {
+            if (canBeCanceled == true)
+                options.Add(new CancelOption(true));
+            if (passText is not null)
+                options.Add(new PassViaButtonOption(passText));
+        }
         
         // Pick a target
         string topBarText =
@@ -1462,12 +1468,15 @@ public static class CommonRuneRules
             + (canBeCanceled == true ? " or right-click to cancel" : null)
             + "."
             + additionalTopText;
-        Option chosenOption = (await caster.Battle.SendRequest( // Send a request to pick an option
-            new AdvancedRequest(caster, "Choose a rune to invoke.", options)
-            {
-                TopBarText = topBarText,
-                TopBarIcon = ModData.Illustrations.InvokeRune,
-            })).ChosenOption;
+        Option chosenOption = 
+            options.Count == 1 && skipConfirmation
+                ? options[0]
+                : (await caster.Battle.SendRequest( // Send a request to pick an option
+                    new AdvancedRequest(caster, "Choose a rune to invoke.", options)
+                    {
+                        TopBarText = topBarText,
+                        TopBarIcon = ModData.Illustrations.InvokeRune,
+                    })).ChosenOption;
         
         // Do stuff based on specific type of choice
         switch (chosenOption)

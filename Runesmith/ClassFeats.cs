@@ -2926,6 +2926,145 @@ public static class ClassFeats
         // TODO: Phase 3, level 10 class feats.
         
         // Chain of Words
+        yield return new TrueFeat(
+                ModData.FeatNames.ChainOfWords, 10,
+                "You see the thin lines of magic between your creations, and you can exploit that connection with a small shift of power from one rune to another.",
+                $$"""
+                {b}Frequency{/b} Once per encounter.
+                
+                You {{ModData.FeatNames.InvokeRune.ToLink("Invoke two Runes")}} within 60 feet. In addition to the runes' normal effects, a chain of glowing script flows between them, dealing 5d6 force damage to all creatures in a straight line between them with a basic Reflex saving throw; creatures bearing the invoked runes are not in the area of this line.
+                
+                A creature who critically fails its save is also immobilized for 1 round or until it Escapes, as the runes seal its movements. The DC to Escape is your class DC.
+                
+                At 12th level, and every 2 levels thereafter, the damage increases by 1d6.
+                """,
+                [Trait.Force, Trait.Invocation, Trait.Runesmith])
+            .WithActionCost(2)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                int numDice = qfFeat.Owner.Level / 2;
+                (int range, string rangeDesc) = CommonRuneRules.GetInvocationRange(qfFeat.Owner, 12);
+                
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + UsedUpDescription($" [invocation] (Once per combat) Invoke two Runes within {rangeDesc}. Creatures in-between in a line take {numDice}d6 force damage (basic Reflex save).", !qfThis.UsedUpPermanently, "combat");
+
+                qfFeat.ProvideMainAction = qfThis =>
+                {
+                    if (qfThis.UsedUpPermanently)
+                        return null;
+
+                    CombatAction chain = new CombatAction(
+                            qfThis.Owner,
+                            new BagOfIllustrationsIllustration(
+                                ModData.Illustrations.InvokeRune,
+                                ModData.Illustrations.InvokeRune,
+                                IllustrationName.LightningBolt),
+                            "Chain of Words",
+                            [ModData.ModTrait, Trait.Force, Trait.Invocation, Trait.Runesmith, Trait.Basic, Trait.AlwaysHits, Trait.Zone],
+                            null!,
+                            Target.MultiplePointLine(
+                                2, range,
+                                tile =>
+                                    tile.PrimaryOccupant is not null
+                                    && DrawnRune.IsARuneBearer(qfThis.Owner, tile.PrimaryOccupant)
+                                    && (qfThis.Owner.HasLineOfEffectTo(tile) < CoverKind.Blocked
+                                        || qfThis.Owner == tile.PrimaryOccupant),
+                                useStrictLineInsteadOfCorners: true))
+                        .WithActionCost(2)
+                        .WithDescription(
+                            "You see the thin lines of magic between your creations, and you can exploit that connection with a small shift of power from one rune to another.",
+                            $$"""
+                              {b}Frequency{/b} Once per encounter.
+
+                              You {{ModData.FeatNames.InvokeRune.ToLink("Invoke two Runes")}} within 60 feet. In addition to the runes' normal effects, a chain of glowing script flows between them, dealing {{S.HeightenedVariable(numDice, 5)}}d6 force damage to all creatures in a straight line between them with a basic Reflex saving throw; creatures bearing the invoked runes are not in the area of this line.
+
+                              A creature who critically fails its save is also immobilized for 1 round or until it Escapes, as the runes seal its movements. The DC to Escape is your class DC.
+                              """)
+                        .WithEffectOnChosenTargets(async (action, caster, targets) =>
+                        {
+                            if (targets.ChosenTiles.Count < 2
+                                || targets.ChosenTiles[^1].PrimaryOccupant is not {} first
+                                || targets.ChosenTiles[^2].PrimaryOccupant is not {} last
+                                || first == last
+                                || targets.ChosenCreatures
+                                    .Where(cr => cr != first && cr != last)
+                                    .ToList() is not {} inBetween
+                                || inBetween.Count == 0)
+                            {
+                                action.RevertRequested = true;
+                                return;
+                            }
+                            
+                            // Invoke 2 runes
+                            foreach (Creature target in (Creature[])[first, last])
+                            {
+                                if (!await CommonRuneRules.ChooseARuneToInvoke(
+                                        caster,
+                                        cr => cr == target,
+                                        overrideRange: range,
+                                        skipConfirmation: true))
+                                {
+                                    action.SpentActions = 1;
+                                    caster.Battle.Log("Chain of Words converted to a simple Invoke Rune action.");
+                                    return;
+                                }
+                            }
+
+                            // Sound effect
+                            Sfxs.Play(SfxName.MagicMissile);
+                            
+                            // Particle splash on each tile
+                            const int numParticles = 10;
+                            List<Particle> projectiles = [];
+                            foreach (Tile tile in targets.ChosenTiles
+                                         .Except(((Creature[])[first, last])
+                                             .SelectMany(cr => cr.Space.Tiles))
+                                         .ToList())
+                            {
+                                projectiles.AddRange(caster.Battle.SpawnOvercreatureProjectileParticles(
+                                    numParticles, tile, tile, Color.White, IllustrationName.LightningBolt));
+                            }
+                            await caster.Battle.WaitForProjectiles(projectiles);
+                            
+                            // Deal damage in-between targets
+                            foreach (Creature target in inBetween)
+                            {
+                                CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(
+                                    target,
+                                    action,
+                                    new SavingThrow(
+                                        Defense.Reflex,
+                                        caster.ClassDC(Trait.Runesmith)));
+
+                                await CommonSpellEffects.DealBasicDamage(
+                                    action, caster, target, result,
+                                    DiceFormula.FromText($"{numDice}d6", "Chain of Words"),
+                                    DamageKind.Force);
+
+                                if (result == CheckResult.CriticalFailure)
+                                {
+                                    QEffect immobilized = QEffect.Immobilized()
+                                        .WithExpirationInOneRound(caster);
+                                    immobilized.ProvideContextualAction = qfEscape =>
+                                        new ActionPossibility(
+                                                Possibilities.CreateEscapeAgainstEffect(
+                                                    qfEscape.Owner,
+                                                    qfEscape,
+                                                    "Chain of Words",
+                                                    caster.ClassDC(Trait.Runesmith)))
+                                            .WithPossibilityGroup(Constants
+                                                .POSSIBILITY_GROUP_CONTEXTUAL_GET_RID_OF_DEBUFF);
+                                    target.AddQEffect(immobilized);
+                                }
+                            }
+
+                            qfThis.UsedUpPermanently = true;
+                        });
+
+                    return new ActionPossibility(chain)
+                        .WithPossibilityGroup(ModData.PossibilityGroups.INVOKING_RUNES);
+                };
+            });
         
         // Clashing Compound Invocation
         yield return new TrueFeat(
