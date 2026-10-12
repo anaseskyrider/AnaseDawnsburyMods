@@ -591,7 +591,7 @@ public static class LibraryOfAnase
                         item.HasTrait(Trait.Ranged)
                             ? RangeKind.Ranged
                             : RangeKind.Melee,
-                        -1);
+                        map);
                 FilterAndAdd(strike);
                 // If this is a melee weapon that can be thrown, add another possibility
                 if (item.HasTrait(Trait.Melee) && item.WeaponProperties!.Throwable)
