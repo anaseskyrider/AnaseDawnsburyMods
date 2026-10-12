@@ -40,6 +40,7 @@ namespace Dawnsbury.Mods.RunesmithClass;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
+/// <item>v2.9: Adjust StrikeCreature signature to include a specific MAP value.</item>
 /// <item>v2.8: Add string.AddIfNotNull().</item>
 /// <item>v2.7: Add Creature.AskForChoiceAmongItems(), CommonSpellEffects.DealAttackRollPersistentDamage(), CombatAction.WithAdjustTarget().</item>
 /// <item>v2.6: Updated functionality of both GameLoop.OfferOptions2 extensions, changed their returns to Task{bool}, and added shortcuts to them as Creature.OfferOptions2(). Remove CombatAction.CreatePass(). Added LongMovement.GetCostOfPath() as instanced and static functions.</item>
@@ -60,7 +61,7 @@ namespace Dawnsbury.Mods.RunesmithClass;
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
-/// <value>v2.8</value>
+/// <value>v2.9</value>
 public static class LibraryOfAnase
 {
     extension(Creature cr)
@@ -544,9 +545,10 @@ public static class LibraryOfAnase
             Illustration? topBarIcon,
             string? topBarText,
             bool allowCancel,
-            string? allowPass)
+            string? allowPass,
+            int map = -1)
         {
-            List<Option> possibilities = CommonCombatActions.GetStrikePossibilities(self, isValidStrike, adjustStrike, isValidTarget);
+            List<Option> possibilities = CommonCombatActions.GetStrikePossibilities(self, isValidStrike, adjustStrike, isValidTarget, map);
             if (allowCancel)
                 possibilities.Add(new CancelOption(true));
             else if (allowPass != null)
@@ -571,13 +573,14 @@ public static class LibraryOfAnase
         }
         
         /// <summary>
-        /// Functions as <see cref="CommonCombatActions.GetStrikePossibilities(Creature, bool, Func{Creature,bool}?)"/> except you can modify each Strike as it's being generated, and filter Strikes.
+        /// Functions as <see cref="CommonCombatActions.GetStrikePossibilities(Creature, bool, Func{Creature,bool}?)"/> except you can modify each Strike as it's being generated, filter Strikes, and set its MAP.
         /// </summary>
         public static List<Option> GetStrikePossibilities(
             Creature self,
             Func<CombatAction, bool>? isValidStrike,
             Action<CombatAction>? adjustStrike,
-            Func<Creature, bool>? isValidTarget)
+            Func<Creature, bool>? isValidTarget,
+            int map = -1)
         {
             List<Option> options = [];
             foreach (Item item in self.Weapons)
@@ -597,7 +600,7 @@ public static class LibraryOfAnase
                         self,
                         item,
                         RangeKind.Ranged,
-                        -1,
+                        map,
                         true);
                     FilterAndAdd(thrown);
                 }

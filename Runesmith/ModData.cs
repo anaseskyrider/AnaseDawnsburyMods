@@ -434,6 +434,7 @@ public static class ModData
         public static readonly Illustration DiacriticFluency = new ModdedIllustration(MOD_FOLDER+"esoteric.png");
         public static readonly Illustration DrawnInVitalInk = new ModdedIllustration(MOD_FOLDER+"knife.png");
         public static readonly Illustration RuneSinger = new ModdedIllustration(MOD_FOLDER+"musical-note.png");
+        public static readonly Illustration DanceOfBloodyInk = new ModdedIllustration(MOD_FOLDER+"bouncing-sword.png");
         
         #endregion
         

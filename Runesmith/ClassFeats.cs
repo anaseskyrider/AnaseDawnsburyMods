@@ -3400,6 +3400,141 @@ public static class ClassFeats
         // TODO: Phase 3, level 14 class feats.
 
         // Dance of Bloody Ink
+        yield return new TrueFeat(
+                ModData.FeatNames.DanceOfBloodyInk, 14,
+                "As you lash out, your weapon is your brush, wounds forming words of power in your target's flesh.",
+                $$"""
+                You {{ModData.FeatNames.InvokeRune.ToLink("Invoke a Rune")}} on a melee weapon you are wielding and Strike. Then, you can Step and Strike again with the same weapon. If the second Strike hits, you {{ModData.FeatNames.TraceRune.ToLink("Trace a Rune")}} onto the target of the Strike.
+
+                Both attacks count toward your multiple attack penalty, but you do not increase your penalty until you have made all your attacks.
+                """,
+                [Trait.Runesmith])
+            .WithActionCost(3)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + " Invoke a Rune on your melee weapon, Strike with it, Step, Strike again, and Trace a Rune on the target if you hit.";
+
+                qfFeat.ProvideStrikeModifier = item =>
+                {
+                    if (!item.HasTrait(Trait.Melee)
+                        || item.HasTrait(Trait.Unarmed))
+                        return null;
+
+                    List<DrawnRune> runesOnWeapon = DrawnRune
+                        .GetDrawnRunes(qfFeat.Owner, qfFeat.Owner)
+                        .Where(dr => dr.DrawnOn == item)
+                        .ToList();
+
+                    CombatAction basicStrike = qfFeat.Owner.CreateStrike(item, qfFeat.Owner.Actions.AttackedThisManyTimesThisTurn)
+                        .WithActionCost(0);
+
+                    CombatAction dance = new CombatAction(
+                            qfFeat.Owner,
+                            /*new BagOfIllustrationsIllustration(
+                                ModData.Illustrations.InvokeRune,
+                                item.Illustration,
+                                IllustrationName.Walk,
+                                item.Illustration)*/
+                            new TriplePortraitIllustration(
+                                ModData.Illustrations.InvokeRune,
+                                ModData.Illustrations.DanceOfBloodyInk,
+                                ModData.Illustrations.TraceRune),
+                            "Dance of Bloody Ink",
+                            [ModData.ModTrait, Trait.Runesmith],
+                            """
+                            {i}As you lash out, your weapon is your brush, wounds forming words of power in your target's flesh.{/i}
+
+                            You Invoke a Rune on a melee weapon you are wielding and Strike. Then, you can Step and Strike again with the same weapon. If the second Strike hits, you Trace a Rune onto the target of the Strike.
+
+                            Both attacks count toward your multiple attack penalty, but you do not increase your penalty until you have made all your attacks.
+                            """,
+                            Target.Self()
+                                .WithAdditionalRestriction(self =>
+                                {
+                                    if (runesOnWeapon.Count == 0)
+                                        return "No runes on weapon";
+                                    if (!basicStrike.CanBeginToUse(self))
+                                        return "Can't Strike";
+                                    if (!self.WouldBeAbleToStride())
+                                        return "Can't move";
+                                    if ((basicStrike.Target as CreatureTarget)!.GetLegalTargetCreatures(self).Count == 0)
+                                        return "No target in range";
+                                    return null;
+                                }))
+                        .WithActionCost(3)
+                        .WithEffectOnSelf(async (action, caster) =>
+                        {
+                            if (!await CommonRuneRules.ChooseARuneToInvoke(
+                                    caster,
+                                    cr => cr == caster,
+                                    rune => runesOnWeapon.Select(dr => dr.Rune).Contains(rune),
+                                    canBeCanceled: true,
+                                    passText: "Abort",
+                                    additionalTopText: " This must be a rune on your weapon. (1/5)"))
+                            {
+                                action.RevertRequested = true;
+                                return;
+                            }
+                            
+                            int cacheMap = qfFeat.Owner.Actions.AttackedThisManyTimesThisTurn;
+                            Creature? chosenCr1 = null;
+                            
+                            if (!await CommonCombatActions.StrikeCreature(
+                                    caster,
+                                    strike => strike.Item == item,
+                                    strike => strike
+                                        .WithEffectOnEachTarget(async (_, _, target, _) =>
+                                            chosenCr1 = target),
+                                    null,
+                                    action.Illustration,
+                                    "Choose a creature to Strike as part of Dance of Bloody Ink. (2/5)",
+                                    true,
+                                    "Convert to simple Invoke Rune",
+                                    cacheMap))
+                            {
+                                action.SpentActions = 1;
+                                caster.Battle.Log("Dance of Bloody Ink converted to a simple Invoke Rune.");
+                                return;
+                            }
+
+                            if (!await caster.StepAsync($"Choose where to Step as part of Dance of Bloody Ink. You should end your movement near an enemy within reach of your {item.Illustration.IllustrationAsIconString} {item.ShortName}. (3/5)", true, true))
+                            {
+                                // Don't allow you to revert just because the initial target died.
+                                if (chosenCr1?.DeathScheduledForNextStateCheck == true)
+                                    return;
+                                action.SpentActions = 2;
+                                caster.Battle.Log("Dance of Bloody Ink converted to a simple Invoke Rune and Strike.");
+                                return;
+                            }
+                            
+                            // No more reversions from here
+
+                            await CommonCombatActions.StrikeCreature(
+                                caster,
+                                strike => strike.Item == item,
+                                strike => strike
+                                    .WithEffectOnEachTarget(async (_, caster2, target, result) =>
+                                    {
+                                        if (result < CheckResult.Success)
+                                            return;
+                                        await caster2.FictitiousSingleTileMoveBack();
+                                        await CommonRuneRules.TraceAnyRuneOnACreature(
+                                            caster2,
+                                            runeFilter: rune => rune.DrawProperties.IsDrawnOnlyOnCreatures,
+                                            targetFilter: cr => cr == target);
+                                    }),
+                                null,
+                                action.Illustration,
+                                "Choose a creature to Strike as part of Dance of Bloody Ink. (4/5)",
+                                true,
+                                "Convert to simple Invoke Rune",
+                                cacheMap);
+                        });
+
+                    return dance;
+                };
+            });
 
         // Define the Canvas
         yield return new TrueFeat(
