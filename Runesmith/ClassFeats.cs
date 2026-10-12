@@ -1430,7 +1430,9 @@ public static class ClassFeats
                             {
                                 // Capture before it gets removed
                                 Creature owner = dr.Owner;
-                                await CommonRuneRules.InvokeDrawnRune(action, dr);
+                                await CommonRuneRules.InvokeDrawnRune(
+                                    action, dr,
+                                    await CommonRuneRules.GetInvocationTargets(action, dr));
                                 owner.AddQEffect(new QEffect(
                                     "Glorious Song",
                                     "You have a +1 status bonus to skill checks as well as saves against fear.",
@@ -1959,6 +1961,7 @@ public static class ClassFeats
                     "a weapon with the disarm, shove, or trip trait"));
         
         // Runic Reprisal
+        // DOC: If you don't get disrupted, the rune is eventually applied and then the delayed post-action Shield Block reaction sees the newly applied rune and attempts to invoke it, despite the damage and the block event occuring before the rune was traced. This will not be fixed due to ease of play and avoidance of player confusion.
         yield return new TrueFeat(
                 ModData.FeatNames.RunicReprisal, 6,
                 "When you Raise your Shield, you can bury a runic trap into it, which is set off by the clash of an enemy weapon.",
@@ -2078,7 +2081,7 @@ public static class ClassFeats
                                         new EnemyCreatureTargetingRequirement()))
                             .WithActionCost(0)
                             .WithTag(reprisalDr)
-                            .WithEffectOnEachTarget(async (_, caster, target, _) =>
+                            .WithEffectOnEachTarget(async (reprisalAction, caster, target, _) =>
                             {
                                 target.AddQEffect(new QEffect(ExpirationCondition.EphemeralAtEndOfImmediateAction)
                                 {
@@ -2094,6 +2097,22 @@ public static class ClassFeats
 
                                         if (invokeThisRune == null)
                                             return;
+                                        
+                                        // Overwrite effect behavior to skip subtargeting and supply prechosen targets.
+                                        invokeThisRune.EffectOnOneTarget = async (invokeAction, caster2, effectTarget, _) =>
+                                        {
+                                            // Apply invocation effects
+                                            await CommonRuneRules.InvokeDrawnRune(
+                                                invokeAction,
+                                                reprisalDr,
+                                                await CommonRuneRules.GetInvocationTargets(
+                                                    invokeAction,
+                                                    reprisalDr,
+                                                    invokeAction.ChosenTargets));
+                                            
+                                            // Log invocation
+                                            CommonRuneRules.LogRune(caster2, invokeAction, reprisalDr, effectTarget);
+                                        };
 
                                         // Move them back, so the invoke animation looks good
                                         await target.FictitiousSingleTileMoveBack();
@@ -2101,6 +2120,15 @@ public static class ClassFeats
                                         await caster.Battle.GameLoop.FullCast(
                                             invokeThisRune,
                                             ChosenTargets.CreateSingleTarget(target));
+
+                                        /*// Move them back, so the invoke animation looks good
+                                        await target.FictitiousSingleTileMoveBack();
+
+                                        // Perform an inline invocation behavior to skip targeting routines
+                                        await CommonRuneRules.InvokeDrawnRune(
+                                            reprisalAction,
+                                            reprisalDr,
+                                            ChosenTargets.CreateSingleTarget(target));*/
                                     }
                                 });
                             }))

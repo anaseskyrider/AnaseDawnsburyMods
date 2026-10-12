@@ -948,8 +948,23 @@ public static class CommonRuneRules
 
     #region Invoking Runes
 
+    public static async Task<ChosenTargets?> GetInvocationTargets(
+        CombatAction invokeAction,
+        DrawnRune drawnRune,
+        ChosenTargets? overrideTargets = null)
+    {
+        ChosenTargets? chosenTargets;
+        if (drawnRune.Rune.InvocationProperties.DetermineChosenTargets is not null)
+            chosenTargets = await drawnRune.Rune.InvocationProperties.DetermineChosenTargets(
+                invokeAction, drawnRune, overrideTargets);
+        else
+            chosenTargets = overrideTargets ?? ChosenTargets.CreateSingleTarget(drawnRune.Owner);
+
+        return chosenTargets;
+    }
+
     /// <summary>
-    /// Creates and returns the CombatAction wrapper which executes the InvocationBehavior of the given runeTarget.
+    /// Creates the CombatAction wrapper which executes the targeting and effect behavior of a rune's invocation.
     /// </summary>
     /// <param name="runesmith">The Creature invoking the rune.</param>
     /// <param name="drawnRune">The DrawnRune to be invoked.</param>
@@ -1057,7 +1072,7 @@ public static class CommonRuneRules
                 // Animation on rune-bearer
                 await PlayInvocationSplashAnimation(targets.ChosenCreature!, rune.Illustration);
             })
-            .WithEffectOnEachTarget(async (invokeAction, caster2, target, result) =>
+            .WithEffectOnEachTarget(async (invokeAction, caster, target, _) =>
             {
                 if (invokeAction.Tag is not RuneActionTag tag
                     || tag.ChosenDrawnRune is null
@@ -1066,15 +1081,20 @@ public static class CommonRuneRules
                     invokeAction.RevertRequested = true;
                     return;
                 }
+
+                // Get chosen targets
+                ChosenTargets? chosenTargets = await CommonRuneRules.GetInvocationTargets(invokeAction, tag.ChosenDrawnRune);
                 
-                CommonRuneRules.LogRune(caster2, invokeAction, tag.ChosenDrawnRune, target);
-                
-                if (!await CommonRuneRules.InvokeDrawnRune(invokeAction, tag.ChosenDrawnRune, target))
+                // Apply invocation effects
+                if (chosenTargets is null
+                    || !await CommonRuneRules.InvokeDrawnRune(invokeAction, tag.ChosenDrawnRune, chosenTargets))
                 {
                     invokeAction.RevertRequested = true;
                     return;
                 }
-                
+
+                // Log invocation
+                CommonRuneRules.LogRune(caster, invokeAction, tag.ChosenDrawnRune, target);
             });
 
         // Saving Throw Tooltip Creator
@@ -1249,24 +1269,23 @@ public static class CommonRuneRules
         
         return anyCombatAction;
     }
-    
+
     /// <summary>
-    /// An INVOCATION ACTION invokes invoke this DRAWN RUNE, possibly onto this TARGET. 
+    /// An INVOCATION ACTION invokes this DRAWN RUNE, affecting these CHOSEN TARGETS. 
     /// </summary>
     /// <param name="sourceAction">The action invoking this rune.</param>
     /// <param name="drawnRune">The rune being invoked, which will be removed from its owner.</param>
-    /// <param name="alternativeTarget">If this invocation needs to affect a specific creature, this is that creature. This behavior is determined by each rune's invocation code.</param>
+    /// <param name="chosenTargets">The chosen targets of the invocation, as determined by <see cref="GetInvocationTargets"/>. Calling that function is preferred over a direct supplying of ChosenTargets because it plays additional animations and sound effects.</param>
     /// <returns>Whether the invocation was successfully completed.</returns>
     public static async Task<bool> InvokeDrawnRune(
         CombatAction sourceAction,
         DrawnRune drawnRune,
-        Creature? alternativeTarget = null)
+        ChosenTargets? chosenTargets)
     {
-        Creature invocationTarget = alternativeTarget ?? drawnRune.Owner;
-        
         if (drawnRune.Rune.InvocationProperties.EffectOnOneTarget == null
             || drawnRune.Hidden
-            || CommonRuneRules.IsImmuneToThisInvocation(invocationTarget, drawnRune.Rune))
+            || chosenTargets?.ChosenCreatures.All(cr =>
+                CommonRuneRules.IsImmuneToThisInvocation(cr, drawnRune.Rune)) == true)
             return false;
         
         List<DrawnRune> callbackRunes = new List<DrawnRune?>
@@ -1297,14 +1316,17 @@ public static class CommonRuneRules
             Sfxs.Play(sfxBefore);
         
         // Invoke the rune
-        List<Creature> affectedCreatures = (await drawnRune.Rune.InvocationProperties.EffectOnOneTarget.Invoke(
-                sourceAction,
-                drawnRune,
-                invocationTarget))
-            ?.WhereNotNull()
-            .ToList() ?? [invocationTarget];
-        
-        // TODO: When doing targeting rewrite, allow for targeting to occur before execution so that cancellation can mean returning false before calling `BeforeInvokingRune` and without removing the rune.
+        List<Creature> affectedCreatures = [];
+        foreach (Creature chosenCreature in chosenTargets?.ChosenCreatures ?? [])
+        {
+            List<Creature>? affected = await drawnRune.Rune.InvocationProperties
+                .EffectOnOneTarget(
+                    sourceAction,
+                    drawnRune,
+                    chosenCreature);
+            if (affected is not null)
+                affectedCreatures.Add(chosenCreature);
+        }
         
         // Make the affected creature immune to further invocations of this rune
         foreach (Creature affectedCreature in affectedCreatures)
@@ -1633,6 +1655,86 @@ public static class CommonRuneRules
         }
         
         return [..innerInvoke.ChosenTargets.ChosenCreatures];
+    }
+
+    public static async Task<ChosenTargets?> GetInnerInvokeTargets(
+        CombatAction outerInvoke,
+        DrawnRune invokedRune,
+        Target target,
+        bool includeRuneBearer,
+        SfxName? soundEffect,
+        Action<CombatAction>? finalAdjustments = null,
+        ChosenTargets? overrideTargets = null)
+    {
+        // Automate target behavior
+        switch (target)
+        {
+            // Area targets always emit from the rune-bearer
+            // and cannot affect anyone immune to the invocation.
+            case AreaTarget arTar:
+            {
+                arTar.WithIncludeOnlyIf((tar, cr) =>
+                    !CommonRuneRules.IsImmuneToThisInvocation(cr, invokedRune.Rune));
+
+                arTar.WithAlternateCreatureOfOrigin(invokedRune.Owner);
+                
+                if (arTar is EmanationTarget emTar)
+                {
+                    if (!includeRuneBearer)
+                        emTar.WithIncludeOnlyIf((tar, cr) =>
+                            cr != invokedRune.Owner);
+                }
+                break;
+            }
+            // Creature targets cannot affect anyone immune to the
+            // invocation.
+            case CreatureTarget crTar:
+            {
+                crTar.AlternateTileOfOrigin = invokedRune.Owner.Space.CenterTile;
+                crTar.WithAdditionalConditionOnTargetCreature(
+                    new IsNotImmuneToInvocation(invokedRune.Rune));
+
+                if (!includeRuneBearer)
+                    crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
+                        d == invokedRune.Owner
+                            ? Usability.NotUsableOnThisCreature("Cannot target rune-bearer")
+                            : Usability.Usable);
+                break;
+            }
+        }
+        
+        // Create action wrapper.
+        // Assists with targeting and tooltip breakdowns.
+        CombatAction innerInvoke = new CombatAction(
+                outerInvoke.Owner,
+                invokedRune.Rune.Illustration,
+                $"Invoke {invokedRune.Rune.FullName}",
+                [..invokedRune.Rune.Traits, ModData.Traits.Invocation, Trait.DoNotShowInCombatLog, Trait.UnaffectedByConcealment],
+                invokedRune.Rune.InvocationProperties.InvocationTextWithFormattedHeightening?.Invoke(invokedRune.Rune, outerInvoke.Owner.Level) ?? "",
+                target)
+            .WithActionCost(0)
+            .WithSoundEffect(soundEffect!)
+            .WithProjectileCone(
+                VfxStyle.BasicProjectileCone(invokedRune.Rune.Illustration));
+
+        if (outerInvoke.Tag is RuneActionTag outerTag)
+            innerInvoke.WithRuneTag(outerTag.Rune, chosenRune: outerTag.ChosenDrawnRune);
+        
+        finalAdjustments?.Invoke(innerInvoke);
+        
+        bool result = overrideTargets is null
+            ? await outerInvoke.Owner.Battle.GameLoop.FullCast(innerInvoke)
+            : await outerInvoke.Owner.Battle.GameLoop.FullCast(
+                innerInvoke,
+                overrideTargets);
+
+        if (!result)
+        {
+            outerInvoke.RevertRequested = true;
+            return null;
+        }
+        
+        return innerInvoke.ChosenTargets;
     }
 
     #region Immunities

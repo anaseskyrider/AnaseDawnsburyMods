@@ -31,6 +31,7 @@ using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
 using Dawnsbury.Mods.RunesmithClass.RuneRules;
+using Dawnsbury.Mods.RunesmithClass.TargetingRequirements;
 using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.RunesmithClass;
@@ -201,12 +202,11 @@ public static class AllRunes
                             && cr.HasEffect(QEffectId.Frightened))
                             ? Usability.Usable
                             : Usability.NotUsableOnThisCreature("No cureable frightened allies within 10 feet"))
-                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    .WithChosenTargeting(async (invokeAction, invokedRune, overrideTargets) =>
                     {
-                        return await CommonRuneRules.ExecuteInnerInvokeAction(
+                        return await CommonRuneRules.GetInnerInvokeTargets(
                             invokeAction,
                             invokedRune,
-                            effectTarget,
                             ((EmanationTarget)Target.AlliesOnlyEmanation(2))
                             .WithIncludeOnlyIf((tar, cr) =>
                                 cr != tar.OwnerAction.Owner
@@ -215,39 +215,45 @@ public static class AllRunes
                                 && cr.HasEffect(QEffectId.Frightened)),
                             false,
                             ModData.SfxNames.INVOKED_BARUIEL,
-                            false,
-                            async (_, _, target, _) =>
-                            {
-                                /*Fighter.ReduceFrightenedValueOfFrightened(
+                            overrideTargets: overrideTargets);
+                    })
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        if (effectTarget.FindQEffect(QEffectId.Frightened) is not { } frightened
+                            || effectTarget.IsImmuneTo(Trait.Emotion)
+                            || effectTarget.IsImmuneTo(Trait.Mental))
+                            return null;
+                        
+                        /*Fighter.ReduceFrightenedValueOfFrightened(
                                     target,
                                     target.FindQEffect(QEffectId.Frightened));
                                 Fighter.ReduceFrightenedValueOfFrightened(
                                     target,
                                     target.FindQEffect(QEffectId.Frightened));*/
-                                // Do this manually, treating CalmAndCentered as
-                                // extra -1 value instead of -(2x).
-                                if (target.FindQEffect(QEffectId.Frightened) is not { } frightened)
-                                    return;
-                                int oldValue = frightened.Value;
-                                if (target.HasEffect(QEffectId.DirgeOfDoomFrightenedSustainer))
-                                {
-                                    frightened.Value = Math.Max(1, frightened.Value - 2);
-                                }
-                                else
-                                {
-                                    frightened.Value -= 2;
-                                    if (target.HasEffect(QEffectId.CalmAndCentered))
-                                        frightened.Value -= 3;
-                                }
+                        
+                        // Do this manually, treating CalmAndCentered as
+                        // extra -1 value instead of -(2x).
+                        
+                        int oldValue = frightened.Value;
+                        if (effectTarget.HasEffect(QEffectId.DirgeOfDoomFrightenedSustainer))
+                        {
+                            frightened.Value = Math.Max(1, frightened.Value - 2);
+                        }
+                        else
+                        {
+                            frightened.Value -= 2;
+                            if (effectTarget.HasEffect(QEffectId.CalmAndCentered))
+                                frightened.Value -= 3;
+                        }
 
-                                target.Battle.Log($"{target.Name}'s frightened value has been reduced from {oldValue} to {Math.Max(0, frightened.Value)}.");
+                        effectTarget.Battle.Log($"{effectTarget.Name}'s frightened value has been reduced from {oldValue} to {Math.Max(0, frightened.Value)}.");
 
-                                if (frightened.Value > 0)
-                                    return;
+                        if (frightened.Value > 0)
+                            return null;
                                 
-                                frightened.ExpiresAt = ExpirationCondition.Immediately;
-                            }
-                        );
+                        frightened.ExpiresAt = ExpirationCondition.Immediately;
+
+                        return effectTarget;
                     }),
                 [Trait.Emotion, Trait.Mental])
             .ToFeat();
@@ -459,12 +465,11 @@ public static class AllRunes
                         ($"{rune.CalculateHeightening(1, 2, 1, level).FinalValue}d8", DamageKind.Slashing))
                     .WithDefense(Defense.Reflex)
                     .WithHideTooltip()
-                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    .WithChosenTargeting(async (invokeAction, invokedRune, overrideTargets) =>
                     {
-                        return await CommonRuneRules.ExecuteInnerInvokeAction(
+                        return await CommonRuneRules.GetInnerInvokeTargets(
                             invokeAction,
                             invokedRune,
-                            effectTarget,
                             Target.RangedCreature(1)
                                 // Enemy of invoker, not action-taker
                                 .WithAdditionalConditionOnTargetCreature((a, d) =>
@@ -473,15 +478,16 @@ public static class AllRunes
                                         : Usability.CommonReasons.TargetIsNotEnemy),
                             false,
                             ModData.SfxNames.INVOKED_ESVADIR,
-                            true,
-                            async (innerInvoke, runeBearer, innerTarget, result) =>
-                            {
-                                await CommonRuneRules.SaveAgainstInvocation(
-                                    innerInvoke,
-                                    invokedRune,
-                                    innerTarget,
-                                    knownResult: result);
-                            });
+                            overrideTargets: overrideTargets);
+                    })
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        await CommonRuneRules.SaveAgainstInvocation(
+                            invokeAction,
+                            invokedRune,
+                            effectTarget);
+
+                        return effectTarget;
                     }))
             .WithLevelText(
                 "+2",
@@ -981,92 +987,21 @@ public static class AllRunes
                         : Usability.NotUsableOnThisCreature("No adjacent enemies that aren't immune to illusion, mental, or visual effects"))
                     .WithDefense(Defense.Perception)
                     .WithHideTooltip() // Is an AoE that does not affect the rune-bearer
-                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    .WithChosenTargeting(async (invokeAction, invokedRune, overrideTargets) =>
                     {
                         const float emanationSize = 1f; // 5 feet
-
-                        return await CommonRuneRules.ExecuteInnerInvokeAction(
+                        return await CommonRuneRules.GetInnerInvokeTargets(
                             invokeAction,
                             invokedRune,
-                            effectTarget,
                             Target.Emanation((int)emanationSize)
                                 .WithIncludeOnlyIf((_, cr) => IsValidTarget(cr))
                                 // This is mildly inefficient, but necessary to limit bad attempts to invoke.
                                 .WithAdditionalRequirementOnCaster(self =>
-                                    effectTarget.Neighbours.Creatures.Any(IsValidTarget)
+                                    invokedRune.Owner.Neighbours.Creatures.Any(IsValidTarget)
                                         ? Usability.Usable
                                         : Usability.NotUsable("No valid creatures in range")),
                             false,
                             ModData.SfxNames.INVOKED_OLJINEX,
-                            false,
-                            async (invokeOljinex, _, invokeTarget, _) =>
-                            {
-                                QEffect invokedOljinex = invokedRune.NewInvocationEffect(
-                                    $"You must first succeed at a Perception check against {invokeAction.Owner.ToColoredBoldedName()+"'s"} class DC before you can willingly move further away from {invokedRune.Owner.ToColoredBoldedName()}. On a failure, the action is lost. On a success, you disbelieve the illusion.",
-                                    ExpirationCondition.ExpiresAtStartOfSourcesTurn,
-                                    invokeQf =>
-                                    {
-                                        invokeQf.Source = invokeAction.Owner;
-                                        invokeQf.SourceAction = invokeOljinex;
-                                        invokeQf.CountsAsADebuff = true;
-                                        // TODO: Consider recoding with tedious StateCheckWithVisibleChanges and LongMovement inspections.
-                                        invokeQf.AfterYouMoveOneSquare = async (qfThis, action, style, before, after) =>
-                                        {
-                                            if (action is null
-                                                || action.Owner != qfThis.Owner
-                                                || !action.HasTrait(Trait.Move)
-                                                || style is null
-                                                || style.ForcedMovement
-                                                || after.DistanceTo(qfThis.Source!) <= before.DistanceTo(qfThis.Source!))
-                                                return;
-                                            
-                                            CombatAction seekOljinex = DisbelieveOljinex(qfThis, action, before);
-
-                                            await qfThis.Owner.Battle.GameLoop.FullCast(seekOljinex);
-                                        };
-                                        
-                                        return;
-
-                                        CombatAction DisbelieveOljinex(QEffect qfThis, CombatAction? moveAction, Tile? before)
-                                        {
-                                            CombatAction seekOljinex = new CombatAction(
-                                                    qfThis.Owner,
-                                                    new SideBySideIllustration(
-                                                        invokedRune.Rune.Illustration,
-                                                        IllustrationName.Seek),
-                                                    "Disbelieve Oljinex",
-                                                    [Trait.Basic, Trait.IsNotHostile, Trait.DoesNotBreakStealth, Trait.UsesPerception],
-                                                    $"Attempt to disbelieve Oljinex' illusory walls with a Perception check against the runesmith's class DC.{S.FourDegreesOfSuccess(
-                                                        null,
-                                                        "You disbelieve the illusion, allowing you to move normally.",
-                                                        "You don't disbelieve the illusion, wasting any actions you spent attempting to move through the walls.",
-                                                        null)}",
-                                                    Target.Self())
-                                                .WithActiveRollSpecification(new ActiveRollSpecification(
-                                                    TaggedChecks.Perception(),
-                                                    Checks.FlatDC(qfThis.Source!.ClassDC(ModData.Traits.Runesmith))))
-                                                .WithActionId(ActionId.Seek)
-                                                .WithActionCost(0);
-                                            if (moveAction is not null && before is not null)
-                                            {
-                                                seekOljinex.WithEffectOnEachTarget(async (_, disbeliever, _, result) =>
-                                                {
-                                                    if (result > CheckResult.Failure)
-                                                        disbeliever.RemoveAllQEffects(qf => qf == qfThis);
-                                                    else
-                                                    {
-                                                        moveAction.Disrupted = true;
-                                                        await disbeliever.SingleTileMove(before, null, null);
-                                                    }
-                                                });
-                                            }
-
-                                            return seekOljinex;
-                                        }
-                                    });
-
-                                invokeTarget.AddQEffect(invokedOljinex);
-                            },
                             finalAdjustments: innerInvoke =>
                             {
                                 innerInvoke.WithEffectOnChosenTargets(async (invokeOljinex, caster, targets) =>
@@ -1097,7 +1032,8 @@ public static class AllRunes
                                             }
                                         });
                                 });
-                            });
+                            },
+                            overrideTargets: overrideTargets);
                         
                         bool IsValidTarget(Creature cr) =>
                             cr != invokedRune.Owner
@@ -1105,6 +1041,81 @@ public static class AllRunes
                             && !(cr.IsImmuneTo(Trait.Illusion)
                                  || cr.IsImmuneTo(Trait.Mental)
                                  || cr.IsImmuneTo(Trait.Visual));
+                    })
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        if (effectTarget.IsImmuneTo(Trait.Illusion)
+                            || effectTarget.IsImmuneTo(Trait.Mental)
+                            || effectTarget.IsImmuneTo(Trait.Visual))
+                            return null;
+                        
+                        QEffect invokedOljinex = invokedRune.NewInvocationEffect(
+                            $"You must first succeed at a Perception check against {invokeAction.Owner.ToColoredBoldedName()+"'s"} class DC before you can willingly move further away from {invokedRune.Owner.ToColoredBoldedName()}. On a failure, the action is lost. On a success, you disbelieve the illusion.",
+                            ExpirationCondition.ExpiresAtStartOfSourcesTurn,
+                            invokeQf =>
+                            {
+                                invokeQf.Source = invokeAction.Owner;
+                                invokeQf.SourceAction = invokeAction;
+                                invokeQf.CountsAsADebuff = true;
+                                // TODO: Consider recoding with tedious StateCheckWithVisibleChanges and LongMovement inspections.
+                                invokeQf.AfterYouMoveOneSquare = async (qfThis, action, style, before, after) =>
+                                {
+                                    if (action is null
+                                        || action.Owner != qfThis.Owner
+                                        || !action.HasTrait(Trait.Move)
+                                        || style is null
+                                        || style.ForcedMovement
+                                        || after.DistanceTo(qfThis.Source!) <= before.DistanceTo(qfThis.Source!))
+                                        return;
+                                    
+                                    CombatAction seekOljinex = DisbelieveOljinex(qfThis, action, before);
+
+                                    await qfThis.Owner.Battle.GameLoop.FullCast(seekOljinex);
+                                };
+                                
+                                return;
+
+                                CombatAction DisbelieveOljinex(QEffect qfThis, CombatAction? moveAction, Tile? before)
+                                {
+                                    CombatAction seekOljinex = new CombatAction(
+                                            qfThis.Owner,
+                                            new SideBySideIllustration(
+                                                invokedRune.Rune.Illustration,
+                                                IllustrationName.Seek),
+                                            "Disbelieve Oljinex",
+                                            [Trait.Basic, Trait.IsNotHostile, Trait.DoesNotBreakStealth, Trait.UsesPerception],
+                                            $"Attempt to disbelieve Oljinex' illusory walls with a Perception check against the runesmith's class DC.{S.FourDegreesOfSuccess(
+                                                null,
+                                                "You disbelieve the illusion, allowing you to move normally.",
+                                                "You don't disbelieve the illusion, wasting any actions you spent attempting to move through the walls.",
+                                                null)}",
+                                            Target.Self())
+                                        .WithActiveRollSpecification(new ActiveRollSpecification(
+                                            TaggedChecks.Perception(),
+                                            Checks.FlatDC(qfThis.Source!.ClassDC(ModData.Traits.Runesmith))))
+                                        .WithActionId(ActionId.Seek)
+                                        .WithActionCost(0);
+                                    if (moveAction is not null && before is not null)
+                                    {
+                                        seekOljinex.WithEffectOnEachTarget(async (_, disbeliever, _, result) =>
+                                        {
+                                            if (result > CheckResult.Failure)
+                                                disbeliever.RemoveAllQEffects(qf => qf == qfThis);
+                                            else
+                                            {
+                                                moveAction.Disrupted = true;
+                                                await disbeliever.SingleTileMove(before, null, null);
+                                            }
+                                        });
+                                    }
+
+                                    return seekOljinex;
+                                }
+                            });
+
+                        effectTarget.AddQEffect(invokedOljinex);
+
+                        return effectTarget;
                     }),
                 additionalTraits: [Trait.Arcane])
             .WithLevelText("+4", "The status bonus to Hardness increases by 1.")
@@ -1164,24 +1175,16 @@ public static class AllRunes
                             ? Usability.Usable
                             : Usability.NotUsableOnThisCreature("No enemies within 20 feet"))
                     .WithDefense(Defense.Fortitude)
-                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    .WithChosenTargeting(async (invokeAction, invokedRune, overrideTargets) =>
                     {
                         const float emanationSize = 4f; // 20 feet
 
-                        return await CommonRuneRules.ExecuteInnerInvokeAction(
+                        return await CommonRuneRules.GetInnerInvokeTargets(
                             invokeAction,
                             invokedRune,
-                            effectTarget,
                             Target.Emanation((int)emanationSize),
                             true,
                             ModData.SfxNames.INVOKED_PLUUNA,
-                            true,
-                            async (_,_, invokeTarget, result) =>
-                            {
-                                if (result <= CheckResult.Failure)
-                                    invokeTarget.AddQEffect(QEffect.Dazzled()
-                                        .WithExpirationAtStartOfSourcesTurn(invokeAction.Owner, 1));
-                            },
                             finalAdjustments: innerInvoke =>
                             {
                                 innerInvoke.WithEffectOnChosenTargets(async (_,_,_) =>
@@ -1195,9 +1198,28 @@ public static class AllRunes
                                                 qfThis.Owner.DetectionStatus.Undetected = false;
                                         });
 
-                                    effectTarget.AddQEffect(invokedPluuna);
+                                    invokedRune.Owner.AddQEffect(invokedPluuna);
                                 });
+                            },
+                            overrideTargets: overrideTargets);
+                    })
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        /*if (effectTarget.IsImmuneTo(Trait.Light))
+                            return null;*/
+                        
+                        await CommonRuneRules.SaveAgainstInvocation(
+                            invokeAction,
+                            invokedRune,
+                            effectTarget,
+                            async (_, invokeTarget, result) =>
+                            {
+                                if (result <= CheckResult.Failure)
+                                    invokeTarget.AddQEffect(QEffect.Dazzled()
+                                        .WithExpirationAtStartOfSourcesTurn(invokeAction.Owner, 1));
                             });
+
+                        return effectTarget;
                     }),
                 [Trait.Light, Trait.Rebalanced])
             .ToFeat();
@@ -1762,7 +1784,7 @@ public static class AllRunes
                 new RuneDrawProperties(
                         "drawn on a rune that deals damage",
                         drawnOnRune: true)
-                    .WithDiacriticTargetingRequirements()
+                    .WithBasicDiacriticTargetingRequirements()
                     .WithBaseRuneMustDealDamage()
                     .WithBaseRuneMustNotBeArea(),
                 new RunePassiveProperties(
@@ -1845,30 +1867,111 @@ public static class AllRunes
                             };
                         }
                     }),
-                new RuneInvocationProperties(null, null),
+                null,
                 [ModData.Traits.Diacritic])
             .ToFeat();
         
-        // TODO: Fob-, Diacritic Rune of Doubling
-        yield return DebugRune(RuneId.Fob, "This diacritic consists of pairs of diamonds in opposite positions around the base rune.", 
-            rune =>
-            {
-                rune.PassiveProperties.PassiveText = "When the base rune is invoked, the rune-bearer is affected by it as usual, and you can choose to also be affected by the invocation if possible.";
-                rune.WithIllustration(new DoublePortraitIllustration(
-                    IllustrationName.RunestoneWinged,
-                    IllustrationName.RunestoneWinged));
-            });
-        /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
-            .ToFeat();*/
+        // Fob-, Diacritic Rune of Doubling
+        yield return new Rune(
+                RuneId.Fob,
+                "This diacritic consists of pairs of diamonds in opposite positions around the base rune.",
+                RuneDrawProperties.Diacritic("that doesn't deal damage")
+                    .WithBaseRuneDoesNotDealDamage(true)
+                    .WithDrawnRuneRequirement(new LegacyRuneTargetingRequirement((a, dr) =>
+                        dr.Rune.InvocationProperties.EffectOnOneTarget is not null
+                        && dr.Rune.InvocationProperties.IsLegalTarget(a, a).CanBeUsed
+                            ? Usability.Usable
+                            : Usability.NotUsableOnThisCreature("You cannot be affected by this invocation"))),
+                RunePassiveProperties.Diacritic(
+                        "When the base rune is invoked, the rune-bearer is affected by it as usual, and you can choose to also be affected by the invocation if possible.")
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        return await CommonRuneRules.ChooseARuneToDrawOn(
+                            drawAction,
+                            drawAction.Owner,
+                            target,
+                            subTarget is DrawnRune runeTarget
+                                ? drOnto =>
+                                    drOnto == runeTarget
+                                : drOnto =>
+                                    drOnto.Rune.InvocationProperties.EffectOnOneTarget is not null
+                                    && !drOnto.Rune.InvocationProperties.DealsDamage
+                                    && drOnto.Rune.Id != RuneId.Marssyl
+                                    && drOnto.Rune.InvocationProperties.IsLegalTarget(drawAction.Owner, drawAction.Owner),
+                            CreateFobPassive,
+                            "Choose a rune to also affect you when invoked.",
+                            rune);
+                        
+                        // Create rune
+                        DrawnRune? CreateFobPassive(DrawnRune? drawnOnto)
+                        {
+                            if (drawnOnto is null)
+                                return null;
+                            
+                            return new DrawnRune(
+                                drawAction,
+                                rune,
+                                (drThis, drOnto) =>
+                                    $"When {drOnto.Illustration!.IllustrationAsIconString} {drOnto.Name!.WithColor("Blue")} is invoked, you can choose to also be affected by the invocation if possible.",
+                                drawnOnto)
+                            {
+                                BeforeInvokingRune = async (drThis, invokeAction, drInvoked) =>
+                                {
+                                    if (drThis.Disabled
+                                        || drInvoked != drThis.DrawnOn
+                                        || drInvoked.Rune.InvocationProperties.EffectOnOneTarget
+                                            is not {} invocationOnEachTarget)
+                                    {
+                                        invokeAction.RevertRequested = true;
+                                        return;
+                                    }
+
+                                    if (!drInvoked.Rune.InvocationProperties.IsLegalTarget(
+                                            drThis.Source!, drThis.Source!))
+                                    {
+                                        drThis.Source!.Battle.Log($"{drThis.Source!.Name} is not a legal target for this invocation.");
+                                        invokeAction.RevertRequested = true;
+                                        return;
+                                    }
+                                },
+                                AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
+                                {
+                                    if (!await drThis.Source!.AskForConfirmation(
+                                            drThis.Rune.Illustration,
+                                            $"{{b}}{drThis.Rune.FullName}{{/b}}\nWould you like to be affected by the following invocation?\n\n{drInvoked.Rune.InvocationProperties.InvocationTextWithHeightening?.Invoke(drInvoked.Rune, drInvoked.Source!.Level) ?? "UNKNOWN INVOCATION."}",
+                                            "Yes", "No"))
+                                    {
+                                        invokeAction.RevertRequested = true;
+                                        return;
+                                    }
+
+                                    // Apply the effects with yourself as the target.
+                                    List<Creature> affectedCreatures = (await drInvoked.Rune.InvocationProperties
+                                            .EffectOnOneTarget!.Invoke(
+                                                invokeAction,
+                                                drInvoked,
+                                                drThis.Source!))
+                                        ?.WhereNotNull()
+                                        .ToList() ?? [];
+                                    
+                                    // Make the affected creatures immune to further invocations of this rune
+                                    foreach (Creature affectedCreature in affectedCreatures)
+                                        affectedCreature.AddQEffect(CommonRuneRules.ImmunityToInvocation(drInvoked.Rune));
+                                },
+                            };
+                        }
+                    }),
+                null,
+                [Trait.Diacritic])
+            .WithIllustration(new DoublePortraitIllustration(
+                IllustrationName.RunestoneWinged,
+                IllustrationName.RunestoneWinged))
+            .ToFeat();
         
         // TODO: Kit-, Diacritic Rune of Mercy
-        yield return DebugRune(RuneId.Kit, "This diacritic frames a rune with soft curves that mitigate its deadlier effects but make them harder to resist.");
+        yield return DebugRune(
+            RuneId.Kit,
+            "This diacritic frames a rune with soft curves that mitigate its deadlier effects but make them harder to resist.");
         /*yield return new Rune(
                 ,
                 ,
@@ -1879,7 +1982,9 @@ public static class AllRunes
             .ToFeat();*/
         
         // TODO: Per-, Diacritic Rune of Continuum
-        yield return DebugRune(RuneId.Per, "This whirling diacritic recirculates the magic of the base rune onto another creature.", 
+        yield return DebugRune(
+            RuneId.Per,
+            "This whirling diacritic recirculates the magic of the base rune onto another creature.", 
             rune =>
             {
                 rune.PassiveProperties.PassiveText = "After the base rune is invoked, it automatically traces itself on a different target of your choice within 15 feet of the original rune-bearer.";
@@ -1904,7 +2009,7 @@ public static class AllRunes
                 new RuneDrawProperties(
                         "drawn on a rune",
                         drawnOnRune: true)
-                    .WithDiacriticTargetingRequirements()
+                    .WithBasicDiacriticTargetingRequirements()
                     .WithInvokeableOncePerCombatRequirement(RuneId.Sun),
                 new RunePassiveProperties(
                         """
@@ -2008,7 +2113,9 @@ public static class AllRunes
             .ToFeat();
 
         // TODO: Ti-, Diacritic Rune of Fundaments
-        yield return DebugRune(RuneId.Ti, "This wavering diacritic encompasses the base rune to slightly change its meaning.");
+        yield return DebugRune(
+            RuneId.Ti,
+            "This wavering diacritic encompasses the base rune to slightly change its meaning.");
         /*yield return new Rune(
                 ,
                 ,
@@ -2025,7 +2132,7 @@ public static class AllRunes
                 new RuneDrawProperties(
                         "drawn on a rune that deals damage",
                         drawnOnRune: true)
-                    .WithDiacriticTargetingRequirements()
+                    .WithBasicDiacriticTargetingRequirements()
                     .WithBaseRuneMustDealDamage(true),
                 new RunePassiveProperties(
                         "When the base rune is invoked, its invocation gains a status bonus to damage equal to 2 plus half your level.",
@@ -2319,68 +2426,68 @@ public static class AllRunes
                             return
                                 $"The rune lashes out in a 30-foot cone from the wielder of the weapon, dealing {S.HeightenedVariable(damage.FinalValue, damage.BaseValue)}d10 void damage to each creature in the area, with a basic Fortitude save. If any creatures take damage, the wielder regains {S.HeightenedVariable(healing.FinalValue, healing.BaseValue)} Hit Points.";
                         })
+                    .WithAdditionalRequirement((runesmith, runeBearer) =>
+                    {
+                        if (runeBearer.Battle.AllCreatures
+                            .Any(cr =>
+                                cr.EnemyOf(runesmith)
+                                && cr.DistanceTo(runeBearer) <= 6))
+                            return Usability.Usable;
+                        return Usability.NotUsableOnThisCreature("No enemy within range of the target");
+                    })
                     .WithDealsDamage((rune, level) =>
                         ($"{rune.CalculateHeightening(4, 2, 1, level).FinalValue}d10", DamageKind.Negative))
                     .WithDefense(Defense.Fortitude)
                     .WithAffectsArea()
                     .WithHideTooltip()
-                    .WithAdditionalRequirement((runesmith, runeBearer) =>
+                    .WithChosenTargeting(async (invokeAction, invokedRune, overrideTargets) =>
                     {
-                        if (runeBearer.Battle.AllCreatures
-                                .Any(cr =>
-                                    cr.EnemyOf(runesmith)
-                                    && cr.DistanceTo(runeBearer) <= 6))
-                            return Usability.Usable;
-                        return Usability.NotUsableOnThisCreature("No enemy within range of the target");
+                        return await CommonRuneRules.GetInnerInvokeTargets(
+                            invokeAction,
+                            invokedRune,
+                            Target.Cone(6),
+                            false,
+                            SfxName.MajorNegative,
+                            innerInvoke =>
+                            {
+                                innerInvoke.WithEffectOnSelf(async (innerInvoke2, caster) =>
+                                {
+                                    QEffect healAfter = new QEffect(ExpirationCondition.ExpiresAtEndOfAnyTurn)
+                                    {
+                                        Name = "[Cruonign Healing]",
+                                        AfterYouDealDamageQ = async (qfThis, attacker, damagingAction, defender) =>
+                                        {
+                                            if (damagingAction.Tag is not RuneActionTag tag
+                                                || tag.ChosenDrawnRune != invokedRune
+                                                || qfThis.UsedUpPermanently)
+                                                return;
+                                
+                                            int healingAmount = invokedRune.Rune.CalculateHeightening(12, 2, 3, invokedRune.Source!.Level).FinalValue;
+                                            await qfThis.Owner.HealAsync(
+                                                DiceFormula.FromText(
+                                                    healingAmount.ToString(),
+                                                    invokedRune.Rune.FullName),
+                                                damagingAction);
+
+                                            qfThis.UsedUpPermanently = true;
+                                            qfThis.ExpiresAt = ExpirationCondition.Immediately;
+                                        },
+                                    };
+                                    caster.AddQEffect(healAfter);
+                                });
+                            },
+                            overrideTargets: overrideTargets);
                     })
                     .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
                     {
-                        QEffect healAfter = new QEffect(ExpirationCondition.ExpiresAtEndOfAnyTurn)
-                        {
-                            AfterYouDealDamageQ = async (qfThis, attacker, damagingAction, defender) =>
-                            {
-                                if (damagingAction.Tag is not RuneActionTag tag
-                                    || tag.ChosenDrawnRune != invokedRune
-                                    || qfThis.UsedUpPermanently)
-                                    return;
-                                
-                                int healingAmount = invokedRune.Rune.CalculateHeightening(12, 2, 3, invokedRune.Source!.Level).FinalValue;
-                                await qfThis.Owner.HealAsync(
-                                    DiceFormula.FromText(
-                                        healingAmount.ToString(),
-                                        invokedRune.Rune.FullName),
-                                    damagingAction);
-
-                                qfThis.UsedUpPermanently = true;
-                                qfThis.ExpiresAt = ExpirationCondition.Immediately;
-                            },
-                        };
-                        invokeAction.Owner.AddQEffect(healAfter);
-                        
-                        var affectedCreatures = await CommonRuneRules.ExecuteInnerInvokeAction(
+                        await CommonRuneRules.SaveAgainstInvocation(
                             invokeAction,
                             invokedRune,
-                            effectTarget,
-                            // After a bunch of refactors, this might not be needed,
-                            // but I'll keep it anyway just in case.
-                            effectTarget != invokedRune.Owner 
-                                ? Target.Ranged(6)
-                                : Target.Cone(6),
-                            false,
-                            SfxName.MajorNegative,
-                            true,
-                            async (innerInvoke, runeBearer, innerTarget, result) =>
-                            {
-                                await CommonRuneRules.SaveAgainstInvocation(
-                                    innerInvoke,
-                                    invokedRune,
-                                    innerTarget,
-                                    knownResult: result);
-                            });
+                            effectTarget);
 
-                        invokeAction.Owner.RemoveAllQEffects(qf => qf == healAfter);
+                        invokeAction.Owner.RemoveAllQEffects(qf => qf.Name == "[Cruonign Healing]");
 
-                        return affectedCreatures;
+                        return effectTarget;
                     }),
                 [Trait.Death, Trait.Negative])
             .WithLevelText("+2", "The additional void damage increases by 1, the damage of the invocation increases by 1d10, and the healing increases by 3.")
@@ -2429,19 +2536,24 @@ public static class AllRunes
                     .WithAffectsArea()
                     .WithDefense(Defense.Fortitude)
                     .WithHideTooltip() // Doesn't affect rune-bearer
-                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    .WithChosenTargeting(async (invokeAction, invokedRune, overrideTargets) =>
                     {
                         const float emanationSize = 3f; // 15 feet
-
-                        return await CommonRuneRules.ExecuteInnerInvokeAction(
+                        return await CommonRuneRules.GetInnerInvokeTargets(
                             invokeAction,
                             invokedRune,
-                            effectTarget,
                             Target.Emanation((int)emanationSize),
                             false,
                             ModData.SfxNames.INVOKED_FEIKRIS,
-                            true,
-                            async (_, _, emanationTarget, result) =>
+                            overrideTargets: overrideTargets);
+                    })
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        await CommonRuneRules.SaveAgainstInvocation(
+                            invokeAction,
+                            invokedRune,
+                            effectTarget,
+                            async (_, emanationTarget, result) =>
                             {
                                 int distance = result switch
                                 {
@@ -2455,6 +2567,7 @@ public static class AllRunes
                                         distance);
                             });
 
+                        return effectTarget;
                     }),
                 [Trait.Arcane])
             .WithLevelText("17th", "The status bonus increases to +3.")
@@ -2528,32 +2641,32 @@ public static class AllRunes
                         "The eyes of the rune fly outwards, attaching to all creatures in a 20-foot emanation. Each of these creatures that would be invisible is concealed instead, and one that would be concealed for any other reason is not concealed. This effect lasts for 2 rounds.",
                         null)
                     .WithAffectsArea()
-                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    .WithChosenTargeting(async (invokeAction, invokedRune, overrideTargets) =>
                     {
                         const float emanationSize = 4f; // 20 feet
-
-                        return await CommonRuneRules.ExecuteInnerInvokeAction(
+                        return await CommonRuneRules.GetInnerInvokeTargets(
                             invokeAction,
                             invokedRune,
-                            effectTarget,
                             Target.Emanation((int)emanationSize),
                             true,
                             ModData.SfxNames.INVOKED_ICHELSU,
-                            false,
-                            async (_,_, emanationTarget, _) =>
+                            overrideTargets: overrideTargets);
+                    })
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        effectTarget.DetectionStatus.HiddenTo.Clear();
+                        effectTarget.DetectionStatus.Undetected = false;
+                        QEffect invokedIchelsu = invokedRune.NewInvocationEffect(
+                            "If you're invisible, you're concealed instead. If you're concealed for any other reason, you're no longer concealed.",
+                            ExpirationCondition.Never,
+                            qf =>
                             {
-                                emanationTarget.DetectionStatus.HiddenTo.Clear();
-                                emanationTarget.DetectionStatus.Undetected = false;
-                                QEffect invokedIchelsu = invokedRune.NewInvocationEffect(
-                                    "If you're invisible, you're concealed instead. If you're concealed for any other reason, you're no longer concealed.",
-                                    ExpirationCondition.Never,
-                                    qf =>
-                                    {
-                                        qf.Id = QEffectId.FaerieFire;
-                                        qf.WithExpirationAtStartOfSourcesTurn(invokeAction.Owner, 2);
-                                    });
-                                emanationTarget.AddQEffect(invokedIchelsu);
+                                qf.Id = QEffectId.FaerieFire;
+                                qf.WithExpirationAtStartOfSourcesTurn(invokeAction.Owner, 2);
                             });
+                        effectTarget.AddQEffect(invokedIchelsu);
+
+                        return effectTarget;
                     }),
                 [Trait.Occult])
             .ToFeat();
@@ -3042,14 +3155,12 @@ public static class AllRunes
                     .WithDefense(Defense.Will)
                     .WithHideTooltipForAllies()
                     .WithAffectsArea()
-                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    .WithChosenTargeting(async (invokeAction, invokedRune, overrideTargets) =>
                     {
                         const float emanationSize = 4f; // 20 feet
-
-                        return await CommonRuneRules.ExecuteInnerInvokeAction(
+                        return await CommonRuneRules.GetInnerInvokeTargets(
                             invokeAction,
                             invokedRune,
-                            effectTarget,
                             Target.Emanation((int)emanationSize)
                                 .WithIncludeOnlyIf((tar, cr) =>
                                     cr.EnemyOf(invokeAction.Owner)
@@ -3057,17 +3168,25 @@ public static class AllRunes
                                     && !cr.IsImmuneTo(Trait.Emotion)),
                             true,
                             ModData.SfxNames.INVOKED_TROLISTRI,
-                            true,
-                            async (_, _, invokedOnto, result) =>
+                            overrideTargets: overrideTargets);
+                    })
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        await CommonRuneRules.SaveAgainstInvocation(
+                            invokeAction,
+                            invokedRune,
+                            effectTarget,
+                            async (innerInvoke, innerTarget, result) =>
                             {
-                                invokedOnto.AddQEffect(CommonRuneRules
-                                    .ImmunityToInvocation(invokedRune.Rune, true));
-                                if (result > CheckResult.Failure)
-                                    return;
-                                invokedOnto.AddQEffect(QEffect
-                                    .Slowed(result == CheckResult.CriticalFailure ? 2 : 1)
-                                    .WithExpirationInOneRound(invokedOnto.Battle));
+                                if (result < CheckResult.Success)
+                                {
+                                    innerTarget.AddQEffect(QEffect
+                                        .Slowed(result == CheckResult.CriticalFailure ? 2 : 1)
+                                        .WithExpirationInOneRound(innerTarget.Battle));
+                                }
                             });
+                        
+                        return effectTarget;
                     }),
                 [Trait.Arcane, Trait.Emotion, Trait.Mental])
             .ToFeat();
@@ -3193,33 +3312,34 @@ public static class AllRunes
                 new RuneInvocationProperties(
                         "All of the bearer's allies in a 10-foot emanation gain a +1 status bonus to attack rolls and skill checks for 1 round.",
                         null)
-                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    .WithChosenTargeting(async (invokeAction, invokedRune, overrideTargets) =>
                     {
                         const int emanationSize = 2;
-                        return await CommonRuneRules.ExecuteInnerInvokeAction(
+                        return await CommonRuneRules.GetInnerInvokeTargets(
                             invokeAction,
                             invokedRune,
-                            invokedRune.Owner,
                             Target.AlliesOnlyEmanation(emanationSize),
                             false,
                             SfxName.HolyWard,
-                            false,
-                            async (innerInvoke, caster, target, _) =>
+                            overrideTargets: overrideTargets);
+                    })
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        effectTarget.AddQEffect(invokedRune.NewInvocationEffect(
+                            "You have a +1 status bonus to attack rolls and skill checks.",
+                            ExpirationCondition.ExpiresAtStartOfSourcesTurn,
+                            qf =>
                             {
-                                target.AddQEffect(invokedRune.NewInvocationEffect(
-                                    "You have a +1 status bonus to attack rolls and skill checks.",
-                                    ExpirationCondition.ExpiresAtStartOfSourcesTurn,
-                                    qf =>
-                                    {
-                                        qf.Key = "YudiciInvocation";
-                                        qf.WithExpirationInOneRound(invokeAction.Owner);
-                                        qf.BonusToAttackRolls = (_, action, _) =>
-                                            action.HasTrait(Trait.Attack)
-                                            || action.ActiveRollSpecification?.TaggedDetermineBonus.InvolvedSkill is not null
-                                                ? new Bonus(1, BonusType.Status, invokedRune.Rune.FullName)
-                                                : null;
-                                    }));
-                            });
+                                qf.Key = "YudiciInvocation";
+                                qf.WithExpirationInOneRound(invokeAction.Owner);
+                                qf.BonusToAttackRolls = (_, action, _) =>
+                                    action.HasTrait(Trait.Attack)
+                                    || action.ActiveRollSpecification?.TaggedDetermineBonus.InvolvedSkill is not null
+                                        ? new Bonus(1, BonusType.Status, invokedRune.Rune.FullName)
+                                        : null;
+                            }));
+
+                        return effectTarget;
                     }),
                 [Trait.Aura, Trait.Divine])
             .ToFeat();
@@ -3229,7 +3349,7 @@ public static class AllRunes
         #region 13th-Level
         
         // TODO: Eck-, Diacritic Rune of Phantasma
-        yield return DebugRune(RuneId.Eck, "This diacritic frames a base rune with almost invisible lines that turn the rune's effects against the bearer’s soul.");
+        yield return DebugRune(RuneId.Eck, "This diacritic frames a base rune with almost invisible lines that turn the rune's effects against the bearer's soul.");
         /*yield return new Rune(
                 ,
                 ,

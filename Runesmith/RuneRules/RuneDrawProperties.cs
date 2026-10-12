@@ -359,6 +359,19 @@ public class RuneDrawProperties(
         return this;
     }
 
+    public RuneDrawProperties WithItemRequirement(ItemTargetingRequirement itemTargetingRequirement)
+    {
+        this.ItemTargetingRequirements.Add(itemTargetingRequirement);
+        return this;
+    }
+
+    public RuneDrawProperties WithDrawnRuneRequirement(
+        DrawnRuneTargetingRequirement drawnRuneTargetingRequirement)
+    {
+        this.RuneTargetingRequirements.Add(drawnRuneTargetingRequirement);
+        return this;
+    }
+
     /// <summary>
     /// Adds an <see cref="EnemyCreatureTargetingRequirement"/> to drawing this rune.
     /// </summary>
@@ -425,7 +438,7 @@ public class RuneDrawProperties(
     /// <summary>
     /// Adds the basic requirements for a diacritic rune to draw onto another rune, such as the target rune not being a diacritic and not having a diacritic already attached. This does not require a target DrawnRune to be drawn by you.
     /// </summary>
-    public RuneDrawProperties WithDiacriticTargetingRequirements()
+    public RuneDrawProperties WithBasicDiacriticTargetingRequirements()
     {
         this.WithCreatureRequirement(new TargetIsARuneBearer(true));
         this.RuneTargetingRequirements.Add(new DiacriticTargetingRequirement());
@@ -434,21 +447,28 @@ public class RuneDrawProperties(
 
     public RuneDrawProperties WithBaseRuneMustDealDamage(bool includeMarssyl = false)
     {
-        this.RuneTargetingRequirements.Add(new LegacyRuneTargetingRequirement((a, dr) =>
+        return this.WithDrawnRuneRequirement(new LegacyRuneTargetingRequirement((a, dr) =>
             dr.Rune.InvocationProperties.DealsDamage
             || (includeMarssyl && dr.Rune.Id == RuneId.Marssyl)
                 ? Usability.Usable
                 : Usability.NotUsableOnThisCreature("Base rune doesn't deal damage")));
-        return this;
+    }
+
+    public RuneDrawProperties WithBaseRuneDoesNotDealDamage(bool excludeMarssyl = false)
+    {
+        return this.WithDrawnRuneRequirement(new LegacyRuneTargetingRequirement((a, dr) =>
+            dr.Rune.InvocationProperties.DealsDamage
+            || (excludeMarssyl && dr.Rune.Id == RuneId.Marssyl)
+                ? Usability.NotUsableOnThisCreature("Base rune deals damage") 
+                : Usability.Usable));
     }
 
     public RuneDrawProperties WithBaseRuneMustNotBeArea()
     {
-        this.RuneTargetingRequirements.Add(new LegacyRuneTargetingRequirement((a, dr) =>
+        return this.WithDrawnRuneRequirement(new LegacyRuneTargetingRequirement((a, dr) =>
             dr.Rune.InvocationProperties.AffectsArea
                 ? Usability.NotUsableOnThisCreature("Base rune already affects an area")
                 : Usability.Usable));
-        return this;
     }
 
     public RuneDrawProperties WithInvokeableOncePerCombatRequirement(RuneId runeId)
@@ -534,7 +554,7 @@ public class RuneDrawProperties(
         var props = new RuneDrawProperties(
                 "drawn on a rune" + drawnOnARuneWhat,
                 drawnOnRune: true)
-            .WithDiacriticTargetingRequirements();
+            .WithBasicDiacriticTargetingRequirements();
         if (invokeableOncePerCombatRuneId.HasValue)
             props.WithInvokeableOncePerCombatRequirement(invokeableOncePerCombatRuneId.Value);
         return props;

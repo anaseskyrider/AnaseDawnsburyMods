@@ -119,15 +119,6 @@ public class RuneInvocationProperties(
 
         return Usability.Usable;
     }
-
-    /// <summary>
-    /// Removes all requirements to invoke the rune.
-    /// </summary>
-    public RuneInvocationProperties WithNoRequirements()
-    {
-        this.TargetingRequirements.Clear();
-        return this;
-    }
     
     /// <summary>
     /// Constructs and adds an additional <see cref="LegacyCreatureTargetingRequirement"/>.
@@ -145,6 +136,25 @@ public class RuneInvocationProperties(
         CreatureTargetingRequirement creatureTargetingRequirement)
     {
         this.TargetingRequirements.Add(creatureTargetingRequirement);
+        return this;
+    }
+    
+    /// <summary>
+    /// This routine gets the targets for complex invocation effects.
+    /// </summary>
+    /// <remarks>
+    /// <para>The parameters are: the CombatAction invoking the rune, the DrawnRune instance being invoked.</para>
+    /// <para>The return is: the ChosenTargets of this invocation, typically acquired via a routine in CommonRuneRules which will also execute animations and sound effects.</para>
+    /// <para>This is useful for invocations that affect creatures or tiles other than the rune-bearer, such as Esvadir which affects an enemy adjacent to the bearer, or Yudici which affects the bearer's allies in an emanation (but not itself).</para>
+    /// </remarks>
+    public Func<CombatAction, DrawnRune, ChosenTargets?, Task<ChosenTargets?>>? DetermineChosenTargets { set; get; }
+
+    /// <summary>
+    /// Sets <see cref="DetermineChosenTargets"/> on this RuneInvocationProperties.
+    /// </summary>
+    public RuneInvocationProperties WithChosenTargeting(Func<CombatAction, DrawnRune, ChosenTargets?, Task<ChosenTargets?>> chosenTargeting)
+    {
+        this.DetermineChosenTargets = chosenTargeting;
         return this;
     }
 
