@@ -658,7 +658,8 @@ public static class Runesmith
                                         CommonRuneRules.CreateEtchAction(cr, rune)
                                             .WithExtraTrait(Trait.DoNotShowOverheadOfActionName),
                                         cr, rune, cr.HeldItems[0], true, true)
-                                    is { } drawnRune)
+                                    is { } drawnRunes
+                                    && drawnRunes.LastOrDefault() is { } drawnRune)
                                 {
                                     qfThis.Owner.AddQEffect(drawnRune
                                         .With(dr => dr.DoNotShowUpOverhead = true));

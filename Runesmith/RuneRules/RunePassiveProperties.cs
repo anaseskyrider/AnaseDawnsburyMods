@@ -70,12 +70,24 @@ public class RunePassiveProperties(
     /// <item><see cref="object"/>?: The secondary target of the drawn rune, if it's different from the creature target.</item>
     /// </list>
     /// <returns>(DrawnRune) The last DrawnRune this lambda generates.</returns>
-    public Func<CombatAction,Rune,Creature,object?,Task<DrawnRune?>>? DrawnRuneCreator { get; set; }
+    public Func<CombatAction,Rune,Creature,object?,Task<List<DrawnRune>?>>? DrawnRuneCreator { get; set; }
     
     /// <summary>
     /// Sets <see cref="DrawnRuneCreator"/> with a new function.
     /// </summary>
     public RunePassiveProperties WithDrawnRuneCreator(Func<CombatAction,Rune,Creature,object?,Task<DrawnRune?>> drawnCreator)
+    {
+        this.DrawnRuneCreator = async (drawAction, rune, target, subTarget) =>
+            new List<DrawnRune?>([await drawnCreator(drawAction, rune, target, subTarget)])
+            .WhereNotNull()
+            .ToList();
+        return this;
+    }
+    
+    /// <summary>
+    /// Sets <see cref="DrawnRuneCreator"/> with a new function.
+    /// </summary>
+    public RunePassiveProperties WithDrawnRuneCreator(Func<CombatAction,Rune,Creature,object?,Task<List<DrawnRune>?>> drawnCreator)
     {
         this.DrawnRuneCreator = drawnCreator;
         return this;

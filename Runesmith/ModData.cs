@@ -517,6 +517,10 @@ public static class ModData
         /// This effect's Tag contains a <see cref="List{Rune}"/>, representing temporarily known runes for this combat.
         /// </summary>
         public static QEffectId TemporaryRunicRepertoire;
+        /// <summary>
+        /// This is the controller effect for the Define the Canvas zone.
+        /// </summary>
+        public static QEffectId DefineCanvasController;
         
         public static void Initialize()
         {
@@ -530,6 +534,7 @@ public static class ModData
             EdifyingTraceEffect = ModManager.RegisterEnumMember<QEffectId>("EdifyingTraceEffect");
             JurrozDamageTracker = ModManager.RegisterEnumMember<QEffectId>("JurrozDamageTracker");
             TemporaryRunicRepertoire = ModManager.RegisterEnumMember<QEffectId>("TemporaryRunicRepertoire");
+            DefineCanvasController = ModManager.RegisterEnumMember<QEffectId>("DefineCanvasController");
         }
     }
 

@@ -245,6 +245,63 @@ public static class CommonRuneRules
             .Union(itemBearer.Weapons) // This will handle unarmed attacks.
             .ToList();
     }
+
+    public static CreatureTarget CreateDrawActionTarget(Rune rune, int actions = 0, int? range = 6)
+    {
+        #region Determine Range
+
+        // Determine range to target (logic maybe expanded later)
+        int rangeToTarget = range ?? 6;
+
+        #endregion
+
+        CreatureTarget creatureTarget = actions == 1
+            ? Target.AdjacentCreatureOrSelf()
+            : Target.RangedCreature(rangeToTarget);
+
+        // Add extra usage requirements.
+        // Don't add the requirement directly, as any changes to the requirement
+        // will affect the rune as a whole. Checking requirements specific to
+        // the rune should be done by inspecting the rune itself, not any of its
+        // actions.
+        
+        // Wrap a new requirement for each creature requirement
+        foreach (var crReq in rune.DrawProperties.CreatureTargetingRequirements)
+            creatureTarget.WithAdditionalConditionOnTargetCreature((a, d) =>
+                crReq.Satisfied(a, d));
+
+        // Create a new requirement that requires any one item
+        // to meet all item requirements.
+        if (rune.DrawProperties.ItemTargetingRequirements.Count > 0)
+            creatureTarget.WithAdditionalConditionOnTargetCreature((a, d) =>
+            {
+                List<Item> items = CommonRuneRules.GetCommonTargetableItems(d);
+                List<Usability> usability = items
+                    .Select(item => rune.DrawProperties.IsLegalTarget(a, item))
+                    .ToList();
+
+                return usability.Any(use => use.CanBeUsed)
+                    ? Usability.Usable
+                    : (usability.FirstOrDefault(use => !use.CanBeUsed) ?? Usability.NotUsableOnThisCreature("No valid item targets"));
+            });
+
+        // Create a new requirement that requires any one drawn rune
+        // to meet all drawn rune requirements.
+        if (rune.DrawProperties.RuneTargetingRequirements.Count > 0)
+            creatureTarget.WithAdditionalConditionOnTargetCreature((a, d) =>
+            {
+                List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(null, d/*, true*/);
+                List<Usability> usability = drawnRunes
+                    .Select(dr => rune.DrawProperties.IsLegalTarget(a, dr))
+                    .ToList();
+
+                return usability.Any(use => use.CanBeUsed)
+                    ? Usability.Usable
+                    : (usability.FirstOrDefault(use => !use.CanBeUsed) ?? Usability.NotUsableOnThisCreature("No valid rune targets"));
+            });
+
+        return creatureTarget;
+    }
     
     /// <summary>
     /// Creates a generic CombatAction that executes <see cref="DrawRuneOnTarget"/> on each target using this Rune.
@@ -260,95 +317,22 @@ public static class CommonRuneRules
         int actions = 0,
         int? range = 6)
     {
-        #region Determine Range
-
-        // Determine range to target (logic maybe expanded later)
-        int rangeToTarget = range ?? 6;
-
-        #endregion
-
-        #region Determine Target
-
-        CreatureTarget adjacentTarget = Target.AdjacentCreatureOrSelf();
-        CreatureTarget rangedTarget = Target.RangedCreature(rangeToTarget);
-        DependsOnActionsSpentTarget varyTarget = Target.DependsOnActionsSpent(
-            adjacentTarget,
-            rangedTarget,
-            // This shouldn't be possible, so this should ideally throw some kind of exception
-            null!);
-
-        // Add extra usage requirements.
-        // Don't add the requirement directly, as any changes to the requirement
-        // will affect the rune as a whole. Checking requirements specific to
-        // the rune should be done by inspecting the rune itself, not any of its
-        // actions.
-        foreach (CreatureTarget crTar in varyTarget.Targets.OfType<CreatureTarget>())
-        {
-            // Wrap a new requirement for each creature requirement
-            foreach (var crReq in rune.DrawProperties.CreatureTargetingRequirements)
-                crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
-                    crReq.Satisfied(a, d));
-
-            // Create a new requirement that requires any one item
-            // to meet all item requirements.
-            if (rune.DrawProperties.ItemTargetingRequirements.Count > 0)
-                crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
-                {
-                    List<Item> items = CommonRuneRules.GetCommonTargetableItems(d);
-                    List<Usability> usability = items
-                        .Select(item => rune.DrawProperties.IsLegalTarget(a, item))
-                        .ToList();
-
-                    return usability.Any(use => use.CanBeUsed)
-                        ? Usability.Usable
-                        : (usability.FirstOrDefault(use => !use.CanBeUsed) ?? Usability.NotUsableOnThisCreature("No valid item targets"));
-                });
-
-            // Create a new requirement that requires any one drawn rune
-            // to meet all drawn rune requirements.
-            if (rune.DrawProperties.RuneTargetingRequirements.Count > 0)
-                crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
-                {
-                    List<DrawnRune> drawnRunes = DrawnRune.GetDrawnRunes(null, d/*, true*/);
-                    List<Usability> usability = drawnRunes
-                        .Select(dr => rune.DrawProperties.IsLegalTarget(a, dr))
-                        .ToList();
-
-                    return usability.Any(use => use.CanBeUsed)
-                        ? Usability.Usable
-                        : (usability.FirstOrDefault(use => !use.CanBeUsed) ?? Usability.NotUsableOnThisCreature("No valid rune targets"));
-                });
-        }
-            
-        Target drawTarget = actions switch
-        {
-            2 => rangedTarget,
-            1 => adjacentTarget,
-            -3 => varyTarget,
-            _ => Target.Self()
-        };
-
-        #endregion
-        
-        // Determine traits
-        Trait[] traits = [
-                ModData.ModTrait,
-                ..rune.Traits,
-                //Trait.Magical, // <- Gained from rune's traits
-                Trait.Spell, // <- Should apply magic immunity.
-                Trait.CountsAsSpellForImmunities, // <- Should also help.
-                Trait.SomaticOnly, // <- Avoids swallow whole suffocation.
-                //Trait.DoNotShowInCombatLog, // Has its own log event
-            ];
-        
         // Create action
         CombatAction drawRuneAction = new CombatAction(
                 runesmith,
                 rune.Illustration,
                 $"Draw Rune ({rune.WordName})",
-                traits,
+                [
+                    ModData.ModTrait,
+                    ..rune.Traits,
+                    //Trait.Magical, // <- Gained from rune's traits
+                    Trait.Spell, // <- Should apply magic immunity.
+                    Trait.CountsAsSpellForImmunities, // <- Should also help.
+                    Trait.SomaticOnly, // <- Avoids swallow whole suffocation.
+                    //Trait.DoNotShowInCombatLog, // Has its own log event
+                ],
                 "ERROR: INCOMPLETE DESCRIPTION",
-                drawTarget)
+                CreateDrawActionTarget(rune, actions, range))
             .WithActionCost(actions)
             .WithSoundEffect(ModData.SfxNames.TRACE_RUNE)
             .WithRuneTag(rune) // Only contains Rune before execution, then DrawnRune after.
@@ -357,7 +341,8 @@ public static class CommonRuneRules
             {
                 if (drawAction.Tag is not RuneActionTag tag
                     // Let diacritics and item-runes handle their subtargeting if this is drawing on everything in the whole area
-                    || drawAction.Target is AreaTarget)
+                    || drawAction.Target is AreaTarget
+                    || drawAction.Target is MultipleCreatureTargetsTarget)
                     return;
                 
                 // If the subtargets were already chosen before this action began, skip.
@@ -402,7 +387,8 @@ public static class CommonRuneRules
                 if (await CommonRuneRules.DrawRuneOnTarget(
                         drawAction, target, tag.Rune,
                         subTarget)
-                    is { } newDrawnRune)
+                    is { } newDrawnRunes
+                    && newDrawnRunes.LastOrDefault() is {} newDrawnRune)
                     tag.CreatedDrawnRune = newDrawnRune;
                 else
                 {
@@ -485,7 +471,7 @@ public static class CommonRuneRules
     /// <param name="ignoreUsageRequirements">(Default: false) If false, then the DrawnRune is applied only when its Rune's <see cref="RuneDrawProperties.IsLegalTarget"/> is usable for the target. This is true for cases like the Runic Reprisal feat which allows a Runesmith to apply any damaging rune to their shield, taking none of the passive effects, but allowing it to be invoked on a creature when they Shield Block.</param>
     /// <param name="doNotApplyImmediately">If true, then this rune won't be applied to the target, and must be applied manually later.</param>
     /// <returns>(bool) True if the effect was successfully applied to the target, false otherwise.</returns>
-    public static async Task<DrawnRune?> DrawRuneOnTarget(
+    public static async Task<List<DrawnRune>?> DrawRuneOnTarget(
         CombatAction drawAction,
         Creature target,
         Rune rune,
@@ -493,10 +479,12 @@ public static class CommonRuneRules
         bool ignoreUsageRequirements = false,
         bool doNotApplyImmediately = false)
     {
+        if (rune.PassiveProperties.DrawnRuneCreator == null)
+            return null;
+        
         // Apply the QF if
         // - ignoreTargetRestrictions is true,
-        // - or
-        // - the rune's draw properties target requirements is legal for this target.
+        // - or the rune's draw properties target requirements is legal for this target.
         if (!ignoreUsageRequirements
             && !rune.DrawProperties.IsLegalTarget(drawAction.Owner, target))
         {
@@ -528,42 +516,43 @@ public static class CommonRuneRules
             }
         }
 
-        DrawnRune? newDrawnRune = null;
-        if (rune.PassiveProperties.DrawnRuneCreator != null)
-            newDrawnRune = await rune.PassiveProperties.DrawnRuneCreator.Invoke(
-                drawAction,
-                rune,
-                // If the alt target is a creature, pass that in, otherwise use the original.
-                alternativeTarget as Creature ?? target,
-                // If the alt target is a non-creature (such as Item), pass that in.
-                alternativeTarget is Creature ? null : alternativeTarget);
+        List<DrawnRune>? newDrawnRunes = await rune.PassiveProperties.DrawnRuneCreator.Invoke(
+            drawAction,
+            rune,
+            // If the alt target is a creature, pass that in, otherwise use the original.
+            alternativeTarget as Creature ?? target,
+            // If the alt target is a non-creature (such as Item), pass that in.
+            alternativeTarget is Creature ? null : alternativeTarget);
 
-        if (newDrawnRune == null)
+        if (newDrawnRunes == null)
             return null;
-        
-        /*// Event callback
-        foreach (Creature cr in caster.Battle.AllCreatures)
+
+        foreach (DrawnRune dr in newDrawnRunes)
         {
-            foreach (QEffect qf in cr.QEffects)
+            // Determine the way the rune is being applied.
+            dr.WithDrawDuration(DrawnRune.GetDrawTraitFromList(drawAction.Traits) ?? ModData.Traits.Traced);
+
+            if (dr.DrawnOn is DrawnRune { AttachedDiacritic: null } drawnOnto)
+                drawnOnto.AttachedDiacritic = dr;
+            
+            /*// Event callback
+            foreach (Creature cr in caster.Battle.AllCreatures)
             {
-                if (qf is DrawnRune drawnRune)
+                foreach (QEffect qf in cr.QEffects)
                 {
-                    qfToApply.BeforeApplyingDrawnRune.Invoke();
+                    if (qf is DrawnRune drawnRune)
+                    {
+                        qfToApply.BeforeApplyingDrawnRune.Invoke();
+                    }
                 }
-            }
-        }*/
+            }*/
+            
+            if (!doNotApplyImmediately
+                && !target.QEffects.Contains(dr))
+                target.AddQEffect(dr);
+        }
         
-        // Determine the way the rune is being applied.
-        newDrawnRune.WithDrawDuration(DrawnRune.GetDrawTraitFromList(drawAction.Traits));
-
-        if (newDrawnRune.DrawnOn is DrawnRune drawnOnto
-            && drawnOnto.AttachedDiacritic is null)
-            drawnOnto.AttachedDiacritic = newDrawnRune;
-        
-        if (!doNotApplyImmediately)
-            target.AddQEffect(newDrawnRune);
-
-        return newDrawnRune;
+        return newDrawnRunes;
     }
 
     /// <summary>
@@ -650,14 +639,14 @@ public static class CommonRuneRules
     /// <summary>
     /// Filter for all items on this target and ask which item to draw the given rune onto.
     /// </summary>
-    /// <param name="sourceAction">The action which is drawing this rune. If this action has an <see cref="AreaTarget"/>, then it will draw on all items and return the last one instead.</param>
+    /// <param name="sourceAction">The action which is drawing this rune. If this action has an <see cref="AreaTarget"/> or <see cref="MultipleCreatureTargetsTarget"/>, then it will draw on all items and return the last one instead.</param>
     /// <param name="runesmith">The runesmith drawing this rune.</param>
     /// <param name="itemHolder">The creature holding the items to choose from.</param>
     /// <param name="itemFilter">Which items are allowed to be drawn on.</param>
     /// <param name="runeCreator">The function which creates a rune attached to this item.</param>
     /// <param name="question">The question to ask the runesmith. E.g., (esvadir) "Choose a weapon or unarmed attack whose Strikes will deal additional persistent bleed damage."</param>
     /// <param name="rune">The root rune being drawn of.</param>
-    public static async Task<DrawnRune?> ChooseAnItemToDrawOn(
+    public static async Task<List<DrawnRune>?> ChooseAnItemToDrawOn(
         CombatAction sourceAction,
         Creature runesmith,
         Creature itemHolder,
@@ -666,46 +655,35 @@ public static class CommonRuneRules
         string question,
         Rune rune)
     {
-        List<Item> validItems = itemHolder.Weapons
+        List<Item> validItems = CommonRuneRules
+            .GetCommonTargetableItems(itemHolder)
             .Where(itemFilter)
             .ToList();
+
+        List<DrawnRune> drawings = [];
         
         // If the source action has an area targeting, then this is drawing
         // on all targets within range. Therefor, draw on all items too.
-        if (sourceAction.Target is AreaTarget)
-        {
-            DrawnRune? lastDraw = null;
-            foreach (DrawnRune? newDrawnRune in validItems.Select(runeCreator))
-            {
-                if (newDrawnRune == null)
-                    continue;
-                
-                // Determine the way the rune is being applied.
-                newDrawnRune.WithDrawDuration(DrawnRune.GetDrawTraitFromList(sourceAction.Traits));
+        if (sourceAction.Target is AreaTarget or MultipleCreatureTargetsTarget)
+            drawings.AddRange(validItems
+                .Select(runeCreator)
+                .WhereNotNull());
+        else if (await runesmith.AskForChoiceAmongItems(
+                         rune.Illustration,
+                         $$"""
+                           {b}{{sourceAction.Name}}{/b}
+                           {{question}}
+                           """,
+                         validItems,
+                         false)
+                     is {} chosenItem
+                 && runeCreator(chosenItem) is {} drawnRune)
+            drawings.Add(drawnRune);
 
-                itemHolder.AddQEffect(newDrawnRune);
-                lastDraw = newDrawnRune;
-            }
-
-            // Return the last one that was drawn.
-            return lastDraw;
-        }
-        else
-        {
-            Item? chosenItem = await runesmith.AskForChoiceAmongItems(
-                rune.Illustration,
-                $$"""
-                  {b}{{sourceAction.Name}}{/b}
-                  {{question}}
-                  """,
-                validItems,
-                false);
-
-            return runeCreator(chosenItem);
-        }
+        return drawings.Count == 0 ? null : drawings;
     }
 
-    public static async Task<DrawnRune?> ChooseARuneToDrawOn(
+    public static async Task<List<DrawnRune>?> ChooseARuneToDrawOn(
         CombatAction sourceAction,
         Creature runesmith,
         Creature runeBearer,
@@ -714,7 +692,7 @@ public static class CommonRuneRules
         string question,
         Rune rune)
     {
-        List<DrawnRune> drawnRunes = DrawnRune
+        List<DrawnRune> validDrawnRunes = DrawnRune
             .GetDrawnRunes(runesmith, runeBearer)
             .Where(dr =>
                 dr.AttachedDiacritic is null
@@ -722,31 +700,19 @@ public static class CommonRuneRules
                 && targetRuneFilter.Invoke(dr))
             .ToList();
         
+        List<DrawnRune> drawings = [];
+        
         // If the source action has an area targeting, then this is drawing
         // on all targets within range. Therefor, draw on all runes too.
-        if (sourceAction.Target is AreaTarget)
-        {
-            DrawnRune? lastDraw = null;
-            foreach (DrawnRune? newDrawnRune in drawnRunes.Select(runeCreator))
-            {
-                if (newDrawnRune == null)
-                    continue;
-                
-                // Determine the way the rune is being applied.
-                newDrawnRune.WithDrawDuration(DrawnRune.GetDrawTraitFromList(sourceAction.Traits));
-
-                runeBearer.AddQEffect(newDrawnRune);
-                lastDraw = newDrawnRune;
-            }
-
-            // Return the last one that was drawn.
-            return lastDraw;
-        }
+        if (sourceAction.Target is AreaTarget or MultipleCreatureTargetsTarget)
+            drawings.AddRange(validDrawnRunes
+                .Select(runeCreator)
+                .WhereNotNull());
         else
         {
             DrawnRune? chosenRune;
             
-            List<string> choices = drawnRunes
+            List<string> choices = validDrawnRunes
                 .Select(dr =>
                     $"{dr.Illustration!.IllustrationAsIconString}{dr.Rune.WordName}")
                 .ToList();
@@ -758,7 +724,7 @@ public static class CommonRuneRules
                 choices.Add("Pass");*/
             // Immediately return only option
             else if (choices.Count == 1)
-                chosenRune = drawnRunes.First();
+                chosenRune = validDrawnRunes.First();
             else
             {
                 ChoiceButtonOption choice = await runesmith.AskForChoiceAmongButtons(
@@ -773,11 +739,15 @@ public static class CommonRuneRules
                 if (choice.Caption == "Pass")
                     chosenRune = null;
                 else
-                    chosenRune = drawnRunes[choice.Index];
+                    chosenRune = validDrawnRunes[choice.Index];
             }
 
-            return runeCreator(chosenRune);
+            DrawnRune? drawnRune = runeCreator(chosenRune);
+            if (drawnRune is not null)
+                drawings.Add(drawnRune);
         }
+        
+        return drawings.Count == 0 ? null : drawings;
     }
 
     #region Etching Runes

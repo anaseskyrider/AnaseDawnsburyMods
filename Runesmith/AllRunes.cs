@@ -1690,18 +1690,19 @@ public static class AllRunes
                         "av-, diacritic rune of succession")
                     .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
                     {
-                        DrawnRune? avPassive = await CommonRuneRules.ChooseARuneToDrawOn(
-                            drawAction,
-                            drawAction.Owner,
-                            target,
-                            subTarget is DrawnRune runeTarget
-                                ? drOnto =>
-                                    drOnto == runeTarget
-                                : drOnto =>
-                                    !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune.Id),
-                            CreateAvPassive,
-                            "Choose a rune that, when invoked, causes you to Invoke a single Rune {icon:FreeAction} on a different rune-bearer within 15 feet of the original rune.",
-                            rune);
+                        DrawnRune? avPassive = (await CommonRuneRules.ChooseARuneToDrawOn(
+                                drawAction,
+                                drawAction.Owner,
+                                target,
+                                subTarget is DrawnRune runeTarget
+                                    ? drOnto =>
+                                        drOnto == runeTarget
+                                    : drOnto =>
+                                        !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune.Id),
+                                CreateAvPassive,
+                                "Choose a rune that, when invoked, causes you to Invoke a single Rune {icon:FreeAction} on a different rune-bearer within 15 feet of the original rune.",
+                                rune))?
+                            .LastOrDefault();
 
                         // Only one instance allowed when drawn
                         if (avPassive is not null)
@@ -1914,18 +1915,19 @@ public static class AllRunes
                         null)
                     .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
                     {
-                        DrawnRune? sunPassive = await CommonRuneRules.ChooseARuneToDrawOn(
-                            drawAction,
-                            drawAction.Owner,
-                            target,
-                            subTarget is DrawnRune runeTarget
-                                ? drOnto =>
-                                    drOnto == runeTarget
-                                : drOnto =>
-                                    !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune.Id),
-                            CreateSunPassive,
-                            "Choose a rune that will be retraced after being invoked.",
-                            rune);
+                        DrawnRune? sunPassive = (await CommonRuneRules.ChooseARuneToDrawOn(
+                                drawAction,
+                                drawAction.Owner,
+                                target,
+                                subTarget is DrawnRune runeTarget
+                                    ? drOnto =>
+                                        drOnto == runeTarget
+                                    : drOnto =>
+                                        !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune.Id),
+                                CreateSunPassive,
+                                "Choose a rune that will be retraced after being invoked.",
+                                rune))?
+                            .LastOrDefault();
 
                         // Only one instance allowed when drawn
                         if (sunPassive is not null)
@@ -1982,7 +1984,8 @@ public static class AllRunes
                                                     drInvoked.Owner,
                                                     drInvoked.Rune,
                                                     drInvoked.DrawnOn,
-                                                    false) is not {} newDrawnRune)
+                                                    false) is not {} newDrawnRunes
+                                                || newDrawnRunes.LastOrDefault() is not {} newDrawnRune)
                                             {
                                                 traceAction.RevertRequested = true;
                                                 //invokeAction.RevertRequested = true;

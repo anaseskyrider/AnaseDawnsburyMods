@@ -25,6 +25,7 @@ using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
+using Dawnsbury.Core.Mechanics.Zoning;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
@@ -1107,11 +1108,12 @@ public static class ClassFeats
                             .With(ca => ca.Traits.Remove(ModData.Traits.Etched))
                             .WithExtraTrait(ModData.Traits.Tattooed);
                         
-                        DrawnRune? appliedRune = await CommonRuneRules.DrawRuneOnTarget(
-                            etchTattoo,
-                            qfThis.Owner,
-                            rune,
-                            doNotApplyImmediately: true);
+                        DrawnRune? appliedRune = (await CommonRuneRules.DrawRuneOnTarget(
+                                etchTattoo,
+                                qfThis.Owner,
+                                rune,
+                                doNotApplyImmediately: true))?
+                            .LastOrDefault();
 
                         if (appliedRune is null)
                         {
@@ -1678,7 +1680,8 @@ public static class ClassFeats
                                     chosenRune.Rune,
                                     chosenCreature,
                                     chosenRune.Rune.DrawProperties.ChooseRuneSubtargets(caster, [chosenCreature]))
-                                is not {} pretendNewRune)
+                                is not {} pretendNewRunes
+                                || pretendNewRunes.FirstOrDefault() is not {} pretendNewRune)
                             {
                                 transposeAction.RevertRequested = true;
                                 return;
@@ -2291,12 +2294,33 @@ public static class ClassFeats
                         //.WithShortDescription("Expend your Runic Tattoo by tracing it in a 15-ft cone.")
                         .WithProjectileCone(VfxStyle.BasicProjectileCone(tattooedRune.Illustration ?? IllustrationName.Action))
                         .WithSoundEffect(ModData.SfxNames.WORDS_FLY_FREE)
-                        .WithEffectOnEachTarget( async (action, caster, target, _) =>
-                        {
-                            await CommonRuneRules.DrawRuneOnTarget(action, target, tattooedRune.Rune);
-                        })
                         .WithEffectOnChosenTargets(async (action, caster, targets) =>
                         {
+                            // Draw on each target
+                            List<DrawnRune> drawings = [];
+                            foreach (Creature cr in targets.ChosenCreatures.ToList())
+                                drawings.AddRange(await CommonRuneRules.DrawRuneOnTarget(action, cr, tattooedRune.Rune) ?? []);
+                                            
+                            // Log the event
+                            caster.Battle.Log(
+                                $"{caster.Name} traces {tattooedRune.Rune.Illustration.IllustrationAsIconString} {tattooedRune.Rune.WordName} onto:");
+                            caster.Battle.LogIndent++;
+                            foreach (DrawnRune dr in drawings.Cast<DrawnRune>())
+                            {
+                                string owner = dr.Owner.Name;
+                                string? subTarget = dr.DrawnOn switch
+                                {
+                                    Item subItem =>
+                                        $"{subItem.Illustration.IllustrationAsIconString} {subItem.ShortName}",
+                                    DrawnRune subRune =>
+                                        $"{subRune.Illustration!.IllustrationAsIconString} {subRune.Rune.WordName}",
+                                    _ => null
+                                };
+                                caster.Battle.Log(
+                                    $"{owner}{(subTarget is null ? null : $"'s {subTarget}")}.");
+                            }
+                            caster.Battle.LogIndent--;
+                            
                             tattooedRune.ExpiresAt = ExpirationCondition.Immediately;
                             qfThis.Owner.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.RUNIC_TATTOO);
                         });
@@ -2923,8 +2947,6 @@ public static class ClassFeats
         
         #region 10th-Level
         
-        // TODO: Phase 3, level 10 class feats.
-        
         // Chain of Words
         yield return new TrueFeat(
                 ModData.FeatNames.ChainOfWords, 10,
@@ -3229,6 +3251,7 @@ public static class ClassFeats
             });
         
         // Overloaded Ammunition
+        // PETR: Special ammunition, explosive ammunition
         
         // Prodigal Rune-Singer
         yield return new TrueFeat(
@@ -3379,6 +3402,214 @@ public static class ClassFeats
         // Dance of Bloody Ink
 
         // Define the Canvas
+        yield return new TrueFeat(
+                ModData.FeatNames.DefineTheCanvas, 14,
+                "You produce rune-inscribed stones, which whirl in the air before darting away to form a perimeter for a runic canvas.",
+                $$"""
+                  {b}Frequency{/b} Once per encounter.
+                  
+                  Place a 20-foot burst on the ground centered on a corner in your space. As long as you're in or adjacent to the canvas, you can {{ModData.FeatNames.TraceRune.ToLink("Trace a Rune")}} {icon:Action} directly into the ground, which causes the rune to expand across the entire space, tracing it onto any number of eligible targets within the area.
+                  """,
+                [Trait.Earth, Trait.Magical, Trait.Runesmith])
+            .WithActionCost(2)
+            .WithPermanentQEffect(qfFeat =>
+            {
+                qfFeat.AddToOffenseBlock = qfThis =>
+                    qfThis.Name!.WithTag("b") + UsedUpDescription(
+                        $" (Once per combat) Place a 20-foot burst in your space. While in or adjacent to this canvas, you can Trace a Rune {{icon:Action}} to apply the rune on up to any eligible targets in the area.",
+                        !qfThis.UsedUpPermanently,
+                        "combat");
+                
+                // Define the Canvas
+                qfFeat.ProvideSectionIntoSubmenu = (qfThis, submenu) =>
+                {
+                    if (qfThis.UsedUpPermanently
+                        || submenu.SubmenuId != ModData.SubmenuIds.TraceRune)
+                        return null;
+
+                    CombatAction defineCanvas = new CombatAction(
+                            qfThis.Owner,
+                            new ScrollIllustration(
+                                IllustrationName.Scroll,
+                                ModData.Illustrations.EtchRune),
+                            "Define the Canvas",
+                            [ModData.ModTrait, Trait.Earth, Trait.Magical, Trait.Runesmith],
+                            """
+                              {i}You produce rune-inscribed stones, which whirl in the air before darting away to form a perimeter for a runic canvas.{/i}
+
+                              {b}Frequency{/b} Once per encounter.
+
+                              Place a 20-foot burst on the ground centered on a corner in your space. As long as you're in or adjacent to the canvas, you can {b}Trace a Rune {icon:Action}{/b} directly into the ground, which causes the rune to expand across the entire space, tracing it onto any number of eligible targets within the area.
+                              """,
+                            Target.Burst(1, 4)
+                                /*.WithAdditionalRequirementOnCenterPoint((burstTar, point) =>
+                                    burstTar.OwnerAction.Owner.Space.Tiles
+                                        .Select(tile => tile.ToPoint())
+                                        .Contains(point))*/)
+                        .WithActionCost(2)
+                        .WithSoundEffect(SfxName.Abjuration)
+                        .WithEffectOnChosenTargets(async (action, caster, targets) =>
+                        {
+                            if (targets.ChosenTiles.Count == 0)
+                            {
+                                action.RevertRequested = true;
+                                return;
+                            }
+                            
+                            qfThis.UsedUpPermanently = true;
+
+                            Vector2 center = new Vector2(
+                                (float)(targets.ChosenTiles.Average(tile => tile.X)),
+                                (float)(targets.ChosenTiles.Average(tile => tile.Y))
+                            );
+                            List<Tile> ring = targets.ChosenTiles
+                                .GroupBy(tile =>
+                                {
+                                    float num1 = Math.Abs(center.X - tile.X);
+                                    float num2 = Math.Abs(center.Y - tile.Y);
+                                    return num1 >= num2 ? num1 + num2 / 2 : num2 + num1 / 2;
+                                })
+                                .OrderByDescending(grp => grp.Key)
+                                .First()
+                                .ToList();
+                            
+                            // Particle splash on each tile
+                            const int numParticles = 10;
+                            List<Particle> canvasParticles = [];
+                            foreach (Tile tile in ring)
+                            {
+                                canvasParticles.AddRange(caster.Battle.SpawnOvercreatureProjectileParticles(
+                                    numParticles,
+                                    new Vector2((float)(center.X + 0.5), (float)(center.Y + 0.5)),
+                                    tile, Color.White, ModData.Illustrations.EtchRune));
+                            }
+                            await caster.Battle.WaitForProjectiles(canvasParticles);
+                            
+                            // Zone
+                            QEffect controller = new QEffect()
+                            {
+                                Id = ModData.QEffectIds.DefineCanvasController,
+                                ProvideActionIntoPossibilitySection = (qfCanvas, section) =>
+                                {
+                                    if (qfCanvas.Zone is null
+                                        || AllRunes.All.FirstOrDefault(rune =>
+                                                rune.FullName == section.Name)
+                                            is not { } foundRune)
+                                        return null;
+
+                                    CombatAction traceRune = CommonRuneRules.CreateTraceAction(
+                                            qfCanvas.Owner, foundRune, 2, 99)
+                                        .WithActionCost(0);
+
+                                    CombatAction canvasTrace = new CombatAction(
+                                            qfCanvas.Owner,
+                                            new ScrollIllustration(
+                                                IllustrationName.Scroll,
+                                                foundRune.Illustration),
+                                            $"Canvas{(qfCanvas.Owner.HasEffect(ModData.QEffectIds.RuneSinger) ? " & Sing" : null)} Rune ({foundRune.WordName})",
+                                            traceRune.Traits.ToArray(),
+                                            CommonRuneRules.CreateTraceActionDescription(
+                                                foundRune,
+                                                traceRune,
+                                                withRangeText: false,
+                                                prologueText:
+                                                "{Blue}{b}Range{/b} All creatures within your canvas{/Blue}\n"
+                                                + (qfCanvas.Owner.HasEffect(ModData.QEffectIds.RuneSinger)
+                                                   && !qfCanvas.Owner.HasFeat(ModData.FeatNames.GenerationalRuneSinger)
+                                                    ? $"{{Blue}}{{b}}Frequency{{/b}} Once per {(qfCanvas.Owner.HasFeat(ModData.FeatNames.ProdigalRuneSinger) ? "round" : "combat")} (Rune-Singer){{/Blue}}\n"
+                                                    : null)),
+                                            Target.MultipleCreatureTargets(
+                                                qfCanvas.Zone.CreaturesInZone.Count(cr =>
+                                                    IsLegalTarget(qfCanvas.Owner, cr)),
+                                                () =>
+                                                {
+                                                    return CommonRuneRules.CreateDrawActionTarget(foundRune, 2, 99)
+                                                        // You must be in or adjacent to your canvas
+                                                        .WithAdditionalConditionOnTargetCreature((a, _) =>
+                                                        {
+                                                            return qfCanvas.Zone.AffectedTiles.Any(tile =>
+                                                                qfCanvas.Owner.IsAdjacentTo(tile)
+                                                                || qfCanvas.Owner.Space.Tiles.Contains(tile))
+                                                                ? Usability.Usable
+                                                                : Usability.NotUsable(
+                                                                    "Must be in or adjacent to your canvas");
+                                                        })
+                                                        // Target must be in your canvas.
+                                                        .WithAdditionalConditionOnTargetCreature((_, d) =>
+                                                        {
+                                                            return qfCanvas.Zone.CreaturesInZone.Contains(d)
+                                                                ? Usability.Usable
+                                                                : Usability.NotUsableOnThisCreature(
+                                                                    "Not in your canvas");
+                                                        });
+                                                }))
+                                        .WithActionId(ModData.ActionIds.TraceRune)
+                                        .WithActionCost(1)
+                                        .WithSoundEffect(traceRune.SoundEffectName!)
+                                        .WithProjectileCone(VfxStyle.BasicProjectileCone(foundRune.Illustration))
+                                        .WithEffectOnChosenTargets(async (canvasAction, caster2, targets2) =>
+                                        {
+                                            // Draw on each target
+                                            List<DrawnRune> drawings = [];
+                                            foreach (Creature cr in targets2.ChosenCreatures.ToList())
+                                                drawings.AddRange(await CommonRuneRules.DrawRuneOnTarget(canvasAction, cr, foundRune) ?? []);
+                                            
+                                            // Log the event
+                                            caster2.Battle.Log(
+                                                $"{caster2.Name} traces {foundRune.Illustration.IllustrationAsIconString} {foundRune.WordName} onto:");
+                                            caster2.Battle.LogIndent++;
+                                            foreach (DrawnRune dr in drawings.Cast<DrawnRune>())
+                                            {
+                                                string owner = dr.Owner.Name;
+                                                string? subTarget = dr.DrawnOn switch
+                                                {
+                                                    Item subItem =>
+                                                        $"{subItem.Illustration.IllustrationAsIconString} {subItem.ShortName}",
+                                                    DrawnRune subRune =>
+                                                        $"{subRune.Illustration!.IllustrationAsIconString} {subRune.Rune.WordName}",
+                                                    _ => null
+                                                };
+                                                caster2.Battle.Log(
+                                                    $"{owner}{(subTarget is null ? null : $"'s {subTarget}")}.");
+                                            }
+                                            caster2.Battle.LogIndent--;
+                                        });
+
+                                    ActionPossibility bloodPossibility = new ActionPossibility(canvasTrace)
+                                    {
+                                        Caption = "Define the Canvas"
+                                    };
+                                    return bloodPossibility;
+
+                                    bool IsLegalTarget(Creature runesmith, Creature target) =>
+                                        (traceRune.Target as CreatureTarget)
+                                        ?.IsLegalTarget(runesmith, target).CanBeUsed == true;
+                                }
+                            };
+                            caster.AddQEffect(controller);
+                            Zone canvas = Zone.SpawnStaticAndApply(
+                                controller, targets.ChosenTiles,
+                                zone =>
+                                {
+                                    zone.TileEffectCreator = tile => new TileQEffect(tile)
+                                    {
+                                        Illustration = new AlphaIllustration(
+                                            new ScrollIllustration(
+                                                IllustrationName.Scroll,
+                                                ModData.Illustrations.EtchRune),
+                                            0.5f)
+                                    };
+                                });
+                        });
+
+                    return new PossibilitySection("Define the Canvas")
+                    {
+                        Possibilities = [
+                            new ActionPossibility(defineCanvas)
+                        ]
+                    };
+                };
+            });
 
         // Henge Gate
 
@@ -3487,7 +3718,8 @@ public static class ClassFeats
                     // Apply it if the action is not disrupted
                     doNotApplyImmediately: true,
                     alternativeTarget: shield)
-                is { } drawnRune)
+                is { } drawnRunes
+                && drawnRunes.LastOrDefault() is { } drawnRune)
             {
                 // Raise a shield
                 Fighter.RaiseShield(caster, shield, caster, false);
