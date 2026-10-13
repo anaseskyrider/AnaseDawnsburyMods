@@ -54,8 +54,6 @@ public static class ClassFeats
     {
         #region 1st-Level
         
-        // TODO: Phase 2, level 1 class feats.
-        
         // Backup Runic Enhancement
         yield return new TrueFeat(
                 ModData.FeatNames.BackupRunicEnhancement, 1,
@@ -571,7 +569,7 @@ public static class ClassFeats
                 values => values.HasFeat(FeatName.Performance),
                 "You must be trained in Performance.");
         
-        // Seek the Hidden Glyphs
+        // TODO: Seek the Hidden Glyphs
         
         // Smithing Weapons
         yield return new TrueFeat(
@@ -3302,8 +3300,6 @@ public static class ClassFeats
         
         #region 12th-Level
         
-        // TODO: Phase 3, level 12 class feats.
-        
         // Astral Compound Invocation
         yield return new TrueFeat(
                 ModData.FeatNames.AstralCompoundInvocation, 12,
@@ -3420,7 +3416,7 @@ public static class ClassFeats
                     2);
             });
 
-        // Orbiting Runestone
+        // TODO: Orbiting Runestone
 
         #endregion
 
