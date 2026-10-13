@@ -116,7 +116,7 @@ public class RuneDrawProperties(
             return (null, null);
         }
 
-        string tooltip = CommonRuneRules.CreateTraceActionDescription(
+        string tooltip = CommonRuneRules.StatBlocks.CreateRuneDescription(
             this.Self,
             decider.Level,
             withFlavorText: false,

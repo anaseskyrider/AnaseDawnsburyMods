@@ -40,6 +40,7 @@ namespace Dawnsbury.Mods.RunesmithClass;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
+/// <item>v3.0: Add CombatAction.WithCastsOrUses(), CombatAction.WithContextMenuName.</item>
 /// <item>v2.9: Adjust StrikeCreature signature to include a specific MAP value.</item>
 /// <item>v2.8: Add string.AddIfNotNull().</item>
 /// <item>v2.7: Add Creature.AskForChoiceAmongItems(), CommonSpellEffects.DealAttackRollPersistentDamage(), CombatAction.WithAdjustTarget().</item>
@@ -61,7 +62,7 @@ namespace Dawnsbury.Mods.RunesmithClass;
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
-/// <value>v2.9</value>
+/// <value>v3.0</value>
 public static class LibraryOfAnase
 {
     extension(Creature cr)
@@ -230,6 +231,24 @@ public static class LibraryOfAnase
             if (caThis.Target is not T tar)
                 return caThis;
             adjustTarget(tar);
+            return caThis;
+        }
+
+        /// <summary>
+        /// Sets <see cref="CombatAction.CastsOrUses"/>.
+        /// </summary>
+        public CombatAction WithCastsOrUses(string? castsOrUses)
+        {
+            caThis.CastsOrUses = castsOrUses;
+            return caThis;
+        }
+
+        /// <summary>
+        /// Sets <see cref="CombatAction.ContextMenuName"/>.
+        /// </summary>
+        public CombatAction WithContextMenuName(string? contextMenuName)
+        {
+            caThis.ContextMenuName = contextMenuName;
             return caThis;
         }
     }

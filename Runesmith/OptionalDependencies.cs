@@ -60,7 +60,7 @@ public static class OptionalDependencies
                       """)
                 .WithEffectOnEachTarget(async (action, self, target, _) =>
                 {
-                    if (await CommonRuneRules.TraceAnyRuneOnACreature(
+                    if (await CommonRuneRules.AskToTraceARune(
                             self,
                             targetFilter: cr => cr == target,
                             canBeCanceled: true)

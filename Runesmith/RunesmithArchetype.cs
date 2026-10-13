@@ -121,9 +121,9 @@ public static class RunesmithArchetype
                         "Trace Rune",
                         [Trait.Concentrate, Trait.Magical, Trait.Manipulate, ModData.Traits.Runesmith],
                         $$"""
-                          {i}{{CommonRuneRules.ACTION_DESCRIPTION_TRACE_RUNE.FLAVOR}}{/i}
+                          {i}{{CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_TRACE_RUNE.FLAVOR}}{/i}
 
-                          {{CommonRuneRules.ACTION_DESCRIPTION_TRACE_RUNE.RULES}}
+                          {{CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_TRACE_RUNE.RULES}}
                           """,
                         Target.Self())
                     .WithActionCost(-3))

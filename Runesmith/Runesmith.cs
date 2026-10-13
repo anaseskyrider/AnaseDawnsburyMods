@@ -10,6 +10,7 @@ using Dawnsbury.Core.CharacterBuilder.Selections;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
+using Dawnsbury.Core.Coroutines.Options.Reactive;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Intelligence;
 using Dawnsbury.Core.Mechanics;
@@ -204,8 +205,8 @@ public static class Runesmith
         // Trace Rune
         yield return new Feat(
                 ModData.FeatNames.TraceRune,
-                CommonRuneRules.ACTION_DESCRIPTION_TRACE_RUNE.FLAVOR,
-                CommonRuneRules.ACTION_DESCRIPTION_TRACE_RUNE.RULES,
+                CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_TRACE_RUNE.FLAVOR,
+                CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_TRACE_RUNE.RULES,
                 [Trait.Concentrate, Trait.Magical, Trait.Manipulate],
                 null)
             .WithPermanentQEffect(null, qfFeat =>
@@ -219,29 +220,30 @@ public static class Runesmith
                         return null;
                     
                     List<Possibility> traceRunePossibilities = [];
-                    // Don't make the 1-action version if you have RuneSinger.
                     bool hasRuneSinger = qfThis.Owner.HasEffect(ModData.QEffectIds.RuneSinger);
                     
                     foreach (Rune rune in repertoire.GetTraceableRunes(qfThis.Owner))
                     {
                         List<Possibility> specificRunePossibilities = [];
+                        // Don't make the 1-action version if you have RuneSinger.
                         if (!hasRuneSinger)
                         {
                             CombatAction traceRuneOne = CommonRuneRules
                                 .CreateTraceAction(qfThis.Owner, rune, 1)
-                                .WithExtraTrait(Trait.Basic);
+                                .With(traceAction =>
+                                {
+                                    // Add the action cost to the option, to reduce confusion.
+                                    traceAction.ContextMenuName = $"{RulesBlock.GetIconTextFromNumberOfActions(traceAction.ActionCost)} {traceAction.ContextMenuName}";
                             
-                            traceRuneOne.Description = CommonRuneRules.CreateTraceActionDescription(
-                                rune,
-                                traceRuneOne,
-                                withFlavorText: false);
-                            traceRuneOne.ShortName = traceRuneOne.Name; // Combat log asks for ShortName, then ContextMenuName, then Name. This prevents it from printing the action symbols more than once.
-                            traceRuneOne.ContextMenuName = $"{{icon:Action}} {traceRuneOne.Name}";
-                            traceRuneOne.WithAdjustTarget<CreatureTarget>(crTar => crTar
-                                .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
-                                    attacker.FindQEffect(ModData.QEffectIds.DrawnInVitalInk)?.Tag == defender
-                                        ? Usability.NotUsableOnThisCreature("use Drawn in Vital Ink")
-                                        : Usability.Usable));
+                                    // Add condition that you use Drawn in Vital Ink on the target
+                                    // if you are able to do so.
+                                    if (qfThis.Owner.HasEffect(ModData.QEffectIds.DrawnInVitalInk))
+                                        traceAction.WithAdjustTarget<CreatureTarget>(crTar => crTar
+                                            .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
+                                                attacker.FindQEffect(ModData.QEffectIds.DrawnInVitalInk)?.Tag == defender
+                                                    ? Usability.NotUsableOnThisCreature("use Drawn in Vital Ink")
+                                                    : Usability.Usable));
+                                });
                             
                             ActionPossibility tracePossOne = new ActionPossibility(traceRuneOne)
                             {
@@ -253,29 +255,30 @@ public static class Runesmith
                         
                         CombatAction traceRuneTwo = CommonRuneRules
                             .CreateTraceAction(qfThis.Owner, rune, 2)
-                            .WithExtraTrait(Trait.Basic);
+                            .With(traceAction =>
+                            {
+                                // Add the action cost to the option, to reduce confusion.
+                                traceAction.ContextMenuName = $"{RulesBlock.GetIconTextFromNumberOfActions(traceAction.ActionCost)} {traceAction.ContextMenuName}";
                         
-                        if (!hasRuneSinger)
-                        {
-                            // Declutter your options by removing the ranged option while in melee.
-                            traceRuneTwo.WithAdjustTarget<CreatureTarget>(crTar => crTar
-                                .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
-                                    attacker.DistanceTo(defender) <= 1
-                                        ? Usability.NotUsableOnThisCreature("use the 1-action version")
-                                        : Usability.Usable));
-                        }
-                        traceRuneTwo.ShortName = traceRuneTwo.Name;
-                        traceRuneTwo.ContextMenuName = $"{RulesBlock.GetIconTextFromNumberOfActions(traceRuneTwo.ActionCost)} {traceRuneTwo.Name}";
-                        traceRuneTwo
-                            .WithAdjustTarget<CreatureTarget>(crTar => crTar
-                                .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
-                                    attacker.FindQEffect(ModData.QEffectIds.DrawnInVitalInk)?.Tag == defender
-                                        ? Usability.NotUsableOnThisCreature("use Drawn in Vital Ink")
-                                        : Usability.Usable))
-                            .WithDescription(CommonRuneRules.CreateTraceActionDescription(
-                                rune,
-                                traceRuneTwo,
-                                withFlavorText: false));
+                                // Declutter your context menus by preventing the ranged option while in melee.
+                                if (!hasRuneSinger)
+                                {
+                                    traceAction.WithAdjustTarget<CreatureTarget>(crTar => crTar
+                                        .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
+                                            attacker.DistanceTo(defender) <= 1
+                                                ? Usability.NotUsableOnThisCreature("use the 1-action version")
+                                                : Usability.Usable));
+                                }
+                        
+                                // Add condition that you use Drawn in Vital Ink on the target
+                                // if you are able to do so.
+                                if (qfThis.Owner.HasEffect(ModData.QEffectIds.DrawnInVitalInk))
+                                    traceAction.WithAdjustTarget<CreatureTarget>(crTar => crTar
+                                        .WithAdditionalConditionOnTargetCreature((attacker, defender) =>
+                                            attacker.FindQEffect(ModData.QEffectIds.DrawnInVitalInk)?.Tag == defender
+                                                ? Usability.NotUsableOnThisCreature("use Drawn in Vital Ink")
+                                                : Usability.Usable));
+                            });
                         
                         ActionPossibility tracePossTwo = new ActionPossibility(traceRuneTwo)
                         {
@@ -294,10 +297,10 @@ public static class Runesmith
                             PossibilitySize.Half)
                         {
                             // variable action trace rune
-                            SpellIfAny = CommonRuneRules.CreateTraceActionForDisplay(qfThis.Owner, rune),
+                            SpellIfAny = CommonRuneRules.StatBlocks.CreateTraceActionForDisplay(qfThis.Owner, rune),
                             Subsections =
                             {
-                                // rune.Name is how features like Drawn In Vital Ink find these sections.
+                                // rune.FullName is how features like Drawn In Vital Ink find these sections.
                                 new PossibilitySection(rune.FullName)
                                 {
                                     Possibilities = specificRunePossibilities,
@@ -317,9 +320,9 @@ public static class Runesmith
                         SpellIfAny = new CombatAction(
                             qfThis.Owner, ModData.Illustrations.TraceRune, "Trace Rune", [Trait.Concentrate, Trait.Magical, Trait.Manipulate, ModData.Traits.Runesmith],
                             $$"""
-                            {i}{{CommonRuneRules.ACTION_DESCRIPTION_TRACE_RUNE.FLAVOR}}{/i}
+                            {i}{{CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_TRACE_RUNE.FLAVOR}}{/i}
 
-                            {{CommonRuneRules.ACTION_DESCRIPTION_TRACE_RUNE.RULES}}
+                            {{CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_TRACE_RUNE.RULES}}
                             """, Target.Self()).WithActionCost(-3),
                         Subsections = { new PossibilitySection("Trace Rune")
                         {
@@ -334,8 +337,8 @@ public static class Runesmith
         // Invoke Rune
         yield return new Feat(
                 ModData.FeatNames.InvokeRune,
-                CommonRuneRules.ACTION_DESCRIPTION_INVOKE_RUNE.FLAVOR,
-                CommonRuneRules.ACTION_DESCRIPTION_INVOKE_RUNE.RULES,
+                CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_INVOKE_RUNE.FLAVOR,
+                CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_INVOKE_RUNE.RULES,
                 [ModData.Traits.Invocation, Trait.Magical],
                 null)
             .WithPermanentQEffect(null, qfFeat =>
@@ -361,137 +364,97 @@ public static class Runesmith
         // Etch Rune
         yield return new Feat(
                 ModData.FeatNames.EtchRune,
-                "An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.",
-                "At the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to 2 runes, and you can etch an additional rune at levels 5, 9, 13, and 17.",
+                CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_ETCH_RUNE.FLAVOR,
+                CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_ETCH_RUNE.RULES,
                 [], null)
             .WithPermanentQEffect(
                 "At the start of combat, apply runes to your party (lasts until consumed).",
                 qfFeat =>
                 {
-                    qfFeat./*StartOfCombat =*/StartOfCombatAfterInitiativeOrderIsSetUp = async qfThis =>
+                    qfFeat./*StartOfCombat =*//*StartOfCombatAfterInitiativeOrderIsSetUp*/StartOfCombatReaction = /*async*/ qfThis =>
                     {
-                        RunicRepertoireTag? repertoire = RunicRepertoireTag.GetRepertoire(qfThis.Owner);
-                        if (repertoire == null)
-                            return;
-                        
-                        /*// Runic Tattoo first
-                        if (qfThis.Owner.HasFeat(ModData.FeatNames.RunicTattoo))
-                        {
-                            QEffect? runicTattooFeat = qfFeat.Owner.QEffects.FirstOrDefault(qf =>
-                                qf.Name is { } name && name.Contains("Runic Tattoo"));
-                            if (runicTattooFeat != null)
-                                await runicTattooFeat.StartOfCombat!.Invoke(runicTattooFeat);
-                        }*/
+                        if (RunicRepertoireTag.GetRepertoire(qfThis.Owner) is not {} repertoire
+                            || repertoire.GetKnownRunes(qfFeat.Owner) is not {} runesKnown
+                            || runesKnown.Count == 0)
+                            return null;
                         
                         // Get etch data
-                        List<Rune> runesKnown = repertoire.GetKnownRunes(qfFeat.Owner);
                         int etchLimit = repertoire.GetEtchLimit(qfThis.Owner);
-                        
-                        qfThis.Owner.Battle.Log(
-                            $"{qfThis.Owner.Name} begins {{b}}Etching Runes{{/b}}.",
+                        if (etchLimit == 0)
+                            return null;
+
+                        ReactionOption reactOpt = ReactionOption.CreateCustom(
                             "Etch Rune",
-                            $$"""
-                              {i}An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.{/i}
-
-                              At the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to {{etchLimit.WithColor("Blue")}} runes.
-                              """,
-                            new Traits([Trait.Manipulate, Trait.DoesNotProvoke, ModData.Traits.Runesmith]));
-                        
-                        // Old implementation
-                        /*qfThis.Owner.Overhead(
-                            "Etching Runes",
-                            Color.Black,
-                            $"{qfThis.Owner.Name} begins {{b}}Etching Runes{{/b}}.",
-                            "Etch Rune",
-                            $"{{i}}An etched rune is carved, inked, or branded in, though this application does not damage the creature or item.{{/i}}\n\nAt the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed. You can etch up to {etchLimit} runes.",
-                            new Traits([Trait.Manipulate, Trait.DoesNotProvoke, ModData.Traits.Runesmith]));*/
-
-                        for (int i = 0; i < etchLimit; i++)
-                        {
-                            // Old implementation
-                            /*await qfThis.Owner.Battle.GameLoop.StateCheck();
-                            
-                            List<Option> options = [];
-                            foreach (Rune rune in runesKnown)
+                            $"Draw up to {etchLimit.WithColor("Blue")} runes that last until the end of combat.",
+                            ModData.Illustrations.EtchRune,
+                            qfThis.Owner,
+                            async () =>
                             {
-                                CombatAction etchThisRune = CommonRuneRules.CreateEtchAction(qfThis.Owner, rune);
-                                etchThisRune.Traits.Add(Trait.DoNotShowOverheadOfActionName);
-                                GameLoop.AddDirectUsageOnCreatureOptions(etchThisRune, options);
-                            }
-                            
-                            if (options.Count <= 0)
-                                continue;
-                                
-                            options.Add(new PassViaButtonOption(" Confirm no additional etchings "));
-                            
-                            // Await which option (even if just 1) to take.
-                            Option chosenOption = (await qfThis.Owner.Battle.SendRequest( // Send a request to pick an option
-                                new AdvancedRequest(qfThis.Owner, "Etch a rune on yourself or an ally.", options)
+                                qfThis.Owner.Battle.Log(
+                                    $"{qfThis.Owner.Name} begins {{b}}Etching Runes{{/b}}.",
+                                    "Etch Rune",
+                                    $$"""
+                                      {{CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_ETCH_RUNE.FLAVOR.WithTag("i")}}
+
+                                      At the beginning of combat, you etch runes on yourself or your allies. Your etched runes remain until the end of combat, or until they're expended or removed.
+                                      
+                                      You can etch up to {{etchLimit.WithColor("Blue")}} runes.
+                                      """,
+                                    new Traits([Trait.Manipulate, ModData.Traits.Runesmith]));
+
+                                for (int i = 0; i < etchLimit; i++)
                                 {
-                                    TopBarText = $"Etch a rune on yourself or an ally. ({i+1}/{etchLimit})",
-                                    TopBarIcon = ModData.Illustrations.EtchRune,
-                                })).ChosenOption;
-                            
-                            switch (chosenOption)
-                            {
-                                case CreatureOption:
-                                    break;
-                                case PassViaButtonOption:
-                                    return;
-                            }
+                                    if (qfThis.Owner.Actions.ActionHistoryThisEncounter.LastOrDefault()?.ActionId == ActionId.Pass
+                                        || qfThis.Owner.Actions.WishesToEndTurn)
+                                    {
+                                        qfThis.Owner.Overhead("Pass", Color.Black);
+                                        break;
+                                    }
+                                    
+                                    qfThis.Owner.Overhead($"Etching runes ({i+1}/{etchLimit})", Color.Black);
 
-                            await chosenOption.Action();*/
+                                    PossibilitySection etchRunes = new PossibilitySection(
+                                        "Etch Rune " + string.Join("", Enumerable.Repeat("{icon:spontaneousspellslot}", etchLimit-i)))
+                                    {
+                                        Possibilities = runesKnown
+                                            .Select(rune =>
+                                                new ActionPossibility(
+                                                    CommonRuneRules.CreateEtchAction(
+                                                        qfThis.Owner, rune))
+                                                {
+                                                    Caption = rune.FullName
+                                                })
+                                            .ToList<Possibility>()
+                                    };
 
-                            if (qfThis.Owner.Actions.ActionHistoryThisEncounter.LastOrDefault() is { Tag: "PassEtching" })
-                                break;
-                            
-                            qfThis.Owner.Overhead("Etching runes ("+(i+1)+"/"+etchLimit+")", Color.Black);
-
-                            PossibilitySection etchRunes = new PossibilitySection(
-                                "Etch Rune " + string.Join("", Enumerable.Repeat("{icon:spontaneousspellslot}", etchLimit-i)));
-                            foreach (Rune rune in runesKnown)
-                            {
-                                CombatAction etchThisRune = CommonRuneRules
-                                    .CreateEtchAction(qfThis.Owner, rune)
-                                    .WithExtraTrait(Trait.DoNotShowOverheadOfActionName);
-                                ActionPossibility etchPoss = new ActionPossibility(etchThisRune)
-                                {
-                                    Caption = (etchThisRune.Tag as RuneActionTag)?.Rune.FullName ?? "[ERROR]"
-                                };
-                                etchRunes.AddPossibility(etchPoss);
-                            }
-                            Possibilities etchableRunes = qfThis.Owner.Possibilities.FilterAnyPossibility(_ => false);
-                            etchableRunes.Sections.Add(etchRunes);
-                            etchableRunes.CannotPass = false;
-                            
-                            etchableRunes.Sections.Add(new PossibilitySection("Pass")
-                            {
-                                Possibilities = [new ActionPossibility(new CombatAction(
-                                        qfThis.Owner,
-                                        IllustrationName.EndTurn,
-                                        "Pass",
-                                        [Trait.Basic, Trait.UsableEvenWhenUnconsciousOrParalyzed, Trait.DoesNotPreventDelay],
-                                        "Do nothing.",
-                                        Target.Self())
-                                    .WithTag("PassEtching")
-                                    .WithActionCost(0))]
+                                    Possibilities etchableRunes = Possibilities
+                                        .Create(
+                                            qfThis.Owner,
+                                            new PossibilitiesRegenerationSpecifics()
+                                            {
+                                                OfferAlsoPass = true
+                                            });
+                                    etchableRunes.Sections.Insert(0, etchRunes);
+                                    etchableRunes = etchableRunes.Filter(ap =>
+                                        ap.CombatAction.ActionId == ActionId.Pass
+                                        || ap.CombatAction.ActionId == ModData.ActionIds.EtchRune);
+                                    etchableRunes.CannotPass = false;
+                                    
+                                    Creature? active = qfThis.Owner.Battle.ActiveCreature;
+                                    qfThis.Owner.Battle.ActiveCreature = qfThis.Owner;
+                                    qfThis.Owner.Possibilities = etchableRunes;
+                
+                                    List<Option> actions = await qfThis.Owner.Battle.GameLoop.CreateActions(
+                                        qfThis.Owner, etchableRunes, null);
+                                    qfThis.Owner.Battle.GameLoopCallback.AfterActiveCreaturePossibilitiesRegenerated();
+                                    await qfThis.Owner.Battle.GameLoop.OfferOptions(
+                                        qfThis.Owner, actions, true);
+                
+                                    qfThis.Owner.Battle.ActiveCreature = active;
+                                }
                             });
-                            
-                            var active = qfThis.Owner.Battle.ActiveCreature;
-                            qfThis.Owner.Battle.ActiveCreature = qfThis.Owner;
-                            qfThis.Owner.Possibilities = etchableRunes;
-        
-                            List<Option> actions = await qfThis.Owner.Battle.GameLoop.CreateActions(
-                                qfThis.Owner,
-                                etchableRunes,
-                                null);
-                            qfThis.Owner.Battle.GameLoopCallback.AfterActiveCreaturePossibilitiesRegenerated();
-                            await qfThis.Owner.Battle.GameLoop.OfferOptions(qfThis.Owner, actions, true);
-        
-                            qfThis.Owner.Battle.ActiveCreature = active;
-                        }
 
-                        qfThis.Tag = true; // True means the runes have been etched.
+                        return reactOpt;
                     };
                 });
         
@@ -654,7 +617,7 @@ public static class Runesmith
                         {
                             foreach (Rune rune in (Rune[])[AllRunes.GetRune(RuneId.Esvadir)!, AllRunes.GetRune(RuneId.Holtrik)!])
                             {
-                                if (await CommonRuneRules.DrawRuneOnTarget(
+                                if (await CommonRuneRules.DrawRuneOnCreature(
                                         CommonRuneRules.CreateEtchAction(cr, rune)
                                             .WithExtraTrait(Trait.DoNotShowOverheadOfActionName),
                                         cr, rune, cr.HeldItems[0], true, true)
@@ -864,9 +827,9 @@ public static class Runesmith
                 // so nothing applies here either.
                 [ModData.ModTrait, ModData.Traits.Invocation, Trait.Magical, ModData.Traits.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment],
                 $$"""
-                {i}{{CommonRuneRules.ACTION_DESCRIPTION_INVOKE_RUNE.FLAVOR}}{/i}
+                {i}{{CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_INVOKE_RUNE.FLAVOR}}{/i}
                 
-                {{CommonRuneRules.ACTION_DESCRIPTION_INVOKE_RUNE.RULES.Replace("30 feet", rangeDesc)}}
+                {{CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_INVOKE_RUNE.RULES.Replace("30 feet", rangeDesc)}}
                 """,
                 Target.Self((self, ai) =>
                     {

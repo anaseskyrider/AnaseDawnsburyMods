@@ -1825,7 +1825,7 @@ public static class AllRunes
                                      """,
                                 drawnOnto)
                             {
-                                AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
+                                BeforeInvokingRune = async (drThis, invokeAction, drInvoked) =>
                                 {
                                     if (drThis.Disabled
                                         || drInvoked != drThis.DrawnOn
@@ -1836,32 +1836,43 @@ public static class AllRunes
                                         return;
                                     }
 
-                                    if (await CommonRuneRules.ExecuteInnerInvokeAction(
-                                        invokeAction,
-                                        drInvoked,
-                                        drInvoked.Owner,
-                                        Target.Emanation(3),
-                                        false,
-                                        drInvoked.Rune.InvocationProperties.SoundEffectAfterInvocation
-                                        ?? drInvoked.Rune.InvocationProperties.SoundEffectBeforeInvocation
-                                        ?? ModData.SfxNames.INVOKE_RUNE,
-                                        false, //drInvoked.Rune.InvocationProperties.Defense.HasValue,
-                                        async (innerInvoke, caster, emTarget, result) =>
-                                        {
-                                            List<Creature> affectedCreatures = (await invocationOnEachTarget.Invoke(
-                                                    innerInvoke,
-                                                    drInvoked,
-                                                    emTarget))
-                                                ?.WhereNotNull()
-                                                .ToList() ?? [emTarget];
-                                            // Make the affected creature immune to further invocations of this rune
-                                            foreach (Creature affectedCreature in affectedCreatures)
-                                                affectedCreature.AddQEffect(CommonRuneRules.ImmunityToInvocation(drInvoked.Rune));
-                                        })
-                                        is null)
+                                    if (await CommonRuneRules.GetInnerInvokeTargets(
+                                            invokeAction,
+                                            drInvoked,
+                                            Target.Emanation(3),
+                                            false,
+                                            drInvoked.Rune.InvocationProperties.SoundEffectAfterInvocation
+                                            ?? drInvoked.Rune.InvocationProperties.SoundEffectBeforeInvocation
+                                            ?? ModData.SfxNames.INVOKE_RUNE)
+                                        is not { } chosenTargets)
                                     {
                                         invokeAction.RevertRequested = true;
                                         return;
+                                    }
+
+                                    drThis.Tag = chosenTargets;
+                                },
+                                AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
+                                {
+                                    if (drThis.Disabled
+                                        || drInvoked != drThis.DrawnOn
+                                        || drInvoked.Rune.InvocationProperties.EffectOnOneTarget
+                                            is not {} invocationOnEachTarget
+                                        || drThis.Tag is not ChosenTargets chosenTargets)
+                                    {
+                                        invokeAction.RevertRequested = true;
+                                        return;
+                                    }
+
+                                    foreach (Creature cr in chosenTargets.ChosenCreatures.ToList())
+                                    {
+                                        List<Creature> affectedCreatures = (await invocationOnEachTarget.Invoke(
+                                                invokeAction, drInvoked, cr))
+                                            ?.WhereNotNull()
+                                            .ToList() ?? [cr];
+                                        // Make the affected creature immune to further invocations of this rune
+                                        foreach (Creature affectedCreature in affectedCreatures)
+                                            affectedCreature.AddQEffect(CommonRuneRules.ImmunityToInvocation(drInvoked.Rune));
                                     }
                                 },
                             };
@@ -2084,7 +2095,7 @@ public static class AllRunes
                                         sunRedraw.ProjectileKind = ProjectileKind.None;
                                         sunRedraw.EffectOnOneTarget = async (traceAction, caster, creature, result) =>
                                         {
-                                            if (await CommonRuneRules.DrawRuneOnTarget(
+                                            if (await CommonRuneRules.DrawRuneOnCreature(
                                                     sunRedraw,
                                                     drInvoked.Owner,
                                                     drInvoked.Rune,
@@ -3638,7 +3649,7 @@ public static class AllRunes
         {
             Illustration = rune.Illustration,
             TextCreator = () =>
-                CommonRuneRules.GetFormattedFeatDescription(rune),
+                CommonRuneRules.StatBlocks.CreateRuneDescription(rune, null),
             Apply = values =>
                 RunicRepertoireTag.GetRepertoire(values)
                     ?.AddRune(values.CurrentLevel, rune)
@@ -3654,7 +3665,9 @@ public static class AllRunes
                     ModData.ID_PREPEND+"Rune."+rune.Id.ToWord(),
                     rune.Id.ToFullName()),
                 rune.GetFlavorText(null, false),
-                CommonRuneRules.GetFormattedFeatDescription(rune, false),
+                CommonRuneRules.StatBlocks.CreateRuneDescription(
+                    rune, null,
+                    withFlavorText: false),
                 rune.Traits
                     .Except([ModData.Traits.Runesmith])
                     .ToList(),

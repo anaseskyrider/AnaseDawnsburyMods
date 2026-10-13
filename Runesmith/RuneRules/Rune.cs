@@ -108,12 +108,21 @@ public class Rune
     /// The text describing how the rune changes as level increases.
     /// </summary>
     /// <remarks>
-    /// This generally begins with {b}Level (+2){/b}, or lists a specific level of increase such as {b}Level (17th){/b}.
+    /// This is the unformatted sentences part of the level entry. This must end with a period.
     /// </remarks>
     /// <example><code>
-    /// newRune.LevelText = "{b}Level (+2){/b} The damage increases by 1, and the damage of the invocation increases by 2d6."
+    /// newRune.LevelText = "The damage increases by 1, and the damage of the invocation increases by 2d6."
     /// </code></example>
-    public string? LevelText { get; set; }
+    public string? LevelText {
+        get;
+        set
+        {
+            if (value?.EndsWith('.') == false)
+                value += ".";
+            field = value;
+        }
+        
+    }
     
     /// <summary>
     /// Gets or sets the numeric part of the formatted level-up text.
@@ -138,7 +147,9 @@ public class Rune
     public string? GetFormattedLevelText(string? text = null)
     {
         string? levelText = text ?? (this.LevelText ?? null);
-        return levelText != null ? "{b}Level (" + this.LevelFormat + "){/b} " + levelText : null;
+        return levelText != null
+            ? $"{{b}}Level{this.LevelFormat?.AddIfNotNull(" (",")")}{{/b}} {levelText}"
+            : null;
     }
     
     #endregion

@@ -366,15 +366,15 @@ public class DrawnRune : QEffect
         foreach (Trait trait in DrawTraits)
         {
             this.Description = this.Description!
-                .Replace(DrawTraitToDescription(trait), "")
-                .Replace(TraditionsToDescription(), "")
+                .Replace(DrawnRune.DrawTraitToDescription(trait), "")
+                .Replace(this.TraditionsToDescription(), "")
                 .Replace(tattoo, "");
         }
 
         Trait drawTrait = this.DrawTrait;
         
         this.Description =
-            $"{DrawTraitToDescription(drawTrait)}{TraditionsToDescription()}{this.Description}";
+            $"{DrawnRune.DrawTraitToDescription(drawTrait)}{this.TraditionsToDescription()}{this.Description}";
         
         if (drawTrait == ModData.Traits.Tattooed)
             this.Description += tattoo;

@@ -153,7 +153,7 @@ public static class ClassFeats
                             // but also don't get the chance to convert to a simple Strike 
                             if (!target.DeathScheduledForNextStateCheck)
                             {
-                                if (await CommonRuneRules.TraceAnyRuneOnACreature(caster,
+                                if (await CommonRuneRules.AskToTraceARune(caster,
                                             // Must target creatures
                                             runeFilter: rune => rune.DrawProperties.IsDrawnOnlyOnCreatures,
                                             targetFilter: cr => cr == target,
@@ -624,64 +624,70 @@ public static class ClassFeats
             // I generally prefer "they" over "it", but the singular
             // helps remove some amount of ambiguity on the sentence subject.
             // The familiar must be within 30 feet, not your Trace targets.
-            .WithPermanentQEffect("You can Trace a Rune {icon:Action} from your familiar's space if it's within 30 feet.", qfFeat =>
-            {
-                if (!ModLoader.FamiliarCreature.HasValue)
-                    return;
-                
-                qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
+            .WithPermanentQEffect(
+                "You can Trace a Rune {icon:Action} from your familiar's space if it's within 30 feet.",
+                qfFeat =>
                 {
-                    if (AllRunes.All.FirstOrDefault(rune =>
-                                rune.FullName == section.Name)
-                            is not { } foundRune)
-                        return null;
-
-                    Creature? familiar = qfThis.Owner.Battle.AllCreatures.FirstOrDefault(cr =>
-                        cr.QEffects.Any(qf =>
-                            qf.Id == ModLoader.FamiliarCreature.Value
-                            && qf.Source == qfThis.Owner));
-
-                    CombatAction familiarTrace = CommonRuneRules
-                        .CreateTraceAction(qfThis.Owner, foundRune, 1)
-                        .WithStrikeNameAndIllustrationChange(
-                            $"Glyph {foundRune.FullName}",
-                            ModData.Illustrations.RuneFamiliar,
-                            false)
-                        .WithAdjustTarget<CreatureTarget>(crTar =>
-                        {
-                            crTar.CreatureTargetingRequirements.RemoveAll(req =>
-                                req is NaturalReachCreatureTargetingRequirement
-                                    or MaximumRangeCreatureTargetingRequirement);
-                            crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
-                                familiar is null
-                                    ? Usability.NotUsable("Familiar doesn't exist")
-                                    : Usability.Usable);
-                            crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
-                                familiar is null || a.DistanceTo(familiar) > 6
-                                    ? Usability.NotUsable("Familiar out of range")
-                                    : Usability.Usable);
-                            crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
-                                familiar is null || !d.IsAdjacentTo(familiar)
-                                    ? Usability.NotUsableOnThisCreature("Not adjacent to familiar")
-                                    : Usability.Usable);
-                            crTar.AlternateTileOfOrigin = familiar?.Space.CenterTile;
-                        });
-                    familiarTrace.AlternateCreatureOfOrigin = familiar;
-                    familiarTrace.ShortName = familiarTrace.Name; // Combat log asks for ShortName, then ContextMenuName, then Name. This prevents it from printing the action symbols more than once.
-                    familiarTrace.ContextMenuName = "{icon:Action} " + familiarTrace.Name;
-                    familiarTrace.Description = CommonRuneRules.CreateTraceActionDescription(
-                        foundRune,
-                        qfThis.Owner.Level,
-                        withFlavorText: false,
-                        prologueText: "{Blue}{b}Range{/b} Adjacent to your glyph familiar{/Blue}\n");
-
-                    return new ActionPossibility(familiarTrace)
+                    if (!ModLoader.FamiliarCreature.HasValue)
+                        return;
+                    
+                    qfFeat.ProvideActionIntoPossibilitySection = (qfThis, section) =>
                     {
-                        Caption = "From Glyph Familiar",
-                        Illustration = ModData.Illustrations.RuneFamiliar,
+                        if (AllRunes.All.FirstOrDefault(rune =>
+                                    rune.FullName == section.Name)
+                                is not { } foundRune)
+                            return null;
+
+                        Creature? familiar = qfThis.Owner.Battle.AllCreatures.FirstOrDefault(cr =>
+                            cr.QEffects.Any(qf =>
+                                qf.Id == ModLoader.FamiliarCreature.Value
+                                && qf.Source == qfThis.Owner));
+
+                        CombatAction familiarTrace = CommonRuneRules
+                            .CreateTraceAction(
+                                qfThis.Owner, foundRune, 1, null,
+                                "Glyph Rune", "redirects")
+                            .WithAdjustTarget<CreatureTarget>(crTar =>
+                            {
+                                crTar.CreatureTargetingRequirements.RemoveAll(req =>
+                                    req is NaturalReachCreatureTargetingRequirement
+                                        or MaximumRangeCreatureTargetingRequirement);
+                                crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
+                                    familiar is null
+                                        ? Usability.NotUsable("Familiar doesn't exist")
+                                        : Usability.Usable);
+                                crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
+                                    familiar is null || !familiar.Actions.CanTakeActions()
+                                        ? Usability.NotUsable("Familiar can't take actions")
+                                        : Usability.Usable);
+                                crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
+                                    familiar is null || a.DistanceTo(familiar) > 6
+                                        ? Usability.NotUsable("Familiar out of range")
+                                        : Usability.Usable);
+                                crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
+                                    familiar is null || !(d.DistanceTo(familiar) <= 1)
+                                        ? Usability.NotUsableOnThisCreature("Not adjacent to familiar")
+                                        : Usability.Usable);
+                                crTar.WithAdditionalConditionOnTargetCreature(
+                                    new UnblockedLineOfEffectCreatureTargetingRequirement());
+                                crTar.AlternateTileOfOrigin = familiar?.Space.CenterTile;
+                            });
+                        familiarTrace.Illustration = new SideBySideIllustration(
+                            familiarTrace.Illustration,
+                            ModData.Illustrations.RuneFamiliar);
+                        familiarTrace.AlternateCreatureOfOrigin = familiar;
+                        familiarTrace.Description = CommonRuneRules.StatBlocks.CreateDrawActionDescription(
+                            foundRune, familiarTrace,
+                            customRangeLine: "Adjacent to your glyph familiar");
+                        familiarTrace.ContextMenuName = $"{{icon:Action}} {familiarTrace.ContextMenuName}";
+
+                        return new ActionPossibility(familiarTrace)
+                        {
+                            Caption = "From Glyph Familiar",
+                            Illustration = ModData.Illustrations.RuneFamiliar,
+                        };
                     };
-                };
-            })
+                })
             .WithOnSheet(values =>
             {
                 if (!values.Tags.TryGetValueAs("CombatFamiliar", out FamiliarTag? famTag)
@@ -879,7 +885,7 @@ public static class ClassFeats
                         if (onSuccess is not null)
                             inkAction.WithEffectOnSelf(async (thisAction, self) =>
                             {
-                                if (await CommonRuneRules.TraceAnyRuneOnACreature(self)
+                                if (await CommonRuneRules.AskToTraceARune(self)
                                     is CancelOption or PassOption)
                                 {
                                     thisAction.RevertRequested = true;
@@ -993,7 +999,7 @@ public static class ClassFeats
                                     .WhereNotNull()
                                     .ToList();
 
-                                if (await CommonRuneRules.TraceAnyRuneOnACreature(
+                                if (await CommonRuneRules.AskToTraceARune(
                                         strike.Owner,
                                         null,
                                         validTraces.Contains,
@@ -1108,7 +1114,7 @@ public static class ClassFeats
                             .With(ca => ca.Traits.Remove(ModData.Traits.Etched))
                             .WithExtraTrait(ModData.Traits.Tattooed);
                         
-                        DrawnRune? appliedRune = (await CommonRuneRules.DrawRuneOnTarget(
+                        DrawnRune? appliedRune = (await CommonRuneRules.DrawRuneOnCreature(
                                 etchTattoo,
                                 qfThis.Owner,
                                 rune,
@@ -1207,7 +1213,7 @@ public static class ClassFeats
                                 .ToList();
 
                             if (runeBearers.Count == 0
-                                || await CommonRuneRules.TraceAnyRuneOnACreature(caster,
+                                || await CommonRuneRules.AskToTraceARune(caster,
                                     targetFilter: validTargets.Contains,
                                     overrideRange: reach)
                                     is not {} chosenOption
@@ -1818,7 +1824,7 @@ public static class ClassFeats
                                                 qfBuff.Owner,
                                                 async () =>
                                                 {
-                                                    if (await CommonRuneRules.TraceAnyRuneOnACreature(
+                                                    if (await CommonRuneRules.AskToTraceARune(
                                                             qfBuff.Owner,
                                                             runeFilter: legalDiacritics.Contains,
                                                             targetFilter: cr => cr == dr.Owner,
@@ -1938,7 +1944,7 @@ public static class ClassFeats
                                 if (action.CheckResult < CheckResult.Success)
                                     return;
                                 
-                                if (await CommonRuneRules.TraceAnyRuneOnACreature(
+                                if (await CommonRuneRules.AskToTraceARune(
                                         self,
                                         runeFilter: rune => rune.DrawProperties.IsDrawnOnlyOnCreatures,
                                         targetFilter: cr => cr == targets.ChosenCreature,
@@ -1994,7 +2000,7 @@ public static class ClassFeats
                                         .Replace(
                                             rune.PassiveProperties.PassiveTextWithHeightening(rune,
                                                 knockAction.Owner.Level),
-                                            "{Blue}(Runic Reprisal) When you use Shield Block against an adjacent attacker, this rune's invocation effects are detonated outward onto the attacker.{/Blue}");
+                                            "{Blue}{b}Runic Reprisal{/b} When you use Shield Block against an adjacent attacker, this rune's invocation effects are detonated outward onto the attacker.{/Blue}");
                                 },
                                 drawnRune =>
                                 {
@@ -2081,6 +2087,7 @@ public static class ClassFeats
                                         new EnemyCreatureTargetingRequirement()))
                             .WithActionCost(0)
                             .WithTag(reprisalDr)
+                            .WithCastsOrUses("reprises")
                             .WithEffectOnEachTarget(async (reprisalAction, caster, target, _) =>
                             {
                                 target.AddQEffect(new QEffect(ExpirationCondition.EphemeralAtEndOfImmediateAction)
@@ -2111,7 +2118,7 @@ public static class ClassFeats
                                                     invokeAction.ChosenTargets));
                                             
                                             // Log invocation
-                                            CommonRuneRules.LogRune(caster2, invokeAction, reprisalDr, effectTarget);
+                                            CommonRuneRules.LogInvokedRune(caster2, reprisalDr.Rune, reprisalDr.Owner, shield);
                                         };
 
                                         // Move them back, so the invoke animation looks good
@@ -2120,17 +2127,12 @@ public static class ClassFeats
                                         await caster.Battle.GameLoop.FullCast(
                                             invokeThisRune,
                                             ChosenTargets.CreateSingleTarget(target));
-
-                                        /*// Move them back, so the invoke animation looks good
-                                        await target.FictitiousSingleTileMoveBack();
-
-                                        // Perform an inline invocation behavior to skip targeting routines
-                                        await CommonRuneRules.InvokeDrawnRune(
-                                            reprisalAction,
-                                            reprisalDr,
-                                            ChosenTargets.CreateSingleTarget(target));*/
                                     }
                                 });
+                            })
+                            .With(reprisalAction =>
+                            {
+                                reprisalAction.ShortName = $"{reprisalDr.Rune.Illustration.IllustrationAsIconString}{reprisalDr.Rune.WordName}";
                             }))
                         .Select(repriseThisRune =>
                         {
@@ -2327,7 +2329,7 @@ public static class ClassFeats
                             // Draw on each target
                             List<DrawnRune> drawings = [];
                             foreach (Creature cr in targets.ChosenCreatures.ToList())
-                                drawings.AddRange(await CommonRuneRules.DrawRuneOnTarget(action, cr, tattooedRune.Rune) ?? []);
+                                drawings.AddRange(await CommonRuneRules.DrawRuneOnCreature(action, cr, tattooedRune.Rune) ?? []);
                                             
                             // Log the event
                             caster.Battle.Log(
@@ -2461,7 +2463,12 @@ public static class ClassFeats
                         return null;
 
                     CombatAction bloodTrace = CommonRuneRules
-                        .CreateTraceAction(qfThis.Owner, foundRune, 2, 12)
+                        .CreateTraceAction(
+                            qfThis.Owner, foundRune, 2, 12,
+                            // The usage of the "Draw" verbiage is external.
+                            // I otherwise use "draw" as the most generic verb for applying runes,
+                            // but that's an internal coding decision unrelated to this feat.
+                            "Draw Rune", "draws")
                         .WithIllustration(new SuperimposedIllustration(
                             foundRune.Illustration,
                             ModData.Illustrations.DrawnInVitalInk))
@@ -2477,20 +2484,15 @@ public static class ClassFeats
                                     ? Usability.Usable
                                     : Usability.NotUsableOnThisCreature("not Drawn In Vital Ink target")));
 
-                    // The usage of the "Draw" verbiage is external.
-                    // I otherwise use "draw" as the most generic verb for applying runes,
-                    // but that's an internal coding decision unrelated to this feat.
-                    bloodTrace.Name = bloodTrace.Name
-                        .Replace("Trace", "Draw")
-                        .Replace("Sing", "Draw & Sing");
-                    bloodTrace.ContextMenuName = "{icon:Action} " + bloodTrace.Name;
-                    bloodTrace.Description = CommonRuneRules.CreateTraceActionDescription(
-                        foundRune,
-                        qfThis.Owner.Level,
-                        withFlavorText: false,
-                        prologueText: "{Blue}{b}Range{/b} 60 feet{/Blue}\n" + (qfThis.Owner.HasEffect(ModData.QEffectIds.RuneSinger) && !qfThis.Owner.HasFeat(ModData.FeatNames.GenerationalRuneSinger)
-                            ? $"{{Blue}}{{b}}Frequency{{/b}} Once per {(qfThis.Owner.HasFeat(ModData.FeatNames.ProdigalRuneSinger) ? "round" : "combat")} (Rune-Singer){{/Blue}}\n"
-                            : null));
+                    bloodTrace.ContextMenuName = "{icon:Action} " + bloodTrace.ContextMenuName;
+                    bloodTrace.Description = CommonRuneRules.StatBlocks.CreateDrawActionDescription(
+                        foundRune, bloodTrace,
+                        customRangeLine:
+                            "60 feet"
+                            + (qfThis.Owner.HasEffect(ModData.QEffectIds.RuneSinger)
+                               && !qfThis.Owner.HasFeat(ModData.FeatNames.GenerationalRuneSinger)
+                               ? $"\n{{b}}Frequency{{/b}} Once per {(qfThis.Owner.HasFeat(ModData.FeatNames.ProdigalRuneSinger) ? "round" : "combat")} (Rune-Singer)."
+                               : null));
 
                     // Update the usage for a legal rune
                     if (foundRune.DrawProperties.IsDrawnOnlyOnCreatures)
@@ -2864,11 +2866,10 @@ public static class ClassFeats
                                     .Select(cr =>
                                         new CreatureOption(
                                             cr,
-                                            // Also excludes the range description
-                                            CommonRuneRules.CreateTraceActionDescription(
-                                                rune,
-                                                caster.Level,
-                                                withFlavorText: false),
+                                            traceAction.TooltipCreator?.Invoke(traceAction, cr, 0)
+                                            // This overload excludes the range description
+                                            ?? CommonRuneRules.StatBlocks.CreateDrawActionDescription(
+                                                rune, caster.Level, null),
                                             async () => chosenRune = rune,
                                             0f, false)
                                         {
@@ -3547,7 +3548,7 @@ public static class ClassFeats
                                         if (result < CheckResult.Success)
                                             return;
                                         await caster2.FictitiousSingleTileMoveBack();
-                                        await CommonRuneRules.TraceAnyRuneOnACreature(
+                                        await CommonRuneRules.AskToTraceARune(
                                             caster2,
                                             runeFilter: rune => rune.DrawProperties.IsDrawnOnlyOnCreatures,
                                             targetFilter: cr => cr == target);
@@ -3671,15 +3672,12 @@ public static class ClassFeats
                                                 foundRune.Illustration),
                                             $"Canvas{(qfCanvas.Owner.HasEffect(ModData.QEffectIds.RuneSinger) ? " & Sing" : null)} Rune ({foundRune.WordName})",
                                             traceRune.Traits.ToArray(),
-                                            CommonRuneRules.CreateTraceActionDescription(
-                                                foundRune,
-                                                traceRune,
-                                                withRangeText: false,
-                                                prologueText:
-                                                "{Blue}{b}Range{/b} All creatures within your canvas{/Blue}\n"
+                                            traceRune.Description.Replace(
+                                                traceRune.Target.ToDescription() ?? "Replaces nothing",
+                                                "{Blue}{b}Range{/b} Any targets within your canvas{/Blue}"
                                                 + (qfCanvas.Owner.HasEffect(ModData.QEffectIds.RuneSinger)
                                                    && !qfCanvas.Owner.HasFeat(ModData.FeatNames.GenerationalRuneSinger)
-                                                    ? $"{{Blue}}{{b}}Frequency{{/b}} Once per {(qfCanvas.Owner.HasFeat(ModData.FeatNames.ProdigalRuneSinger) ? "round" : "combat")} (Rune-Singer){{/Blue}}\n"
+                                                    ? $"\n{{Blue}}{{b}}Frequency{{/b}} Once per {(qfCanvas.Owner.HasFeat(ModData.FeatNames.ProdigalRuneSinger) ? "round" : "combat")} (Rune-Singer){{/Blue}}\n"
                                                     : null)),
                                             Target.MultipleCreatureTargets(
                                                 qfCanvas.Zone.CreaturesInZone.Count(cr =>
@@ -3715,7 +3713,7 @@ public static class ClassFeats
                                             // Draw on each target
                                             List<DrawnRune> drawings = [];
                                             foreach (Creature cr in targets2.ChosenCreatures.ToList())
-                                                drawings.AddRange(await CommonRuneRules.DrawRuneOnTarget(canvasAction, cr, foundRune) ?? []);
+                                                drawings.AddRange(await CommonRuneRules.DrawRuneOnCreature(canvasAction, cr, foundRune) ?? []);
                                             
                                             // Log the event
                                             caster2.Battle.Log(
@@ -3845,13 +3843,17 @@ public static class ClassFeats
     {
         // Make instances of each rune with description adjustments
         CombatAction knockThisRune = CommonRuneRules
-            .CreateTraceAction(runesmith, rune, actionVersion: 0)
+            .CreateTraceAction(
+                runesmith, rune,
+                actionVersion: 0,
+                actionName: "Fortifying Knock",
+                castsOrUses: "knocks")
             .WithIllustration(new SideBySideIllustration(
                 shield.Illustration,
                 rune.Illustration))
-            .WithName($"Fortifying Knock ({rune.WordName})")
             .WithActionCost(1)
             .WithExtraTrait(Trait.Flourish)
+            .WithSoundEffect(null)
             .WithNewTarget(Target.Self((self, ai) =>
                 ai.GainBonusToAC(
                     CommonShieldRules.GetAC(shield)!.Value
@@ -3859,13 +3861,10 @@ public static class ClassFeats
                     + (rune.Id is RuneId.Holtrik && !self.HasEffect(qf => qf is DrawnRune dr && dr.Rune.Id == RuneId.Holtrik) ? 1 : 0) // Include status bonus from Holtrik
                     )));
         
-        knockThisRune.Description = CommonRuneRules
-            .CreateTraceActionDescription(rune, runesmith.Level, withFlavorText: false)
-            .Replace(
-                rune.DrawProperties.UsageText,
-                "{Blue}drawn on your raised shield{/Blue}");
-        knockThisRune.Traits.Remove(Trait.DoNotShowInCombatLog);
-        knockThisRune.SoundEffectName = null;
+        knockThisRune.Description = CommonRuneRules.StatBlocks
+            .CreateDrawActionDescription(
+                rune, knockThisRune,
+                customUsageLine: "drawn on your raised shield");
 
         bool hasManipulate = knockThisRune.Traits.Remove(Trait.Manipulate);
         
@@ -3874,7 +3873,7 @@ public static class ClassFeats
         {
             // Trace the rune, but do not apply it right away
             Rune rune2 = (knockAction.Tag as RuneActionTag)?.Rune!;
-            if (await CommonRuneRules.DrawRuneOnTarget(
+            if (await CommonRuneRules.DrawRuneOnCreature(
                     knockAction, target, rune2,
                     // You can apply illegal runes to your shield with Runic Reprisal
                     ignoreUsageRequirements: true,
@@ -3911,7 +3910,7 @@ public static class ClassFeats
                 drawnRune.DrawnOn = shield;
                 doWhatIfDrawn?.Invoke(drawnRune);
                 
-                CommonRuneRules.LogRune(caster, knockAction, drawnRune, target, shield);
+                CommonRuneRules.LogNewRune(caster, drawnRune.Rune, target, shield);
             }
             // If the rune failed to apply due to an error, do not raise the shield
             else

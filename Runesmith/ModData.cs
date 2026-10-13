@@ -629,7 +629,7 @@ public static class ModData
               {b}Rune{/b}
               {i}Trait{/i}
 
-              {{CommonRuneRules.TRAIT_DESCRIPTION_RUNE}}
+              {{CommonRuneRules.StatBlocks.TRAIT_DESCRIPTION_RUNE}}
               """,
             true);
         
@@ -639,7 +639,7 @@ public static class ModData
               {b}Invocation{/b}
               {i}Trait{/i}
 
-              {{CommonRuneRules.TRAIT_DESCRIPTION_INVOCATION}}
+              {{CommonRuneRules.StatBlocks.TRAIT_DESCRIPTION_INVOCATION}}
               """,
             true);
         
@@ -649,7 +649,7 @@ public static class ModData
               {b}Diacritic{/b}
               {i}Trait{/i}
 
-              {{CommonRuneRules.TRAIT_DESCRIPTION_DIACRITIC}}
+              {{CommonRuneRules.StatBlocks.TRAIT_DESCRIPTION_DIACRITIC}}
               """,
             true);
 
@@ -663,7 +663,7 @@ public static class ModData
               {b}Runesmith Rune Traditions{/b}
               {i}Deviation from tabletop{/i}
 
-              {{CommonRuneRules.TRAIT_DESCRIPTION_RUNE_TRADITION}}
+              {{CommonRuneRules.StatBlocks.TRAIT_DESCRIPTION_RUNE_TRADITION}}
               """,
             true);
 
@@ -779,7 +779,7 @@ public static class ModData
         
         public static readonly Trait Rune = ModManager.RegisterTrait("Rune",
             new TraitProperties("Rune", true,
-                CommonRuneRules.TRAIT_DESCRIPTION_RUNE,
+                CommonRuneRules.StatBlocks.TRAIT_DESCRIPTION_RUNE,
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
         
         /// <summary>A <see cref="DrawnRune"/> with this trait represents a QEffect which has been temporarily traced.</summary>
@@ -805,13 +805,13 @@ public static class ModData
         /// <summary>An action with this trait represents an invocation action. A QEffect with this trait represents the effects of an invocation, as opposed to an effect that is the result of a rune being applied.</summary>
         public static readonly Trait Invocation = ModManager.RegisterTrait("Invocation",
             new TraitProperties("Invocation", true,
-                CommonRuneRules.TRAIT_DESCRIPTION_INVOCATION,
+                CommonRuneRules.StatBlocks.TRAIT_DESCRIPTION_INVOCATION,
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
         
         /// <summary>A diacritic rune is a rune that is drawn onto other runes.</summary>
         public static readonly Trait Diacritic = ModManager.RegisterTrait("Diacritic",
             new TraitProperties("Diacritic", true,
-                CommonRuneRules.TRAIT_DESCRIPTION_DIACRITIC,
+                CommonRuneRules.StatBlocks.TRAIT_DESCRIPTION_DIACRITIC,
                 relevantForShortBlock: true) { RelevantOnlyForClass = Runesmith });
         
         #endregion
@@ -832,5 +832,7 @@ public static class ModData
         public static Trait Rune => Traits.Rune;
         public static Trait Diacritic => Traits.Diacritic;
         public static Trait Invocation => Traits.Invocation;
+        public static Trait Traced => Traits.Traced;
+        public static Trait Etched => Traits.Etched;
     }
 }
