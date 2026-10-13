@@ -3563,7 +3563,8 @@ public static class ClassFeats
 
                     return dance;
                 };
-            });
+            })
+            .WithInappropriateBecauseOfBadInventory(FeatInventoryRequirements.RequiresMeleeWeapon);
 
         // Define the Canvas
         yield return new TrueFeat(
