@@ -1108,6 +1108,8 @@ public static class CommonRuneRules
                 // Get chosen targets
                 ChosenTargets? chosenTargets = await CommonRuneRules.GetInvocationTargets(
                     invokeAction, tag.ChosenDrawnRune);
+
+                DrawnRune? cachedDiacritic = tag.ChosenDrawnRune.AttachedDiacritic;
                 
                 // Apply invocation effects
                 if (chosenTargets is null
@@ -1119,7 +1121,9 @@ public static class CommonRuneRules
                 }
 
                 // Log invocation
-                CommonRuneRules.LogInvokedRune(caster, tag.ChosenDrawnRune.Rune, target);
+                /*CommonRuneRules.LogInvokedRune(caster, tag.ChosenDrawnRune, target);
+                if (cachedDiacritic is not null)
+                    CommonRuneRules.LogInvokedRune(caster, cachedDiacritic, target);*/
             })
             .WithTargetingTooltip((invokeAction, target, index) =>
             {
@@ -1388,11 +1392,69 @@ public static class CommonRuneRules
         }
         
         // Remove this rune
+        DrawnRune? diacritic = drawnRune.AttachedDiacritic;
+        CommonRuneRules.LogInvokedRune(sourceAction.Owner, drawnRune, drawnRune.Owner, drawnRune.DrawnOn);
         CommonRuneRules.RemoveDrawnRune(drawnRune);
-        if (drawnRune.AttachedDiacritic is { } drawnDiacritic)
-            CommonRuneRules.RemoveDrawnRune(drawnDiacritic);
+        if (diacritic is not null)
+        {
+            CommonRuneRules.LogInvokedRune(sourceAction.Owner, diacritic, diacritic.Owner, diacritic.DrawnOn);
+            CommonRuneRules.RemoveDrawnRune(diacritic);
+        }
 
         return true;
+    }
+
+    /// <summary>
+    /// TODO: Document this.
+    /// </summary>
+    /// <param name="runesmith"></param>
+    /// <param name="drawnRune"></param>
+    /// <param name="target"></param>
+    public static async Task<bool> InvokeDrawnRuneAgainstTarget(
+        Creature runesmith,
+        DrawnRune drawnRune,
+        Creature target)
+    {
+        // Create action
+        CombatAction? invokeAction = CommonRuneRules.CreateInvokeAction(
+                runesmith, drawnRune,
+                immediatelyRemoveImmunity: true,
+                requiresTargetHasDrawnRune: false)
+            ?.WithActionCost(0);
+
+        if (invokeAction is null)
+            return false;
+        
+        // Overwrite the execution to use the specific target instead of
+        // the rune-bearer.
+        invokeAction.EffectOnOneTarget = async (invokeAction2, _, _, _) =>
+        {
+            // Execute sub-targeting routine
+            if (await CommonRuneRules.GetInvocationTargets(
+                    invokeAction2,
+                    drawnRune,
+                    // Use the action's chosen targets, which is set
+                    // to just the target creature during full-casting.
+                    invokeAction2.ChosenTargets)
+                is not { } chosenSubTargets
+                || !await CommonRuneRules.InvokeDrawnRune(
+                    invokeAction2,
+                    drawnRune,
+                    chosenSubTargets))
+            {
+                invokeAction2.RevertRequested = true;
+                return;
+            }
+        };
+
+        // Move them back, so the invoke animation looks good
+        await target.FictitiousSingleTileMoveBack();
+
+        // Execute the action for all the bells and whistles.
+        return await runesmith.Battle.GameLoop.FullCast(
+            invokeAction,
+            // Pass in the single target as the chosen targets.
+            ChosenTargets.CreateSingleTarget(target));
     }
 
     /// <summary>
@@ -2026,7 +2088,7 @@ public static class CommonRuneRules
     /// <param name="invokedRune">The rune being logged.</param>
     /// <param name="target">The creature bearing the rune.</param>
     /// <param name="subTarget">The subtarget of the rune, such as an item, if any.</param>
-    public static void LogInvokedRune(Creature runesmith, Rune invokedRune, Creature target,
+    public static void LogInvokedRune(Creature runesmith, DrawnRune invokedRune, Creature target,
         object? subTarget = null)
     {
         string whom = target.Name;
@@ -2036,13 +2098,16 @@ public static class CommonRuneRules
             DrawnRune subRune => $"{subRune.Illustration!.IllustrationAsIconString}{subRune.Rune.WordName}",
             _ => null
         };
-        string rune = $"{invokedRune.Illustration.IllustrationAsIconString}{invokedRune.WordName}";
+        string rune = $"{invokedRune.Rune.Illustration.IllustrationAsIconString}{invokedRune.Rune.WordName}";
         
         runesmith.Battle.Log(
             $"{whom}{(whom2 is not null ? $"'s {whom2}" : null)} loses {rune}.",
-            invokedRune.FullName,
-            CommonRuneRules.StatBlocks.CreateRuneDescription(invokedRune, runesmith.Level),
+            invokedRune.Rune.FullName,
+            CommonRuneRules.StatBlocks.CreateRuneDescription(invokedRune.Rune, runesmith.Level),
             new Traits(invokedRune.Traits));
+
+        /*if (invokedRune.AttachedDiacritic is { } diacritic)
+            LogInvokedRune(runesmith, diacritic, target, subTarget);*/
     }
     
     #endregion

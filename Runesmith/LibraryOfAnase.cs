@@ -40,7 +40,8 @@ namespace Dawnsbury.Mods.RunesmithClass;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
-/// <item>v3.0: Add CombatAction.WithCastsOrUses(), CombatAction.WithContextMenuName.</item>
+/// <item>v3.1: Add CombatAction.WithTemporaryEffectOnCreatures().</item>
+/// <item>v3.0: Add CombatAction.WithCastsOrUses(), CombatAction.WithContextMenuName().</item>
 /// <item>v2.9: Adjust StrikeCreature signature to include a specific MAP value.</item>
 /// <item>v2.8: Add string.AddIfNotNull().</item>
 /// <item>v2.7: Add Creature.AskForChoiceAmongItems(), CommonSpellEffects.DealAttackRollPersistentDamage(), CombatAction.WithAdjustTarget().</item>
@@ -62,7 +63,7 @@ namespace Dawnsbury.Mods.RunesmithClass;
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
-/// <value>v3.0</value>
+/// <value>v3.1</value>
 public static class LibraryOfAnase
 {
     extension(Creature cr)
@@ -217,6 +218,42 @@ public static class LibraryOfAnase
             againstWhom.AddQEffect(qfForAction);
             await caThis.Owner.Battle.GameLoop.FullCast(caThis, ChosenTargets.CreateSingleTarget(againstWhom));
             againstWhom.RemoveAllQEffects(qf => qf == qfForAction);
+        }
+
+        /// <summary>
+        /// Applies a temporary effect to each of the action's <see cref="ChosenTargets.ChosenCreatures"/> and removes it after the action finishes executing.
+        /// </summary>
+        /// <param name="qfForAction">Generates a QEffect for each chosen creature. The CombatAction is this action, the Creature is the chosen creature, and the return is the effect (if any) to add.</param>
+        /// <remarks>
+        /// This wraps around any existing <see cref="CombatAction.EffectOnChosenTargetsBeforeRolls"/> and <see cref="CombatAction.EffectOnChosenTargets"/> lambdas. Call this function last to ensure consistency.
+        /// </remarks>
+        public CombatAction WithTemporaryEffectOnCreatures(Func<CombatAction, Creature, QEffect?> qfForAction)
+        {
+            List<QEffect> generatedQfs = [];
+            var cachedBefore = caThis.EffectOnChosenTargetsBeforeRolls;
+            caThis.EffectOnChosenTargetsBeforeRolls = async (action, caster, targets) =>
+            {
+                targets.ChosenCreatures.ForEach(cr =>
+                {
+                    if (qfForAction(action, cr) is not { } tempQf)
+                        return;
+                    cr.AddQEffect(tempQf);
+                    generatedQfs.Add(tempQf);
+                });
+                // Perform this last, applying QEffects as the first possible step.
+                await cachedBefore.InvokeIfNotNull(action, caster, targets);
+            };
+            var cachedAfter = caThis.EffectOnChosenTargets;
+            caThis.EffectOnChosenTargets = async (action, caster, targets) =>
+            {
+                // Perform this first, removing QEffects as the last possible step.
+                await cachedAfter.InvokeIfNotNull(action, caster, targets);
+                // Just in case the RemoveAll fails for any reason.
+                generatedQfs.ForEach(qf => qf.ExpiresAt = ExpirationCondition.Immediately);
+                targets.ChosenCreatures.ForEach(cr =>
+                    cr.RemoveAllQEffects(qf => generatedQfs.Contains(qf)));
+            };
+            return caThis;
         }
 
         /// <summary>

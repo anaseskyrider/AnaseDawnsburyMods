@@ -461,21 +461,29 @@ public static class ModData
     {
         public const string RUNESINGER = "RuneSinger";
         public const string RUNIC_TATTOO = "RunicTattoo";
-        public static string SUN_DIACRITIC = OncePerCombatRune(RuneId.Sun);
 
-        public static string OncePerCombatRune(RuneId runeId)
+        /*public static string OncePerCombatRune(RuneId runeId)
         {
             return $"InvokedRune:{runeId.ToWord()}";
-        }
+        }*/
 
         public static bool RuneIsUsedUp(Creature runesmith, RuneId runeId)
         {
-            return runesmith.PersistentUsedUpResources.UsedUpActions.Contains(OncePerCombatRune(runeId));
+            return runesmith.QEffects.Any(qf =>
+                qf.Id == QEffectIds.UsedUpRune
+                && qf.Tag is RuneId usedId
+                && usedId == runeId);
+            //return runesmith.PersistentUsedUpResources.UsedUpActions.Contains(OncePerCombatRune(runeId));
         }
 
         public static void UseUpRune(Creature runesmith, RuneId runeId)
         {
-            runesmith.PersistentUsedUpResources.UsedUpActions.Add(OncePerCombatRune(runeId));
+            runesmith.AddQEffect(new QEffect()
+            {
+                Id = QEffectIds.UsedUpRune,
+                Tag = runeId
+            });
+            //runesmith.PersistentUsedUpResources.UsedUpActions.Add(OncePerCombatRune(runeId));
         }
     }
     
@@ -505,6 +513,10 @@ public static class ModData
         /// A creature with this effect is immune to the invocation of the <see cref="Rune"/> stored in its <see cref="QEffect.Tag"/>.
         /// </summary>
         public static QEffectId ImmuneToInvocation;
+        /// <summary>
+        /// A creature with this effect cannot trace or invoke the rune with the <see cref="RuneId"/> found in <see cref="QEffect.Tag"/>.
+        /// </summary>
+        public static QEffectId UsedUpRune;
         public static QEffectId RunicCrafter;
         public static QEffectId RuneSinger;
         public static QEffectId RuneSingerCreator;
@@ -522,10 +534,15 @@ public static class ModData
         /// This is the controller effect for the Define the Canvas zone.
         /// </summary>
         public static QEffectId DefineCanvasController;
+        /// <summary>
+        /// This is the controller effect for the Henge Gate zone.
+        /// </summary>
+        public static QEffectId HengeGateController;
         
         public static void Initialize()
         {
             ImmuneToInvocation = ModManager.RegisterEnumMember<QEffectId>("ImmuneToInvocation");
+            UsedUpRune = ModManager.RegisterEnumMember<QEffectId>("UsedUpRune");
             RunicCrafter = ModManager.RegisterEnumMember<QEffectId>("RunicCrafter");
             RuneSinger = ModManager.RegisterEnumMember<QEffectId>("Rune-Singer");
             RuneSingerCreator = ModManager.RegisterEnumMember<QEffectId>("RuneSingerCreator");
@@ -536,6 +553,7 @@ public static class ModData
             JurrozDamageTracker = ModManager.RegisterEnumMember<QEffectId>("JurrozDamageTracker");
             TemporaryRunicRepertoire = ModManager.RegisterEnumMember<QEffectId>("TemporaryRunicRepertoire");
             DefineCanvasController = ModManager.RegisterEnumMember<QEffectId>("DefineCanvasController");
+            HengeGateController = ModManager.RegisterEnumMember<QEffectId>("HengeGateController");
         }
     }
 
@@ -801,6 +819,10 @@ public static class ModData
         /// <summary>A <see cref="DrawnRune"/> with this hidden technical trait represents a QEffect which has been traced via the Runic Reprisal feat.</summary>
         public static readonly Trait Reprised = ModManager.RegisterTrait("Reprised",
             new TraitProperties("Reprised", false) { BackgroundColor = Color.BurlyWood });
+        
+        /// <summary>A <see cref="DrawnRune"/> with this hidden technical trait represents a QEffect which has been traced via the Orbiting Runestone feat.</summary>
+        public static readonly Trait Orbiting = ModManager.RegisterTrait("Orbiting",
+            new TraitProperties("Orbiting", false) { BackgroundColor = Color.BurlyWood });
         
         /// <summary>An action with this trait represents an invocation action. A QEffect with this trait represents the effects of an invocation, as opposed to an effect that is the result of a rune being applied.</summary>
         public static readonly Trait Invocation = ModManager.RegisterTrait("Invocation",

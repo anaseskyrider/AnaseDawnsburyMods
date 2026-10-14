@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
@@ -393,19 +394,19 @@ public static class AllRunes
                         null)
                     .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
                     {
-                        return await CommonRuneRules.ChooseAnItemToDrawOn(
-                            drawAction,
-                            drawAction.Owner,
-                            target,
-                            subTarget is Item itemTarget
-                                ? item => item == itemTarget
-                                : item =>
+                        return subTarget is Item itemTarget
+                            ? [MakeEsvadirPassive(itemTarget)!]
+                            : await CommonRuneRules.ChooseAnItemToDrawOn(
+                                drawAction,
+                                drawAction.Owner,
+                                target,
+                                item =>
                                     item.WeaponProperties is not null
                                     && item.DetermineDamageKinds().Any(kind =>
                                         kind is DamageKind.Piercing or DamageKind.Slashing),
-                            MakeEsvadirPassive,
-                            "Choose a weapon or unarmed attack whose Strikes will deal additional persistent bleed damage.",
-                            rune);
+                                MakeEsvadirPassive,
+                                "Choose a weapon or unarmed attack whose Strikes will deal additional persistent bleed damage.",
+                                rune);
 
                         DrawnRune? MakeEsvadirPassive(Item? targetItem)
                         {
@@ -510,16 +511,16 @@ public static class AllRunes
                         null)
                     .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
                     {
-                        return await CommonRuneRules.ChooseAnItemToDrawOn(
-                            drawAction,
-                            drawAction.Owner,
-                            target,
-                            subTarget is Item itemTarget
-                                ? item => item == itemTarget
-                                : item => item.HasTrait(Trait.Shield),
-                            MakeHoltrikPassive,
-                            "Choose a shield to give a +1 status bonus to the bearer while raised.",
-                            rune);
+                        return subTarget is Item itemTarget
+                            ? [MakeHoltrikPassive(itemTarget)!]
+                            : await CommonRuneRules.ChooseAnItemToDrawOn(
+                                drawAction,
+                                drawAction.Owner,
+                                target,
+                                item => item.HasTrait(Trait.Shield),
+                                MakeHoltrikPassive,
+                                "Choose a shield to give a +1 status bonus to the bearer while raised.",
+                                rune);
                         
                         DrawnRune? MakeHoltrikPassive(Item? targetItem)
                         {
@@ -726,19 +727,19 @@ public static class AllRunes
                         null)
                     .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
                     {
-                        return await CommonRuneRules.ChooseAnItemToDrawOn(
-                            drawAction,
-                            drawAction.Owner,
-                            target,
-                            subTarget is Item itemTarget
-                                ? item => item == itemTarget
-                                : item =>
+                        return subTarget is Item itemTarget
+                            ? [MakeMarssylPassive(itemTarget)!]
+                            : await CommonRuneRules.ChooseAnItemToDrawOn(
+                                drawAction,
+                                drawAction.Owner,
+                                target,
+                                item =>
                                     item.WeaponProperties is not null
                                     && item.DetermineDamageKinds()
                                         .Contains(DamageKind.Bludgeoning),
-                            MakeMarssylPassive,
-                            "Choose a weapon or unarmed attack whose Strikes will deal 1 bludgeoning splash damage per weapon damage die.",
-                            rune);
+                                MakeMarssylPassive,
+                                "Choose a weapon or unarmed attack whose Strikes will deal 1 bludgeoning splash damage per weapon damage die.",
+                                rune);
                         
                         DrawnRune? MakeMarssylPassive(Item? targetItem)
                         {
@@ -930,16 +931,16 @@ public static class AllRunes
                     {
                         int bonusHardness = 2 + ((drawAction.Owner.Level - rune.BaseLevel) / 4);
                         
-                        return await CommonRuneRules.ChooseAnItemToDrawOn(
-                            drawAction,
-                            drawAction.Owner,
-                            target,
-                            subTarget is Item itemTarget
-                                ? item => item == itemTarget
-                                : item => item.HasTrait(Trait.Shield),
-                            MakeOljinexPassive,
-                            $"Choose a shield to gain a +{bonusHardness} status bonus to its Hardness against physical damage from ranged attacks.",
-                            rune);
+                        return subTarget is Item itemTarget
+                            ? [MakeOljinexPassive(itemTarget)!]
+                            : await CommonRuneRules.ChooseAnItemToDrawOn(
+                                drawAction,
+                                drawAction.Owner,
+                                target,
+                                item => item.HasTrait(Trait.Shield),
+                                MakeOljinexPassive,
+                                $"Choose a shield to gain a +{bonusHardness} status bonus to its Hardness against physical damage from ranged attacks.",
+                                rune);
                         
                         DrawnRune? MakeOljinexPassive(Item? targetItem)
                         {
@@ -1874,6 +1875,8 @@ public static class AllRunes
                                         foreach (Creature affectedCreature in affectedCreatures)
                                             affectedCreature.AddQEffect(CommonRuneRules.ImmunityToInvocation(drInvoked.Rune));
                                     }
+                                    
+                                    ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune.Id);
                                 },
                             };
                         }
@@ -2358,20 +2361,20 @@ public static class AllRunes
                     {
                         int bonusDamage = rune.CalculateHeightening(3, 2, 1, drawAction.Owner.Level).FinalValue;
                         
-                        return await CommonRuneRules.ChooseAnItemToDrawOn(
-                            drawAction,
-                            drawAction.Owner,
-                            target,
-                            subTarget is Item itemTarget
-                                ? item => item == itemTarget
-                                : item =>
+                        return subTarget is Item itemTarget
+                            ? [MakeCruonignPassive(itemTarget)!]
+                            : await CommonRuneRules.ChooseAnItemToDrawOn(
+                                drawAction,
+                                drawAction.Owner,
+                                target,
+                                item =>
                                     item.WeaponProperties is not null
                                     && !item.HasTrait(Trait.Unarmed)
                                     && item.DetermineDamageKinds().Any(kind =>
                                         kind is DamageKind.Piercing or DamageKind.Slashing),
-                            MakeCruonignPassive,
-                            $"Choose a weapon whose Strikes will deal additional {bonusDamage} void damage and generate temporary Hit Points.",
-                            rune);
+                                MakeCruonignPassive,
+                                $"Choose a weapon whose Strikes will deal additional {bonusDamage} void damage and generate temporary Hit Points.",
+                                rune);
 
                         DrawnRune? MakeCruonignPassive(Item? targetItem)
                         {
@@ -3231,16 +3234,16 @@ public static class AllRunes
                         null)
                     .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
                     {
-                        return await CommonRuneRules.ChooseAnItemToDrawOn(
-                            drawAction,
-                            drawAction.Owner,
-                            target,
-                            subTarget is Item itemTarget
-                                ? item => item == itemTarget
-                                : item => item.HasTrait(Trait.Shield),
-                            MakeYudiciPassive,
-                            "Choose a shield to radiate a 10-foot aura that grants your allies a +1 circumstance bonus to AC it's while raised.",
-                            rune);
+                        return subTarget is Item itemTarget
+                            ? [MakeYudiciPassive(itemTarget)!]
+                            : await CommonRuneRules.ChooseAnItemToDrawOn(
+                                drawAction,
+                                drawAction.Owner,
+                                target,
+                                item => item.HasTrait(Trait.Shield),
+                                MakeYudiciPassive,
+                                "Choose a shield to radiate a 10-foot aura that grants your allies a +1 circumstance bonus to AC it's while raised.",
+                                rune);
                         
                         DrawnRune? MakeYudiciPassive(Item? targetItem)
                         {
