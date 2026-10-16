@@ -2519,6 +2519,14 @@ public static class AllRunes
                                                 voidAmount.ToString(),
                                                 rune.FullName));
                                     },
+                                    AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
+                                    {
+                                        if (drThis != drInvoked)
+                                            return;
+
+                                        invokeAction.Owner.RemoveAllQEffects(qf =>
+                                            qf.Name == "[Cruonign Healing]");
+                                    },
                                 };
                             // Done separately to capture references
                             cruonignPassive.AddExtraKindedDamageOnStrike = (strike, defender) =>
@@ -2602,8 +2610,6 @@ public static class AllRunes
                             invokeAction,
                             invokedRune,
                             effectTarget);
-
-                        invokeAction.Owner.RemoveAllQEffects(qf => qf.Name == "[Cruonign Healing]");
 
                         return effectTarget;
                     }),
