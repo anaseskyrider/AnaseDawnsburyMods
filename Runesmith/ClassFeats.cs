@@ -1876,7 +1876,7 @@ public static class ClassFeats
                             .GetKnownRunes(qfThis.Owner)
                             .Where(rune =>
                                 rune.IsDiacriticRune
-                                && !ModData.PersistentActions.RuneIsUsedUp(qfThis.Owner, rune.Id))
+                                && !ModData.PersistentActions.RuneIsUsedUp(qfThis.Owner, rune))
                             .ToList()
                             ?? [];
                     }

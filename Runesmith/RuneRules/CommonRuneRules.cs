@@ -769,7 +769,11 @@ public static class CommonRuneRules
             
             if (!doNotApplyImmediately
                 && !target.QEffects.Contains(dr))
+            {
+                if (dr.Rune.PassiveProperties.OnlyOneInExistenceAtATime)
+                    CommonRuneRules.RemoveAllOtherInstancesOf(drawAction.Owner, dr.Rune.Id);
                 target.AddQEffect(dr);
+            }
         }
         
         return newDrawnRunes;
@@ -1864,6 +1868,8 @@ public static class CommonRuneRules
         
         if (drawnRune.Owner != newOwner)
         {
+            if (drawnRune.Rune.PassiveProperties.OnlyOneInExistenceAtATime)
+                CommonRuneRules.RemoveAllOtherInstancesOf(drawnRune.Source!, drawnRune.Rune.Id);
             CommonRuneRules.RemoveDrawnRune(drawnRune);
             //drawnRune.Owner.RemoveAllQEffects(qf => qf == drawnRune);
             newOwner.AddQEffect(drawnRune);

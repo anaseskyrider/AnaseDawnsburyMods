@@ -185,7 +185,7 @@ public class RunicRepertoireTag
     {
         return GetKnownRunes(runesmith, true)
             .Where(rune =>
-                !ModData.PersistentActions.RuneIsUsedUp(runesmith, rune.Id))
+                !ModData.PersistentActions.RuneIsUsedUp(runesmith, rune))
             .ToList();
     }
 
@@ -285,7 +285,7 @@ public class RunicRepertoireTag
                                 if (first.IsDiacriticRune)
                                     word += "-";
                                 return word.WithTag(ModData.PersistentActions
-                                        .RuneIsUsedUp(runesmith, first.Id)
+                                    .RuneIsUsedUp(runesmith, first)
                                         ? "strike"
                                         : null);
                             }));

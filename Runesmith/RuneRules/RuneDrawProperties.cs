@@ -371,6 +371,15 @@ public class RuneDrawProperties(
         this.RuneTargetingRequirements.Add(drawnRuneTargetingRequirement);
         return this;
     }
+    
+    /// <summary>
+    /// Constructs and adds an additional <see cref="LegacyRuneTargetingRequirement"/>.
+    /// </summary>
+    public RuneDrawProperties WithDrawnRuneRequirement(
+        Func<Creature, DrawnRune, Usability> additionalConditionOnTarget)
+    {
+        return this.WithDrawnRuneRequirement(new LegacyRuneTargetingRequirement(additionalConditionOnTarget));
+    }
 
     /// <summary>
     /// Adds an <see cref="EnemyCreatureTargetingRequirement"/> to drawing this rune.
@@ -471,10 +480,10 @@ public class RuneDrawProperties(
                 : Usability.Usable));
     }
 
-    public RuneDrawProperties WithInvokeableOncePerCombatRequirement(RuneId runeId)
+    public RuneDrawProperties WithInvokeableOncePerCombatRequirement()
     {
         return this.WithCreatureRequirement((a, d) =>
-            ModData.PersistentActions.RuneIsUsedUp(a, runeId)
+            ModData.PersistentActions.RuneIsUsedUp(a, this.Self)
                 ? Usability.NotUsable("Already invoked this combat")
                 : Usability.Usable);
     }
@@ -546,8 +555,8 @@ public class RuneDrawProperties(
     /// Create a new RuneDrawProperties instance for diacritic runes.
     /// </summary>
     /// <param name="drawnOnARuneWhat">What to text, if any, to add to the Usage entry after "drawn on a rune".</param>
-    /// <param name="invokeableOncePerCombatRuneId">If this rune can only be invoked once per combat, this is that requirement. You must still call <see cref="ModData.PersistentActions.UseUpRune"/> on its own.</param>
-    public static RuneDrawProperties Diacritic(string? drawnOnARuneWhat = null, RuneId? invokeableOncePerCombatRuneId = null)
+    /// <param name="invokeableOncePerCombat">Whether this rune can only be invoked once per combat, which adds the necessary requirement automatically. You must still call <see cref="ModData.PersistentActions.UseUpRune"/> on its own.</param>
+    public static RuneDrawProperties Diacritic(string? drawnOnARuneWhat = null, bool invokeableOncePerCombat = false)
     {
         if (drawnOnARuneWhat is not null)
             drawnOnARuneWhat = " " + drawnOnARuneWhat;
@@ -555,8 +564,8 @@ public class RuneDrawProperties(
                 "drawn on a rune" + drawnOnARuneWhat,
                 drawnOnRune: true)
             .WithBasicDiacriticTargetingRequirements();
-        if (invokeableOncePerCombatRuneId.HasValue)
-            props.WithInvokeableOncePerCombatRequirement(invokeableOncePerCombatRuneId.Value);
+        if (invokeableOncePerCombat)
+            props.WithInvokeableOncePerCombatRequirement();
         return props;
     }
 }

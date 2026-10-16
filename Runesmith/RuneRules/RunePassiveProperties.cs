@@ -93,6 +93,38 @@ public class RunePassiveProperties(
         return this;
     }
 
+    /// <summary>
+    /// Sets <see cref="DrawnRuneCreator"/> with a function for creating diacritics.
+    /// </summary>
+    /// <remarks>
+    /// This function is helpful for consolidating common code for diacritics, including handling null target DrawnRunes and preset target DrawnRunes.
+    /// </remarks>
+    /// <param name="additionalRuneRequirements">Whether the targeted DrawnRune is legal. Always prevents targeting runes that are diacritics and runes that have a diacritic already.</param>
+    /// <param name="diacriticPassive">The function which creates a new diacritic DrawnRune from a given DrawnRune target, the action drawing the rune, and the base rune to create from.</param>
+    /// <param name="question">The question to present to the user. This already includes the title of the diacritic in the string.</param>
+    public RunePassiveProperties WithDiacriticCreator(
+        Func<DrawnRune,bool>? additionalRuneRequirements,
+        Func<DrawnRune,CombatAction,Rune,DrawnRune> diacriticPassive,
+        string question)
+    {
+        this.DrawnRuneCreator = async (drawAction, rune, target, subTarget) =>
+        {
+            if (subTarget is DrawnRune runeTarget
+                && diacriticPassive(runeTarget, drawAction, rune) is {} newDiacritic)
+                return [newDiacritic];
+            return await CommonRuneRules.ChooseARuneToDrawOn(
+                drawAction, drawAction.Owner, target,
+                drOnto =>
+                    !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune)
+                    // null is true
+                    && additionalRuneRequirements?.Invoke(drOnto) is not false,
+                drOnto => drOnto is null ? null : diacriticPassive(drOnto, drawAction, rune),
+                question,
+                rune);
+        };
+        return this;
+    }
+
     #region Additional Properties
     
     /// <summary>
@@ -111,6 +143,20 @@ public class RunePassiveProperties(
         this.PassiveEffectIsDebuff = true;
         return this;
     }
+    
+    /// <summary>
+    /// If true, then a runesmith can only have one DrawnRune instance of this rune at a time.
+    /// </summary>
+    public bool OnlyOneInExistenceAtATime { get; set; }
+
+    /// <summary>
+    /// Sets <see cref="OnlyOneInExistenceAtATime"/> to true.
+    /// </summary>
+    public RunePassiveProperties WithOnlyOneInExistenceAtATime()
+    {
+        this.OnlyOneInExistenceAtATime = true;
+        return this;
+    }
 
     #endregion
 
@@ -123,11 +169,23 @@ public class RunePassiveProperties(
         return this;
     }
 
+    /// <summary>
+    /// Creates a properties instance for diacritic runes.
+    /// </summary>
+    /// <param name="passiveText">The passive text of the diacritic.</param>
+    /// <param name="invokeableOnceRuneName">If only one instance of this rune is allowed and it can only be invoked once per combat, this is the lower-case name of that rune. A non-null value sets <see cref="OnlyOneInExistenceAtATime"/> to true.</param>
+    /// <param name="heightening">The heightening of the diacritic rune, if any.</param>
+    /// <returns></returns>
     public static RunePassiveProperties Diacritic(string passiveText, string? invokeableOnceRuneName = null, Func<Rune,int,string>? heightening = null)
     {
-        return new RunePassiveProperties(
+        var props = new RunePassiveProperties(
             passiveText
-            + (invokeableOnceRuneName is not null ? $"\n\n{{b}}Special{{/b}}You can only have one copy of {invokeableOnceRuneName} applied at a given time, and once you invoke it, you cannot Etch or Trace it again for the rest of this encounter." : null),
+            + (invokeableOnceRuneName is not null
+                ? $"\n\n{{b}}Special{{/b}} You can only have one copy of {invokeableOnceRuneName.ToLower()} applied at a given time, and once you invoke it, you cannot Etch or Trace it again for the rest of this encounter."
+                : null),
             heightening);
+        if (invokeableOnceRuneName is not null)
+            props.WithOnlyOneInExistenceAtATime();
+        return props;
     }
 }

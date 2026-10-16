@@ -467,21 +467,24 @@ public static class ModData
             return $"InvokedRune:{runeId.ToWord()}";
         }*/
 
-        public static bool RuneIsUsedUp(Creature runesmith, RuneId runeId)
+        public static bool RuneIsUsedUp(Creature runesmith, Rune rune)
         {
+            // These runes are never used up
+            if (!rune.PassiveProperties.OnlyOneInExistenceAtATime)
+                return false;
             return runesmith.QEffects.Any(qf =>
                 qf.Id == QEffectIds.UsedUpRune
-                && qf.Tag is RuneId usedId
-                && usedId == runeId);
+                && qf.Tag is Rune runeTag
+                && runeTag == rune);
             //return runesmith.PersistentUsedUpResources.UsedUpActions.Contains(OncePerCombatRune(runeId));
         }
 
-        public static void UseUpRune(Creature runesmith, RuneId runeId)
+        public static void UseUpRune(Creature runesmith, Rune rune)
         {
             runesmith.AddQEffect(new QEffect()
             {
                 Id = QEffectIds.UsedUpRune,
-                Tag = runeId
+                Tag = rune
             });
             //runesmith.PersistentUsedUpResources.UsedUpActions.Add(OncePerCombatRune(runeId));
         }

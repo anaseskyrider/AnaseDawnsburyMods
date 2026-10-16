@@ -1940,7 +1940,7 @@ public static class AllRunes
         yield return new Rune(
                 RuneId.Av,
                 "This diacritic surrounds the base rune with similar-looking smaller runes to give the impression of distant echoes.",
-                RuneDrawProperties.Diacritic(null, RuneId.Av),
+                RuneDrawProperties.Diacritic(null, true),
                 RunePassiveProperties.Diacritic(
                         "When the base rune is invoked, you can Invoke a single Rune on a different rune-bearer within 15 feet of the original rune-bearer as a {icon:FreeAction} free action.",
                         "av-, diacritic rune of succession")
@@ -1998,7 +1998,7 @@ public static class AllRunes
                                             return;
                                         }
                                         
-                                        ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune.Id);
+                                        ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune);
                                     },
                                 };
                         }
@@ -2034,7 +2034,7 @@ public static class AllRunes
                                 ? drOnto =>
                                     drOnto == runeTarget
                                 : drOnto =>
-                                    !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune.Id)
+                                    !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune)
                                     && drOnto.Rune.InvocationProperties.DealsDamage
                                     && !drOnto.Rune.InvocationProperties.AffectsArea,
                             CreateEnPassive,
@@ -2109,7 +2109,7 @@ public static class AllRunes
                                             affectedCreature.AddQEffect(CommonRuneRules.ImmunityToInvocation(drInvoked.Rune));
                                     }
                                     
-                                    ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune.Id);
+                                    ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune);
                                 },
                             };
                         }
@@ -2257,7 +2257,7 @@ public static class AllRunes
                         "drawn on a rune",
                         drawnOnRune: true)
                     .WithBasicDiacriticTargetingRequirements()
-                    .WithInvokeableOncePerCombatRequirement(RuneId.Sun),
+                    .WithInvokeableOncePerCombatRequirement(),
                 new RunePassiveProperties(
                         """
                         After the base rune is invoked, the base rune automatically traces itself back upon the same target.
@@ -2275,7 +2275,7 @@ public static class AllRunes
                                     ? drOnto =>
                                         drOnto == runeTarget
                                     : drOnto =>
-                                        !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune.Id),
+                                        !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune),
                                 CreateSunPassive,
                                 "Choose a rune that will be retraced after being invoked.",
                                 rune))?
@@ -2345,7 +2345,7 @@ public static class AllRunes
                                             }
 
                                             (traceAction.Tag as RuneActionTag)?.CreatedDrawnRune = newDrawnRune;
-                                            ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune.Id);
+                                            ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune);
                                         };
 
                                         await drThis.Owner.Battle.GameLoop.FullCast(
@@ -2396,7 +2396,7 @@ public static class AllRunes
                                 ? drOnto =>
                                     drOnto == runeTarget
                                 : drOnto =>
-                                    !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune.Id)
+                                    !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune)
                                     && (drOnto.Rune.InvocationProperties.DealsDamage
                                         || drOnto.Rune.Id == RuneId.Marssyl),
                             CreateUrPassive,
