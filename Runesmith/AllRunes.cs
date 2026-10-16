@@ -2077,43 +2077,26 @@ public static class AllRunes
                 "This diacritic consists of pairs of diamonds in opposite positions around the base rune.",
                 RuneDrawProperties.Diacritic("that doesn't deal damage")
                     .WithBaseRuneDoesNotDealDamage(true)
-                    .WithDrawnRuneRequirement(new LegacyRuneTargetingRequirement((a, dr) =>
+                    .WithDrawnRuneRequirement((a, dr) =>
                         dr.Rune.InvocationProperties.EffectOnOneTarget is not null
                         && dr.Rune.InvocationProperties.IsLegalTarget(a, a).CanBeUsed
                             ? Usability.Usable
-                            : Usability.NotUsableOnThisCreature("You cannot be affected by this invocation"))),
+                            : Usability.NotUsableOnThisCreature("You cannot be affected by this invocation")),
                 RunePassiveProperties.Diacritic(
                         "When the base rune is invoked, the rune-bearer is affected by it as usual, and you can choose to also be affected by the invocation if possible.")
-                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
-                    {
-                        return await CommonRuneRules.ChooseARuneToDrawOn(
-                            drawAction,
-                            drawAction.Owner,
-                            target,
-                            subTarget is DrawnRune runeTarget
-                                ? drOnto =>
-                                    drOnto == runeTarget
-                                : drOnto =>
-                                    drOnto.Rune.InvocationProperties.EffectOnOneTarget is not null
-                                    && !drOnto.Rune.InvocationProperties.DealsDamage
-                                    && drOnto.Rune.Id != RuneId.Marssyl
-                                    && drOnto.Rune.InvocationProperties.IsLegalTarget(drawAction.Owner, drawAction.Owner),
-                            CreateFobPassive,
-                            "Choose a rune to also affect you when invoked.",
-                            rune);
-                        
-                        // Create rune
-                        DrawnRune? CreateFobPassive(DrawnRune? drawnOnto)
-                        {
-                            if (drawnOnto is null)
-                                return null;
-                            
-                            return new DrawnRune(
+                    .WithDiacriticCreator(
+                        (drawAction, drOnto) =>
+                            drOnto.Rune.InvocationProperties.EffectOnOneTarget is not null
+                            && !drOnto.Rune.InvocationProperties.DealsDamage
+                            && drOnto.Rune.Id != RuneId.Marssyl
+                            && drOnto.Rune.InvocationProperties.IsLegalTarget(drawAction.Owner, drawAction.Owner),
+                        (drBase, drawAction, rune) =>
+                            new DrawnRune(
                                 drawAction,
                                 rune,
                                 (drThis, drOnto) =>
-                                    $"When {drOnto.Illustration!.IllustrationAsIconString} {drOnto.Name!.WithColor("Blue")} is invoked, you can choose to also be affected by the invocation if possible.",
-                                drawnOnto)
+                                    $"When {drOnto} is invoked, you can choose to also be affected by the invocation if possible.",
+                                drBase)
                             {
                                 BeforeInvokingRune = async (drThis, invokeAction, drInvoked) =>
                                 {
@@ -2158,9 +2141,8 @@ public static class AllRunes
                                     foreach (Creature affectedCreature in affectedCreatures)
                                         affectedCreature.AddQEffect(CommonRuneRules.ImmunityToInvocation(drInvoked.Rune));
                                 },
-                            };
-                        }
-                    }),
+                            },
+                        "Choose a rune to also affect you when invoked."),
                 null,
                 [Trait.Diacritic])
             .WithIllustration(new DoublePortraitIllustration(
