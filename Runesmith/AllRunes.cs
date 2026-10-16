@@ -1944,39 +1944,16 @@ public static class AllRunes
                 RunePassiveProperties.Diacritic(
                         "When the base rune is invoked, you can Invoke a single Rune on a different rune-bearer within 15 feet of the original rune-bearer as a {icon:FreeAction} free action.",
                         "av-, diacritic rune of succession")
-                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
-                    {
-                        DrawnRune? avPassive = (await CommonRuneRules.ChooseARuneToDrawOn(
-                                drawAction,
-                                drawAction.Owner,
-                                target,
-                                subTarget is DrawnRune runeTarget
-                                    ? drOnto =>
-                                        drOnto == runeTarget
-                                    : drOnto =>
-                                        !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune.Id),
-                                CreateAvPassive,
-                                "Choose a rune that, when invoked, causes you to Invoke a single Rune {icon:FreeAction} on a different rune-bearer within 15 feet of the original rune.",
-                                rune))?
-                            .LastOrDefault();
-
-                        // Only one instance allowed when drawn
-                        if (avPassive is not null)
-                            CommonRuneRules.RemoveAllOtherInstancesOf(drawAction.Owner, rune.Id);
-
-                        return avPassive;
-
-                        DrawnRune? CreateAvPassive(DrawnRune? drawnOnto)
-                        {
-                            if (drawnOnto is null)
-                                return null;
-                            
-                            return new DrawnRune(
+                    .WithDiacriticCreator(
+                        // Has no particular requirements not covered elsewhere
+                        null,
+                        (drBase, drawAction, rune) =>
+                            new DrawnRune(
                                     drawAction,
                                     rune,
                                     (drThis, drOnto) =>
-                                        $"After {drOnto.Illustration!.IllustrationAsIconString} {drOnto.Name!.WithColor("Blue")} is invoked, {drThis.Source!.ToColoredBoldedName()} can Invoke a single Rune {{icon:FreeAction}} on a different rune-bearer within 15 feet of this one.",
-                                    drawnOnto)
+                                        $"After {drOnto} is invoked, {drThis.Source!.ToColoredBoldedName()} can Invoke a single Rune {{icon:FreeAction}} on a different rune-bearer within 15 feet of this one.",
+                                    drBase)
                                 {
                                     AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
                                     {
@@ -2000,9 +1977,8 @@ public static class AllRunes
                                         
                                         ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune);
                                     },
-                                };
-                        }
-                    }),
+                                },
+                        "Choose a rune that, when invoked, causes you to Invoke a single Rune {icon:FreeAction} on a different rune-bearer within 15 feet of the original rune."),
                 null,
                 [Trait.Diacritic])
             .WithIllustration(new CornerIllustration(
