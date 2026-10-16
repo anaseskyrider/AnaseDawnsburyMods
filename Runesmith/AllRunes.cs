@@ -1346,7 +1346,7 @@ public static class AllRunes
                     .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
                     {
                         await effectTarget.StepAsync(
-                            $"Choose where to Step as part of invoking {invokedRune.Rune.Illustration.IllustrationAsIconString} {invokedRune.Rune.FullName.WithColor("Blue")}, or right-click to cancel.",
+                            $"Choose where to Step as part of invoking {invokedRune}, or right-click to cancel.",
                             true, true);
 
                         effectTarget.AddQEffect(invokedRune.NewInvocationEffect(
@@ -1440,7 +1440,7 @@ public static class AllRunes
                         for (int i=0; i<3; i++)
                         {
                             await effectTarget.StepAsync(
-                                $"Choose where to Step as part of invoking {invokedRune.Rune.Illustration.IllustrationAsIconString} {invokedRune.Rune.FullName.WithColor("Blue")}{(i==0 ? ", or right-click to cancel" : null)}. ({i+1}/3)",
+                                $"Choose where to Step as part of invoking {invokedRune}{(i==0 ? ", or right-click to cancel" : null)}. ({i+1}/3)",
                                 i==0, true);
                         }
 
@@ -2300,7 +2300,7 @@ public static class AllRunes
                         };
                         effectTarget.AddQEffect(mobility);
                         await effectTarget.StrideOrStepAdvancedAsync(
-                            $"Choose where to Stride underwater as part of invoking {invokedRune.Rune.Illustration.IllustrationAsIconString} {invokedRune.Rune.FullName.WithColor("Blue")}, or right-click to cancel.",
+                            $"Choose where to Stride underwater as part of invoking {invokedRune}, or right-click to cancel.",
                             permissibleTarget: tile =>
                                 tile.IsWater
                                 || tile.Battle.Map.FinalTerrain == TerrainKind.Aquatic,
@@ -2754,7 +2754,7 @@ public static class AllRunes
 
                         // Perform flight
                         if (!await effectTarget.StrideOrStepAdvancedAsync(
-                                $"Choose where to Fly for invoked {invokedRune.Rune.Id.ToFullName()}, or right-click to pass. You should end your movement next to a creature who has damaged you.",
+                                $"Choose where to Fly for {invokedRune}, or right-click to pass. You should end your movement next to a creature who has damaged you.",
                                 maximumSpeed: 12,
                                 allowCancel: true,
                                 allowPass: true,

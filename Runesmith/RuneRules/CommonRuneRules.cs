@@ -1229,10 +1229,10 @@ public static class CommonRuneRules
     public static string RuneToOverhead(DrawnRune drawnRune)
     {
         string word =
-            $"{drawnRune.Rune.Illustration.IllustrationAsIconString}{{b}}{drawnRune.Rune.WordName}!{{/b}}";
+            $"{{b}}{drawnRune.ToWordString()}!{{/b}}";
         if (drawnRune.AttachedDiacritic is not null)
             word =
-                $"{drawnRune.AttachedDiacritic.Rune.Illustration.IllustrationAsIconString}{{b}}{drawnRune.AttachedDiacritic.Rune.WordName}-{{/b}}{word}";
+                $"{{b}}{drawnRune.AttachedDiacritic.ToWordString()}-{{/b}}{word}";
         return word;
     }
 
@@ -2095,7 +2095,7 @@ public static class CommonRuneRules
         string? whom2 = subTarget switch
         {
             Item subItem => $"{subItem.Illustration.IllustrationAsIconString}{subItem.ShortName}",
-            DrawnRune subRune => $"{subRune.Illustration!.IllustrationAsIconString}{subRune.Rune.WordName}",
+            DrawnRune subRune => subRune.ToWordString(),
             _ => null
         };
         string rune = $"{invokedRune.Rune.Illustration.IllustrationAsIconString}{invokedRune.Rune.WordName}";

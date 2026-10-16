@@ -1681,8 +1681,8 @@ public static class ClassFeats
                                 caster,
                                 possibleDropoffs,
                                 transposeAction.Illustration,
-                                $"Choose a creature to bear {chosenRune.Rune.Illustration.IllustrationAsIconString} {{Blue}}{chosenRune.Rune.FullName}{{/Blue}}",
-                                $"Move {chosenRune.Rune.Illustration.IllustrationAsIconString} {{Blue}}{chosenRune.Rune.FullName}{{/Blue}} to this creature.",
+                                $"Choose a creature to bear {chosenRune}.",
+                                $"Move {chosenRune} to this creature.",
                                 "Revert");
                             
                             if (chosenCreature == null)
@@ -2148,7 +2148,7 @@ public static class ClassFeats
                             })
                             .With(reprisalAction =>
                             {
-                                reprisalAction.ShortName = $"{reprisalDr.Rune.Illustration.IllustrationAsIconString}{reprisalDr.Rune.WordName}";
+                                reprisalAction.ShortName = $"{reprisalDr.ToWordString()}";
                             }))
                         .Select(repriseThisRune =>
                         {
@@ -2351,7 +2351,7 @@ public static class ClassFeats
                                             
                             // Log the event
                             caster.Battle.Log(
-                                $"{caster.Name} traces {tattooedRune.Rune.Illustration.IllustrationAsIconString} {tattooedRune.Rune.WordName} onto:");
+                                $"{caster.Name} traces {tattooedRune.ToWordString()} onto:");
                             caster.Battle.LogIndent++;
                             foreach (DrawnRune dr in drawings.Cast<DrawnRune>())
                             {
