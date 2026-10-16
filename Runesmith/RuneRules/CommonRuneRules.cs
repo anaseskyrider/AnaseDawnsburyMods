@@ -1121,8 +1121,6 @@ public static class CommonRuneRules
                 // Get chosen targets
                 ChosenTargets? chosenTargets = await CommonRuneRules.GetInvocationTargets(
                     invokeAction, tag.ChosenDrawnRune);
-
-                DrawnRune? cachedDiacritic = tag.ChosenDrawnRune.AttachedDiacritic;
                 
                 // Apply invocation effects
                 if (chosenTargets is null
@@ -1132,11 +1130,6 @@ public static class CommonRuneRules
                     invokeAction.RevertRequested = true;
                     return;
                 }
-
-                // Log invocation
-                /*CommonRuneRules.LogInvokedRune(caster, tag.ChosenDrawnRune, target);
-                if (cachedDiacritic is not null)
-                    CommonRuneRules.LogInvokedRune(caster, cachedDiacritic, target);*/
             })
             .WithTargetingTooltip((invokeAction, target, index) =>
             {
