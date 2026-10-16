@@ -2229,24 +2229,17 @@ public static class AllRunes
             .ToFeat();*/
         
         // TODO: Per-, Diacritic Rune of Continuum
-        yield return DebugRune(
-            RuneId.Per,
-            "This whirling diacritic recirculates the magic of the base rune onto another creature.", 
-            rune =>
-            {
-                rune.PassiveProperties.PassiveText = "After the base rune is invoked, it automatically traces itself on a different target of your choice within 15 feet of the original rune-bearer.";
-                rune.WithIllustration(new CornerIllustration(
-                    IllustrationName.RunestoneWinged,
-                    ModData.Illustrations.TraceRune,
-                    Direction.Southwest));
-            });
         /*yield return new Rune(
-                ,
-                ,
+                RuneId.Per,
+                "This whirling diacritic recirculates the magic of the base rune onto another creature.",
                 new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
+                RunePassiveProperties.Diacritic("After the base rune is invoked, it automatically traces itself on a different target of your choice within 15 feet of the original rune-bearer."),
+                null,
+                [Trait.Diacritic])
+            .WithIllustration(new CornerIllustration(
+                IllustrationName.RunestoneWinged,
+                ModData.Illustrations.TraceRune,
+                Direction.Southwest))
             .ToFeat();*/
         
         // Sun-, Diacritic Rune of Preservation
@@ -2360,16 +2353,13 @@ public static class AllRunes
             .ToFeat();
 
         // TODO: Ti-, Diacritic Rune of Fundaments
-        yield return DebugRune(
-            RuneId.Ti,
-            "This wavering diacritic encompasses the base rune to slightly change its meaning.");
         /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
+                RuneId.Ti,
+                "This wavering diacritic encompasses the base rune to slightly change its meaning.",
+                RuneDrawProperties.Diacritic(),
+                RunePassiveProperties.Diacritic(),
+                null,
+                [Trait.Diacritic])
             .ToFeat();*/
         
         // Ur-, Diacritic Rune of Intensity
