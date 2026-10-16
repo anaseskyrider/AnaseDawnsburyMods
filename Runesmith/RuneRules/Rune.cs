@@ -151,6 +151,16 @@ public class Rune
             ? $"{{b}}Level{this.LevelFormat?.AddIfNotNull(" (",")")}{{/b}} {levelText}"
             : null;
     }
+
+    public override string ToString()
+    {
+        return this.Illustration.IllustrationAsIconString + this.FullName.WithColor("Blue").WithTag("i");
+    }
+
+    public string ToWordString(bool coloredItalic = false)
+    {
+        return this.Illustration.IllustrationAsIconString + this.WordName.WithColor(coloredItalic ? "Blue" : null).WithTag(coloredItalic ? "i" : null);
+    }
     
     #endregion
 

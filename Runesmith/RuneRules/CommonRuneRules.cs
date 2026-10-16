@@ -1625,7 +1625,7 @@ public static class CommonRuneRules
         CheckResult? knownResult = null)
     {
         if (invokedRune.Rune.InvocationProperties.Defense is null)
-            throw new NullReferenceException($"Saving throw for invocation of {invokedRune.Rune.Id.ToWord()} was attempted, but no saving throw defense was found. Use InvocationProperties.WithDefense(Defense) to set a defense for this rune's invocations.");
+            throw new NullReferenceException($"Saving throw for invocation of {invokedRune.Rune.WordName} was attempted, but no saving throw defense was found. Use InvocationProperties.WithDefense(Defense) to set a defense for this rune's invocations.");
         
         CheckResult result = knownResult ?? await CommonSpellEffects.RollSavingThrowAsync(
             effectTarget,
@@ -1883,7 +1883,7 @@ public static class CommonRuneRules
                 ? ExpirationCondition.Never // This QF won't be removed later on.
                 : ExpirationCondition.ExpiresAtEndOfAnyTurn, // This QF is supposed to be removed when the activity making invokeActions completes. This is a back-up safety for developer-error.
             DoNotShowUpOverhead = true,
-            Key = "InvocationImmunity:" + rune.Id.ToWord(),
+            Key = "InvocationImmunity:" + rune.WordName,
         };
         return runeInvocationImmunity;
     }

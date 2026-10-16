@@ -281,7 +281,7 @@ public class RunicRepertoireTag
                             .Select(runes =>
                             {
                                 Rune first = runes.First();
-                                string word = first.Id.ToWord().ToLower();
+                                string word = first.WordName.ToLower();
                                 if (first.IsDiacriticRune)
                                     word += "-";
                                 return word.WithTag(ModData.PersistentActions

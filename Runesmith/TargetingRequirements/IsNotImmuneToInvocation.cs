@@ -9,7 +9,7 @@ public class IsNotImmuneToInvocation(Rune rune) : CreatureTargetingRequirement
 {
     public Rune Rune = rune;
 
-    public string UnusableWhy => $"Is immune to {Rune.Id.ToWord()} invocations.";
+    public string UnusableWhy => $"Is immune to {Rune.WordName} invocations.";
     
     public override Usability Satisfied(Creature source, Creature target)
     {

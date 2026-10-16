@@ -147,7 +147,7 @@ public class RuneDrawProperties(
                         drawProps.IsLegalTarget(caster, cr))
                     .Select(cr => new CreatureOption(
                         cr,
-                        $"Trace {tag.Rune.Id.ToWord()} on {cr.Name}",
+                        $"Trace {tag.Rune.WordName} on {cr.Name}",
                         async () => tag.ChosenCreature = cr,
                         0f, // TODO: Goodness
                         false)
@@ -184,7 +184,7 @@ public class RuneDrawProperties(
                     .Where(item => drawProps.IsLegalTarget(caster, item))
                     .Select(item => new TileOption(
                             tile,
-                            $"Trace {tag.Rune.Id.ToWord()} on dropped {item.Name}",
+                            $"Trace {tag.Rune.WordName} on dropped {item.Name}",
                             async () => tag.ChosenItem = item,
                             0f,
                             false)

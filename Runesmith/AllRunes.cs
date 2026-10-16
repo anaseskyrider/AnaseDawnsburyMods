@@ -3647,8 +3647,8 @@ public static class AllRunes
     public static FeatlikeChoice RuneToChoice(Rune rune)
     {
         return new FeatlikeChoice(
-            $"RunesmithRuneSelection.{rune.Id.ToWord()}",
-            rune.Id.ToFullName())
+            $"RunesmithRuneSelection.{rune.WordName}",
+            rune.FullName)
         {
             Illustration = rune.Illustration,
             TextCreator = () =>
@@ -3665,8 +3665,8 @@ public static class AllRunes
     {
         Feat runeFeat = new Feat(
                 ModManager.RegisterFeatName(
-                    ModData.ID_PREPEND+"Rune."+rune.Id.ToWord(),
-                    rune.Id.ToFullName()),
+                    ModData.ID_PREPEND+"Rune."+rune.WordName,
+                    rune.FullName),
                 rune.GetFlavorText(null, false),
                 CommonRuneRules.StatBlocks.CreateRuneDescription(
                     rune, null,

@@ -239,6 +239,16 @@ public class DrawnRune : QEffect
     
     public bool IsOccult => this.Traditions.Contains(Trait.Occult);
 
+    public override string ToString()
+    {
+        return this.Rune.ToString();
+    }
+
+    public string ToWordString(bool coloredItalic = false)
+    {
+        return this.Rune.ToWordString(coloredItalic);
+    }
+
     #endregion
 
     #region Methods

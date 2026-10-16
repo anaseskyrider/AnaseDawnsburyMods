@@ -1066,7 +1066,7 @@ public static class ClassFeats
                             {
                                 Rune rune = (runeFeat.Tag as Rune)!;
                                 return new FeatlikeChoice(
-                                    $"RunicTattoo.{rune.Id.ToWord()}",
+                                    $"RunicTattoo.{rune.WordName}",
                                     rune.FullName)
                                 {
                                     Illustration = runeFeat.Illustration,
