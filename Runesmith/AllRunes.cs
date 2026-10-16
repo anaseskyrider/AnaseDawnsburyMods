@@ -1483,11 +1483,11 @@ public static class AllRunes
                         drawnOnCreature: true)
                     .WithAllyRequirement(),
                 new RunePassiveProperties(
-                        $"The rune-bearer gains a +1 status bonus to Survival checks. While in natural terrain, this bonus also applies to any Lore checks. If etched at the beginning of an encounter, the rune-bearer can use Survival to roll initiative, and the status bonus applies to this roll{ModData.Tooltips.InfoSertumReroll}.",
+                        $"The rune-bearer gains a +1 status bonus to Survival checks. While in natural terrain, this bonus also applies to their Lore checks. If etched at the beginning of an encounter, the rune-bearer can use Survival to roll initiative, and the status bonus applies to this roll{ModData.Tooltips.InfoSertumReroll}.",
                         (rune, level) =>
                         {
                             return
-                                $"The rune-bearer gains a +{S.HeightenedVariable(level >= 17 ? 3 : level >= 9 ? 2 : 1, 1)} status bonus to Survival checks. While in natural terrain, this bonus also applies to any Lore checks. The rune-bearer can use Survival to roll initiative, and the status bonus applies to this roll.";
+                                $"The rune-bearer gains a +{S.HeightenedVariable(level >= 17 ? 3 : level >= 9 ? 2 : 1, 1)} status bonus to Survival checks. While in natural terrain, this bonus also applies to their Lore checks. The rune-bearer can use Survival to roll initiative, and the status bonus applies to this roll.";
                         })
                     .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
                     {
