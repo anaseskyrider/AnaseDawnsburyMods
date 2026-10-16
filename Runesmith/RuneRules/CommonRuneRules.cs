@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
@@ -268,7 +269,7 @@ public static class CommonRuneRules
     #region Drawing Runes
 
     /// <summary>
-    /// TODO: Document this.
+    /// Get all items on this creature commonly used for the Usage requirements of a rune.
     /// </summary>
     /// <param name="itemBearer"></param>
     /// <returns></returns>
@@ -283,13 +284,17 @@ public static class CommonRuneRules
     }
 
     /// <summary>
-    /// TODO: Document this.
+    /// Create the Target instance appropriate for the action version of a Trace Rune action.
     /// </summary>
-    /// <param name="rune"></param>
-    /// <param name="actions"></param>
-    /// <param name="range"></param>
+    /// <param name="rune">The Rune being drawn.</param>
+    /// <param name="actionVersion">The 1- or 2-action Trace Rune. 0-action is permitted but can behave strangely in some cases.</param>
+    /// <param name="range">(Default: 6) The range of the action if different from standard. This is not used for 1-action versions of Trace Rune which is based on reach.</param>
     /// <returns></returns>
-    public static CreatureTarget CreateDrawActionTarget(Rune rune, int actions = 0, int? range = 6)
+    public static CreatureTarget CreateDrawActionTarget(
+        Rune rune,
+        [Range(0, 2)]
+        int actionVersion = 0,
+        int? range = 6)
     {
         #region Determine Range
 
@@ -298,7 +303,11 @@ public static class CommonRuneRules
 
         #endregion
 
-        CreatureTarget creatureTarget = actions == 1
+        // 0-action versions usually behave strangely, such as affecting yourself
+        // or affecting at a custom range with a strange animation, so use the
+        // ranged version for 0-action Trace Runes. This is also good for effects
+        // such as Engraving Strike because it avoids too much back-and-forth wiggles.
+        CreatureTarget creatureTarget = actionVersion == 1
             ? Target.AdjacentCreatureOrSelf()
             : Target.RangedCreature(rangeToTarget);
 
@@ -1405,15 +1414,20 @@ public static class CommonRuneRules
     }
 
     /// <summary>
-    /// TODO: Document this.
+    /// Perform the effects of an invocation against a single creature target.
     /// </summary>
-    /// <param name="runesmith"></param>
-    /// <param name="drawnRune"></param>
-    /// <param name="target"></param>
+    /// <remarks>
+    /// This causes the invocation to only affect the target, regardless of the number of targets it normally effects. This essentially skips most subtargeting routines whilst still playing all the expected animations and sound effects, or altering the animations as appropriate. Use this for effects such as Runic Reprisal or Orbiting Runestone.
+    /// </remarks>
+    /// <param name="runesmith">The creature invoking the rune.</param>
+    /// <param name="drawnRune">The rune being invoked.</param>
+    /// <param name="target">The single creature target of the rune's invocation effects.</param>
+    /// <param name="customName">If the invocation action has a custom name, this is that name.</param>
     public static async Task<bool> InvokeDrawnRuneAgainstTarget(
         Creature runesmith,
         DrawnRune drawnRune,
-        Creature target)
+        Creature target,
+        string? customName = null)
     {
         // Create action
         CombatAction? invokeAction = CommonRuneRules.CreateInvokeAction(
@@ -1424,6 +1438,9 @@ public static class CommonRuneRules
 
         if (invokeAction is null)
             return false;
+
+        if (customName is not null)
+            invokeAction.WithName(customName);
         
         // Overwrite the execution to use the specific target instead of
         // the rune-bearer.
@@ -1606,16 +1623,16 @@ public static class CommonRuneRules
     }
 
     /// <summary>
-    /// TODO: Document this.
+    /// Perform a saving throw against this invocation, and apply damage (if any).
     /// </summary>
-    /// <param name="invokeAction"></param>
-    /// <param name="invokedRune"></param>
-    /// <param name="effectTarget"></param>
-    /// <param name="onResult"></param>
-    /// <param name="skipDamage"></param>
-    /// <param name="knownResult"></param>
-    /// <returns></returns>
-    /// <exception cref="NullReferenceException"></exception>
+    /// <param name="invokeAction">The action invoking this rune.</param>
+    /// <param name="invokedRune">The rune being invoked.</param>
+    /// <param name="effectTarget">The target making the save.</param>
+    /// <param name="onResult">What to do, other than taking damage, depending on the result.</param>
+    /// <param name="skipDamage">If invokedRune.Rune.InvocationProperties.GetKindedDamage is not null, then this must be false to skip dealing damage as part of this saving throw.</param>
+    /// <param name="knownResult">If a CheckResult was determined outside this action, then this is that result instead of making a new saving throw.</param>
+    /// <returns>The CheckResult of the saving throw that was made.</returns>
+    /// <exception cref="NullReferenceException">invokedRune.Rune.InvocationProperties.Defense must not be null.</exception>
     public static async Task<CheckResult> SaveAgainstInvocation(
         CombatAction invokeAction,
         DrawnRune invokedRune,
@@ -1654,132 +1671,17 @@ public static class CommonRuneRules
     /// <summary>
     /// Executes an inner action for invocations that have complex targeting or area effects.
     /// </summary>
+    /// <remarks>
+    /// This is useful for generating animations and sound effects in a manner expected of performing actions in combat, e.g. only playing a sound when confirming an area rather than when performing the initial invocation or after all animations play.
+    /// </remarks>
     /// <param name="outerInvoke">The outer action invoking this rune.</param>
     /// <param name="invokedRune">The rune being invoked.</param>
-    /// <param name="invokeTarget">The creature targeted by the effect of the invocation. This is usually the rune-bearer, but if it's not, then a ChosenTarget is created with the invokeTarget.</param>
     /// <param name="target">The inner action's Target. Always includes a requirement that a creature is not immune to this invocation. If this is an <see cref="AreaTarget"/>, the alternate origin is the rune-bearer.</param>
     /// <param name="includeRuneBearer">Whether to include the rune-bearer as a valid target of the effect.</param>
-    /// <param name="soundEffect">The sound effect to play on invocation, if any.</param>
-    /// <param name="hasSavingThrow">Whether to include <see cref="RuneInvocationProperties.Defense"/> in a saving throw on each target.</param>
-    /// <param name="effectOnEachTarget">What to do on each target of the invocation's effect.</param>
-    /// <param name="chosen">If this action has a predetermined effect target, then FullCast against this target instead of deciding.</param>
+    /// <param name="soundEffect">The sound effect to play on confirmation, if any.</param>
     /// <param name="finalAdjustments">Changes to make to the inner invocation.</param>
+    /// <param name="overrideTargets">If this action has a predetermined set of creature or tile targets, then FullCast with these prechosen targets instead of deciding.</param>
     /// <returns>The list of affected creatures.</returns>
-    public static async Task<List<Creature>?> ExecuteInnerInvokeAction(
-        CombatAction outerInvoke,
-        DrawnRune invokedRune,
-        Creature invokeTarget,
-        Target target,
-        bool includeRuneBearer,
-        SfxName? soundEffect,
-        bool hasSavingThrow,
-        Delegates.EffectOnEachTarget effectOnEachTarget,
-        ChosenTargets? chosen = null,
-        Action<CombatAction>? finalAdjustments = null)
-    {
-        bool invokeOntoTarget = invokedRune.Owner != invokeTarget || chosen is not null;
-        
-        // Automate target behavior
-        switch (target)
-        {
-            // Area targets always emit from the rune-bearer
-            // and cannot affect anyone immune to the invocation.
-            case AreaTarget arTar:
-            {
-                arTar.WithIncludeOnlyIf((tar, cr) =>
-                    !CommonRuneRules.IsImmuneToThisInvocation(cr, invokedRune.Rune));
-
-                if (!invokeOntoTarget)
-                    arTar.WithAlternateCreatureOfOrigin(invokedRune.Owner);
-                
-                if (arTar is EmanationTarget emTar)
-                {
-                    if (!includeRuneBearer)
-                        emTar.WithIncludeOnlyIf((tar, cr) =>
-                            cr != invokedRune.Owner);
-                }
-                break;
-            }
-            // Creature targets cannot affect anyone immune to the
-            // invocation.
-            case CreatureTarget crTar:
-            {
-                crTar.AlternateTileOfOrigin = invokedRune.Owner.Space.CenterTile;
-                crTar.WithAdditionalConditionOnTargetCreature(
-                    new IsNotImmuneToInvocation(invokedRune.Rune));
-
-                if (!includeRuneBearer)
-                    crTar.WithAdditionalConditionOnTargetCreature((a, d) =>
-                        d == invokedRune.Owner
-                            ? Usability.NotUsableOnThisCreature("Cannot target rune-bearer")
-                            : Usability.Usable);
-                break;
-            }
-        }
-        
-        // Create action wrapper.
-        // Assists with targeting and tooltip breakdowns.
-        CombatAction innerInvoke = new CombatAction(
-                outerInvoke.Owner,
-                invokedRune.Rune.Illustration,
-                $"Invoke {invokedRune.Rune.FullName}",
-                [..invokedRune.Rune.Traits, ModData.Traits.Invocation, Trait.DoNotShowInCombatLog, Trait.UnaffectedByConcealment],
-                invokedRune.Rune.InvocationProperties.InvocationTextWithFormattedHeightening?.Invoke(invokedRune.Rune, outerInvoke.Owner.Level) ?? "",
-                target)
-            .WithActionCost(0)
-            .WithSoundEffect(soundEffect!)
-            .WithEffectOnEachTarget(effectOnEachTarget);
-
-        if (hasSavingThrow)
-            innerInvoke.WithSavingThrow(new SavingThrow(
-                invokedRune.Rune.InvocationProperties.Defense!.Value,
-                outerInvoke.Owner.ClassDC(ModData.Traits.Runesmith)));
-
-        if (outerInvoke.Tag is RuneActionTag outerTag)
-            innerInvoke.WithRuneTag(outerTag.Rune, chosenRune: outerTag.ChosenDrawnRune);
-        
-        // When invoking generally, include an extra animation.
-        // Otherwise when invoking onto a specific target, like
-        // for Runic Reprisal, don't add the extra animations.
-        if (!invokeOntoTarget)
-        {
-            innerInvoke.WithProjectileCone(
-                VfxStyle.BasicProjectileCone(invokedRune.Rune.Illustration));
-        }
-        
-        finalAdjustments?.Invoke(innerInvoke);
-        
-        // The effect target is normally the rune-bearer, so you go
-        // through the target-choosing routine as normal. If a different
-        // target is passed by a more specific ability, then this means
-        // the rune is being invoked onto a specific target instead of
-        // being invoked normally.
-        bool result = invokeOntoTarget
-            ? await outerInvoke.Owner.Battle.GameLoop.FullCast(
-                innerInvoke,
-                chosen ?? ChosenTargets.CreateSingleTarget(invokeTarget))
-            : await outerInvoke.Owner.Battle.GameLoop.FullCast(innerInvoke);
-
-        if (!result)
-        {
-            outerInvoke.RevertRequested = true;
-            return null;
-        }
-        
-        return [..innerInvoke.ChosenTargets.ChosenCreatures];
-    }
-
-    /// <summary>
-    /// TODO: Document this.
-    /// </summary>
-    /// <param name="outerInvoke"></param>
-    /// <param name="invokedRune"></param>
-    /// <param name="target"></param>
-    /// <param name="includeRuneBearer"></param>
-    /// <param name="soundEffect"></param>
-    /// <param name="finalAdjustments"></param>
-    /// <param name="overrideTargets"></param>
-    /// <returns></returns>
     public static async Task<ChosenTargets?> GetInnerInvokeTargets(
         CombatAction outerInvoke,
         DrawnRune invokedRune,

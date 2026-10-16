@@ -2106,43 +2106,11 @@ public static class ClassFeats
                                 {
                                     AfterYouTakeAction = async (_, _) =>
                                     {
-                                        CombatAction? invokeThisRune = CommonRuneRules.CreateInvokeAction(
-                                                caster,
-                                                reprisalDr,
-                                                1,
-                                                true,
-                                                false)?
-                                            .WithName($"Reprise ({reprisalDr.Rune.WordName})");
-
-                                        if (invokeThisRune == null)
-                                            return;
-                                        
-                                        // Overwrite effect behavior to skip subtargeting and supply prechosen targets.
-                                        invokeThisRune.EffectOnOneTarget = async (invokeAction, caster2, effectTarget, _) =>
-                                        {
-                                            /*DrawnRune? cachedDiacritic = reprisalDr.AttachedDiacritic;*/
-                                            
-                                            // Apply invocation effects
-                                            await CommonRuneRules.InvokeDrawnRune(
-                                                invokeAction,
-                                                reprisalDr,
-                                                await CommonRuneRules.GetInvocationTargets(
-                                                    invokeAction,
-                                                    reprisalDr,
-                                                    invokeAction.ChosenTargets));
-                                            
-                                            // Log invocation
-                                            /*CommonRuneRules.LogInvokedRune(caster2, reprisalDr, reprisalDr.Owner, shield);
-                                            if (cachedDiacritic is not null)
-                                                CommonRuneRules.LogInvokedRune(caster, cachedDiacritic, target);*/
-                                        };
-
-                                        // Move them back, so the invoke animation looks good
-                                        await target.FictitiousSingleTileMoveBack();
-                                        
-                                        await caster.Battle.GameLoop.FullCast(
-                                            invokeThisRune,
-                                            ChosenTargets.CreateSingleTarget(target));
+                                        await CommonRuneRules.InvokeDrawnRuneAgainstTarget(
+                                            caster,
+                                            reprisalDr,
+                                            target,
+                                            $"Reprise ({reprisalDr.Rune.WordName})");
                                     }
                                 });
                             })
