@@ -2305,44 +2305,29 @@ public static class AllRunes
         yield return new Rune(
                 RuneId.Ur,
                 "This diacritic accentuates the base rune with bolder lines to give greater weight to its effects.",
-                new RuneDrawProperties(
-                        "drawn on a rune that deals damage",
-                        drawnOnRune: true)
-                    .WithBasicDiacriticTargetingRequirements()
+                RuneDrawProperties.Diacritic("that deals damage")
                     .WithBaseRuneMustDealDamage(true),
-                new RunePassiveProperties(
+                RunePassiveProperties.Diacritic(
                         "When the base rune is invoked, its invocation gains a status bonus to damage equal to 2 plus half your level.",
-                        null)
-                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
-                    {
-                        int bonusAmount = (2 + (drawAction.Owner.Level / 2));
-                        
-                        return await CommonRuneRules.ChooseARuneToDrawOn(
-                            drawAction,
-                            drawAction.Owner,
-                            target,
-                            subTarget is DrawnRune runeTarget
-                                ? drOnto =>
-                                    drOnto == runeTarget
-                                : drOnto =>
-                                    !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune)
-                                    && (drOnto.Rune.InvocationProperties.DealsDamage
-                                        || drOnto.Rune.Id == RuneId.Marssyl),
-                            CreateUrPassive,
-                            $"Choose a rune to gain a +{bonusAmount} status bonus to its invocation's damage.",
-                            rune);
-
-                        DrawnRune? CreateUrPassive(DrawnRune? drawnOnto)
+                        null,
+                        (rune, level) =>
                         {
-                            if (drawnOnto is null)
-                                return null;
-                            
+                            return
+                                $"When the base rune is invoked, its invocation gains a +{S.HeightenedVariable(2 + (level / 2), 2 + (rune.BaseLevel / 2))} status bonus to damage.";
+                        })
+                    .WithDiacriticCreator(
+                        (drawAction, drOnto) =>
+                            drOnto.Rune.InvocationProperties.DealsDamage
+                            || drOnto.Rune.Id == RuneId.Marssyl,
+                        (drBase, drawAction, rune) =>
+                        {
+                            int bonusAmount = 2 + (drawAction.Owner.Level / 2);
                             return new DrawnRune(
                                 drawAction,
                                 rune,
                                 (drThis, drOnto) =>
-                                    $"The invocation of {drOnto.Illustration!.IllustrationAsIconString} {drOnto.Name!.WithColor("Blue")} gains a +{bonusAmount} status bonus to its damage.",
-                                drawnOnto)
+                                    $"The invocation of {drOnto} gains a +{bonusAmount} status bonus to its damage.",
+                                drBase)
                             {
                                 BeforeInvokingRune = async (drThis, invokeAction, drInvoked) =>
                                 {
@@ -2365,16 +2350,17 @@ public static class AllRunes
                                             // Apply to an invocation action's damage
                                             if ((action.HasTrait(ModData.Traits.Invocation)
                                                  || action.ActionId == ModData.ActionIds.InvokeRune)
-                                                && (action.Tag as RuneActionTag)?.ChosenDrawnRune is { } drInvokingDamage
+                                                && (action.Tag as RuneActionTag)?.ChosenDrawnRune is
+                                                { } drInvokingDamage
                                                 && drInvokingDamage == drInvoked)
                                                 return urBonus;
-                                            
+
                                             // Apply to a Strike being buffed by Marssyl
                                             if (action.HasTrait(Trait.Strike)
                                                 && qfThis.Owner.QEffects.Any(qf =>
                                                     qf.Traits.Contains(ModData.Traits.Invocation)
                                                     && (qf.Name?.ToLower().Contains("marssyl") ?? false)
-                                                    && qf.Tag is Item marssylItem 
+                                                    && qf.Tag is Item marssylItem
                                                     && marssylItem == action.Item))
                                                 return urBonus;
 
@@ -2389,8 +2375,9 @@ public static class AllRunes
                                     invokeAction.Owner.AddQEffect(invokeBonus);
                                 },
                             };
-                        }
-                    }),
+                        },
+                        (drawAction, rune) =>
+                            $"Choose a rune to gain a +{2 + (drawAction.Owner.Level / 2)} status bonus to its invocation's damage."),
                 null,
                 [ModData.Traits.Diacritic])
             .ToFeat();
