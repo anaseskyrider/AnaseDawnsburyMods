@@ -2215,18 +2215,53 @@ public static class AllRunes
                 IllustrationName.RunestoneWinged))
             .ToFeat();
         
-        // TODO: Kit-, Diacritic Rune of Mercy
-        yield return DebugRune(
-            RuneId.Kit,
-            "This diacritic frames a rune with soft curves that mitigate its deadlier effects but make them harder to resist.");
-        /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
-            .ToFeat();*/
+        // Kit-, Diacritic Rune of Mercy
+        yield return new Rune(
+                RuneId.Kit,
+                "This diacritic frames a rune with soft curves that mitigate its deadlier effects but make them harder to resist.",
+                RuneDrawProperties.Diacritic(
+                        "rune that deals damage and doesn't have the death or void trait")
+                    .WithBaseRuneMustDealDamage()
+                    .WithDrawnRuneRequirement((a, dr) =>
+                    {
+                        if (dr.Traits.Contains(Trait.Death))
+                            return Usability.NotUsableOnThisCreature("Rune has the death trait");
+                        if (dr.Traits.Contains(Trait.Negative))
+                            return Usability.NotUsableOnThisCreature("Rune has the void trait");
+                        return Usability.Usable;
+                    }),
+                RunePassiveProperties.Diacritic(
+                        "When the base rune is invoked, it has the nonlethal trait, but the rune-bearer takes a –1 status penalty to any saving throw.")
+                    .WithDiacriticCreator(
+                        dr => !dr.Traits.ContainsOneOf([Trait.Death, Trait.Negative])
+                              && dr.Rune.InvocationProperties.DealsDamage,
+                        (drBase, drawAction, rune) =>
+                            new DrawnRune(
+                                drawAction,
+                                rune,
+                                (drThis, drOnto) =>
+                                    $"The invocation of {drOnto} is nonlethal and the rune-bearer has a -1 status penalty to any saving throws against it.",
+                                drBase)
+                            {
+                                BonusToDefenses = (qfThis, action, def) =>
+                                    def.IsSavingThrow()
+                                    && action?.HasTrait(Trait.Invocation) == true
+                                    && action.Tag is RuneActionTag tag
+                                    && tag.ChosenDrawnRune == drBase
+                                        ? new Bonus(-1, BonusType.Status, (qfThis as DrawnRune)!.Rune.FullName)
+                                        : null,
+                                BeforeInvokingRune = async (drThis, invokeAction, drInvoked) =>
+                                {
+                                    if (drThis.Disabled
+                                        || drInvoked != drThis.DrawnOn)
+                                        return;
+                                    invokeAction.WithExtraTrait(Trait.Nonlethal);
+                                }
+                            },
+                        "Choose a rune to become nonlethal and impose a -1 status penalty to its saving throws on the rune-bearer."),
+                null,
+                [Trait.Diacritic])
+            .ToFeat();
         
         // TODO: Per-, Diacritic Rune of Continuum
         /*yield return new Rune(
@@ -2348,7 +2383,7 @@ public static class AllRunes
                                 };
                         }
                     }),
-                new RuneInvocationProperties(null, null),
+                null,
                 [ModData.Traits.Diacritic])
             .ToFeat();
 
@@ -2452,7 +2487,7 @@ public static class AllRunes
                             };
                         }
                     }),
-                new RuneInvocationProperties(null, null),
+                null,
                 [ModData.Traits.Diacritic])
             .ToFeat();
 
