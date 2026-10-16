@@ -105,7 +105,7 @@ public class RunePassiveProperties(
     public RunePassiveProperties WithDiacriticCreator(
         Func<CombatAction,DrawnRune,bool>? additionalRuneRequirements,
         Func<DrawnRune,CombatAction,Rune,DrawnRune> diacriticPassive,
-        string question)
+        Func<CombatAction,Rune,string> question)
     {
         this.DrawnRuneCreator = async (drawAction, rune, target, subTarget) =>
         {
@@ -125,7 +125,7 @@ public class RunePassiveProperties(
                         // null is true
                         && additionalRuneRequirements?.Invoke(drawAction, drOnto) is not false,
                     drOnto => drOnto is null ? null : diacriticPassive(drOnto, drawAction, rune),
-                    question,
+                    question(drawAction, rune),
                     rune) ?? []);
             
             if (drawings.Count == 0)

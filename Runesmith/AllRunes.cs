@@ -1978,7 +1978,7 @@ public static class AllRunes
                                         ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune);
                                     },
                                 },
-                        "Choose a rune that, when invoked, causes you to Invoke a single Rune {icon:FreeAction} on a different rune-bearer within 15 feet of the original rune."),
+                        (_,_) => "Choose a rune that, when invoked, causes you to Invoke a single Rune {icon:FreeAction} on a different rune-bearer within 15 feet of the original rune."),
                 null,
                 [Trait.Diacritic])
             .WithIllustration(new CornerIllustration(
@@ -2066,7 +2066,7 @@ public static class AllRunes
                                     ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune);
                                 },
                             },
-                        "Choose a rune whose invocation will radiate outward in a 15-foot emanation from its bearer."),
+                        (_,_) => "Choose a rune whose invocation will radiate outward in a 15-foot emanation from its bearer."),
                 null,
                 [ModData.Traits.Diacritic])
             .ToFeat();
@@ -2142,7 +2142,7 @@ public static class AllRunes
                                         affectedCreature.AddQEffect(CommonRuneRules.ImmunityToInvocation(drInvoked.Rune));
                                 },
                             },
-                        "Choose a rune to also affect you when invoked."),
+                        (_,_) => "Choose a rune to also affect you when invoked."),
                 null,
                 [Trait.Diacritic])
             .WithIllustration(new DoublePortraitIllustration(
@@ -2194,7 +2194,7 @@ public static class AllRunes
                                     invokeAction.WithExtraTrait(Trait.Nonlethal);
                                 }
                             },
-                        "Choose a rune to become nonlethal and impose a -1 status penalty to its saving throws on the rune-bearer."),
+                        (_,_) => "Choose a rune to become nonlethal and impose a -1 status penalty to its saving throws on the rune-bearer."),
                 null,
                 [Trait.Diacritic])
             .ToFeat();
@@ -2286,7 +2286,7 @@ public static class AllRunes
                                             ChosenTargets.CreateSingleTarget(drInvoked.Owner));
                                     },
                                 },
-                        "Choose a rune that will be retraced after being invoked."),
+                        (_,_) => "Choose a rune that will be retraced after being invoked."),
                 null,
                 [ModData.Traits.Diacritic])
             .ToFeat();
