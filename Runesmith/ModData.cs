@@ -578,6 +578,7 @@ public static class ModData
         public const SfxName PASSIVE_CAMONICA = SfxName.Fear;
         public const SfxName INVOKED_CAMONICA = SfxName.Mental;
         public const SfxName INVOKED_ESVADIR = SfxName.RayOfFrost;
+        public const SfxName INVOKED_LEDRIA = SfxName.MinorAbjuration;
         public const SfxName INVOKED_LYSKEL = SfxName.ChillTouch;
         public const SfxName INVOKED_MARSSYL_SHOVE = SfxName.Shove;
         public const SfxName INVOKED_OLJINEX = SfxName.Fear;
@@ -749,6 +750,15 @@ public static class ModData
             {i}Rules clarification{/i}
 
             Despite the name "Etching", this can be used on traced runes as well.
+            """);
+
+        public static readonly string InfoLedriaAlly = RegisterInfoTooltip(
+            ID_PREPEND + "LedriaAlly",
+            """
+            {b}Ledria, Rune of Appeal{/b}
+            {i}Implementation{/i}
+            
+            For simplicity, this invocation only affects allies (as well as yourself) instead of all creatures within range. Allies are determined relative to you, not the rune-bearer, as normal.
             """);
 
         public static readonly string InfoSertumReroll = RegisterInfoTooltip(

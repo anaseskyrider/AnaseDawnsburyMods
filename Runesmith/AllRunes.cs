@@ -14,6 +14,8 @@ using Dawnsbury.Core.CharacterBuilder.Selections;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
+using Dawnsbury.Core.Coroutines.Options.Reactive;
+using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Intelligence;
@@ -601,9 +603,111 @@ public static class AllRunes
             .ToFeat();
 
         // TODO: Ledria, Rune of Appeal
-        yield return DebugRune(
-            RuneId.Ledria,
-            "No matter what skin, shell, or scale this rune is drawn on, it shines like gold.");
+        // Faction alignment is treated as "allies of the runesmith", regardless of the rune-bearer's faction.
+        // DOC: Invocation affects allies, rather than all creatures, for simplicity.
+        yield return new Rune(
+                RuneId.Ledria,
+                "No matter what skin, shell, or scale this rune is drawn on, it shines like gold.",
+                new RuneDrawProperties(
+                        "drawn on a creature",
+                        drawnOnCreature: true)
+                    .WithAllyRequirement(true),
+                new RunePassiveProperties(
+                        "The rune-bearer gains a +1 status bonus to Deception, Diplomacy, and Performance checks.",
+                        (rune, level) =>
+                        {
+                            return
+                                $"The rune-bearer gains a +{S.HeightenedVariable(level >= 17 ? 3 : level >= 9 ? 2 : 1, 1)} status bonus to Deception, Diplomacy, and Performance checks.";
+                        })
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        int bonus = drawAction.Owner.Level >= 17 ? 3 : drawAction.Owner.Level >= 9 ? 2 : 1;
+                        return new DrawnRune(
+                            drawAction,
+                            rune,
+                            "You gain a +1 status bonus to Deception, Diplomacy, and Performance checks.")
+                        {
+                            BonusToSkills = skill =>
+                                skill is Skill.Deception or Skill.Diplomacy or Skill.Performance
+                                    ? new Bonus(bonus, BonusType.Status, rune.FullName)
+                                    : null
+                        };
+                    }),
+                new RuneInvocationProperties(
+                        $"The rune draws allies closer to the bearer. You and each ally{ModData.Tooltips.InfoLedriaAlly} within 30 feet of the rune-bearer can Step closer to the rune-bearer as a {{icon:FreeAction}} free action.",
+                        null)
+                    .WithAdditionalRequirement((a, d) =>
+                        a.Battle.AllCreatures.Any(cr =>
+                            // Include YOUR allies (and you)
+                            a.FriendOf(cr)
+                            // Exclude the rune-bearer
+                            && a != d
+                            && d.DistanceTo(cr) <= 6)
+                            ? Usability.Usable
+                            : Usability.NotUsableOnThisCreature("None of your allies within 30 feet"))
+                    .WithAffectsArea()
+                    .WithChosenTargeting(async (invokeAction, invokedRune, overrideTargets) =>
+                    {
+                        const float emanationSize = 6f; // 30 feet
+
+                        return await CommonRuneRules.GetInnerInvokeTargets(
+                            invokeAction,
+                            invokedRune,
+                            Target.Emanation((int)emanationSize)
+                                .WithIncludeOnlyIf((_, cr) =>
+                                    cr.FriendOf(invokedRune.Source!)),
+                            false,
+                            ModData.SfxNames.INVOKED_LEDRIA,
+                            overrideTargets: overrideTargets,
+                            finalAdjustments: subAction =>
+                            {
+                                if (overrideTargets?.ChosenCreatures.Count is < 2)
+                                    return;
+                                
+                                // For Ledria to not be a PITA to use, you need to be able to control
+                                // which ally moves in what order, so that's what this reaction option
+                                // is for. This blends subtargeting and EffectOnOneTarget like logic.
+                                
+                                // To manage this, a function is employed in two places: (1) The inner
+                                // invocation for normal conditions that affect an area of allies,
+                                // allowing you to control the order of executed Step actions; and (2)
+                                // the OnEachTarget area for complex invocations caused by diacritics
+                                // when it otherwise affects just one target.
+                                
+                                // This is handled by manually adding an invocation immunity, and
+                                // checking it redundantly later.
+                                subAction.WithEffectOnChosenTargets(async (self, chosen) =>
+                                {
+                                    await CommonQuestions.OfferReactionsAsync(new ReactionRequestStyle(
+                                        self.Battle,
+                                        () => $"{invokeAction.Owner.ToColoredName()} has invoked {invokedRune}, allowing each ally within 30 feet of {invokedRune.Owner.ToColoredName()} to Step towards them as a {{icon:FreeAction}} free action.",
+                                        true,
+                                        invokeAction.Owner,
+                                        () => chosen.ChosenCreatures
+                                            .Select(ally =>
+                                                ReactionOption.CreateCustom(
+                                                        "Step",
+                                                        $"Step towards {invokedRune.Owner.ToColoredName()}.",
+                                                        invokedRune.Rune.Illustration,
+                                                        ally,
+                                                        async () => await LedriaStepTowardsRuneBearer(
+                                                            invokedRune, ally))
+                                                    .WithIsFreeAction())
+                                            .ToList()
+                                    ));
+                                    chosen.ChosenCreatures.ForEach(ally =>
+                                        ally.AddQEffect(CommonRuneRules.ImmunityToInvocation(invokedRune.Rune)));
+                                });
+                            });
+                    })
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        await LedriaStepTowardsRuneBearer(invokedRune, effectTarget);
+                        return effectTarget;
+                    }),
+                [Trait.Occult])
+            .WithLevelText("9th", "The bonus increases to +2.\n{b}Level (17th){/b} The bonus increases to +3.")
+            .ToFeat();
         
         // Lyskel, Rune of Frost
         yield return new Rune(
@@ -3714,6 +3818,33 @@ public static class AllRunes
     public static Rune? GetRune(RuneId runeId)
     {
         return All.FirstOrDefault(rune => rune.Id == runeId);
+    }
+
+    public static async Task<bool> LedriaStepTowardsRuneBearer(DrawnRune invokedRune, Creature ally)
+    {
+        if (CommonRuneRules.IsImmuneToThisInvocation(ally, invokedRune.Rune))
+            return false;
+        
+        Sfxs.Play(SfxName.Footsteps);
+                        
+        Creature? active = ally.Battle.ActiveCreature;
+        ally.Battle.ActiveCreature = ally;
+                        
+        bool result = await ally.StrideOrStepAdvancedAsync(
+            $"Choose where to Step as part of invoking {invokedRune}, or right-click to cancel. You must end this movement closer to {invokedRune.Owner.ToColoredName()}.",
+            allowStep: true, allowStride: false,
+            passText: "Don't Step",
+            // Allows equidistance in order to avoid situations where you're KIND OF
+            // moving closer but there's an obstacle in the way, or it's a very
+            // shallow angle of being slightly closer that isn't visible on a grid.
+            permissibleTarget: tile => tile.DistanceTo(invokedRune.Owner) <= ally.DistanceTo(invokedRune.Owner));
+                        
+        ally.Battle.ActiveCreature = active;
+
+        if (result)
+            ally.AddQEffect(CommonRuneRules.ImmunityToInvocation(invokedRune.Rune));
+
+        return result;
     }
 
     public static HashSet<Creature>? JurrozWhoDamagedMe(Creature me)
