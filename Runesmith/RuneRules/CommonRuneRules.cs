@@ -1325,9 +1325,7 @@ public static class CommonRuneRules
         ChosenTargets? chosenTargets)
     {
         if (drawnRune.Rune.InvocationProperties.EffectOnOneTarget == null
-            || drawnRune.Hidden
-            || chosenTargets?.ChosenCreatures.All(cr =>
-                CommonRuneRules.IsImmuneToThisInvocation(cr, drawnRune.Rune)) == true)
+            || drawnRune.Hidden)
             return false;
         
         List<DrawnRune> callbackRunes = new List<DrawnRune?>
@@ -1360,7 +1358,9 @@ public static class CommonRuneRules
         
         // Invoke the rune
         List<Creature> affectedCreatures = [];
-        foreach (Creature chosenCreature in chosenTargets?.ChosenCreatures ?? [])
+        foreach (Creature chosenCreature in (chosenTargets?.ChosenCreatures ?? [])
+                 .Where(cr =>
+                     !CommonRuneRules.IsImmuneToThisInvocation(cr, drawnRune.Rune)))
         {
             List<Creature>? affected = await drawnRune.Rune.InvocationProperties
                 .EffectOnOneTarget(
