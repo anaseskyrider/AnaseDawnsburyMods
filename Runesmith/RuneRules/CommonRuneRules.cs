@@ -2098,7 +2098,7 @@ public static class CommonRuneRules
             DrawnRune subRune => subRune.ToWordString(),
             _ => null
         };
-        string rune = $"{invokedRune.Rune.Illustration.IllustrationAsIconString}{invokedRune.Rune.WordName}";
+        string rune = invokedRune.ToWordString();
         
         runesmith.Battle.Log(
             $"{whom}{(whom2 is not null ? $"'s {whom2}" : null)} loses {rune}.",
