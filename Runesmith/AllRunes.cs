@@ -1991,49 +1991,27 @@ public static class AllRunes
         yield return new Rune(
                 RuneId.En,
                 "This diacritic surrounds a rune with outward-facing arrows to magnify and direct power outward.",
-                new RuneDrawProperties(
-                        "drawn on a rune that deals damage",
-                        drawnOnRune: true)
-                    .WithBasicDiacriticTargetingRequirements()
+                RuneDrawProperties.Diacritic("that deals damage")
                     .WithBaseRuneMustDealDamage()
                     .WithBaseRuneMustNotBeArea(),
-                new RunePassiveProperties(
-                        "When the base rune is invoked, the rune-bearer is affected by it as usual, and each other creature in a 15-foot emanation around the rune-bearer also takes the damage and other effects from the base rune (and can attempt a saving throw if possible). An individual creature can be affected by the rune only once, even if the rune could normally affect more creatures than just the rune-bearer.",
-                        null)
-                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
-                    {
-                        return await CommonRuneRules.ChooseARuneToDrawOn(
-                            drawAction,
-                            drawAction.Owner,
-                            target,
-                            subTarget is DrawnRune runeTarget
-                                ? drOnto =>
-                                    drOnto == runeTarget
-                                : drOnto =>
-                                    !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune)
-                                    && drOnto.Rune.InvocationProperties.DealsDamage
-                                    && !drOnto.Rune.InvocationProperties.AffectsArea,
-                            CreateEnPassive,
-                            "Choose a rune whose invocation will radiate outward in a 15-foot emanation from its bearer.",
-                            rune);
-
-                        // Create rune
-                        DrawnRune? CreateEnPassive(DrawnRune? drawnOnto)
-                        {
-                            if (drawnOnto is null)
-                                return null;
-                            
-                            return new DrawnRune(
+                RunePassiveProperties.Diacritic(
+                        "When the base rune is invoked, the rune-bearer is affected by it as usual, and each other creature in a 15-foot emanation around the rune-bearer also takes the damage and other effects from the base rune (and can attempt a saving throw if possible). An individual creature can be affected by the rune only once, even if the rune could normally affect more creatures than just the rune-bearer.")
+                    .WithDiacriticCreator(
+                        drOnto =>
+                            drOnto.Rune.InvocationProperties is
+                                { DealsDamage: true, AffectsArea: false },
+                        (drBase, drawAction, rune) =>
+                            new DrawnRune(
                                 drawAction,
                                 rune,
                                 (drThis, drOnto) =>
                                     $"""
-                                     When {drOnto.Illustration!.IllustrationAsIconString} {drOnto.Name!.WithColor("Blue")} is invoked, each other creature in a 15-foot emanation around {drOnto.Owner.ToColoredBoldedName()} also takes the base rune's damage and other effects (and can attempt a saving throw if possible).
+                                     When {drOnto} is invoked, each other creature in a 15-foot emanation around {drOnto.Owner.ToColoredBoldedName()} also takes the base rune's damage and other effects (and can attempt a saving throw if possible).
 
                                      This doesn't allow a creature to be affected by the rune more than once, even if it would affect more.
                                      
                                      """,
-                                drawnOnto)
+                                drBase)
                             {
                                 BeforeInvokingRune = async (drThis, invokeAction, drInvoked) =>
                                 {
@@ -2087,9 +2065,8 @@ public static class AllRunes
                                     
                                     ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune);
                                 },
-                            };
-                        }
-                    }),
+                            },
+                        "Choose a rune whose invocation will radiate outward in a 15-foot emanation from its bearer."),
                 null,
                 [ModData.Traits.Diacritic])
             .ToFeat();
