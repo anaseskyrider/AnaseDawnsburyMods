@@ -103,24 +103,39 @@ public class RunePassiveProperties(
     /// <param name="diacriticPassive">The function which creates a new diacritic DrawnRune from a given DrawnRune target, the action drawing the rune, and the base rune to create from.</param>
     /// <param name="question">The question to present to the user. This already includes the title of the diacritic in the string.</param>
     public RunePassiveProperties WithDiacriticCreator(
-        Func<DrawnRune,bool>? additionalRuneRequirements,
+        Func<CombatAction,DrawnRune,bool>? additionalRuneRequirements,
         Func<DrawnRune,CombatAction,Rune,DrawnRune> diacriticPassive,
         string question)
     {
         this.DrawnRuneCreator = async (drawAction, rune, target, subTarget) =>
         {
+            List<DrawnRune> drawings = [];
+            
+            // Cut straight to the passed-in rune target instead
+            // of validating legality.
             if (subTarget is DrawnRune runeTarget
                 && diacriticPassive(runeTarget, drawAction, rune) is {} newDiacritic)
-                return [newDiacritic];
-            return await CommonRuneRules.ChooseARuneToDrawOn(
-                drawAction, drawAction.Owner, target,
-                drOnto =>
-                    !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune)
-                    // null is true
-                    && additionalRuneRequirements?.Invoke(drOnto) is not false,
-                drOnto => drOnto is null ? null : diacriticPassive(drOnto, drawAction, rune),
-                question,
-                rune);
+                drawings.Add(newDiacritic);
+            // Otherwise, go through choice-making as normal.
+            else
+                drawings.AddRange(await CommonRuneRules.ChooseARuneToDrawOn(
+                    drawAction, drawAction.Owner, target,
+                    drOnto =>
+                        !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune)
+                        // null is true
+                        && additionalRuneRequirements?.Invoke(drawAction, drOnto) is not false,
+                    drOnto => drOnto is null ? null : diacriticPassive(drOnto, drawAction, rune),
+                    question,
+                    rune) ?? []);
+            
+            if (drawings.Count == 0)
+                return null;
+            
+            // If you can only have one, only ever return one.
+            if (rune.PassiveProperties.OnlyOneInExistenceAtATime)
+                return [drawings.Last()];
+            
+            return drawings;
         };
         return this;
     }

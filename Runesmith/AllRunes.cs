@@ -1997,7 +1997,7 @@ public static class AllRunes
                 RunePassiveProperties.Diacritic(
                         "When the base rune is invoked, the rune-bearer is affected by it as usual, and each other creature in a 15-foot emanation around the rune-bearer also takes the damage and other effects from the base rune (and can attempt a saving throw if possible). An individual creature can be affected by the rune only once, even if the rune could normally affect more creatures than just the rune-bearer.")
                     .WithDiacriticCreator(
-                        drOnto =>
+                        (drawAction, drOnto) =>
                             drOnto.Rune.InvocationProperties is
                                 { DealsDamage: true, AffectsArea: false },
                         (drBase, drawAction, rune) =>
@@ -2186,8 +2186,9 @@ public static class AllRunes
                 RunePassiveProperties.Diacritic(
                         "When the base rune is invoked, it has the nonlethal trait, but the rune-bearer takes a –1 status penalty to any saving throw.")
                     .WithDiacriticCreator(
-                        dr => !dr.Traits.ContainsOneOf([Trait.Death, Trait.Negative])
-                              && dr.Rune.InvocationProperties.DealsDamage,
+                        (drawAction, drOnto) =>
+                            !drOnto.Traits.ContainsOneOf([Trait.Death, Trait.Negative])
+                            && drOnto.Rune.InvocationProperties.DealsDamage,
                         (drBase, drawAction, rune) =>
                             new DrawnRune(
                                 drawAction,
