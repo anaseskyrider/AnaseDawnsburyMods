@@ -1650,18 +1650,147 @@ public static class AllRunes
             .WithLevelText("+2", "The reduction in physical resistance increases by 1, the damage of the invocation increases by 1d6, and the persistent damage increases by 1.")
             .ToFeat();
         
-        // TODO: Tilus, Rune of Vocabulary
-        yield return DebugRune(
-            RuneId.Tilus,
-            "Upon close inspection, this rune comprises hundreds of smaller characters of various runic languages.");
-        /*yield return new Rune(
+        // Tilus, Rune of Vocabulary
+        // DOC: Substantially more powerful due to niche use-cases. The invocation protects against any outgoing fizzles to Auditory actions, and slaps on DoesNotProvoke universally to Auditory actions as well.
+        yield return new Rune(
                 RuneId.Tilus,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
-            .ToFeat();*/
+                "Upon close inspection, this rune comprises hundreds of smaller characters of various runic languages.",
+                new RuneDrawProperties(
+                        "drawn on a creature",
+                        drawnOnCreature: true)
+                    .WithAllyRequirement(),
+                new RunePassiveProperties(
+                        "The raw magic of language flows through the rune-bearer, negating any penalties to their actions, as well as any bonuses to saving throws they impose, due to not sharing a language with a target. In addition, they gain a +1 status bonus to Society checks. While not in natural terrain, this bonus also applies to their Lore checks.",
+                        (rune, level) =>
+                        {
+                            return
+                                $"The raw magic of language flows through the rune-bearer, negating penalties to their actions and any saving throws they impose due to not sharing a language with their targets. In addition, they gain a +{S.HeightenedVariable(level >= 17 ? 3 : level >= 9 ? 2 : 1, 1)} status bonus to Society checks. While not in natural terrain, this bonus also applies to their Lore checks.";
+                        })
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        int bonusAmount = drawAction.Owner.Level >= 17 ? 3 : drawAction.Owner.Level >= 9 ? 2 : 1;
+                        return (new DrawnRune(
+                                drawAction,
+                                rune,
+                                $"You ignore penalties caused by not sharing a language. You also gain a +1 status bonus to Society checks{(target.Battle.Map.FinalTerrain is TerrainKind.Civilization ? ", as well as to Lore checks." : ".")}")
+                            {
+                                BonusToSkills = skill =>
+                                {
+                                    if (skill is Skill.Society)
+                                        return new Bonus(bonusAmount, BonusType.Status, rune.FullName);
+                                    if (skill.ToStringOrTechnical().ToLower().Contains("lore")
+                                        && target.Battle.Map.FinalTerrain
+                                            is TerrainKind.Civilization)
+                                        return new Bonus(bonusAmount, BonusType.Status, rune.FullName);
+                                    return null;
+                                },
+                                StateCheck = qfThis =>
+                                {
+                                    qfThis.Owner
+                                        .AddQEffect(new QEffect(ExpirationCondition.Ephemeral)
+                                        {
+                                            Id = QEffectId.IntimidatingGlare
+                                        })
+                                        .AddQEffect(new QEffect(ExpirationCondition.Ephemeral)
+                                        {
+                                            Id = QEffectId.SpeakWithAnimals
+                                        });
+                                },
+                                BeforeBonusesAreFlattened = (qfThis, list, reason, action, defender) =>
+                                {
+                                    if (reason is not BonusCalculationReason.SkillCheck)
+                                        return;
+                                    list.RemoveAll(bonus =>
+                                        bonus is not null
+                                        && bonus.BonusType is BonusType.Circumstance
+                                        && bonus.Amount < 0
+                                        && bonus.BonusSource.ToLower() == "no shared language");
+                                },
+                            }
+                            .AddGrantingOfTechnical(
+                                (qfThis, cr) => cr.EnemyOf(qfThis.Owner),
+                                (qfThis, qfTech) =>
+                                {
+                                    qfTech.BeforeBonusesAreFlattened = (qfTech2, list, reason, action, defender) =>
+                                    {
+                                        if (reason is not BonusCalculationReason.Defense
+                                            || action?.Owner != qfThis.Owner)
+                                            return;
+                                        list.RemoveAll(bonus =>
+                                            bonus is not null
+                                            && bonus.BonusType is BonusType.Circumstance
+                                            && bonus.Amount > 0
+                                            && bonus.BonusSource.ToLower() == "no shared language");
+                                    };
+                                })
+                            as DrawnRune)!;
+                    }),
+                new RuneInvocationProperties(
+                        "The rune-bearer's voice rings clear and true, allowing them to automatically succeed when an effect would attempt to fizzle or disrupt an auditory action they're taking for 1 round.",
+                        null)
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        QEffect invokedTilus = invokedRune.NewInvocationEffect(
+                            "You automatically succeed when an effect would attempt to fizzle or disrupt an auditory action you take, and such actions do not provoke reactions.",
+                            ExpirationCondition.ExpiresAtStartOfSourcesTurn,
+                            qfInvoked =>
+                            {
+                                qfInvoked.SourceAction = invokeAction;
+                                qfInvoked.Source = invokedRune.Source;
+                                qfInvoked.Tag = new HashSet<QEffect>();
+                                qfInvoked.ModifyActionPossibility = (qfThis, action) =>
+                                {
+                                    if (!action.HasTrait(Trait.Auditory))
+                                        return;
+                                    action.WithExtraTrait(Trait.DoesNotProvoke);
+                                };
+                                qfInvoked.StateCheckLayer = 1;
+                                qfInvoked.StateCheck = qfThis =>
+                                {
+                                    if (qfThis.Tag is not HashSet<QEffect> modifiedEffects)
+                                        return;
+                                    
+                                    // Stop tracking effects you no longer own
+                                    modifiedEffects.RemoveWhere(qf =>
+                                        !qfThis.Owner.QEffects.Contains(qf));
+                                    
+                                    // For each effect you have that has outgoing fizzles,
+                                    // modify it so that checks against auditory occur first.
+                                    foreach (QEffect qf in qfThis.Owner.QEffects
+                                                 .Where(qf => !modifiedEffects.Contains(qf))
+                                                 .ToList())
+                                    {
+                                        if (qf.FizzleOutgoingActions is not { } cached)
+                                            continue;
+                                        qf.FizzleOutgoingActions = async (qfFizz, action, strBuild) =>
+                                        {
+                                            if (action.HasTrait(Trait.Auditory))
+                                            {
+                                                if (await cached(qfFizz, action, strBuild))
+                                                    qfFizz.Owner.Battle.Log(
+                                                        $"{qfFizz.Owner} automatically succeeded against an effect that attempted to fizzle their auditory action.",
+                                                        invokedRune.Rune.FullName,
+                                                        CommonRuneRules.StatBlocks.CreateRuneDescription(
+                                                            invokedRune.Rune, invokedRune.Source!.Level),
+                                                        new Traits(invokedRune.Rune.Traits.ToList()));
+                                                return false;
+                                            }
+                                            return await cached(qfFizz, action, strBuild);
+                                        };
+                                        modifiedEffects.Add(qf);
+                                    }
+                                    
+                                };
+                            })
+                            .WithExpirationInOneRound(invokeAction.Owner);
+
+                        effectTarget.AddQEffect(invokedTilus);
+
+                        return effectTarget;
+                    }),
+                [Trait.Arcane, Trait.Mental, Trait.Rebalanced])
+            .WithLevelText("9th", "The bonus increases to +2.\n{b}Level (17th){/b} The bonus increases to +3.")
+            .ToFeat();
 
         // Zohk, Rune of Homecoming
         yield return new Rune(
