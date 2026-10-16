@@ -2203,7 +2203,7 @@ public static class AllRunes
         /*yield return new Rune(
                 RuneId.Per,
                 "This whirling diacritic recirculates the magic of the base rune onto another creature.",
-                new RuneDrawProperties(),
+                RuneDrawProperties.Diacritic(),
                 RunePassiveProperties.Diacritic("After the base rune is invoked, it automatically traces itself on a different target of your choice within 15 feet of the original rune-bearer."),
                 null,
                 [Trait.Diacritic])
@@ -2217,51 +2217,20 @@ public static class AllRunes
         yield return new Rune(
                 RuneId.Sun,
                 "This spiraling diacritic channels the magic of a rune outwards, then back to the same location, allowing a rune to reconstitute itself.",
-                new RuneDrawProperties(
-                        "drawn on a rune",
-                        drawnOnRune: true)
-                    .WithBasicDiacriticTargetingRequirements()
-                    .WithInvokeableOncePerCombatRequirement(),
-                new RunePassiveProperties(
-                        """
-                        After the base rune is invoked, the base rune automatically traces itself back upon the same target.
-
-                        {b}Special{/b} You can have only one copy of {i}sun-, diacritic rune of preservation{/i} applied at a given time, and once you invoke it, you cannot Etch or Trace it again for the rest of this encounter.
-                        """,
-                        null)
-                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
-                    {
-                        DrawnRune? sunPassive = (await CommonRuneRules.ChooseARuneToDrawOn(
-                                drawAction,
-                                drawAction.Owner,
-                                target,
-                                subTarget is DrawnRune runeTarget
-                                    ? drOnto =>
-                                        drOnto == runeTarget
-                                    : drOnto =>
-                                        !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune),
-                                CreateSunPassive,
-                                "Choose a rune that will be retraced after being invoked.",
-                                rune))?
-                            .LastOrDefault();
-
-                        // Only one instance allowed when drawn
-                        if (sunPassive is not null)
-                            CommonRuneRules.RemoveAllOtherInstancesOf(drawAction.Owner, rune.Id);
-
-                        return sunPassive;
-
-                        DrawnRune? CreateSunPassive(DrawnRune? drawnOnto)
-                        {
-                            if (drawnOnto is null)
-                                return null;
-                            
-                            return new DrawnRune(
+                RuneDrawProperties.Diacritic(null, true),
+                RunePassiveProperties.Diacritic(
+                        "After the base rune is invoked, the base rune automatically traces itself back upon the same target.",
+                        "sun-, diacritic rune of preservation")
+                    .WithDiacriticCreator(
+                        // No particular extra requirements
+                        null,
+                        (drBase, drawAction, rune) =>
+                            new DrawnRune(
                                     drawAction,
                                     rune,
                                     (drThis, drOnto) =>
-                                        $"After {drOnto.Illustration!.IllustrationAsIconString} {drOnto.Name!.WithColor("Blue")} is invoked, it traces itself back upon the same target.",
-                                    drawnOnto)
+                                        $"After {drOnto} is invoked, it traces itself back upon the same target.",
+                                    drBase)
                                 {
                                     AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
                                     {
@@ -2316,9 +2285,8 @@ public static class AllRunes
                                             sunRedraw,
                                             ChosenTargets.CreateSingleTarget(drInvoked.Owner));
                                     },
-                                };
-                        }
-                    }),
+                                },
+                        "Choose a rune that will be retraced after being invoked."),
                 null,
                 [ModData.Traits.Diacritic])
             .ToFeat();
