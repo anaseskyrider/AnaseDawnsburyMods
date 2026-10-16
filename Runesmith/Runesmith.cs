@@ -866,6 +866,7 @@ public static class Runesmith
                     }))
             .WithTag((range, rangeDesc)) // Store the range info to make the archetype easier to adjust
             .WithActionCost(1)
+            .WithCastsOrUses("begins")
             .WithEffectOnEachTarget(async (thisAction, self, _,_) =>
             {
                 // Number of runes on the field.

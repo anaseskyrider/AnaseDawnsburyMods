@@ -1071,8 +1071,12 @@ public static class CommonRuneRules
 
         CombatAction invokeThisRune = new CombatAction(
                 runesmith,
-                rune.Illustration,
-                $"Invoke Rune ({rune.WordName})",
+                drawnRune.AttachedDiacritic is not null
+                    ? new DoublePortraitIllustration(
+                        drawnRune.AttachedDiacritic.Rune.Illustration,
+                        rune.Illustration)
+                    : rune.Illustration,
+                $"Invoke Rune ({drawnRune.AttachedDiacritic?.Rune.WordName.AddIfNotNull(null, "-")}{rune.WordName})",
                 traits.ToArray(),
                 // Use the rune stat block for the description instead of
                 // the template 2-invocation activity description.
@@ -1167,7 +1171,7 @@ public static class CommonRuneRules
         // > Aldis Ronan invokes &Atryl.
         invokeThisRune.ShortName = rune.Illustration.IllustrationAsIconString + rune.WordName;
         // Shorten the context menu name.
-        invokeThisRune.ContextMenuName = $"Invoke {rune.WordName}";
+        invokeThisRune.ContextMenuName = $"Invoke {drawnRune.AttachedDiacritic?.Rune.WordName.AddIfNotNull(null, "-")}{rune.WordName}";
 
         if (immediatelyRemoveImmunity)
             invokeThisRune = CommonRuneRules.WithImmediatelyRemovesImmunity(invokeThisRune);
