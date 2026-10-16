@@ -602,7 +602,7 @@ public static class AllRunes
                     .WithSoundAfterInvocation(SfxName.RaiseShield))
             .ToFeat();
 
-        // TODO: Ledria, Rune of Appeal
+        // Ledria, Rune of Appeal
         // Faction alignment is treated as "allies of the runesmith", regardless of the rune-bearer's faction.
         // DOC: Invocation affects allies, rather than all creatures, for simplicity.
         yield return new Rune(
