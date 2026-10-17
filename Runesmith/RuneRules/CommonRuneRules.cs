@@ -790,6 +790,7 @@ public static class CommonRuneRules
     /// <param name="overridePassButton">(Default: " Confirm no trace action ") If the text of the <see cref="PassViaButtonOption"/> should be different, this is that text.</param>
     /// <param name="canBeCanceled">Whether the attempt to draw the rune can be canceled.</param>
     /// <param name="doNotImmediatelyExecute">Whether to immediately execute the chosen option, or wait.</param>
+    /// <param name="question">The TopBarText to present to the user.</param>
     /// <returns>The chosen Option. Use this to decide whether the action should be reverted or not.</returns>
     public static async Task<Option?> AskToTraceARune(
         Creature runesmith,

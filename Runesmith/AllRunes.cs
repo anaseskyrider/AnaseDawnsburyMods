@@ -1952,7 +1952,7 @@ public static class AllRunes
                                     drawAction,
                                     rune,
                                     (drThis, drOnto) =>
-                                        $"After {drOnto} is invoked, {drThis.Source!.ToColoredBoldedName()} can Invoke a single Rune {{icon:FreeAction}} on a different rune-bearer within 15 feet of this one.",
+                                        $"After {drOnto} is invoked, {drThis.Source?.ToColoredBoldedName() ?? "the runesmith"} can Invoke a single Rune {{icon:FreeAction}} on a different rune-bearer within 15 feet of this one.\n\nCan only be invoked once per encounter.\n",
                                     drBase)
                                 {
                                     AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
@@ -2303,7 +2303,7 @@ public static class AllRunes
                                     drawAction,
                                     rune,
                                     (drThis, drOnto) =>
-                                        $"After {drOnto} is invoked, it traces itself back upon the same target.",
+                                        $"After {drOnto} is invoked, it traces itself back upon the same target.\n\nCan only be invoked once per encounter.\n",
                                     drBase)
                                 {
                                     AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
