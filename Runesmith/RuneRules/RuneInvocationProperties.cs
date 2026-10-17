@@ -109,6 +109,8 @@ public class RuneInvocationProperties(
     /// </summary>
     public Usability IsLegalTarget(Creature runesmith, Creature target)
     {
+        if (CommonRuneRules.IsImmuneToThisInvocation(target, this.Self))
+            return Usability.NotUsableOnThisCreature("Immune to this invocation");
         foreach (CreatureTargetingRequirement req in TargetingRequirements)
         {
             // Return the first unusable reason found
