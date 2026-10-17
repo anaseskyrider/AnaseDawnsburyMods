@@ -3446,26 +3446,37 @@ public static class AllRunes
             .ToFeat();
         
         // TODO: Oraloq, Rune of Inarticulateness
+        // DOC: The rune-bearer does not take this effect into consideration for their actions.
         /*yield return new Rune(
                 RuneId.Oraloq,
                 "This hard-to-read rune makes language difficult for the unfortunate rune-bearer.",
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
+                new RuneDrawProperties(
+                        "drawn on a creature",
+                        drawnOnCreature: true),
+                new RunePassiveProperties(
+                        "When the rune-bearer attempts a skill check or ability with the linguistic trait or attempts to Cast a spell that doesn’t have the subtle trait, they must succeed a DC 5 flat check, or the action is lost.",
+                        null),
+                new RuneInvocationProperties(
+                        "The rune-bearer must attempt a Will save as the rune puts a strong mental block on the part of their mind that interprets language. If the rune-bearer fails their save, they take 20 mental damage (or double damage on a critical failure) the first time they use any language, take a linguistic action, or Cast a Spell without the subtle trait. The effect ends once the damage is taken or at the end of the rune-bearer’s next turn, whichever comes first.",
+                        (rune, level) =>
+                        {
+                            return $"";
+                        }),
+                [Trait.Mental])
+            .WithLevelText("+2", "The damage of the invocation increases by 5.")
             .ToFeat();*/
         
         // TODO: Piteregrin, Rune of Transposition
-        yield return DebugRune(
-            RuneId.Piteregrin,
-            "The slanted lines and odd curls of this rune give the impression that it is trying to escape.");
         /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
+                RuneId.Piteregrin,
+                "The slanted lines and odd curls of this rune give the impression that it is trying to escape.",
+                new RuneDrawProperties("drawn onto a creature", drawnOnCreature: true),
+                new RunePassiveProperties(
+                        "The rune-bearer can use a single action to swap places with any other willing rune-bearer within 15 feet. (The other rune-bearer can be bearing any rune.) Each creature must have room to appear in its new location or the effect is disrupted. This action has the concentrate and teleportation traits.",
+                        null),
+                new RuneInvocationProperties(
+                        "(teleportation) The rune grows to an enormous size, swallowing up the rune-bearer and each Large or smaller creature adjacent to them, and then immediately spits them back out. Choose a square within a 15-foot emanation from the rune-bearer’s original position for each swallowed creature to reappear. A Large creature doesn’t necessarily need to reappear completely within the emanation, as long as one of its squares is. An unwilling creature avoids being teleported if it succeeds at a Will save against your class DC.",
+                        null))
             .ToFeat();*/
 
         // Trolistri, Rune of Forlorn Sorrow
@@ -3562,16 +3573,23 @@ public static class AllRunes
             .ToFeat();
         
         // TODO: Ulgatus, Rune of Restraint
-        yield return DebugRune(
-            RuneId.Ulgatus,
-            "A faction of constructed beings developed this rune to avoid the weaknesses of flesh.");
         /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
+                RuneId.Ulgatus,
+                "A faction of constructed beings developed this rune to avoid the weaknesses of flesh.",
+                new RuneDrawProperties("drawn on a creature wearing armor", drawnOnCreature: true),
+                new RunePassiveProperties(
+                        "When the creature wearing the armor would gain or increase the value of their drained, enfeebled, or sickened condition, the rune attempts to prevent the imposition. The bearer attempts a DC 15 flat check. On a success, it doesn’t gain or increase the value of that condition, but the rune goes temporarily dormant for 10 minutes. While dormant, the rune can’t protect the bearer from conditions but can be invoked.",
+                        (rune, int) =>
+                        {
+                            return $"";
+                        }),
+                new RuneInvocationProperties(
+                        "The rune causes the armor to grow around the creature wearing it, fortifying any vulnerable spots. For 1 minute, the wearer gains resistance 10 to critical hits.",
+                        (rune, int) =>
+                        {
+                            return $"";
+                        }))
+            .WithLevelText("17th", "The DC of the flat check decreases to 10 and the resistance to critical hits increases to 20.")
             .ToFeat();*/
         
         // Yudici, Rune of Remonstrance
@@ -3719,14 +3737,14 @@ public static class AllRunes
         #region 13th-Level
         
         // TODO: Eck-, Diacritic Rune of Phantasma
-        yield return DebugRune(RuneId.Eck, "This diacritic frames a base rune with almost invisible lines that turn the rune's effects against the bearer's soul.");
         /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
+                RuneId.Eck,
+                "This diacritic frames a base rune with almost invisible lines that turn the rune's effects against the bearer's soul.",
+                RuneDrawProperties.Diacritic("that deals damage"),
+                RunePassiveProperties.Diacritic(),
+                null,
+                [Trait.Diacritic])
+            .WithLevelText("17th", "The persistent spirit damage increases by 1d8.")
             .ToFeat();*/
         
         // TODO: Inth-, Diacritic Rune of Corruption
@@ -3737,7 +3755,7 @@ public static class AllRunes
                 RuneId.Inth,
                 "This set of angular accents around the base rune channels the essence of fiendish corruption.",
                 RuneDrawProperties.Diacritic(),
-                RunePassiveProperties.Diacritic("The base rune gains the unholy trait, as does any damage it deals. If applied to a holy creature, that creature is enfeebled 2 for as long as it bears the rune."),
+                RunePassiveProperties.Diacritic("The base rune gains the unholy trait, as does any damage it deals. If applied to a holy creature, that creature is {r}enfeebled 2{/r} for as long as it bears the rune."),
                 new InvocationProperties(
                     // Not sure if it's RAW, but I think unholy is inherited from the above, and is included for clarity.
                     "(fire, unholy) When the base rune is invoked, it burns away in unholy black fire that lingers on its target. In addition to the base rune’s normal effect, the target takes 2d4 persistent fire damage.",
@@ -3914,25 +3932,30 @@ public static class AllRunes
         inthFeat.RulesText += "\n\n" + ModData.Illustrations.DdSun.IllustrationAsIconString + " {b}Compatibility{/b} For the purposes of being holy, creatures with weakness to evil damage are considered holy, and this diacritic's persistent damage uses the better of fire or evil damage.";*/
         
         // TODO: Nesh-, Diacritic Rune of Contingency
-        yield return DebugRune(RuneId.Nesh, "The wavy lines of this diacritic seem to stretch the base rune into a wider area.");
+        // Contingency is complicated as hell. Do this one last.
         /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
+                RuneId.Nesh,
+                "The wavy lines of this diacritic seem to stretch the base rune into a wider area.",
+                RuneDrawProperties.Diacritic(null, true),
+                RunePassiveProperties.Diacritic(
+                        $$"When you draw this rune, choose a trigger that when met will invoke the base rune, using the same restrictions as for the trigger of a Ready action. When the trigger is met, you can {{ModData.FeatNames.InvokeRune.ToLink("Invoke the base Rune") as a {icon:Reaction} reaction; you can’t invoke any additional runes with that reaction.",
+                        null,
+                        true),
+                null,
+                [Trait.Diacritic])
             .ToFeat();*/
         
         // TODO: Sar-, Diacritic Rune of Righteousness
-        yield return DebugRune(RuneId.Sar, "Clean arcs of gold faintly glow on the base rune, evoking celestial order and serenity.");
         /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
+                RuneId.Sar,
+                "Clean arcs of gold faintly glow on the base rune, evoking celestial order and serenity.",
+                RuneDrawProperties.Diacritic(),
+                RunePassiveProperties.Diacritic(
+                        "The base rune gains the holy trait, as does any damage it deals. If applied to an unholy creature, that creature is enfeebled 2 for as long as it bears the rune."),
+                new RuneInvocationProperties(
+                        "When the base rune is invoked, it shines with holy light that harshly judges the target for any of its sins. In addition to the base rune's normal effect, the target is {r}drained 1{/r}.",
+                        null),
+                [Trait.Diacritic, Trait.Divine, Trait.Holy])
             .ToFeat();*/
 
         #endregion
