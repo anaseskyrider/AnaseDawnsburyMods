@@ -1793,6 +1793,18 @@ public static class CommonRuneRules
         };
         return runeInvocationImmunity;
     }
+    
+    /// <summary>
+    /// Determines whether a TARGET Creature is immune to the invocation effects of this Rune.
+    /// </summary>
+    /// <remarks>This searches for a QEffect with an <see cref="QEffect.Id"/> equal to <see cref="ModData.QEffectIds.ImmuneToInvocation"/> and a <see cref="QEffect.Tag"/> matching this Rune.</remarks>
+    /// <param name="target">The CREATURE to check.</param>
+    /// <param name="rune">The RUNE to check.</param>
+    /// <returns>(bool) Returns true if the immunity QEffect is present on the target.</returns>
+    public static bool IsImmuneToThisInvocation(Creature target, DrawnRune rune)
+    {
+        return IsImmuneToThisInvocation(target, rune.Rune);
+    }
 
     /// <summary>
     /// Determines whether a TARGET Creature is immune to the invocation effects of this Rune.
