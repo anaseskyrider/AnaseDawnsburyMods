@@ -23,6 +23,7 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
@@ -3111,35 +3112,14 @@ public static class AllRunes
                         })
                     .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
                     {
-                        ChoiceButtonOption choice = await drawAction.Owner.AskForChoiceAmongButtons(
-                            rune.Illustration,
-                            $$"""
-                              {b}{{rune.FullName}}{/b}
-                              Choose which damage type to insulate against.
-                              """,
-                            $"{{icon:RayOfFrost}} {"Cold".WithColor(DamageKind.Cold.DamageKindToColor())}",
-                            $"{{icon:ElectricArc}} {"Electricity".WithColor(DamageKind.Electricity.DamageKindToColor())}",
-                            $"{{icon:ProduceFlame}} {"Fire".WithColor(DamageKind.Fire.DamageKindToColor())}");
-
-                        DamageKind chosenKind;
-                        Trait chosenTrait;
-                        switch (choice.Index)
-                        {
-                            case 0:
-                                chosenKind = DamageKind.Cold;
-                                chosenTrait = Trait.Cold;
-                                break;
-                            case 1:
-                                chosenKind = DamageKind.Electricity;
-                                chosenTrait = Trait.Electricity;
-                                break;
-                            case 2:
-                                chosenKind = DamageKind.Fire;
-                                chosenTrait = Trait.Fire;
-                                break;
-                            default:
-                                return null;
-                        }
+                        if (await TiAskDamageChoice(
+                                drawAction.Owner,
+                                rune,
+                                "Choose which damage type to insulate against.",
+                                [DamageKind.Cold, DamageKind.Electricity, DamageKind.Fire])
+                            is not { } choice
+                            || choice.Trait is null)
+                            return null;
                         
                         var resist = rune.CalculateHeightening(4, 2, 1, drawAction.Owner.Level);
                         var thorns = rune.CalculateHeightening(2, 2, 1, drawAction.Owner.Level);
@@ -3147,13 +3127,13 @@ public static class AllRunes
                         return new DrawnRune(
                             drawAction,
                             rune,
-                            $"You have resistance {resist.FinalValue.WithColor("Blue")} to {chosenKind.ToStringOrTechnical().ToLower().WithColor(chosenKind.DamageKindToColor())} damage, and creatures take {thorns.FinalValue.WithColor("Blue")} {chosenKind.ToStringOrTechnical().ToLower().WithColor(chosenKind.DamageKindToColor())} damage when they touch you, damage you with an unarmed attack, or damage you with a non-reach melee weapon.")
+                            $"You have resistance {resist.FinalValue.WithColor("Blue")} to {choice.Kind.ToStringOrTechnical().ToLower().WithColor(choice.Kind.DamageKindToColor())} damage, and creatures take {thorns.FinalValue.WithColor("Blue")} {choice.Kind.ToStringOrTechnical().ToLower().WithColor(choice.Kind.DamageKindToColor())} damage when they touch you, damage you with an unarmed attack, or damage you with a non-reach melee weapon.")
                         {
-                            Name = $"{rune.FullName} ({chosenKind.ToStringOrTechnical().ToLower()})",
-                            Tag = chosenKind,
+                            Name = $"{rune.FullName} ({choice.Kind.ToStringOrTechnical().ToLower()})",
+                            Tag = choice.Kind,
                             CountsAsABuff = true,
                             StateCheck = qfThis =>
-                                qfThis.Owner.WeaknessAndResistance.AddResistance(chosenKind, resist.FinalValue),
+                                qfThis.Owner.WeaknessAndResistance.AddResistance(choice.Kind, resist.FinalValue),
                             // Damage when merely touched
                             AfterYouAreTargeted = async (qfThis, action) =>
                             {
@@ -3183,7 +3163,7 @@ public static class AllRunes
                                 await DealThornsDamage(drThis, action.Owner);
                             }
                         }
-                        .WithTrait(chosenTrait);
+                        .WithTrait(choice.Trait.Value);
 
                         bool ActionIsValidAttack(CombatAction action)
                         {
@@ -3209,7 +3189,7 @@ public static class AllRunes
                                     rune.FullName),
                                 enemy,
                                 CheckResult.Success,
-                                chosenKind);
+                                choice.Kind);
                         }
                     }),
                 new RuneInvocationProperties(
@@ -3970,6 +3950,81 @@ public static class AllRunes
             ally.AddQEffect(CommonRuneRules.ImmunityToInvocation(invokedRune.Rune));
 
         return result;
+    }
+
+    public static DamageKind? TiGetBaseRuneDamage(DrawnRune drawnOnto)
+    {
+        return
+            drawnOnto.Rune.InvocationProperties.DealsDamage
+                ? drawnOnto.Tag as DamageKind? ?? drawnOnto.Rune.InvocationProperties.GetKindedDamage?.Invoke(drawnOnto.Rune, drawnOnto.Source!.Level).Kind
+                : null;
+    }
+
+    public static string[] TiDamageKindsToButtons(DamageKind[] kinds)
+    {
+        return kinds
+            // Don't reorder, preserve index information
+            /*.OrderByDescending(kind => kind.ToStringOrTechnical())*/
+            .Select(kind =>
+            {
+                Illustration icon = kind switch
+                {
+                    DamageKind.Acid => IllustrationName.AcidSplash,
+                    DamageKind.Cold => IllustrationName.RayOfFrost,
+                    DamageKind.Electricity => IllustrationName.ElectricArc,
+                    DamageKind.Fire => IllustrationName.ProduceFlame,
+                    _ => IllustrationName.YellowWarning,
+                };
+                string name = kind.ToStringOrTechnical().Capitalize().WithColor(kind.DamageKindToColor());
+                return icon.IllustrationAsIconString + " " + name;
+            })
+            .ToArray();
+    }
+
+    public static async Task<(DamageKind Kind, Trait? Trait)?> TiAskDamageChoice(Creature runesmith, Rune rune, string question, DamageKind[] kinds)
+    {
+        ChoiceButtonOption choice = await runesmith.AskForChoiceAmongButtons(
+            rune.Illustration,
+            $$"""
+              {b}{{rune.Illustration.IllustrationAsIconString}}{{rune.FullName}}{/b}
+              {{question}}
+              """,
+            TiDamageKindsToButtons(kinds));
+
+        if (choice.Index > kinds.Length - 1)
+            return null;
+
+        DamageKind chosenKind = kinds[choice.Index];
+        Trait? chosenTrait = KojastriKindToTrait(chosenKind);
+
+        return (chosenKind, chosenTrait);
+    }
+
+    public static Trait? KojastriKindToTrait(DamageKind kind)
+    {
+        switch (kind)
+        {
+            case DamageKind.Acid:
+                return Trait.Acid;
+            case DamageKind.Cold:
+                return Trait.Cold;
+            case DamageKind.Electricity:
+                return Trait.Electricity;
+            case DamageKind.Fire:
+                return Trait.Fire;
+            case DamageKind.Mental:
+                return Trait.Mental;
+            case DamageKind.Negative:
+                return Trait.Negative;
+            case DamageKind.Positive:
+                return Trait.Positive;
+            case DamageKind.Poison:
+                return Trait.Poison;
+            case DamageKind.Sonic:
+                return Trait.Sonic;
+            default:
+                return null;
+        }
     }
 
     public static HashSet<Creature>? JurrozWhoDamagedMe(Creature me)
