@@ -2863,18 +2863,122 @@ public static class AllRunes
             .WithLevelText("17th", "The status bonus increases to +3.")
             .ToFeat();
 
-        // TODO: Germantria, Rune of Partnership
-        yield return DebugRune(
-            RuneId.Germantria,
-            "When drawn, this knobby rune pulses with your own heartbeat, creating a vital connection between you and the bearer.");
-        /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
-            .ToFeat();*/
+        // Germantria, Rune of Partnership
+        yield return new Rune(
+                RuneId.Germantria,
+                "When drawn, this knobby rune pulses with your own heartbeat, creating a vital connection between you and the bearer.",
+                new RuneDrawProperties(
+                        "drawn on a creature",
+                        drawnOnCreature: true)
+                    .WithAllyRequirement(excludeSelf: true),
+                new RunePassiveProperties(
+                        "The rune-bearer takes half damage from all effects that deal Hit Point damage, and you take the remainder of the damage. When you take this damage, you don’t apply any resistances, weaknesses, or other abilities you have to that damage; you simply take that amount of damage. If either you or the rune-bearer is reduced to 0 Hit Points, the rune fades without being invoked.",
+                        null)
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        return new DrawnRune(
+                            drawAction, rune,
+                            $"You take half as much damage, and {drawAction.Owner.ToColoredName()} takes the rest.")
+                        {
+                            // Cached damage to deal
+                            Tag = 0,
+                            YouAreDealtDamageEvent = async (qfThis, dEvent) =>
+                            {
+                                DrawnRune drThis = (qfThis as DrawnRune)!;
+                                
+                                // Halve the damage, rounding down.
+                                int halvedDown = (int)Math.Round(
+                                    dEvent.TotalResolvedDamage / 2d,
+                                    MidpointRounding.ToZero);
+                                int halvedUp = (dEvent.TotalResolvedDamage - halvedDown);
+                                
+                                // Cache it, rounding up for the runesmith.
+                                drThis.Tag = halvedUp;
+                                
+                                // Apply reduction, using rounded-up value for reduction
+                                // because that means the rounded-down total.
+                                dEvent.ReduceBy(halvedUp, $"Half ({drThis.Rune.FullName})");
+                            },
+                            AfterYouTakeDamage = async (qfThis, _, _, _, _) =>
+                            {
+                                DrawnRune drThis = (qfThis as DrawnRune)!;
+                                Creature runesmith = drThis.Source!;
+                                if (drThis.Disabled
+                                    || !drThis.IsFirstInstanceOf()
+                                    || drThis.Tag is not int amount
+                                    || amount < 1)
+                                    return;
+                                
+                                // Deal directly, do not construct an event.
+                                if (runesmith.TemporaryHP > 0)
+                                {
+                                    int takeableTempHP = Math.Min(runesmith.TemporaryHP, amount);
+                                    int totalDamage1 = amount - takeableTempHP;
+                                    runesmith.TemporaryHP -= takeableTempHP;
+                                    runesmith.TakeDamage(totalDamage1);
+                                }
+                                else
+                                    runesmith.TakeDamage(amount);
+                                
+                                // Log the event.
+                                runesmith.Battle.Log(
+                                    $"{runesmith} takes {amount.WithTag("b")} damage from {drThis.ToWordString()}'s effect.",
+                                    drThis.Rune.FullName,
+                                    CommonRuneRules.StatBlocks.CreateRuneDescription(drThis.Rune, runesmith.Level),
+                                    new Traits(drThis.Rune.Traits.ToArray()));
+
+                                // Reset cached damage
+                                drThis.Tag = 0;
+                                
+                                // Trigger what happens after taking damage.
+                                // Don't include the action nor count as a critical, that
+                                // seems like it'd be too much to critically down 2 people.
+                                // Especially for an effect that simply 'takes the damage'.
+                                await DeathRules.CheckReachingZeroHP(runesmith, null, false);
+                            },
+                            StateCheck = qfThis =>
+                            {
+                                DrawnRune drThis = (qfThis as DrawnRune)!;
+                                if (drThis.Owner.HP <= 0 || drThis.Source!.HP <= 0)
+                                {
+                                    drThis.ExpiresAt = ExpirationCondition.Immediately;
+                                    CommonRuneRules.LogInvokedRune(drThis.Source!, drThis, drThis.Owner);
+                                }
+                            }
+                        };
+                    }),
+                new RuneInvocationProperties(
+                        "(healing) The connection between you and the rune-bearer is severed in a burst of healing energy. Both you and the rune-bearer regain 20 Hit Points.",
+                        (rune, level) =>
+                        {
+                            (int baseValue, _, int finalValue) = rune.CalculateHeightening(20, 2, 5, level);
+                            return
+                                $"(healing) The connection between you and the rune-bearer is severed in a burst of healing energy. Both you and the rune-bearer regain {S.HeightenedVariable(finalValue, baseValue)} Hit Points.";
+                        })
+                    .WithSoundBeforeInvocation(SfxName.Healing)
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        int healingAmount = invokedRune.Rune.CalculateHeightening(20, 2, 5, invokedRune.Source!.Level).FinalValue;
+                        
+                        CombatAction healAction = CombatAction.CreateSimple(
+                                invokedRune.Source!,
+                                invokedRune.Rune.FullName,
+                                [..invokedRune.Traits, Trait.Healing])
+                            .WithIllustration(invokedRune.Rune.Illustration);
+                        
+                        List<Creature> heals = new List<Creature>([effectTarget, invokedRune.Source!])
+                            // Because this effect is performing its own kind of targeting irrespective
+                            // of any ChosenTargets effects or what have you, this is a good fallback.
+                            // It might be redundant, it's hard to say since these implementations are
+                            // kind of complex.
+                            .Where(cr => !CommonRuneRules.IsImmuneToThisInvocation(cr, invokedRune.Rune))
+                            .ToList();
+                        foreach (Creature cr in heals)
+                            await cr.HealAsync(healingAmount.ToString(), healAction);
+
+                        return heals;
+                    }))
+            .ToFeat();
         
         // Ichelsu, Rune of Observation
         yield return new Rune(
