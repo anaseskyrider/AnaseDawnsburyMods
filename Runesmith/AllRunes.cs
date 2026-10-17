@@ -2366,15 +2366,62 @@ public static class AllRunes
                 [ModData.Traits.Diacritic])
             .ToFeat();
 
-        // TODO: Ti-, Diacritic Rune of Fundaments
-        /*yield return new Rune(
+        // Ti-, Diacritic Rune of Fundaments
+        yield return new Rune(
                 RuneId.Ti,
                 "This wavering diacritic encompasses the base rune to slightly change its meaning.",
-                RuneDrawProperties.Diacritic(),
-                RunePassiveProperties.Diacritic(),
+                RuneDrawProperties.Diacritic(
+                        "that deals acid, cold, electricity, or fire damage")
+                    .WithBaseRuneMustDealDamageOfTypes([DamageKind.Acid, DamageKind.Cold, DamageKind.Electricity, DamageKind.Fire]),
+                RunePassiveProperties.Diacritic(
+                        "When the base rune is invoked, you can alter the damage its invocation deals, choosing acid, cold, electricity, or fire.")
+                    .WithDiacriticCreator(
+                        (drawAction, drOnto) =>
+                            TiGetBaseRuneDamage(drOnto)
+                                is DamageKind.Acid
+                                or DamageKind.Cold
+                                or DamageKind.Electricity
+                                or DamageKind.Fire,
+                        (drawAction, rune, drBase) =>
+                            new DrawnRune(
+                                drawAction, rune,
+                                (drThis, drOnto) => $"When {drOnto} is invoked, you can alter the damage its invocation deals, choosing acid, cold, electricity, or fire.",
+                                drBase)
+                            {
+                                BeforeInvokingRune = async (drThis, invokeAction, drInvoked) =>
+                                {
+                                    if (drThis.Disabled
+                                        || drInvoked != drThis.DrawnOn)
+                                        return;
+
+                                    if (await TiAskDamageChoice(
+                                            drThis.Source!,
+                                            drThis.Rune,
+                                            $"Choose a damage type for {drInvoked} to deal.",
+                                            [DamageKind.Acid, DamageKind.Cold, DamageKind.Electricity, DamageKind.Fire]
+                                        )
+                                        is not { } choice)
+                                    {
+                                        invokeAction.RevertRequested = true;
+                                        return;
+                                    }
+
+                                    invokeAction.Owner.AddQEffect(new QEffect()
+                                    {
+                                        Name = "[TI- DAMAGE CHANGER]",
+                                        ConvertAllOutgoingDamageToDamageKind = choice.Kind
+                                    });
+                                },
+                                AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
+                                {
+                                    invokeAction.Owner.RemoveAllQEffects(qf =>
+                                        qf.Name == "[TI- DAMAGE CHANGER]");
+                                }
+                            },
+                        (drawAction, rune) => "Choose a rune to be able to alter its invocation damage type to acid, cold, electricity, or fire."),
                 null,
                 [Trait.Diacritic])
-            .ToFeat();*/
+            .ToFeat();
         
         // Ur-, Diacritic Rune of Intensity
         yield return new Rune(
