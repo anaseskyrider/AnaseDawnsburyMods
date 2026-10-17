@@ -799,7 +799,8 @@ public static class CommonRuneRules
         int? overrideRange = null,
         string? overridePassButton = null,
         bool? canBeCanceled = false,
-        bool? doNotImmediatelyExecute = false)
+        bool? doNotImmediatelyExecute = false,
+        string question = "Choose a rune to Trace")
     {
         // Get available runes
         List<Rune>? knownRunes = RunicRepertoireTag
@@ -842,10 +843,11 @@ public static class CommonRuneRules
         options.Add(new PassViaButtonOption(overridePassButton ?? " Confirm no trace action "));
         
         // Pick a target
-        string topBarText = $"Choose a rune to Trace{(canBeCanceled == true ? " or right-click to cancel" : null)}.";
+        question = question.TrimEnd('.');
+        string topBarText = $"{question}{(canBeCanceled == true ? " or right-click to cancel" : null)}.";
         // Send a request to pick an option
         Option chosenOption = (await runesmith.Battle.SendRequest(
-            new AdvancedRequest(runesmith, "Choose a rune to Trace.", options)
+            new AdvancedRequest(runesmith, $"{question}.", options)
             {
                 TopBarText = topBarText,
                 TopBarIcon = ModData.Illustrations.TraceRune,
@@ -1779,7 +1781,7 @@ public static class CommonRuneRules
                 rune.Illustration,
                 ModData.Illustrations.NoSymbol),
             Name = $"Invocation Immunity: {rune.FullName}",
-            Description = $"You cannot be affected by another invocation of a {rune.FullName.WithColor("Blue")} rune{(immuneForEncounter ? " for the rest of the encounter" : " until the end of this action")}.",
+            Description = $"You cannot be affected by another invocation of a {rune} rune{(immuneForEncounter ? " for the rest of the encounter" : " until the end of this action")}.",
             Id = ModData.QEffectIds.ImmuneToInvocation,
             Tag = rune, // The rune that you're immune to
             ExpiresAt = immuneForEncounter
