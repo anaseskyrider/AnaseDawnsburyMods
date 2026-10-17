@@ -3934,7 +3934,18 @@ public static class AllRunes
                 RunePassiveProperties.Diacritic(
                         $$"When you draw this rune, choose a trigger that when met will invoke the base rune, using the same restrictions as for the trigger of a Ready action. When the trigger is met, you can {{ModData.FeatNames.InvokeRune.ToLink("Invoke the base Rune") as a {icon:Reaction} reaction; you can’t invoke any additional runes with that reaction.",
                         null,
-                        true),
+                        true)
+                    .WithDiacriticCreator(
+                        null,
+                        (drawAction, rune, drBase) =>
+                            new DrawnRune(
+                                drawAction, rune,
+                                (drThis, drOnto) => $"\n\nCan only be invoked once per encounter.\n",
+                                drBase)
+                            {
+                                
+                            },
+                        _,),
                 null,
                 [Trait.Diacritic])
             .ToFeat();*/
