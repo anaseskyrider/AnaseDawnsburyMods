@@ -10,7 +10,9 @@ using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Display.Text;
 using Dawnsbury.IO;
+using Dawnsbury.Modding;
 using Dawnsbury.Mods.RunesmithClass.TargetingRequirements;
 
 namespace Dawnsbury.Mods.RunesmithClass.RuneRules;
@@ -470,6 +472,20 @@ public class RuneDrawProperties(
             || (excludeMarssyl && dr.Rune.Id == RuneId.Marssyl)
                 ? Usability.NotUsableOnThisCreature("Base rune deals damage") 
                 : Usability.Usable);
+    }
+
+    public RuneDrawProperties WithBaseRuneMustDealDamageOfTypes(DamageKind[] kinds)
+    {
+        kinds = kinds
+            .OrderByDescending(kind => kind.ToStringOrTechnical())
+            .ToArray();
+        return this
+            .WithBaseRuneMustDealDamage(false)
+            .WithDrawnRuneRequirement((a, dr) =>
+                AllRunes.TiGetBaseRuneDamage(dr) is {} kind
+                && kinds.Contains(kind)
+                    ? Usability.Usable
+                    : Usability.NotUsableOnThisCreature($"Base rune doesn't deal {S.ConstructOrList(kinds.Select(kind => kind.ToStringOrTechnical().ToLower()), "or")} damage"));
     }
 
     public RuneDrawProperties WithBaseRuneMustNotBeArea()
