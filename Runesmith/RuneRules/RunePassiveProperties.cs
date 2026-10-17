@@ -104,7 +104,7 @@ public class RunePassiveProperties(
     /// <param name="question">The question to present to the user. This already includes the title of the diacritic in the string.</param>
     public RunePassiveProperties WithDiacriticCreator(
         Func<CombatAction,DrawnRune,bool>? additionalRuneRequirements,
-        Func<DrawnRune,CombatAction,Rune,DrawnRune> diacriticPassive,
+        Func<CombatAction,Rune,DrawnRune,DrawnRune> diacriticPassive,
         Func<CombatAction,Rune,string> question)
     {
         this.DrawnRuneCreator = async (drawAction, rune, target, subTarget) =>
@@ -114,7 +114,7 @@ public class RunePassiveProperties(
             // Cut straight to the passed-in rune target instead
             // of validating legality.
             if (subTarget is DrawnRune runeTarget
-                && diacriticPassive(runeTarget, drawAction, rune) is {} newDiacritic)
+                && diacriticPassive(drawAction, rune, runeTarget) is {} newDiacritic)
                 drawings.Add(newDiacritic);
             // Otherwise, go through choice-making as normal.
             else
@@ -124,7 +124,7 @@ public class RunePassiveProperties(
                         !ModData.PersistentActions.RuneIsUsedUp(drOnto.Source!, drOnto.Rune)
                         // null is true
                         && additionalRuneRequirements?.Invoke(drawAction, drOnto) is not false,
-                    drOnto => drOnto is null ? null : diacriticPassive(drOnto, drawAction, rune),
+                    drOnto => drOnto is null ? null : diacriticPassive(drawAction, rune, drOnto),
                     question(drawAction, rune),
                     rune) ?? []);
             

@@ -1947,7 +1947,7 @@ public static class AllRunes
                     .WithDiacriticCreator(
                         // Has no particular requirements not covered elsewhere
                         null,
-                        (drBase, drawAction, rune) =>
+                        (drawAction, rune, drBase) =>
                             new DrawnRune(
                                     drawAction,
                                     rune,
@@ -2000,7 +2000,7 @@ public static class AllRunes
                         (drawAction, drOnto) =>
                             drOnto.Rune.InvocationProperties is
                                 { DealsDamage: true, AffectsArea: false },
-                        (drBase, drawAction, rune) =>
+                        (drawAction, rune, drBase) =>
                             new DrawnRune(
                                 drawAction,
                                 rune,
@@ -2090,7 +2090,7 @@ public static class AllRunes
                             && !drOnto.Rune.InvocationProperties.DealsDamage
                             && drOnto.Rune.Id != RuneId.Marssyl
                             && drOnto.Rune.InvocationProperties.IsLegalTarget(drawAction.Owner, drawAction.Owner),
-                        (drBase, drawAction, rune) =>
+                        (drawAction, rune, drBase) =>
                             new DrawnRune(
                                 drawAction,
                                 rune,
@@ -2171,7 +2171,7 @@ public static class AllRunes
                         (drawAction, drOnto) =>
                             !drOnto.Traits.ContainsOneOf([Trait.Death, Trait.Negative])
                             && drOnto.Rune.InvocationProperties.DealsDamage,
-                        (drBase, drawAction, rune) =>
+                        (drawAction, rune, drBase) =>
                             new DrawnRune(
                                 drawAction,
                                 rune,
@@ -2224,7 +2224,7 @@ public static class AllRunes
                     .WithDiacriticCreator(
                         // No particular extra requirements
                         null,
-                        (drBase, drawAction, rune) =>
+                        (drawAction, rune, drBase) =>
                             new DrawnRune(
                                     drawAction,
                                     rune,
@@ -2318,7 +2318,7 @@ public static class AllRunes
                         (drawAction, drOnto) =>
                             drOnto.Rune.InvocationProperties.DealsDamage
                             || drOnto.Rune.Id == RuneId.Marssyl,
-                        (drBase, drawAction, rune) =>
+                        (drawAction, rune, drBase) =>
                         {
                             int bonusAmount = 2 + (drawAction.Owner.Level / 2);
                             return new DrawnRune(

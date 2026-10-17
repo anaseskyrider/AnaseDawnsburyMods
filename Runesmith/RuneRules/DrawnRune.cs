@@ -80,7 +80,7 @@ public class DrawnRune : QEffect
     /// </summary>
     /// <list type="bullet">
     /// <item><see cref="DrawnRune"/>: This diacritic DrawnRune.</item>
-    /// <item><see cref="Item"/>: The DrawnRune that this diacritic rune is drawn onto.</item>
+    /// <item><see cref="DrawnRune"/>: The DrawnRune that this diacritic rune is drawn onto.</item>
     /// </list>
     /// <returns>(string) The new description of the rune effect.</returns>
     public Func<DrawnRune,DrawnRune,string>? DiacriticDescriptionGenerator { get; set; }
