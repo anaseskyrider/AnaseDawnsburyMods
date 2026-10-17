@@ -3342,12 +3342,9 @@ public static class AllRunes
             .ToFeat();
         
         // TODO: Oraloq, Rune of Inarticulateness
-        yield return DebugRune(
-            RuneId.Oraloq,
-            "This hard-to-read rune makes language difficult for the unfortunate rune-bearer.");
         /*yield return new Rune(
-                ,
-                ,
+                RuneId.Oraloq,
+                "This hard-to-read rune makes language difficult for the unfortunate rune-bearer.",
                 new RuneDrawProperties(),
                 new RunePassiveProperties(),
                 new RuneInvocationProperties(),
