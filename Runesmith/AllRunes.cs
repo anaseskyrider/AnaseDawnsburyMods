@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.CodeAnalysis;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
@@ -15,7 +14,6 @@ using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
 using Dawnsbury.Core.Coroutines.Options.Reactive;
-using Dawnsbury.Core.Coroutines.Requests;
 using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Creatures.Parts;
 using Dawnsbury.Core.Intelligence;
@@ -35,7 +33,6 @@ using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.Modding;
 using Dawnsbury.Mods.RunesmithClass.RuneRules;
-using Dawnsbury.Mods.RunesmithClass.TargetingRequirements;
 using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.RunesmithClass;
@@ -45,11 +42,9 @@ public static class AllRunes
     public static List<Rune> All { get; } = [];
     public static List<Feat> AllRuneFeats { get; } = [];
 
-    public static bool DEBUG_MODE = false;
-
     public static void LoadRunes()
     {
-        foreach (Feat runeFeat in CreateRuneFeats().WhereNotNull())
+        foreach (Feat runeFeat in CreateRuneFeats())
         {
             All.Add((runeFeat.Tag as Rune)!);
             AllRuneFeats.Add(runeFeat);
@@ -57,7 +52,7 @@ public static class AllRunes
         }
     }
 
-    public static IEnumerable<Feat?> CreateRuneFeats()
+    public static IEnumerable<Feat> CreateRuneFeats()
     {
         /* TODO: Consider altering the way runes apply Item effects based on these Item fields to look into:
          * WithPermanentQEffectWhenWorn
@@ -3748,7 +3743,6 @@ public static class AllRunes
             .ToFeat();*/
         
         // TODO: Inth-, Diacritic Rune of Corruption
-        yield return DebugRune(RuneId.Inth);
         // "the target takes 1d4 persistent fire damage" has some ambiguity between Esvadir's invocation and Pluuna's invocation.
         // DOC: Wording changed to specify that the rune-bearer takes the persistent damage.
         /*Rune runeInthDiacritic = new Rune(
@@ -4077,17 +4071,6 @@ public static class AllRunes
         adjustFeat?.Invoke(runeFeat);
 
         return runeFeat;
-    }
-
-    public static Feat? DebugRune(RuneId id, string flavor = "NYI", Action<Rune>? adjustRune = null)
-    {
-        if (DEBUG_MODE)
-        {
-            Rune debugRune = new Rune(id, flavor, new RuneDrawProperties("NYI"), new RunePassiveProperties("NYI", null), new RuneInvocationProperties("NYI", null));
-            adjustRune?.Invoke(debugRune);
-            return debugRune.ToFeat();
-        }
-        return null;
     }
 
     public static Rune? GetRune(RuneId runeId)
