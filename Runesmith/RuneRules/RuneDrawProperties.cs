@@ -456,20 +456,20 @@ public class RuneDrawProperties(
 
     public RuneDrawProperties WithBaseRuneMustDealDamage(bool includeMarssyl = false)
     {
-        return this.WithDrawnRuneRequirement(new LegacyRuneTargetingRequirement((a, dr) =>
+        return this.WithDrawnRuneRequirement((a, dr) =>
             dr.Rune.InvocationProperties.DealsDamage
             || (includeMarssyl && dr.Rune.Id == RuneId.Marssyl)
                 ? Usability.Usable
-                : Usability.NotUsableOnThisCreature("Base rune doesn't deal damage")));
+                : Usability.NotUsableOnThisCreature("Base rune doesn't deal damage"));
     }
 
     public RuneDrawProperties WithBaseRuneDoesNotDealDamage(bool excludeMarssyl = false)
     {
-        return this.WithDrawnRuneRequirement(new LegacyRuneTargetingRequirement((a, dr) =>
+        return this.WithDrawnRuneRequirement((a, dr) =>
             dr.Rune.InvocationProperties.DealsDamage
             || (excludeMarssyl && dr.Rune.Id == RuneId.Marssyl)
                 ? Usability.NotUsableOnThisCreature("Base rune deals damage") 
-                : Usability.Usable));
+                : Usability.Usable);
     }
 
     public RuneDrawProperties WithBaseRuneMustNotBeArea()
