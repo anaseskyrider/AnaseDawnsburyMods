@@ -599,6 +599,7 @@ public static class ModData
 
         #region 5th-Level Runes
 
+        public const SfxName INVOKED_PER = SfxName.DazzlingFlash;
         // Was AuraExpansion
         public const SfxName INVOKED_SUN = SfxName.DazzlingFlash;
 

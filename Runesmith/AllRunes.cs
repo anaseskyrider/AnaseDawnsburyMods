@@ -2199,19 +2199,93 @@ public static class AllRunes
                 [Trait.Diacritic])
             .ToFeat();
         
-        // TODO: Per-, Diacritic Rune of Continuum
-        /*yield return new Rune(
+        // Per-, Diacritic Rune of Continuum
+        yield return new Rune(
                 RuneId.Per,
                 "This whirling diacritic recirculates the magic of the base rune onto another creature.",
-                RuneDrawProperties.Diacritic(),
-                RunePassiveProperties.Diacritic("After the base rune is invoked, it automatically traces itself on a different target of your choice within 15 feet of the original rune-bearer."),
+                RuneDrawProperties.Diacritic(null, true),
+                RunePassiveProperties.Diacritic(
+                        "After the base rune is invoked, it automatically traces itself on a different target of your choice within 15 feet of the original rune-bearer.",
+                        true)
+                    .WithDiacriticCreator(
+                        null,
+                        (drawAction, rune, drBase) =>
+                            new DrawnRune(
+                                drawAction, rune,
+                                // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
+                                (drThis, drOnto) => $"After {drOnto} is invoked, it automatically traces itself onto a different target of your choice within 15 feet of {drThis.Owner?.ToColoredName() ?? "the original rune-bearer"}.\n\nCan only be invoked once per encounter.\n",
+                                drBase)
+                            {
+                                AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
+                                {
+                                    if (drThis.Disabled
+                                        || drInvoked != drThis.DrawnOn)
+                                        return;
+                                    
+                                    // Normally the invoke animation happens, then the effects and SFX play.
+                                    // This adds a small delay after that for the sound to finish before
+                                    // immediately beginning sun-'s SFX and VFX so that it's easier to process.
+                                    await Task.Delay(500);
+
+                                    await CommonRuneRules.AskToTraceARune(
+                                        // Just in-case fallbacks
+                                        drInvoked.Source!.Alive
+                                            ? drInvoked.Source!
+                                            : drThis.Source!.Alive
+                                                ? drThis.Source!
+                                                : drInvoked.Owner,
+                                        // ReSharper disable once VariableHidesOuterVariable
+                                        runeFilter: rune => rune == drInvoked.Rune,
+                                        targetFilter: cr => cr.DistanceTo(drInvoked.Owner) <= 3,
+                                        adjustAction: traceAction =>
+                                        {
+                                            traceAction.Name =
+                                                traceAction.Name.Replace("Trace", "Retrace");
+                                            traceAction.ContextMenuName =
+                                                traceAction.ContextMenuName?.Replace("Trace", "Retrace");
+                                            traceAction.CastsOrUses = "retraces";
+                                            var cachedSound = traceAction.SoundEffectName;
+                                            traceAction
+                                                .WithSoundEffect(null)
+                                                .WithExtraTrait(Trait.DoNotShowOverheadOfActionName)
+                                                .WithAdjustTarget<CreatureTarget>(crTar => crTar
+                                                    .AlternateTileOfOrigin = drInvoked.Owner.Space.CenterTile)
+                                                .WithPrologueEffectOnChosenTargetsBeforeRolls(async (_, _, _) =>
+                                                {
+                                                    // Animation on rune-bearer
+                                                    Sfxs.Play(ModData.SfxNames.INVOKED_PER);
+                                                    await CommonRuneRules.PlayInvocationSplashAnimation(drInvoked.Owner, drThis.Rune.Illustration);
+                                                    
+                                                    Sfxs.Play(cachedSound);
+                                                });
+                                            traceAction.EffectOnOneTarget = async (traceAction2, caster, target, _) =>
+                                            {
+                                                if (await CommonRuneRules.DrawRuneOnCreature(
+                                                            traceAction2, target, drInvoked.Rune)
+                                                        is not {} newDrawnRunes
+                                                    || newDrawnRunes.LastOrDefault() is not {} newDrawnRune)
+                                                {
+                                                    traceAction.RevertRequested = true;
+                                                    return;
+                                                }
+
+                                                (traceAction.Tag as RuneActionTag)?.CreatedDrawnRune = newDrawnRune;
+                                                ModData.PersistentActions.UseUpRune(drThis.Source!, drThis.Rune);
+                                            };
+                                        },
+                                        overrideRange: 3,
+                                        overridePassButton: " Confirm no retrace ",
+                                        question: $"Choose a target to Trace {drInvoked} onto.");
+                                },
+                            },
+                        (drawAction, rune) => "Choose a rune that, when invoked, will automatically trace itself on another target within 15 feet of the rune-bearer."),
                 null,
                 [Trait.Diacritic])
             .WithIllustration(new CornerIllustration(
                 IllustrationName.RunestoneWinged,
                 ModData.Illustrations.TraceRune,
                 Direction.Southwest))
-            .ToFeat();*/
+            .ToFeat();
         
         // Sun-, Diacritic Rune of Preservation
         yield return new Rune(
