@@ -3630,27 +3630,26 @@ public static class AllRunes
         
         // TODO: Inth-, Diacritic Rune of Corruption
         yield return DebugRune(RuneId.Inth);
-        /*yield return new Rune(
-                ,
-                ,
-                new RuneDrawProperties(),
-                new RunePassiveProperties(),
-                new RuneInvocationProperties(),
-                [])
-            .ToFeat();*/
         // "the target takes 1d4 persistent fire damage" has some ambiguity between Esvadir's invocation and Pluuna's invocation.
         // DOC: Wording changed to specify that the rune-bearer takes the persistent damage.
         /*Rune runeInthDiacritic = new Rune(
-                "Inth-, Diacritic Rune of Corruption",
-                ModData.Traits.InthDiacritic,
-                IllustrationName.KeenRunestone,
-                13,
-                "drawn on a rune",
+                RuneId.Inth,
                 "This set of angular accents around the base rune channels the essence of fiendish corruption.",
-                "The base rune gains the unholy trait, as does any damage it deals. If applied to a holy creature, that creature is enfeebled 1 for as long as the rune is applied to it.",
-                "(unholy) When the base rune is invoked, it burns away in unholy black fire that lingers on its bearer. In addition to the base rune's normal effect, the rune-bearer takes 1d4 persistent fire damage.",
-                "The damage increases by 1d4.",
-                [ModData.Traits.Diacritic, Trait.Divine, Trait.Fiend, Trait.Fire, Trait.Evil])
+                RuneDrawProperties.Diacritic(),
+                RunePassiveProperties.Diacritic("The base rune gains the unholy trait, as does any damage it deals. If applied to a holy creature, that creature is enfeebled 2 for as long as it bears the rune."),
+                new InvocationProperties(
+                    // Not sure if it's RAW, but I think unholy is inherited from the above, and is included for clarity.
+                    "(fire, unholy) When the base rune is invoked, it burns away in unholy black fire that lingers on its target. In addition to the base rune’s normal effect, the target takes 2d4 persistent fire damage.",
+                    (rune, level) =>
+                    {
+                        (int baseValue, _, int finalValue) = rune.CalculateHeightening();
+                        return $"(fire) When the base rune is invoked, it burns away in unholy black fire that lingers on its target. In addition to the base rune's normal effect, the target takes {S.HeightenedVariable(finalValue, baseValue)}d4 persistent fire damage."
+                    }),
+                [Trait.Diacritic, Trait.Divine, Trait.Unholy])
+            .WithLevelText("+2", "The persistent fire damage increases by 2d4.")
+            
+            // To be converted from playtest down below
+            
             .WithHeightenedText(
                 null,
                 (rune, charLevel) =>
@@ -3809,7 +3808,7 @@ public static class AllRunes
                                weak.DamageKind is DamageKind.Evil);
                 }
             })
-            .WithDrawnOnRuneTechnical();
+            .ToFeat();
         RuneFeat inthFeat = AddRuneAsRuneFeat(ModData.ID_PREPEND+"RuneInthDiacritic", runeInthDiacritic);
         inthFeat.RulesText += "\n\n" + ModData.Illustrations.DdSun.IllustrationAsIconString + " {b}Compatibility{/b} For the purposes of being holy, creatures with weakness to evil damage are considered holy, and this diacritic's persistent damage uses the better of fire or evil damage.";*/
         
