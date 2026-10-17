@@ -3819,7 +3819,8 @@ public static class AllRunes
     {
         Feat runeFeat = new Feat(
                 ModManager.RegisterFeatName(
-                    ModData.ID_PREPEND+"Rune."+rune.WordName,
+                    // Remove the '-' for backwards compatibility with changes
+                    ModData.ID_PREPEND+"Rune."+rune.WordName.TrimEnd('-'),
                     rune.FullName),
                 rune.GetFlavorText(null, false),
                 CommonRuneRules.StatBlocks.CreateRuneDescription(
