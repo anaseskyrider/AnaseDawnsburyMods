@@ -268,6 +268,9 @@ public class Rune
         RuneInvocationProperties? invocationProperties,
         List<Trait>? additionalTraits = null)
     {
+        if (additionalTraits != null)
+            this.Traits = this.Traits.Concat(additionalTraits).ToList();
+        
         this.Id = runeId;
         
         this.Illustration = runeId.ToIcon();
@@ -284,12 +287,13 @@ public class Rune
         
         this.PassiveProperties = passiveProperties;
         this.PassiveProperties.Self = this;
+
+        if (this.PassiveProperties.OnlyOneInExistenceAtATime)
+            this.PassiveProperties.PassiveText +=
+                $"\n\n{{b}}Special{{/b}} You can only have one copy of {this.FullName.ToLower().WithTag("i")} applied at a given time, and once you invoke it, you cannot Etch or Trace it again for the rest of this encounter.";
         
         this.InvocationProperties = invocationProperties ?? new RuneInvocationProperties(null, null);
         this.InvocationProperties.Self = this;
-        
-        if (additionalTraits != null)
-            this.Traits = this.Traits.Concat(additionalTraits).ToList();
     }
 
     /// <summary>

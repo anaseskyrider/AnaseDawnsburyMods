@@ -165,11 +165,11 @@ public class RunePassiveProperties(
     public bool OnlyOneInExistenceAtATime { get; set; }
 
     /// <summary>
-    /// Sets <see cref="OnlyOneInExistenceAtATime"/> to true.
+    /// Sets <see cref="OnlyOneInExistenceAtATime"/>. Default: true
     /// </summary>
-    public RunePassiveProperties WithOnlyOneInExistenceAtATime()
+    private RunePassiveProperties WithOnlyOneInExistenceAtATime(bool value = true)
     {
-        this.OnlyOneInExistenceAtATime = true;
+        this.OnlyOneInExistenceAtATime = value;
         return this;
     }
 
@@ -188,19 +188,17 @@ public class RunePassiveProperties(
     /// Creates a properties instance for diacritic runes.
     /// </summary>
     /// <param name="passiveText">The passive text of the diacritic.</param>
-    /// <param name="invokeableOnceRuneName">If only one instance of this rune is allowed and it can only be invoked once per combat, this is the lower-case name of that rune. A non-null value sets <see cref="OnlyOneInExistenceAtATime"/> to true.</param>
+    /// <param name="invokeableOnce">Whether only one instance of this rune is allowed and can only be invoked once per combat. Sets <see cref="OnlyOneInExistenceAtATime"/>.</param>
     /// <param name="heightening">The heightening of the diacritic rune, if any.</param>
     /// <returns></returns>
-    public static RunePassiveProperties Diacritic(string passiveText, string? invokeableOnceRuneName = null, Func<Rune,int,string>? heightening = null)
+    public static RunePassiveProperties Diacritic(
+        string passiveText,
+        bool invokeableOnce = false,
+        Func<Rune,int,string>? heightening = null)
     {
         var props = new RunePassiveProperties(
-            passiveText
-            + (invokeableOnceRuneName is not null
-                ? $"\n\n{{b}}Special{{/b}} You can only have one copy of {invokeableOnceRuneName.ToLower()} applied at a given time, and once you invoke it, you cannot Etch or Trace it again for the rest of this encounter."
-                : null),
-            heightening);
-        if (invokeableOnceRuneName is not null)
-            props.WithOnlyOneInExistenceAtATime();
+                passiveText, heightening)
+            .WithOnlyOneInExistenceAtATime(invokeableOnce);
         return props;
     }
 }

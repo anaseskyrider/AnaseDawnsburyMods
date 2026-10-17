@@ -1943,7 +1943,7 @@ public static class AllRunes
                 RuneDrawProperties.Diacritic(null, true),
                 RunePassiveProperties.Diacritic(
                         "When the base rune is invoked, you can Invoke a single Rune on a different rune-bearer within 15 feet of the original rune-bearer as a {icon:FreeAction} free action.",
-                        "av-, diacritic rune of succession")
+                        true)
                     .WithDiacriticCreator(
                         // Has no particular requirements not covered elsewhere
                         null,
@@ -2220,7 +2220,7 @@ public static class AllRunes
                 RuneDrawProperties.Diacritic(null, true),
                 RunePassiveProperties.Diacritic(
                         "After the base rune is invoked, the base rune automatically traces itself back upon the same target.",
-                        "sun-, diacritic rune of preservation")
+                        true)
                     .WithDiacriticCreator(
                         // No particular extra requirements
                         null,
@@ -2309,8 +2309,7 @@ public static class AllRunes
                     .WithBaseRuneMustDealDamage(true),
                 RunePassiveProperties.Diacritic(
                         "When the base rune is invoked, its invocation gains a status bonus to damage equal to 2 plus half your level.",
-                        null,
-                        (rune, level) =>
+                        heightening: (rune, level) =>
                         {
                             return
                                 $"When the base rune is invoked, its invocation gains a +{S.HeightenedVariable(2 + (level / 2), 2 + (rune.BaseLevel / 2))} status bonus to damage.";
