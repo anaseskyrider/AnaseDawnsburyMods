@@ -2248,7 +2248,9 @@ public static class AllRunes
                                                 drInvoked.Source!,
                                                 drInvoked.Rune,
                                                 2,
-                                                99)
+                                                99,
+                                                "Retrace Rune",
+                                                "retraces")
                                             .WithActionCost(0)
                                             .WithSoundEffect(ModData.SfxNames.INVOKED_SUN)
                                             .WithExtraTrait(Trait.DoNotShowOverheadOfActionName)
@@ -2260,7 +2262,6 @@ public static class AllRunes
                                                 await CommonRuneRules.PlayInvocationSplashAnimation(targets.ChosenCreature, drThis.Rune.Illustration);
                                             });
 
-                                        sunRedraw.Name = sunRedraw.Name.Replace("Trace", "Retrace");
                                         sunRedraw.ProjectileKind = ProjectileKind.None;
                                         sunRedraw.EffectOnOneTarget = async (traceAction, caster, creature, result) =>
                                         {
@@ -2273,7 +2274,6 @@ public static class AllRunes
                                                 || newDrawnRunes.LastOrDefault() is not {} newDrawnRune)
                                             {
                                                 traceAction.RevertRequested = true;
-                                                //invokeAction.RevertRequested = true;
                                                 return;
                                             }
 
