@@ -62,7 +62,7 @@ public class Rune
     /// <example>"Atryl"</example>
     public string WordName {
         get;
-        set => field = value.Capitalize();
+        set => field = value.Capitalize().TrimEnd('-') + (this.IsDiacriticRune ? "-" : null);
     }
     
     /// <summary>

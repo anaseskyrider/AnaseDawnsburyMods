@@ -1076,7 +1076,7 @@ public static class CommonRuneRules
                         drawnRune.AttachedDiacritic.Rune.Illustration,
                         rune.Illustration)
                     : rune.Illustration,
-                $"Invoke Rune ({drawnRune.AttachedDiacritic?.Rune.WordName.AddIfNotNull(null, "-")}{rune.WordName})",
+                $"Invoke Rune ({drawnRune.AttachedDiacritic?.Rune.WordName}{rune.WordName})",
                 traits.ToArray(),
                 // Use the rune stat block for the description instead of
                 // the template 2-invocation activity description.
@@ -1171,7 +1171,7 @@ public static class CommonRuneRules
         // > Aldis Ronan invokes &Atryl.
         invokeThisRune.ShortName = rune.Illustration.IllustrationAsIconString + rune.WordName;
         // Shorten the context menu name.
-        invokeThisRune.ContextMenuName = $"Invoke {drawnRune.AttachedDiacritic?.Rune.WordName.AddIfNotNull(null, "-")}{rune.WordName}";
+        invokeThisRune.ContextMenuName = $"Invoke {drawnRune.AttachedDiacritic?.Rune.WordName}{rune.WordName}";
 
         if (immediatelyRemoveImmunity)
             invokeThisRune = CommonRuneRules.WithImmediatelyRemovesImmunity(invokeThisRune);
@@ -1242,7 +1242,7 @@ public static class CommonRuneRules
             $"{{b}}{drawnRune.ToWordString()}!{{/b}}";
         if (drawnRune.AttachedDiacritic is not null)
             word =
-                $"{{b}}{drawnRune.AttachedDiacritic.ToWordString()}-{{/b}}{word}";
+                $"{{b}}{drawnRune.AttachedDiacritic.ToWordString()}{{/b}}{word}";
         return word;
     }
 

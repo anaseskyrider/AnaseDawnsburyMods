@@ -282,8 +282,6 @@ public class RunicRepertoireTag
                             {
                                 Rune first = runes.First();
                                 string word = first.WordName.ToLower();
-                                if (first.IsDiacriticRune)
-                                    word += "-";
                                 return word.WithTag(ModData.PersistentActions
                                     .RuneIsUsedUp(runesmith, first)
                                         ? "strike"

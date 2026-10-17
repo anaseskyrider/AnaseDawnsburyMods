@@ -2327,9 +2327,9 @@ public static class ClassFeats
                                 string? subTarget = dr.DrawnOn switch
                                 {
                                     Item subItem =>
-                                        $"{subItem.Illustration.IllustrationAsIconString} {subItem.ShortName}",
+                                        $"{subItem.Illustration.IllustrationAsIconString}{subItem.ShortName}",
                                     DrawnRune subRune =>
-                                        $"{subRune.Illustration!.IllustrationAsIconString} {subRune.Rune.WordName}",
+                                        subRune.ToWordString(),
                                     _ => null
                                 };
                                 caster.Battle.Log(
@@ -3900,7 +3900,7 @@ public static class ClassFeats
                                             
                                             // Log the event
                                             caster2.Battle.Log(
-                                                $"{caster2.Name} traces {foundRune.Illustration.IllustrationAsIconString} {foundRune.WordName} onto:");
+                                                $"{caster2.Name} traces {foundRune.ToWordString()} onto:");
                                             caster2.Battle.LogIndent++;
                                             foreach (DrawnRune dr in drawings.Cast<DrawnRune>())
                                             {
@@ -3910,7 +3910,7 @@ public static class ClassFeats
                                                     Item subItem =>
                                                         $"{subItem.Illustration.IllustrationAsIconString} {subItem.ShortName}",
                                                     DrawnRune subRune =>
-                                                        $"{subRune.Illustration!.IllustrationAsIconString} {subRune.Rune.WordName}",
+                                                        subRune.ToWordString(),
                                                     _ => null
                                                 };
                                                 caster2.Battle.Log(
