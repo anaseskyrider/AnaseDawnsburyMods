@@ -1640,7 +1640,7 @@ public static class ClassFeats
                             List<Creature> possiblePickups = caster.Battle.AllCreatures
                                 .Where(cr =>
                                     cr.DistanceTo(caster) <= 6
-                                    && DrawnRune.GetDrawnRunes(caster, cr).Count != 0)
+                                    && DrawnRune.IsARuneBearer(caster, cr))
                                 .ToList();
                             
                             if (transposeAction.Tag is Creature target)
@@ -1649,13 +1649,14 @@ public static class ClassFeats
                                     .ToList();
                             
                             DrawnRune? chosenRune = (await CommonRuneRules.ChooseADrawnRune(
-                                caster,
-                                possiblePickups,
-                                transposeAction.Illustration,
-                                "Choose one of your runes to move to another creature within 30 feet or right-click to cancel.",
-                                dr => $"Pick up {{Blue}}{dr.Rune.FullName}{{/Blue}}",
-                                null, "Revert", true,
-                                IsTransposableRune)).ChosenRune;
+                                    caster,
+                                    possiblePickups,
+                                    transposeAction.Illustration,
+                                    "Choose one of your runes to move to another creature within 30 feet or right-click to cancel.",
+                                    dr => $"Pick up {{Blue}}{dr.Rune.FullName}{{/Blue}}",
+                                    null, "Revert", true,
+                                    IsTransposableRune))
+                                .ChosenRune;
 
                             if (chosenRune == null)
                             {
@@ -1667,14 +1668,16 @@ public static class ClassFeats
                             // the rune, such that the target must have legal subtargets
                             // for runes that target items or runes. This is how I ensure
                             // that there are legal subtargets on the Creature.
-                            CombatAction fakeTraceAction = CommonRuneRules.CreateTraceAction(caster, chosenRune.Rune, 2, 99);
+                            var drawTarget = CommonRuneRules.CreateDrawActionTarget(
+                                    chosenRune.Rune, 2, 6);
+                            drawTarget.SetOwnerAction(chosenRune.SourceAction!);
 
                             List<Creature> possibleDropoffs = caster.Battle.AllCreatures
                                 /*.Where(cr =>
                                     chosenRune.Rune.DrawProperties.IsLegalTarget(caster, cr))*/
                                 .Where(cr =>
-                                    (fakeTraceAction.Target as CreatureTarget)?
-                                    .IsLegalTarget(caster, cr) ?? false)
+                                    drawTarget?.IsLegalTarget(caster, cr)
+                                    ?? false)
                                 .ToList();
                             
                             Creature? chosenCreature = await caster.Battle.AskToChooseACreature(
@@ -1692,7 +1695,7 @@ public static class ClassFeats
                             }
                             
                             if (await chosenRune.Rune.PassiveProperties.DrawnRuneCreator!.Invoke(
-                                    transposeAction,
+                                    chosenRune.SourceAction!,
                                     chosenRune.Rune,
                                     chosenCreature,
                                     chosenRune.Rune.DrawProperties.ChooseRuneSubtargets(caster, [chosenCreature]))
@@ -1719,7 +1722,9 @@ public static class ClassFeats
                                 1, ProjectileKind.Arrow,
                                 chosenRune.Rune.Illustration);*/
                             
-                            /*await*/ CommonRuneRules.MoveRuneToTarget(chosenRune, chosenCreature,
+                            /*await*/ CommonRuneRules.MoveRuneToTarget(
+                                chosenRune,
+                                chosenCreature,
                                 pretendNewRune.DrawnOn);
                         });
                 }

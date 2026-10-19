@@ -1628,19 +1628,42 @@ public static class CommonRuneRules
     /// Removes a given DrawnRune from its owner.
     /// </summary>
     /// <param name="drawnRune">The DrawnRune to be removed from its Owner.</param>
+    /// <param name="fakeRemove">If true, this does not attempt to expire the effect.</param>
     /// <returns>(bool) True if the DrawnRune was removed, false otherwise.</returns>
-    public static bool RemoveDrawnRune(DrawnRune drawnRune)
+    public static bool RemoveDrawnRune(DrawnRune drawnRune, bool fakeRemove = false)
     {
-        int removals = drawnRune.Owner.RemoveAllQEffects(
-            qfToRemove =>
+        // Prevent it from automating certain expiration effects
+        var expires = drawnRune.WhenExpires;
+        if (fakeRemove)
+            drawnRune.WhenExpires = null;
+        
+        int removals = drawnRune.Owner.RemoveAllQEffects(qfToRemove =>
+        {
+            if (qfToRemove != drawnRune)
+                return false;
+            
+            if (drawnRune.DrawnOn is DrawnRune drOnto
+                && !fakeRemove)
             {
-                if (qfToRemove != drawnRune)
-                    return false;
-                if (drawnRune.DrawnOn is DrawnRune drawnOnto)
-                    drawnOnto.AttachedDiacritic = null;
+                drOnto.AttachedDiacritic = null;
                 drawnRune.DrawnOn = null;
-                return true;
-            });
+                drOnto.ExpiresAt = ExpirationCondition.Immediately;
+            }
+
+            if (drawnRune.AttachedDiacritic is { } diaThis
+                && !fakeRemove)
+            {
+                drawnRune.AttachedDiacritic = null;
+                diaThis.DrawnOn = null;
+                diaThis.ExpiresAt = ExpirationCondition.Immediately;
+            }
+            
+            return true;
+        });
+
+        if (fakeRemove)
+            drawnRune.WhenExpires = expires;
+        
         return removals > 0;
     }
 
@@ -1899,9 +1922,12 @@ public static class CommonRuneRules
         if (drawnRune.Owner != newOwner)
         {
             if (drawnRune.Rune.PassiveProperties.OnlyOneInExistenceAtATime)
-                CommonRuneRules.RemoveAllOtherInstancesOf(drawnRune.Source!, drawnRune.Rune.Id);
-            CommonRuneRules.RemoveDrawnRune(drawnRune);
-            //drawnRune.Owner.RemoveAllQEffects(qf => qf == drawnRune);
+                CommonRuneRules.RemoveAllOtherInstancesOf(drawnRune.Source!, drawnRune);
+            
+            // Remove it
+            CommonRuneRules.RemoveDrawnRune(drawnRune, fakeRemove: true);
+            
+            // Add to the new owner
             newOwner.AddQEffect(drawnRune);
         }
         
@@ -1988,6 +2014,22 @@ public static class CommonRuneRules
         foreach (DrawnRune dr in DrawnRune
                      .GetAllDrawnRunes(runesmith, true)
                      .Where(dr => dr.Rune.Id == runeId))
+        {
+            CommonRuneRules.RemoveDrawnRune(dr);
+        }
+    }
+
+    /// <summary>
+    /// Removes all other instances of a rune with this ID created by this runesmith.
+    /// </summary>
+    /// <remarks>Used for runes that you are only allowed 1 instance of, such as some diacritic runes. This overload removes effects which aren't itself.</remarks>
+    public static void RemoveAllOtherInstancesOf(Creature runesmith, DrawnRune drawnRune)
+    {
+        foreach (DrawnRune dr in DrawnRune
+                     .GetAllDrawnRunes(runesmith, true)
+                     .Where(dr =>
+                         dr != drawnRune
+                         && dr.Rune.Id == drawnRune.Rune.Id))
         {
             CommonRuneRules.RemoveDrawnRune(dr);
         }
