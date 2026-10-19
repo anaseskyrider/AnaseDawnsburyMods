@@ -2440,6 +2440,9 @@ public static class AllRunes
                                 },
                                 AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
                                 {
+                                    if (drThis.Disabled
+                                        || drInvoked != drThis.DrawnOn)
+                                        return;
                                     invokeAction.Owner.RemoveAllQEffects(qf =>
                                         qf.Name == "[TI- DAMAGE CHANGER]");
                                 }
