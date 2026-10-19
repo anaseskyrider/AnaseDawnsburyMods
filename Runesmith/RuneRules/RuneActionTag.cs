@@ -45,6 +45,11 @@ public class RuneActionTag(
     /// The Item targeted by this rune-drawing CombatAction.
     /// </summary>
     public Item? ChosenItem { get; set; } = chosenItem;
+
+    /// <summary>
+    /// The Creatures affected by this rune's invocation.
+    /// </summary>
+    public List<Creature>? AffectedCreatures { get; set; } = null;
     
     // Tile. Tiles? Whatever. For when the level 17 tile targeting rune exists.
     

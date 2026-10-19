@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
@@ -204,6 +205,8 @@ public class DrawnRune : QEffect
     /// <item><see cref="DrawnRune"/>: The drawn rune that was just invoked.</item>
     /// </list>
     public Func<DrawnRune, CombatAction, DrawnRune, Task>? AfterInvokingRune { get; set; }
+
+    public Trait? DamageDealtByRunesGainTrait { get; set; } = null;
     
     #endregion
     

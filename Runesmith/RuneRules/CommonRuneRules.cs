@@ -1026,7 +1026,6 @@ public static class CommonRuneRules
         Rune rune = drawnRune.Rune;
         if (rune.InvocationProperties.EffectOnOneTarget == null)
             return null;
-        Trait drawTrait = drawnRune.DrawTrait;
 
         #region Range
 
@@ -1129,9 +1128,14 @@ public static class CommonRuneRules
                 ChosenTargets? chosenTargets = await CommonRuneRules.GetInvocationTargets(
                     invokeAction, tag.ChosenDrawnRune);
                 
+                if (chosenTargets is null)
+                {
+                    invokeAction.RevertRequested = true;
+                    return;
+                }
+                
                 // Apply invocation effects
-                if (chosenTargets is null
-                    || !await CommonRuneRules.InvokeDrawnRune(
+                if (!await CommonRuneRules.InvokeDrawnRune(
                         invokeAction, tag.ChosenDrawnRune, chosenTargets))
                 {
                     invokeAction.RevertRequested = true;
@@ -1348,6 +1352,16 @@ public static class CommonRuneRules
             ])
             .WhereNotNull()
             .ToList();
+
+        // Bonus traits
+        if (drawnRune.Rune.InvocationProperties.DealsDamage)
+            foreach (DrawnRune dr in callbackRunes)
+            {
+                if (dr.DamageDealtByRunesGainTrait is not { } trait
+                    || sourceAction.HasTrait(trait))
+                    continue;
+                sourceAction.WithExtraTrait(trait);
+            }
         
         // BeforeInvokingRune
         foreach (DrawnRune dr in callbackRunes)
@@ -1390,6 +1404,10 @@ public static class CommonRuneRules
         
         if (drawnRune.Rune.InvocationProperties.SoundEffectAfterInvocation is {} sfxAfter)
             Sfxs.Play(sfxAfter);
+
+        // Track who was affected by the invocation
+        if (affectedCreatures.Count > 0)
+            (sourceAction.Tag as RuneActionTag)?.AffectedCreatures = affectedCreatures;
         
         // AfterInvokingRune
         foreach (DrawnRune dr in callbackRunes)
@@ -1605,7 +1623,7 @@ public static class CommonRuneRules
         // Execute chosen option
         return await chosenOption.Action();
     }
-    
+
     /// <summary>
     /// Removes a given DrawnRune from its owner.
     /// </summary>

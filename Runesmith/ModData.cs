@@ -615,6 +615,13 @@ public static class ModData
 
         #endregion
 
+        #region 13th-Level Runes
+        
+        public const SfxName INVOKED_INTH = SfxName.FireRay;
+        public const SfxName INVOKED_SAR = SfxName.HolyWard;
+
+        #endregion
+
         #endregion
 
         #region Class Feats
@@ -772,6 +779,17 @@ public static class ModData
             {i}Implementation{/i}
 
             In order to apply these effects, initiative must be rerolled just before combat begins. This occurs each time the rune is applied.
+            """);
+
+        public static readonly string InfoInthDamage = RegisterInfoTooltip(
+            ID_PREPEND + "InthDamage",
+            """
+            {b}Inth-/Sar-, Diacritic Runes{/b}
+            {i}Implementation{/i}
+
+            Due to technical limitations, and for the purposes of compatibility with Dawnsbury Days, the persistent damage dealt by Inth-/Sar- and the base rune (if any) uses the better of its normal kind or evil/good damage.
+            
+            In addition, Marssyl's splash damage on your Strikes means your Strikes gain the corresponding unholy/holy trait.
             """);
 
         #endregion
