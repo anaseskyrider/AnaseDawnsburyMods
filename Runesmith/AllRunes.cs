@@ -3786,16 +3786,84 @@ public static class AllRunes
 
         #region 13th-Level
         
-        // TODO: Eck-, Diacritic Rune of Phantasma
-        /*yield return new Rune(
+        // Eck-, Diacritic Rune of Phantasma
+        yield return new Rune(
                 RuneId.Eck,
                 "This diacritic frames a base rune with almost invisible lines that turn the rune's effects against the bearer's soul.",
                 RuneDrawProperties.Diacritic("that deals damage"),
-                RunePassiveProperties.Diacritic(),
+                RunePassiveProperties.Diacritic(
+                        "When the base rune is invoked, the damage it deals becomes spirit damage, and each of your enemies adjacent to the rune-bearer takes 1d8 persistent spirit damage.",
+                        heightening: (rune, level) =>
+                        {
+                            int numDice = level >= 17 ? 2 : 1;
+                            return
+                                $"The damage dealt by the base rune becomes spirit damage. When the base rune is invoked, each of your enemies adjacent to the rune-bearer takes {S.HeightenedVariable(numDice, 1)}d8 persistent spirit damage.";
+                        })
+                    .WithDiacriticCreator(
+                        (drawAction, drOnto) =>
+                            drOnto.Rune.InvocationProperties.DealsDamage,
+                        (drawAction, rune, drBase) =>
+                        {
+                            int numDice = drawAction.Owner.Level >= 17 ? 2 : 1;
+                            return new DrawnRune(
+                                drawAction, rune,
+                                (drThis, drOnto) =>
+                                    $"When {drOnto} is invoked, the damage it deals becomes spirit damage, and {drThis.Source!.ToColoredName()}'s enemies adjacent to this bearer take {numDice}d8 persistent spirit damage.",
+                                drBase)
+                            {
+                                BeforeInvokingRune = async (drThis, invokeAction, drInvoked) =>
+                                {
+                                    if (drThis.Disabled
+                                        || drInvoked != drThis.DrawnOn)
+                                        return;
+
+                                    invokeAction.Owner.AddQEffect(new QEffect()
+                                    {
+                                        Name = "[ECK- DAMAGE CHANGER]",
+                                        ConvertAllOutgoingDamageToDamageKind = DamageSpirit.Spirit
+                                    });
+                                },
+                                AfterInvokingRune = async (drThis, invokeAction, drInvoked) =>
+                                {
+                                    if (drThis.Disabled
+                                        || drInvoked != drThis.DrawnOn)
+                                        return;
+                                    
+                                    List<Creature> targets = drThis.Owner.Battle
+                                        .AllCreatures
+                                        .Where(cr =>
+                                            drThis.Source!.EnemyOf(cr)
+                                            && cr.IsAdjacentTo(drThis.Owner)
+                                            && !CommonRuneRules.IsImmuneToThisInvocation(cr, drThis))
+                                        .ToList();
+                                    
+                                    Sfxs.Play(ModData.SfxNames.INVOKED_ECK);
+                                    await CommonRuneRules.PlayGroupInvocationSplashAnimation(
+                                        drThis.Owner.Battle,
+                                        targets
+                                            .Select(cr => (cr, drThis.Rune.Illustration))
+                                            .ToList());
+                                    
+                                    foreach (Creature enemy in targets)
+                                    {
+                                        await CommonSpellEffects.DealAttackRollPersistentDamage(
+                                            invokeAction, enemy,
+                                            CheckResult.Success,
+                                            $"{numDice}d8",
+                                            DamageSpirit.Spirit);
+                                        enemy.AddQEffect(CommonRuneRules.ImmunityToInvocation(drThis.Rune));
+                                    }
+                                    
+                                    invokeAction.Owner.RemoveAllQEffects(qf =>
+                                        qf.Name == "[ECK- DAMAGE CHANGER]");
+                                }
+                            };
+                        },
+                        (drawAction, rune) => "Choose a rune whose invocation damage type will become spirit."),
                 null,
                 [Trait.Diacritic])
             .WithLevelText("17th", "The persistent spirit damage increases by 1d8.")
-            .ToFeat();*/
+            .ToFeat();
         
         // Inth-, Diacritic Rune of Corruption
         // DOC: Since the invocation refers to the base rune's target, this causes you to choose one creature affected by the invocation to set on fire.

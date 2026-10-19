@@ -617,6 +617,7 @@ public static class ModData
 
         #region 13th-Level Runes
         
+        public const SfxName INVOKED_ECK = SfxName.DivineLance;
         public const SfxName INVOKED_INTH = SfxName.FireRay;
         public const SfxName INVOKED_SAR = SfxName.HolyWard;
 
