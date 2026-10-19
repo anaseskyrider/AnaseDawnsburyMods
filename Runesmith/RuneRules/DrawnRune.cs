@@ -369,7 +369,7 @@ public class DrawnRune : QEffect
     }
 
     /// <summary>
-    /// Gets the list of DrawnRunes on the rune-bearing Creature.
+    /// Creates a list of DrawnRunes on the rune-bearing Creature.
     /// </summary>
     /// <param name="runesmith">(nullable) The creature who drew the runes. If null, provides all DrawnRunes.</param>
     /// <param name="runeBearer">The creature with runes drawn on them.</param>
@@ -383,6 +383,11 @@ public class DrawnRune : QEffect
         return drawnRunes;
     }
 
+    /// <summary>
+    /// Creates a list of DrawnRunes on all rune-bearing Creatures.
+    /// </summary>
+    /// <param name="runesmith">The creature who drew the runes.</param>
+    /// <param name="includeDisabled">If true, include disabled runes (such as for the Runic Reprisal feat).</param>
     public static List<DrawnRune> GetAllDrawnRunes(Creature runesmith, bool includeDisabled = false)
     {
         return runesmith.Battle.AllCreatures
