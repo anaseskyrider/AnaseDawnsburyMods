@@ -268,9 +268,9 @@ public class DrawnRune : QEffect
     
     // I have no idea what I want these to do just yet.
     
-    // public Func<????>? BeforeApplyingRune { get; set; }
+    // public Func<DrawnRune,CombatAction,DrawnRune,Task>? BeforeApplyingRune { get; set; }
     
-    // public Func<????>? AfterApplyingRune { get; set; }
+    // public Func<DrawnRune,CombatAction,DrawnRune,Task>? AfterApplyingRune { get; set; }
 
     /// <summary>
     /// Happens before you are invoked or the rune you're attached to is invoked.
