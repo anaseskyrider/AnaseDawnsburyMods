@@ -749,11 +749,11 @@ public static class CommonRuneRules
 
         foreach (DrawnRune dr in newDrawnRunes)
         {
-            // Determine the way the rune is being applied.
-            dr.WithDrawDuration(DrawnRune.GetDrawTraitFromList(drawAction.Traits) ?? ModData.Traits.Traced);
-
-            if (dr.DrawnOn is DrawnRune { AttachedDiacritic: null } drawnOnto)
+            if (dr.DrawnOn is DrawnRune drawnOnto)
+            {
                 drawnOnto.AttachedDiacritic = dr;
+                drawnOnto.UpdateDescription();
+            }
             
             /*// Event callback
             foreach (Creature cr in caster.Battle.AllCreatures)
@@ -1152,7 +1152,7 @@ public static class CommonRuneRules
                 // including the name of the specific rune and its duration trait,
                 // in addition to the invocation entry from the action description.
                 string description =
-                    $"{DrawnRune.DrawTraitToDescription(drawTrait)}{tag.ChosenDrawnRune.TraditionsToDescription()}{invokeAction.Description.Replace("{b}Invocation{/b} ", "")}";
+                    $"{tag.ChosenDrawnRune.GetDescription(true)}\n{invokeAction.Description.Replace("{b}Invocation{/b} ", "")}";
                 
                 if (rune.InvocationProperties is { Defense: {} def, HideBreakdownTooltip: false }
                     && !(target.FriendOf(invokeAction.Owner)
@@ -1428,7 +1428,7 @@ public static class CommonRuneRules
         CommonRuneRules.RemoveDrawnRune(drawnRune);
         if (diacritic is not null)
         {
-            CommonRuneRules.LogInvokedRune(sourceAction.Owner, diacritic, diacritic.Owner, diacritic.DrawnOn);
+            CommonRuneRules.LogInvokedRune(sourceAction.Owner, diacritic, diacritic.Owner, drawnRune);
             CommonRuneRules.RemoveDrawnRune(diacritic);
         }
 

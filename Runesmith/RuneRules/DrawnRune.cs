@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.RegularExpressions;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
@@ -47,24 +48,88 @@ public class DrawnRune : QEffect
     /// </summary>
     public Rune Rune { get; }
 
+    private object? _drawnOn;
+    private DrawnRune? _attachedDiacritic;
+
     /// <summary>
-    /// Any object which abstractly represents the "true" target of the QEffect, what it's "actually" drawn on.
+    /// Gets or sets the object which abstractly represents the "true" target of the QEffect, what it's "actually" drawn on.
     /// </summary>
     /// <remarks>
-    /// <para> The types are generally of: <see cref="Creature"/>, <see cref="DrawnRune"/> (used for diacritics), <see cref="Dawnsbury.Core.Mechanics.Treasure.Item"/> (used for weapons, unarmed strikes).</para>
+    /// <para>The types are generally of: <see cref="Creature"/>, <see cref="DrawnRune"/> (used for diacritics), <see cref="Dawnsbury.Core.Mechanics.Treasure.Item"/> (used for weapons, unarmed strikes).</para>
     /// <para>Used by other parts of the mod to assist with behavior such as disabling a QEffect (without automated C# garbage collection causing problems) when no creature is holding the item that the rune is drawn onto.</para>
+    /// <para>This setter also sets <see cref="AttachedDiacritic"/>.</para>
     /// </remarks>
-    public object? DrawnOn { get; set; }
-    
+    public object? DrawnOn
+    {
+        get => _drawnOn;
+        set
+        {
+            // Tell my old base rune that I am no longer
+            // attached to it.
+            if (this._drawnOn is DrawnRune cached)
+            {
+                _drawnOn = value;
+                cached._attachedDiacritic = null;
+                cached.UpdateDescription();
+            }
+            else
+                _drawnOn = value;
+            // Tell my new base rune that I am attached
+            // to it.
+            if (value is DrawnRune baseRune)
+            {
+                baseRune._attachedDiacritic = this;
+                baseRune.UpdateDescription();
+            }
+            this.UpdateDescription();
+        }
+    }
+
     /// <summary>
-    /// The diacritic rune attached to this DrawnRune, if any.
+    /// Gets or sets the diacritic rune attached to this DrawnRune, if any.
     /// </summary>
-    public DrawnRune? AttachedDiacritic { get; set; }
+    /// <remarks>
+    /// This setter also sets <see cref="DrawnOn"/>.
+    /// </remarks>
+    public DrawnRune? AttachedDiacritic
+    {
+        get => _attachedDiacritic;
+        set
+        {
+            // Tell my diacritic that it is no longer
+            // attached to me.
+            if (this._attachedDiacritic is { } cached)
+            {
+                _attachedDiacritic = value;
+                cached._drawnOn = null;
+                cached.UpdateDescription();
+            }
+            else
+                _attachedDiacritic = value;
+            // Tell my diacritic that it is attached
+            // to me.
+            if (value is not null)
+            {
+                value._drawnOn = this;
+                value.UpdateDescription();
+            }
+            this.UpdateDescription();
+        }
+    }
 
     /// <summary>
     /// See <see cref="Disabled"/> for functionality.
     /// </summary>
     private bool DisablePassive { get; set; }
+    
+    /// <summary>
+    /// Get or set the function which generates a new description from itself.
+    /// </summary>
+    /// <list type="bullet">
+    /// <item><see cref="DrawnRune"/>: This DrawnRune.</item>
+    /// </list>
+    /// <returns>(string) The new description of the rune effect.</returns>
+    public Func<DrawnRune,string>? DescriptionGenerator { get; set; }
     
     /// <summary>
     /// Get or set the function which generates a new description from the Item it's attached to.
@@ -111,6 +176,11 @@ public class DrawnRune : QEffect
             drawAction.Owner,
             rune.Illustration)
     {
+        // If this was created with a different generator, then it
+        // passes in "". So don't set this in that case.
+        if (!string.IsNullOrEmpty(description))
+            this.DescriptionGenerator = drThis => description;
+        
         this.SourceAction = drawAction;
         this.Rune = rune;
         this.Traits = new List<Trait>(rune.Traits);
@@ -128,6 +198,26 @@ public class DrawnRune : QEffect
             if (this.Source!.Skills.IsTrained(Skill.Occultism))
                 this.Traits.Add(Trait.Occult);
         }
+        
+        // Determine the way the rune is being applied.
+        this.WithDrawDuration(DrawnRune.GetDrawTraitFromList(drawAction.Traits) ?? Trait.Traced);
+
+        this.UpdateDescription();
+        
+        this.WhenExpires += qfThis =>
+        {
+            DrawnRune drThis = (qfThis as DrawnRune)!;
+            if (drThis.DrawnOn is DrawnRune drOnto)
+            {
+                if (drThis.DamageDealtByRunesGainTrait is {} bonusTrait
+                    // Don't remove from the drawn instance if the trait
+                    // was normal for its stat block
+                    && !drOnto.Rune.HasTrait(bonusTrait))
+                    drOnto.Traits.Remove(bonusTrait);
+            }
+            drThis.DrawnOn = null;
+            drThis.AttachedDiacritic = null;
+        };
     }
 
     /// <summary>
@@ -148,9 +238,7 @@ public class DrawnRune : QEffect
             rune,
             "")
     {
-        this.ItemDescriptionGenerator = itemDescriptionGenerator;
-        this.Description = itemDescriptionGenerator(this, drawnOn);
-        this.WithDrawnOnItem(drawnOn, null);
+        this.WithDrawnOnItem(drawnOn, itemDescriptionGenerator);
     }
 
     /// <summary>
@@ -171,9 +259,7 @@ public class DrawnRune : QEffect
             rune,
             "")
     {
-        this.DiacriticDescriptionGenerator = diacriticDescriptionGenerator;
-        this.Description = diacriticDescriptionGenerator(this, drawnOn);
-        this.WithDrawnOnRune(drawnOn, null);
+        this.WithDrawnOnRune(drawnOn, diacriticDescriptionGenerator);
     }
     
     #endregion
@@ -348,10 +434,13 @@ public class DrawnRune : QEffect
     }
     
     /// <summary>
-    /// Gets the tooltip description of this trait as a draw duration trait.
+    /// Creates the formatted description of this trait for tooltips.
     /// </summary>
-    public static string DrawTraitToDescription(Trait trait) =>
-        trait.ToStringOrTechnical().WithTag("i").WithColor("Firebrick") + "\n";
+    [return: NotNullIfNotNull("trait")]
+    public static string? TraitToDescription(Trait? trait)
+    {
+        return trait?.ToStringOrTechnical().WithTag("i").WithColor("Firebrick");
+    }
 
     /// <summary>
     /// Gets the draw duration trait from the list, if any.
@@ -367,30 +456,81 @@ public class DrawnRune : QEffect
         return drawTrait;
     }
 
-    public string TraditionsToDescription() =>
-        string.Join(", ", this.Traditions.Select(trait => trait.ToStringOrTechnical())).WithTag("i")
-            .WithColor("Firebrick") + "\n";
-
-    public void UpdateDescription()
+    /// <summary>
+    /// Creates the formatted description of this rune's traditions for tooltips.
+    /// </summary>
+    public string? TraditionsToDescription()
     {
-        const string tattoo =
-            "\n\n{i}{Blue}If invoked, this rune won't be available until your next daily preparations.{/Blue}{/i}";
+        if (this.Traditions.Count == 0)
+            return null;
+        return string.Join(", ", this.Traditions.Select(trait =>
+                trait.ToStringOrTechnical()))
+            .WithTag("i")
+            .WithColor("Firebrick");
+    }
+
+    /// <summary>
+    /// Gets the fully formatted description of this rune for tooltips.
+    /// </summary>
+    /// <param name="headersOnly">If true, exclude the body of the description and only include the headers.</param>
+    public string GetDescription(bool headersOnly = false)
+    {
+        List<string> lines = [];
         
-        foreach (Trait trait in DrawTraits)
+        // Draw trait
+        Trait drawTrait = this.DrawTrait;
+        lines.Add(DrawnRune.TraitToDescription(drawTrait)!);
+        
+        // Traditions and bonus traits
+        string? traditions = this.TraditionsToDescription();
+        string? bonusTrait = DrawnRune.TraitToDescription(this.AttachedDiacritic?.DamageDealtByRunesGainTrait);
+        if (!string.IsNullOrEmpty(traditions))
         {
-            this.Description = this.Description!
-                .Replace(DrawnRune.DrawTraitToDescription(trait), "")
-                .Replace(this.TraditionsToDescription(), "")
-                .Replace(tattoo, "");
+            if (bonusTrait is not null)
+                lines.Add(traditions + $"; {bonusTrait}");
+            else
+                lines.Add(traditions);
+        }
+        else if (bonusTrait is not null)
+            lines.Add(bonusTrait);
+        
+        if (!headersOnly)
+        {
+            // Generate the description
+            string description =
+                (this.DrawnOn is Item itemTarget
+                    ? this.ItemDescriptionGenerator?.Invoke(this, itemTarget)
+                    : null)
+                ?? (this.DrawnOn is DrawnRune runeTarget
+                    ? this.DiacriticDescriptionGenerator?.Invoke(this, runeTarget)
+                    : null)
+                ?? this.DescriptionGenerator?.Invoke(this)
+                ?? "[NO DESCRIPTION SET]";
+            if (!headersOnly)
+                lines.Add(description);
+
+            // Runic Tattoo addition
+            if (drawTrait == ModData.Traits.Tattooed)
+                lines.Add(
+                    "\n{i}{Blue}If invoked, this rune won't be available until your next daily preparations.{/Blue}{/i}");
         }
 
-        Trait drawTrait = this.DrawTrait;
-        
-        this.Description =
-            $"{DrawnRune.DrawTraitToDescription(drawTrait)}{this.TraditionsToDescription()}{this.Description}";
-        
-        if (drawTrait == ModData.Traits.Tattooed)
-            this.Description += tattoo;
+        return string.Join("\n", lines);
+    }
+
+    /// <summary>
+    /// Update this rune's description, generating from scratch.
+    /// </summary>
+    public void UpdateDescription()
+    {
+        this.Description = this.GetDescription();
+    }
+
+    public DrawnRune WithDescriptionGenerator(Func<DrawnRune,string>? newDescriptionGenerator)
+    {
+        this.DescriptionGenerator = newDescriptionGenerator;
+        this.UpdateDescription();
+        return this;
     }
     
     /// <summary>
@@ -471,22 +611,19 @@ public class DrawnRune : QEffect
     /// <param name="newDescriptionGenerator">If this function is called for any reason without using the DrawnRune constructor that requires a <see cref="ItemDescriptionGenerator"/>, this is that new generator.</param>
     private DrawnRune WithDrawnOnItem(Item drawTarget, Func<DrawnRune,Item,string>? newDescriptionGenerator)
     {
-        this.DrawnOn = drawTarget;
         if (newDescriptionGenerator is not null)
             this.ItemDescriptionGenerator = newDescriptionGenerator;
+        this.DrawnOn = drawTarget;
         this.StateCheck += qfThis =>
         {
             DrawnRune drThis = (qfThis as DrawnRune)!;
+            // Regenerate the description in case the rune's been moved to a new item.
+            drThis.UpdateDescription();
             
             // Find who is "holding" this item or unarmed attack
             Creature? holder = null;
             if (drThis.DrawnOn is Item drawnOn)
             {
-                // Regenerate the description in case the rune's been moved to a new item.
-                // (This shouldn't be null, but it's a solid fallback in case it is)
-                drThis.Description = this.ItemDescriptionGenerator?.Invoke(drThis, drawnOn) ?? "[NO DESCRIPTION]";
-                drThis.UpdateDescription();
-
                 // Find the first creature who possesses this item.
                 holder = drThis.Owner.Battle.AllCreatures
                     // Always put the owner of the effect first to avoid identical unarmeds moving around.
@@ -540,9 +677,9 @@ public class DrawnRune : QEffect
     
     public DrawnRune WithDrawnOnRune(DrawnRune rune, Func<DrawnRune,DrawnRune,string>? newDescriptionGenerator)
     {
-        this.DrawnOn = rune;
         if (newDescriptionGenerator is not null)
-            DiacriticDescriptionGenerator = newDescriptionGenerator;
+            this.DiacriticDescriptionGenerator = newDescriptionGenerator;
+        this.DrawnOn = rune;
         this.StateCheck += qfThis =>
         {
             DrawnRune drThis = (qfThis as DrawnRune)!;

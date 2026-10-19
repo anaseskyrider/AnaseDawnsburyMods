@@ -31,9 +31,11 @@ using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
+using Dawnsbury.IO;
 using Dawnsbury.Modding;
 using Dawnsbury.Mods.RunesmithClass.RuneRules;
 using Microsoft.Xna.Framework;
+using SpiritDamage;
 
 namespace Dawnsbury.Mods.RunesmithClass;
 
@@ -3028,7 +3030,7 @@ public static class AllRunes
                         {
                             WhenYouAcquireThis = qfThis =>
                             {
-                                QEffect see = QEffect.SeeInvisibility()
+                                /*QEffect see = QEffect.SeeInvisibility()
                                     .With(qf =>
                                     {
                                         qf.HideFromPortrait = true;
@@ -3043,16 +3045,37 @@ public static class AllRunes
                                     });
                                 qfThis.Owner
                                     .AddQEffect(see)
-                                    .AddQEffect(vision);
+                                    .AddQEffect(vision);*/
                                 CommonStealthActions.ThisCreatureGainedTheAbilityToSeeInvisible(qfThis.Owner);
                             },
-                            WhenExpires = qfThis =>
+                            StateCheck = qfThis =>
+                            {
+                                QEffect see = QEffect.SeeInvisibility()
+                                    .WithExpirationEphemeral()
+                                    .With(qf =>
+                                    {
+                                        qf.HideFromPortrait = true;
+                                        qf.Supereffect = qfThis;
+                                    });
+                                QEffect vision = QEffect.AllAroundVision()
+                                    .WithExpirationEphemeral()
+                                    .With(qf =>
+                                    {
+                                        qf.Innate = false;
+                                        qf.HideFromPortrait = true;
+                                        qf.Supereffect = qfThis;
+                                    });
+                                qfThis.Owner
+                                    .AddQEffect(see)
+                                    .AddQEffect(vision);
+                            },
+                            /*WhenExpires = qfThis =>
                             {
                                 qfThis.Owner.RemoveAllQEffects(qf =>
                                     qf.Id is QEffectId.SeeInvisibility 
                                         or QEffectId.AllAroundVision
                                     && qf.Supereffect == qfThis);
-                            }
+                            }*/
                         };
                     }),
                 new RuneInvocationProperties(

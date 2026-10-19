@@ -15,8 +15,11 @@
         <Tokens2 Include="$(Tokens2Folder)\**\*.*"/>
     </ItemGroup>
     <ItemGroup>
-      <ProjectReference Include="..\Lores and Weaknesses\Dawnsbury.Mods.LoresAndWeaknesses.csproj" />
-      <ProjectReference Include="..\More Shields\Dawnsbury.Mods.MoreShields.csproj" />
+        <ProjectReference Include="..\Lores and Weaknesses\Dawnsbury.Mods.LoresAndWeaknesses.csproj" />
+        <ProjectReference Include="..\More Shields\Dawnsbury.Mods.MoreShields.csproj" />
+        <Reference Include="SpiritDamage.dll">
+            <HintPath>$(WorkshopInstalls)\3577287156\CustomMods\SpiritDamage.dll</HintPath>
+        </Reference>
     </ItemGroup>
     
     <Target Name="CopyToGameModsFolder" AfterTargets="Build">
