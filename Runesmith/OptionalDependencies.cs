@@ -99,7 +99,7 @@ public static class OptionalDependencies
                         BonusToDefenses = (qfDebuff, defAction, def) =>
                             def.IsSavingThrow()
                             && defAction?.Owner == self
-                            && defAction.HasTrait(ModData.Traits.Invocation)
+                            && defAction.HasTrait(Trait.Invocation)
                                 ? new Bonus(-1, BonusType.Status, "Edifying Trace")
                                 : null,
                     };

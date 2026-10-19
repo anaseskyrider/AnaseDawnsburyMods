@@ -276,7 +276,7 @@ public static class ClassFeats
                 $$"""
                 Make a ranged Strike that uses ammunition against a target within the first range increment of your weapon. If it hits, you {{ModData.FeatNames.InvokeRune.ToLink("Invoke Runes")}} on the target as whisper of the ammunition's flight sets them off. You can invoke up to two runes on the target of your Strike in this way. On a critical hit, the target takes a –1 circumstance penalty on any saving throws against the runes invoked by your Remote Detonation.
                 """,
-                [Trait.Flourish, ModData.Traits.Invocation, Trait.Runesmith])
+                [Trait.Flourish, Trait.Invocation, Trait.Runesmith])
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
             {
@@ -303,7 +303,7 @@ public static class ClassFeats
                         .WithActionCost(1)
                         .WithExtraTrait(0, ModData.ModTrait)
                         .WithExtraTrait(Trait.Flourish)
-                        .WithExtraTrait(ModData.Traits.Invocation)
+                        .WithExtraTrait(Trait.Invocation)
                         .WithExtraTrait(Trait.Runesmith)
                         .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
                             strikeMods,
@@ -332,7 +332,7 @@ public static class ClassFeats
                                     BonusToDefenses = (qfPenalty, invokeAction, defense) =>
                                     {
                                         if (invokeAction != null
-                                            && invokeAction.HasTrait(ModData.Traits.Invocation)
+                                            && invokeAction.HasTrait(Trait.Invocation)
                                             && defense.IsSavingThrow())
                                         {
                                             return new Bonus(-1, BonusType.Circumstance, "Remote Detonation Critical Success");
@@ -789,8 +789,8 @@ public static class ClassFeats
                 
                 qfFeat.YouBeginAction = async (qfThis, action) =>
                 {
-                    if (action.HasTrait(ModData.Traits.Traced)
-                        || action.HasTrait(ModData.Traits.Etched))
+                    if (action.HasTrait(Trait.Traced)
+                        || action.HasTrait(Trait.Etched))
                         action.WithExtraTrait(Trait.DoesNotBreakStealth);
                 };
                 
@@ -1118,7 +1118,7 @@ public static class ClassFeats
                         CombatAction etchTattoo = CommonRuneRules
                             .CreateEtchAction(qfThis.Owner, rune)
                             .WithName($"Tattoo {rune.FullName}")
-                            .With(ca => ca.Traits.Remove(ModData.Traits.Etched))
+                            .With(ca => ca.Traits.Remove(Trait.Etched))
                             .WithExtraTrait(ModData.Traits.Tattooed);
                         
                         DrawnRune? appliedRune = (await CommonRuneRules.DrawRuneOnCreature(
@@ -1331,7 +1331,7 @@ public static class ClassFeats
 
                 Choose up to three rune-bearers within 30 feet and {{ModData.FeatNames.InvokeRune.ToLink("Invoke one Rune")}} on each of them. The song also inspires the rune-bearers, granting them a +1 status bonus to skill checks and saves against fear effects for 1 minute.
                 """,
-                [Trait.Auditory, Trait.Concentrate, Trait.Emotion, ModData.Traits.Invocation, Trait.Mental, Trait.Runesmith])
+                [Trait.Auditory, Trait.Concentrate, Trait.Emotion, Trait.Invocation, Trait.Mental, Trait.Runesmith])
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
             {
@@ -1354,7 +1354,7 @@ public static class ClassFeats
                                     ModData.Illustrations.TraceRune,
                                     ModData.Illustrations.TraceRune)),
                             "Song of Glorious Invocation",
-                            [ModData.ModTrait, Trait.Auditory, Trait.Concentrate, Trait.Emotion, ModData.Traits.Invocation, Trait.Mental, Trait.Runesmith, Trait.Basic],
+                            [ModData.ModTrait, Trait.Auditory, Trait.Concentrate, Trait.Emotion, Trait.Invocation, Trait.Mental, Trait.Runesmith, Trait.Basic],
                             null!,
                             Target.Self()
                                 .WithAdditionalRestriction(a =>
@@ -1478,7 +1478,7 @@ public static class ClassFeats
                 ModData.FeatNames.TerrifyingInvocation, 4,
                 "You spit and roar as you pronounce your rune's terrible name.",
                 $"You attempt to Demoralize a single target within 30 feet, and then {ModData.FeatNames.InvokeRune.ToLink("Invoke one Rune")} upon that target. You don't take a penalty to your check if the creature doesn't understand your language.",
-                [ModData.Traits.Invocation, Trait.Runesmith])
+                [Trait.Invocation, Trait.Runesmith])
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
             {
@@ -1492,7 +1492,7 @@ public static class ClassFeats
                             IllustrationName.Demoralize,
                             ModData.Illustrations.InvokeRune),
                         "Terrifying Invocation",
-                        [ModData.ModTrait, ModData.Traits.Invocation, Trait.Runesmith],
+                        [ModData.ModTrait, Trait.Invocation, Trait.Runesmith],
                         $$"""
                           {i}You spit and roar as you pronounce your rune's terrible name.{/i}
 
@@ -1988,7 +1988,7 @@ public static class ClassFeats
 
                  If you {FeatName.ShieldBlock.ToLink("Shield Block {icon:Reaction}")} with the shield against a melee Strike, you can {ModData.FeatNames.InvokeRune.ToLink("Invoke the Rune")} as part of the reaction, causing the rune to detonate outward and apply its invocation effect to the attacking creature.
                  """,
-                [ModData.Traits.Invocation, Trait.Runesmith])
+                [Trait.Invocation, Trait.Runesmith])
             .WithPermanentQEffect(qfFeat =>
             {
                 /*qfFeat.ProvideSectionIntoSubmenu = (qfThis, submenu) =>*/
@@ -2045,7 +2045,7 @@ public static class ClassFeats
                                 shield.Illustration,
                                 ModData.Illustrations.TraceRune),
                             "Runic Reprisal",
-                            [ModData.ModTrait, Trait.Flourish, ModData.Traits.Invocation, Trait.Runesmith],
+                            [ModData.ModTrait, Trait.Flourish, Trait.Invocation, Trait.Runesmith],
                             $$"""
                               {i}When you Raise your Shield, you can bury a runic trap into it, which is set off by the clash of an enemy weapon.{/i}
 
@@ -2086,7 +2086,7 @@ public static class ClassFeats
                                 action.Owner,
                                 ModData.Illustrations.InvokeRune,
                                 $"Runic Reprisal ({reprisalDr.Rune.WordName})",
-                                [ModData.Traits.Invocation, Trait.Runesmith, Trait.UnaffectedByConcealment, Trait.ProxyAttack],
+                                [Trait.Invocation, Trait.Runesmith, Trait.UnaffectedByConcealment, Trait.ProxyAttack],
                                 $$"""
                                   {i}When you Raise your Shield, you can bury a runic trap into it, which is set off by the clash of an enemy weapon.{/i}
                                   
@@ -2157,7 +2157,7 @@ public static class ClassFeats
                             .SelectMany(cr =>
                                 DrawnRune.GetDrawnRunes(caster, cr))
                             .Count(dr =>
-                                dr.DrawTrait == ModData.Traits.Traced
+                                dr.DrawTrait == Trait.Traced
                                 && !dr.CannotExpireThisTurn);
                         
                         if (await caster.Battle.AskForConfirmation(
@@ -2173,7 +2173,7 @@ public static class ClassFeats
                             QEffect tranceEffect = QEffect.Quickened(action =>
                             {
                                 // Code not shortened in case I need to expand the logic.
-                                if (action.HasTrait(ModData.Traits.Traced))
+                                if (action.HasTrait(Trait.Traced))
                                     return true;
                                 return false;
                             })
@@ -2182,7 +2182,7 @@ public static class ClassFeats
                                 qf.PreventTakingAction = action =>
                                 {
                                     // Code not shortened in case I need to expand the logic.
-                                    if (action.HasTrait(ModData.Traits.Invocation))
+                                    if (action.HasTrait(Trait.Invocation))
                                         return "(tracing trance) can't take invocation actions";
                                     return null;
                                 };
@@ -2199,7 +2199,7 @@ public static class ClassFeats
                             else
                                 caster.Actions.QuickenedForActions.Add(tranceEffect.QuickenedFor!);
                             CombatAction dummyTraceAction =
-                                CombatAction.CreateSimple(caster, "Dummy Trace Action", [ModData.Traits.Traced]);
+                                CombatAction.CreateSimple(caster, "Dummy Trace Action", [Trait.Traced]);
                             dummyTraceAction.UsedQuickenedAction = true;
                             caster.Actions.RevertExpendingOfResources(1, dummyTraceAction);
                             
@@ -2214,7 +2214,7 @@ public static class ClassFeats
                 ModData.FeatNames.VitalCompoundInvocation, 6,
                 "You can invoke runes from traditions that manipulate vital energy to restore flesh.",
                 $"You {ModData.FeatNames.InvokeRune.ToLink("Invoke two Runes")} — one must be a {ModData.Tooltips.RuleRuneTradition("divine rune")}, and one must be a {ModData.Tooltips.RuleRuneTradition("primal rune")}. In addition to the runes' normal effects, one creature that's within 30 feet of both invoked runes regains Hit Points equal to 5 + double your level.",
-                [Trait.Healing, ModData.Traits.Invocation, Trait.Runesmith, Trait.Positive])
+                [Trait.Healing, Trait.Invocation, Trait.Runesmith, Trait.Positive])
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
             {
@@ -2228,7 +2228,7 @@ public static class ClassFeats
                             IllustrationName.Heal,
                             IllustrationName.Bless,
                             "Vital Compound Invocation",
-                            [ModData.ModTrait, Trait.Healing, ModData.Traits.Invocation, Trait.Runesmith, Trait.Positive],
+                            [ModData.ModTrait, Trait.Healing, Trait.Invocation, Trait.Runesmith, Trait.Positive],
                             "You can invoke runes from traditions that manipulate vital energy to restore flesh.",
                             $"You Invoke two Runes — one must be a divine rune, and one must be a primal rune. In addition to the runes' normal effects, one creature that's within {/*invokeDesc*/ "range"} of both invoked runes regains {healing.WithColor("Blue")} Hit Points.",
                             $"Invoke a divine and primal rune, then heal an ally within {invokeDesc} of both.",
@@ -2297,7 +2297,7 @@ public static class ClassFeats
                                 tattooedRune.Illustration ?? IllustrationName.Action,
                                 IllustrationName.SeekCone),
                             "Words, Fly Free",
-                            [ModData.ModTrait, Trait.Manipulate, Trait.Runesmith, ModData.Traits.Traced, Trait.Basic],
+                            [ModData.ModTrait, Trait.Manipulate, Trait.Runesmith, Trait.Traced, Trait.Basic],
                             """
                             {i}Just because your runes are tattooed on your very body doesn't mean they need to remain there.{/i}
 

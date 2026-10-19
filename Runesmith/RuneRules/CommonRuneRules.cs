@@ -526,7 +526,7 @@ public static class CommonRuneRules
                             if (rune.InvocationProperties.Defense is { } def)
                                 invocationDmgValue = self.AI.DealDamageWithBasicSave(
                                     tar.OwnerAction,
-                                    new SavingThrow(def, self.ClassDC(ModData.Traits.Runesmith)),
+                                    new SavingThrow(def, self.ClassDC(Trait.Runesmith)),
                                     defender.Defenses.GetSavingThrow(def, tar.OwnerAction).Bonus,
                                     defender,
                                     invocationDmgValue);
@@ -575,7 +575,7 @@ public static class CommonRuneRules
                 ModData.Illustrations.EtchRune,
                 Direction.Southeast))
             .WithActionCost(0)
-            .WithExtraTrait(ModData.Traits.Etched)
+            .WithExtraTrait(Trait.Etched)
             .WithExtraTrait(Trait.DoNotShowOverheadOfActionName)
             // Recreate the same description, just with text after the usage text.
             .WithDescription(CommonRuneRules.StatBlocks.CreateRuneDescription(
@@ -635,7 +635,7 @@ public static class CommonRuneRules
             .WithActionCost(actionVersion)
             .WithExtraTrait(Trait.Concentrate)
             .WithExtraTrait(Trait.Manipulate)
-            .WithExtraTrait(ModData.Traits.Traced)
+            .WithExtraTrait(Trait.Traced)
             .WithActionId(ModData.ActionIds.TraceRune);
         
         if (actionVersion != 1) // Isn't the melee one
@@ -1040,7 +1040,7 @@ public static class CommonRuneRules
         List<Trait> traits = [
             ModData.ModTrait,
             ..rune.Traits,
-            ModData.Traits.Invocation,
+            Trait.Invocation,
             Trait.UnaffectedByConcealment,
             Trait.Spell, // <- Should apply magic immunity.
             Trait.CountsAsSpellForImmunities, // <- Should also help.
@@ -1159,7 +1159,7 @@ public static class CommonRuneRules
                             target,
                             new SavingThrow(
                                 def,
-                                runesmith.ClassDC(ModData.Traits.Runesmith)))
+                                runesmith.ClassDC(Trait.Runesmith)))
                         .TooltipDescription;
                     description += "\n\n" + tooltip;
                 }
@@ -1212,7 +1212,7 @@ public static class CommonRuneRules
                     if (rune.InvocationProperties.Defense is { } def2)
                         invocationDmgValue = self.AI.DealDamageWithBasicSave(
                             tar.OwnerAction,
-                            new SavingThrow(def2, self.ClassDC(ModData.Traits.Runesmith)),
+                            new SavingThrow(def2, self.ClassDC(Trait.Runesmith)),
                             defender.Defenses.GetSavingThrow(def2, tar.OwnerAction).Bonus,
                             defender,
                             invocationDmgValue);
@@ -1652,7 +1652,7 @@ public static class CommonRuneRules
             effectTarget,
             invokeAction,
             invokedRune.Rune.InvocationProperties.Defense.Value,
-            invokeAction.Owner.ClassDC(ModData.Traits.Runesmith));
+            invokeAction.Owner.ClassDC(Trait.Runesmith));
 
         if (!skipDamage
             && invokedRune.Rune.InvocationProperties.GetKindedDamage is {} getKindedDamage )
@@ -1738,7 +1738,7 @@ public static class CommonRuneRules
                 outerInvoke.Owner,
                 invokedRune.Rune.Illustration,
                 $"Invoke {invokedRune.Rune.FullName}",
-                [..invokedRune.Rune.Traits, ModData.Traits.Invocation, Trait.DoNotShowInCombatLog, Trait.UnaffectedByConcealment],
+                [..invokedRune.Rune.Traits, Trait.Invocation, Trait.DoNotShowInCombatLog, Trait.UnaffectedByConcealment],
                 invokedRune.Rune.InvocationProperties.InvocationTextWithFormattedHeightening?.Invoke(invokedRune.Rune, outerInvoke.Owner.Level) ?? "",
                 target)
             .WithActionCost(0)

@@ -33,8 +33,8 @@ public class DrawnRune : QEffect
     public static readonly List<Trait> DrawTraits =
     [
         ModData.Traits.Tattooed,
-        ModData.Traits.Etched,
-        ModData.Traits.Traced,
+        Trait.Etched,
+        Trait.Traced,
     ];
 
     #endregion
@@ -269,8 +269,8 @@ public class DrawnRune : QEffect
     {
         return qf is DrawnRune dr
                && (runesmith == null || dr.Source == runesmith)
-               && dr.Traits.Contains(ModData.Traits.Rune)
-               && !dr.Traits.Contains(ModData.Traits.Invocation)
+               && dr.Traits.Contains(Trait.Rune)
+               && !dr.Traits.Contains(Trait.Invocation)
                && (!dr.Disabled || includeDisabled);
     }
 
@@ -313,9 +313,9 @@ public class DrawnRune : QEffect
     {
         return qf is DrawnRune dr
                && (runesmith is null || dr.Source == runesmith)
-               && dr.Traits.Contains(ModData.Traits.Rune) // with the rune trait,
-               && !dr.Traits.Contains(ModData.Traits.Invocation) // but not the invocation trait,
-               && !dr.Traits.Contains(ModData.Traits.Diacritic) // nor is a diacritic rune.
+               && dr.Traits.Contains(Trait.Rune) // with the rune trait,
+               && !dr.Traits.Contains(Trait.Invocation) // but not the invocation trait,
+               && !dr.Traits.Contains(Trait.Diacritic) // nor is a diacritic rune.
                && (!dr.Disabled || includeDisabled)
                && (dr.Rune.InvocationProperties.TargetingRequirements.Count == 0
                    || runesmith is null
@@ -328,11 +328,11 @@ public class DrawnRune : QEffect
             return false;
         if (runesmith is not null && dr.Source != runesmith)
             return false;
-        if (!dr.Traits.Contains(ModData.Traits.Rune))
+        if (!dr.Traits.Contains(Trait.Rune))
             return false;
-        if (dr.Traits.Contains(ModData.Traits.Invocation))
+        if (dr.Traits.Contains(Trait.Invocation))
             return false;
-        if (dr.Traits.Contains(ModData.Traits.Diacritic))
+        if (dr.Traits.Contains(Trait.Diacritic))
             return false;
         if (dr.Disabled && !includeDisabled)
             return false;
@@ -358,8 +358,8 @@ public class DrawnRune : QEffect
     {
         Trait? drawTrait = traits.FirstOrDefault(trait =>
             trait == ModData.Traits.Tattooed
-            || trait == ModData.Traits.Etched
-            || trait == ModData.Traits.Traced);
+            || trait == Trait.Etched
+            || trait == Trait.Traced);
 
         return drawTrait;
     }
@@ -448,9 +448,9 @@ public class DrawnRune : QEffect
         this.Traits.Add(newTrait.Value);
 
         if (newTrait.Value == ModData.Traits.Tattooed
-            || newTrait.Value == ModData.Traits.Etched)
+            || newTrait.Value == Trait.Etched)
             this.ExpiresAt = ExpirationCondition.Never;
-        else if (newTrait.Value == ModData.Traits.Traced)
+        else if (newTrait.Value == Trait.Traced)
             this.WithExpirationAtEndOfSourcesNextTurn(this.Source!, true);
 
         UpdateDescription();
@@ -604,7 +604,7 @@ public class DrawnRune : QEffect
             Illustration = new SuperimposedIllustration(
                 this.Illustration ?? IllustrationName.None,
                 ModData.Illustrations.CheckSymbol),
-            Traits = [ModData.Traits.Invocation],
+            Traits = [Trait.Invocation],
             Source = this.Source,
             ExpiresAt = expiresAt,
         };

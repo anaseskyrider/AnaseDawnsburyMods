@@ -27,12 +27,12 @@ public class Rune
     /// <summary>
     /// Gets the traits associated with the rune. By default, all runes have at least the Rune, Runesmith, and Magical traits.
     /// </summary>
-    public List<Trait> Traits { get; } = [ModData.Traits.Rune, ModData.Traits.Runesmith, Trait.Magical];
+    public List<Trait> Traits { get; } = [Trait.Rune, Trait.Runesmith, Trait.Magical];
 
     /// <summary>
     /// Gets whether this rune is a diacritic rune.
     /// </summary>
-    public bool IsDiacriticRune => this.HasTrait(ModData.Traits.Diacritic);
+    public bool IsDiacriticRune => this.HasTrait(Trait.Diacritic);
     
     public RuneDrawProperties DrawProperties { get; }
     

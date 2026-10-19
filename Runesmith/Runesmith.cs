@@ -53,7 +53,7 @@ public static class Runesmith
         Feat runesmithClassFeat = new ClassSelectionFeat(
                 ModData.FeatNames.RunesmithClass,
                 "At the heart of all communication is the word, and at the heart of all magic is the rune. Equal parts scholar and artist, you devote yourself to the study of these mystic symbols, learning to carve, etch, brand, and paint the building blocks of magic to channel powers greater than yourself.",
-                ModData.Traits.Runesmith,
+                Trait.Runesmith,
                 new EnforcedAbilityBoost(Ability.Intelligence),
                 8,
                 [Trait.Perception, Trait.Reflex, Trait.Unarmed, Trait.Simple, Trait.Martial, Trait.UnarmoredDefense, Trait.LightArmor, Trait.MediumArmor, Trait.Crafting],
@@ -170,7 +170,7 @@ public static class Runesmith
                 // Runic repertoire
                 RunicRepertoireTag repertoire = RunicRepertoireTag.GetOrCreateRepertoire(
                     values,
-                    ModData.Traits.Runesmith,
+                    Trait.Runesmith,
                     2);
                 
                 // 4 initial runes
@@ -190,7 +190,7 @@ public static class Runesmith
                 values.GrantFeat(FeatName.ShieldBlock);
                 
                 // Class feat
-                values.AddClassFeatOption("RunesmithFeat1", ModData.Traits.Runesmith, 1);
+                values.AddClassFeatOption("RunesmithFeat1", Trait.Runesmith, 1);
             });
         runesmithClassFeat.RulesText = runesmithClassFeat.RulesText
             .Replace("Key ability", "Key attribute")
@@ -318,7 +318,7 @@ public static class Runesmith
                         SubmenuId = ModData.SubmenuIds.TraceRune,
                         // This doesn't DO anything, it's just to provide description to the menu.
                         SpellIfAny = new CombatAction(
-                            qfThis.Owner, ModData.Illustrations.TraceRune, "Trace Rune", [Trait.Concentrate, Trait.Magical, Trait.Manipulate, ModData.Traits.Runesmith],
+                            qfThis.Owner, ModData.Illustrations.TraceRune, "Trace Rune", [Trait.Concentrate, Trait.Magical, Trait.Manipulate, Trait.Runesmith],
                             $$"""
                             {i}{{CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_TRACE_RUNE.FLAVOR}}{/i}
 
@@ -339,7 +339,7 @@ public static class Runesmith
                 ModData.FeatNames.InvokeRune,
                 CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_INVOKE_RUNE.FLAVOR,
                 CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_INVOKE_RUNE.RULES,
-                [ModData.Traits.Invocation, Trait.Magical],
+                [Trait.Invocation, Trait.Magical],
                 null)
             .WithPermanentQEffect(null, qfFeat =>
             {
@@ -400,7 +400,7 @@ public static class Runesmith
                                       
                                       You can etch up to {{etchLimit.WithColor("Blue")}} runes.
                                       """,
-                                    new Traits([Trait.Manipulate, ModData.Traits.Runesmith]));
+                                    new Traits([Trait.Manipulate, Trait.Runesmith]));
 
                                 for (int i = 0; i < etchLimit; i++)
                                 {
@@ -646,7 +646,7 @@ public static class Runesmith
                             {
                                 // Do not ever attempt to invoke an etched rune
                                 if (action.Tag is RuneActionTag tag
-                                    && tag.ChosenDrawnRune!.DrawTrait == ModData.Traits.Etched)
+                                    && tag.ChosenDrawnRune!.DrawTrait == Trait.Etched)
                                     return AIConstants.NEVER;
                                 
                                 var runes = GetInvokeableRunes(action.Owner);
@@ -661,7 +661,7 @@ public static class Runesmith
                                 // It's preferable to invoke it than waste it.
                                 if (action.Owner.Actions.ActionsLeft == 1
                                     && runes.Count(dr =>
-                                        dr.DrawTrait == ModData.Traits.Traced
+                                        dr.DrawTrait == Trait.Traced
                                         && !dr.CannotExpireThisTurn) == 1)
                                     return AIConstants.VERY_PREFERRED;
                                 
@@ -707,7 +707,7 @@ public static class Runesmith
                         // Only desire invoking them once you have expiring runes,
                         // 2+ runes to invoke, or can invoke for free.
                         if (!allDrawnRunes.Any(dr =>
-                                dr.DrawTrait == ModData.Traits.Traced
+                                dr.DrawTrait == Trait.Traced
                                 && !dr.CannotExpireThisTurn)
                             && allDrawnRunes.Count < 2
                             && !qfThis.UsedThisTurn)
@@ -762,7 +762,7 @@ public static class Runesmith
                             && !dr.Rune.InvocationProperties.TargetingRequirements.Any(req =>
                                 req is FriendCreatureTargetingRequirement
                                     or FriendOrSelfCreatureTargetingRequirement)
-                            && dr.DrawTrait != ModData.Traits.Etched
+                            && dr.DrawTrait != Trait.Etched
                             && !dr.Disabled
                             && dr.Owner.DistanceTo(runesmith) <= 6
                         )
@@ -825,7 +825,7 @@ public static class Runesmith
                 "Invoke Rune",
                 // Deafened is interpreted to not 'the DC5-check' for spellcasting in Dawnsbury,
                 // so nothing applies here either.
-                [ModData.ModTrait, ModData.Traits.Invocation, Trait.Magical, ModData.Traits.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment],
+                [ModData.ModTrait, Trait.Invocation, Trait.Magical, Trait.Runesmith, Trait.Spell, Trait.Basic, Trait.DoNotShowOverheadOfActionName, Trait.UnaffectedByConcealment],
                 $$"""
                 {i}{{CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_INVOKE_RUNE.FLAVOR}}{/i}
                 

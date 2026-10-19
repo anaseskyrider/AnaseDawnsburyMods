@@ -24,7 +24,7 @@ public static class RunesmithArchetype
     {
         // Lv2: Runesmith Dedication
         Feat runesmithDedication = ArchetypeFeats.CreateMulticlassDedication(
-                ModData.Traits.Runesmith,
+                Trait.Runesmith,
                 "You dabble in the fundamental magic of runes and explore the writing at the heart of the world.",
                 $$"""
                  You become trained in runesmith class DC and Crafting; if you were already trained in Crafting, you instead become trained in a skill of your choice.
@@ -40,14 +40,14 @@ public static class RunesmithArchetype
             {
                 // Dedication skills
                 //// DC Might be redundant, but just in case...
-                values.SetProficiency(ModData.Traits.Runesmith, Proficiency.Trained);
-                //values.Proficiencies.AddProficiencyAdjustment(traits => traits.Contains(ModData.Traits.Runesmith), values.Class!.ClassTrait);
+                values.SetProficiency(Trait.Runesmith, Proficiency.Trained);
+                //values.Proficiencies.AddProficiencyAdjustment(traits => traits.Contains(Trait.Runesmith), values.Class!.ClassTrait);
                 values.TrainInThisOrSubstitute(Skill.Crafting);
 
                 // Runic repertoire
                 RunicRepertoireTag repertoire = RunicRepertoireTag.GetOrCreateRepertoire(
                     values,
-                    ModData.Traits.Runesmith,
+                    Trait.Runesmith,
                     1);
                 
                 // 2 initial runes
@@ -98,7 +98,7 @@ public static class RunesmithArchetype
 
         // Lv2: Basic Runic Magic
         // Lv4: Advanced Runic Magic
-        foreach (Feat feat in ArchetypeFeats.CreateBasicAndAdvancedMulticlassFeatGrantingArchetypeFeats(ModData.Traits.Runesmith, "Rune Magic"))
+        foreach (Feat feat in ArchetypeFeats.CreateBasicAndAdvancedMulticlassFeatGrantingArchetypeFeats(Trait.Runesmith, "Rune Magic"))
         {
             if (feat.Name.Contains("Advanced"))
                 ModData.FeatNames.AdvancedRunicMagic = feat.FeatName;
@@ -113,13 +113,13 @@ public static class RunesmithArchetype
                 "You can now create runes in the midst of combat.",
                 "You gain the Trace Rune action.",
                 [])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.Runesmith)
+            .WithAvailableAsArchetypeFeat(Trait.Runesmith)
             .WithRulesBlockForCombatAction(cr =>
                 new CombatAction(
                         cr,
                         ModData.Illustrations.TraceRune,
                         "Trace Rune",
-                        [Trait.Concentrate, Trait.Magical, Trait.Manipulate, ModData.Traits.Runesmith],
+                        [Trait.Concentrate, Trait.Magical, Trait.Manipulate, Trait.Runesmith],
                         $$"""
                           {i}{{CommonRuneRules.StatBlocks.ACTION_DESCRIPTION_TRACE_RUNE.FLAVOR}}{/i}
 
@@ -135,7 +135,7 @@ public static class RunesmithArchetype
                 "Your knowledge of runes grows.",
                 $"Add two {ModData.Tooltips.TraitRune("runes")} of 5th level or lower to your runic repertoire.",
                 [])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.Runesmith)
+            .WithAvailableAsArchetypeFeat(Trait.Runesmith)
             .WithOnSheet(values =>
             {
                 RunicRepertoireTag.AddRuneSelectionOption(
@@ -153,9 +153,9 @@ public static class RunesmithArchetype
                 "Your expertise in magical scripting lends further power to your runic magic.",
                 "You become an expert in runesmith class DC.",
                 [])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.Runesmith)
+            .WithAvailableAsArchetypeFeat(Trait.Runesmith)
             .WithOnSheet(values =>
-                values.SetProficiency(ModData.Traits.Runesmith, Proficiency.Expert));
+                values.SetProficiency(Trait.Runesmith, Proficiency.Expert));
         
         // Lv18: Greater Expanded Repertoire
         yield return new TrueFeat(
@@ -163,7 +163,7 @@ public static class RunesmithArchetype
                 "You have gained extensive knowledge in the art of creating runes.",
                 $"Add two {ModData.Tooltips.TraitRune("runes")} of 9th level or lower to your runic repertoire.",
                 [])
-            .WithAvailableAsArchetypeFeat(ModData.Traits.Runesmith)
+            .WithAvailableAsArchetypeFeat(Trait.Runesmith)
             .WithOnSheet(values =>
             {
                 RunicRepertoireTag.AddRuneSelectionOption(

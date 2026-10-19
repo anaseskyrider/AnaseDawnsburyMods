@@ -987,7 +987,7 @@ public static class AllRunes
                                             target,
                                             CombatAction.CreateSimple(action.Owner, $"Invoked {invokedRune.Rune.FullName}"),
                                             invokedRune.Rune.InvocationProperties.Defense!.Value,
-                                            invokeAction.Owner.ClassDC(ModData.Traits.Runesmith));
+                                            invokeAction.Owner.ClassDC(Trait.Runesmith));
                                         
                                         int tilePush = pushResult <= CheckResult.Failure
                                             ? pushResult == CheckResult.CriticalFailure ? 4 : 2
@@ -1193,7 +1193,7 @@ public static class AllRunes
                                             Target.Self())
                                         .WithActiveRollSpecification(new ActiveRollSpecification(
                                             TaggedChecks.Perception(),
-                                            Checks.FlatDC(qfThis.Source!.ClassDC(ModData.Traits.Runesmith))))
+                                            Checks.FlatDC(qfThis.Source!.ClassDC(Trait.Runesmith))))
                                         .WithActionId(ActionId.Seek)
                                         .WithActionCost(0);
                                     if (moveAction is not null && before is not null)
@@ -1914,7 +1914,7 @@ public static class AllRunes
                                 effectTarget,
                                 CombatAction.CreateSimple(invokeAction.Owner, invokeAction.Name, [..invokeAction.Traits, Trait.Teleportation]),
                                 invokedRune.Rune.InvocationProperties.Defense!.Value,
-                                invokeAction.Owner.ClassDC(ModData.Traits.Runesmith));
+                                invokeAction.Owner.ClassDC(Trait.Runesmith));
                         }
 
                         if (result > CheckResult.Failure)
@@ -2064,7 +2064,7 @@ public static class AllRunes
                             },
                         (_,_) => "Choose a rune whose invocation will radiate outward in a 15-foot emanation from its bearer."),
                 null,
-                [ModData.Traits.Diacritic])
+                [Trait.Diacritic])
             .ToFeat();
         
         // Fob-, Diacritic Rune of Doubling
@@ -2358,7 +2358,7 @@ public static class AllRunes
                                 },
                         (_,_) => "Choose a rune that will be retraced after being invoked."),
                 null,
-                [ModData.Traits.Diacritic])
+                [Trait.Diacritic])
             .ToFeat();
 
         // Ti-, Diacritic Rune of Fundaments
@@ -2464,7 +2464,7 @@ public static class AllRunes
                                                 "Ur, Diacritic Rune of Intensity");
 
                                             // Apply to an invocation action's damage
-                                            if ((action.HasTrait(ModData.Traits.Invocation)
+                                            if ((action.HasTrait(Trait.Invocation)
                                                  || action.ActionId == ModData.ActionIds.InvokeRune)
                                                 && (action.Tag as RuneActionTag)?.ChosenDrawnRune is
                                                 { } drInvokingDamage
@@ -2474,7 +2474,7 @@ public static class AllRunes
                                             // Apply to a Strike being buffed by Marssyl
                                             if (action.HasTrait(Trait.Strike)
                                                 && qfThis.Owner.QEffects.Any(qf =>
-                                                    qf.Traits.Contains(ModData.Traits.Invocation)
+                                                    qf.Traits.Contains(Trait.Invocation)
                                                     && (qf.Name?.ToLower().Contains("marssyl") ?? false)
                                                     && qf.Tag is Item marssylItem
                                                     && marssylItem == action.Item))
@@ -2495,7 +2495,7 @@ public static class AllRunes
                         (drawAction, rune) =>
                             $"Choose a rune to gain a +{2 + (drawAction.Owner.Level / 2)} status bonus to its invocation's damage."),
                 null,
-                [ModData.Traits.Diacritic])
+                [Trait.Diacritic])
             .ToFeat();
 
         #endregion
@@ -3405,7 +3405,7 @@ public static class AllRunes
                                 .WithTag(invokedRune)
                                 .WithSavingThrow(new SavingThrow(
                                     invokedRune.Rune.InvocationProperties.Defense!.Value,
-                                    invokeAction.Owner.ClassDC(ModData.Traits.Runesmith)));
+                                    invokeAction.Owner.ClassDC(Trait.Runesmith)));
                             
                             CheckResult result = await CommonSpellEffects.RollSavingThrowAsync(
                                 enemy,
@@ -4056,7 +4056,7 @@ public static class AllRunes
                     rune, null,
                     withFlavorText: false),
                 rune.Traits
-                    .Except([ModData.Traits.Runesmith])
+                    .Except([Trait.Runesmith])
                     .ToList(),
                 null)
             .WithIllustration(rune.Illustration)

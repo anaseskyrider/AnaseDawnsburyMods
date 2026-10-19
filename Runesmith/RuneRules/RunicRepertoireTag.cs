@@ -122,7 +122,7 @@ public class RunicRepertoireTag
     /// <summary>
     /// Functions similar to <see cref="SpellcastingSource.SpellcastingTradition"/>. This mod uses <see cref="ModData.Traits.Runesmith"/> as its source.
     /// </summary>
-    public Trait ClassOfOrigin { get; private set; } = ModData.Traits.Runesmith;
+    public Trait ClassOfOrigin { get; private set; } = Trait.Runesmith;
 
     /// <summary>
     /// List of runes known by level.
@@ -263,7 +263,7 @@ public class RunicRepertoireTag
             traditions.Add("occult");
         if (runesmith.Skills.IsTrained(Skill.Nature))
             traditions.Add("primal");
-        int DC = runesmith.ClassDC(ModData.Traits.Runesmith);
+        int DC = runesmith.ClassDC(Trait.Runesmith);
         int etchLim = repertoire.GetEtchLimit(runesmith);
         string? tattoo = runesmith.PersistentCharacterSheet?.Calculated
             .GetTag<Rune>(ClassFeats.RUNIC_TATTOO_KEY)?
