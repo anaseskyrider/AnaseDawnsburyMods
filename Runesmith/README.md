@@ -1,7 +1,7 @@
 # [Runesmith](https://steamcommunity.com/sharedfiles/filedetails/?id=3460180524)
 From *Impossible Magic*, the runesmith is a warrior scholar who wields a repertoire of runic magic — the most fundamental magic there is.
 
-[h3]How to Play[/h3]
+## How to Play
 The Runesmith is a medium armor, martial-weaponry class possessing a **Runic Repertoire**. They know **Runes**, which are unique spell-like effects, similar to a kineticist's impulses.
 
 During combat, you temporarily **Trace** these runes onto the rune's target (e.g. a creature or a weapon), which confers passive effects like "Reduced fire resistance". As a separate action, you can **Invoke** 1-2 runes to activate effects like "The rune-bearer makes a Fortitude save vs fire damage", which consumes the rune in the process.
