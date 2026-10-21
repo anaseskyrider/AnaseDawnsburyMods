@@ -23,17 +23,20 @@ using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Mechanics.Zoning;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
+using Dawnsbury.Display.Controls.Statblocks;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Display.Text;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
 using Dawnsbury.Mods.RunesmithClass.RuneRules;
+using Dawnsbury.Mods.RunesmithClass.TargetingRequirements;
 using Microsoft.Xna.Framework;
 using SpiritDamage;
 
@@ -3613,18 +3616,145 @@ public static class AllRunes
             .WithLevelText("+2", "The damage of the invocation increases by 5.")
             .ToFeat();
         
-        // TODO: Piteregrin, Rune of Transposition
-        /*yield return new Rune(
+        // Piteregrin, Rune of Transposition
+        yield return new Rune(
                 RuneId.Piteregrin,
                 "The slanted lines and odd curls of this rune give the impression that it is trying to escape.",
-                new RuneDrawProperties("drawn onto a creature", drawnOnCreature: true),
+                new RuneDrawProperties(
+                        "drawn onto a creature",
+                        drawnOnCreature: true)
+                    .WithAllyRequirement(true),
                 new RunePassiveProperties(
-                        "The rune-bearer can use a single action to swap places with any other willing rune-bearer within 15 feet. (The other rune-bearer can be bearing any rune.) Each creature must have room to appear in its new location or the effect is disrupted. This action has the concentrate and teleportation traits.",
-                        null),
+                        "The rune-bearer can use a single action to swap places with any other willing rune-bearer within 15 feet. {i}(The other rune-bearer can be bearing any rune.){/i} Each creature must have room to appear in its new location or the effect is disrupted. This action has the concentrate and teleportation traits.",
+                        null)
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        return new DrawnRune(
+                            drawAction, rune,
+                            "You can swap places with another willing rune-bearer as an {icon:Action} action.")
+                        {
+                            ProvideContextualAction = qfThis =>
+                            {
+                                CombatAction transposition = PiteregrinTranspose(qfThis.Owner);
+                                
+                                return new ActionPossibility(transposition)
+                                    .WithPossibilityGroup(Constants.POSSIBILITY_GROUP_CONTEXTUAL_EFFECT_ACTIONS);
+                            }
+                        };
+                    }),
                 new RuneInvocationProperties(
-                        "(teleportation) The rune grows to an enormous size, swallowing up the rune-bearer and each Large or smaller creature adjacent to them, and then immediately spits them back out. Choose a square within a 15-foot emanation from the rune-bearer’s original position for each swallowed creature to reappear. A Large creature doesn’t necessarily need to reappear completely within the emanation, as long as one of its squares is. An unwilling creature avoids being teleported if it succeeds at a Will save against your class DC.",
-                        null))
-            .ToFeat();*/
+                        "(teleportation) The rune grows to an enormous size, swallowing up the rune-bearer and each Large or smaller creature adjacent to them, and then immediately spits them back out. Choose a square within a 15-foot emanation from the rune-bearer's original position for each swallowed creature to reappear. A Large creature doesn’t necessarily need to reappear completely within the emanation, as long as one of its squares is. An unwilling creature avoids being teleported if it succeeds at a Will save against your class DC.",
+                        null)
+                    .WithAffectsArea()
+                    .WithDefense(Defense.Will)
+                    .WithHideTooltipForAllies()
+                    .WithChosenTargeting(async (invokeAction, invokedRune, overrideTargets) =>
+                    {
+                        const float emanationSize = 3f; // 15 feet
+
+                        return await CommonRuneRules.GetInnerInvokeTargets(
+                            invokeAction,
+                            invokedRune,
+                            Target.Emanation((int)emanationSize)
+                                .WithIncludeOnlyIf((_, cr) =>
+                                    cr == invokedRune.Owner
+                                    || cr.Space.Size <= Size.Large),
+                            true,
+                            ModData.SfxNames.INVOKED_PITEREGRIN,
+                            overrideTargets: overrideTargets,
+                            finalAdjustments: subAction =>
+                            {
+                                if (overrideTargets?.ChosenCreatures.Count is < 2)
+                                    return;
+                                
+                                // This design is based on Ledria. See that rune for code comments
+                                // documenting why this is designed this way.
+                                
+                                subAction.WithEffectOnChosenTargets(async (self, chosen) =>
+                                {
+                                    // Collect allies and failed saves
+                                    List<Creature> teleportees = [];
+                                    foreach (Creature cr in chosen.ChosenCreatures)
+                                    {
+                                        if (!cr.FriendOf(self)
+                                            && await CommonRuneRules.SaveAgainstInvocation(
+                                                invokeAction, invokedRune, cr)
+                                            >= CheckResult.Success)
+                                            continue;
+                                        teleportees.Add(cr);
+                                        cr.Space.PreviousTile = cr.Space.TopLeftTile;
+                                        cr.Space.RemoveSelfFromAllTiles();
+                                        cr.Space.OnTheMap = true;
+                                    }
+
+                                    List<Tile> emanationTiles = invokeAction.Owner.Battle
+                                        .Map.AllTiles
+                                        .Where(tile =>
+                                            tile.DistanceTo(invokedRune.Owner) <= 3f)
+                                        .ToList();
+
+                                    // Store this to avoid errors with complex diacritic
+                                    // interactions.
+                                    invokedRune.Tag = emanationTiles;
+                                    
+                                    // Teleport everyone
+                                    List<Creature> reacted = [];
+                                    await CommonQuestions.OfferReactionsAsync(new ReactionRequestStyle(
+                                        self.Battle,
+                                        () => $"{invokeAction.Owner.ToColoredName()} has invoked {invokedRune}, teleporting each creature (willing, or failed their Will save) within 15 feet of {invokedRune.Owner.ToColoredName()} to any space within that range.",
+                                        true,
+                                        invokeAction.Owner,
+                                        // In order to give player control over the enemy creature reaction order,
+                                        // this tracks who has already reacted and manually removes them from
+                                        // the list. Each action has the player as the controller instead of
+                                        // the reacting creature.
+                                        () => teleportees
+                                            .Except(reacted)
+                                            .Select(cr =>
+                                            {
+                                                ReactionOption reactOpt = ReactionOption.CreateCustom(
+                                                        $"{invokedRune.Rune.Illustration.IllustrationAsIconString} Transpose",
+                                                        $"Teleport to a new location within range of {invokedRune.Owner.ToColoredName()}.",
+                                                        cr.Illustration,
+                                                        self,
+                                                        async () =>
+                                                        {
+                                                            await PiteregrinTransposeWithinEmanation(invokeAction.Owner,
+                                                                invokedRune, cr, emanationTiles);
+                                                            reacted.Add(cr);
+                                                        })
+                                                    .WithTraits(Trait.ExecuteEvenIfCasterCannotTakeActions)
+                                                    .WithDoesNotCountAsYourTriggerResponse();
+                                                reactOpt.MouseOverStatblock = new CombatActionStatblock(
+                                                    invokeAction, 0, null, null);
+                                                return reactOpt;
+                                            })
+                                            .ToList()
+                                    ));
+                                    
+                                    // Make the emanation immune
+                                    chosen.ChosenCreatures.ForEach(ally =>
+                                        ally.AddQEffect(CommonRuneRules.ImmunityToInvocation(invokedRune.Rune)));
+                                });
+                            });
+                    })
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        List<Tile> emanationTiles = 
+                            invokedRune.Tag as List<Tile>
+                            ?? invokeAction.Owner.Battle
+                                .Map.AllTiles
+                                .Where(tile =>
+                                    tile.DistanceTo(invokedRune.Owner) <= 3f)
+                                .ToList();
+                        invokedRune.Tag = emanationTiles;
+                        await PiteregrinTransposeWithinEmanation(
+                            invokeAction.Owner, invokedRune,
+                            effectTarget, emanationTiles);
+                        return effectTarget;
+                    }))
+            .ToFeat()
+            .WithRulesBlockForCombatAction(PiteregrinTranspose);
 
         // Trolistri, Rune of Forlorn Sorrow
         // Faction alignment is treated as "enemies to the runesmith", regardless of the rune-bearer's faction.
@@ -4509,6 +4639,198 @@ public static class AllRunes
             .TryGetValue(me, out HashSet<Creature>? damagedMe) == true
             ? damagedMe.Where(cr => cr.Alive && cr.EnemyOf(me)).ToHashSet()
             : null;
+    }
+
+    public static CombatAction PiteregrinTranspose(Creature owner)
+    {
+        CombatAction transposition = new CombatAction(
+                owner,
+                RuneId.Piteregrin.ToIcon(),
+                "Piteregrin's Transposition",
+                [ModData.ModTrait, Trait.Concentrate, Trait.Teleportation],
+                """
+                {b}Range{/b} 15 feet
+                {b}Target{/b} 1 willing rune-bearer (any rune)
+
+                Swap places with the target creature. Each of you must have room to fit in your new locations, or else the action fails.
+                """,
+                Target.RangedCreature(3)
+                    .WithAdditionalConditionOnTargetCreature(
+                        new FriendCreatureTargetingRequirement())
+                    .WithAdditionalConditionOnTargetCreature(
+                        new TargetIsARuneBearer(true))
+                    .WithAdditionalConditionOnTargetCreature((a, d) =>
+                        d.Space.Tiles.Any(tile =>
+                            tile.AccommodatesSize(a.Space.SizeInSquares))
+                        && a.Space.Tiles.Any(tile =>
+                            tile.AccommodatesSize(d.Space.SizeInSquares))
+                            ? Usability.Usable
+                            : Usability.NotUsableOnThisCreature("Spaces don't fit")))
+            .WithEffectOnChosenTargets(async (action, caster, targets) =>
+            {
+                if (targets.ChosenCreature is not {} chosenCr)
+                {
+                    action.RevertRequested = true;
+                    return;
+                }
+
+                TBattle battle = caster.Battle;
+                int sizeDiff = Math.Abs(caster.Space.SizeInSquares - chosenCr.Space.SizeInSquares);
+
+                List<Tile> space1 =
+                    (caster.Space.SizeInSquares > chosenCr.Space.SizeInSquares
+                        ? caster.Space.Tiles
+                        : battle.Map.TilesInRectangle(
+                            caster.Space.TopLeftTile.X - sizeDiff,
+                            caster.Space.TopLeftTile.Y - sizeDiff,
+                            caster.Space.TopLeftTile.X + (caster.Space.SizeInSquares - 1),
+                            caster.Space.TopLeftTile.Y + (caster.Space.SizeInSquares - 1)))
+                    .ToList();
+                caster.Space.PreviousTile = caster.Space.TopLeftTile;
+                caster.Space.RemoveSelfFromAllTiles();
+                caster.Space.OnTheMap = true;
+                
+                List<Tile> space2 =
+                    (chosenCr.Space.SizeInSquares > caster.Space.SizeInSquares
+                        ? chosenCr.Space.Tiles
+                        : battle.Map.TilesInRectangle(
+                            chosenCr.Space.TopLeftTile.X - sizeDiff,
+                            chosenCr.Space.TopLeftTile.Y - sizeDiff,
+                            chosenCr.Space.TopLeftTile.X + (chosenCr.Space.SizeInSquares - 1),
+                            chosenCr.Space.TopLeftTile.Y + (chosenCr.Space.SizeInSquares - 1)))
+                    .ToList();
+                chosenCr.Space.PreviousTile = chosenCr.Space.TopLeftTile;
+                chosenCr.Space.RemoveSelfFromAllTiles();
+                chosenCr.Space.OnTheMap = true;
+
+                List<Tile> targets1 = space1
+                    .Where(tile => tile.IsTrulyGenuinelyFreeTo(chosenCr))
+                    .ToList();
+                List<Tile> targets2 = space2
+                    .Where(tile => tile.IsTrulyGenuinelyFreeTo(caster))
+                    .ToList();
+                
+                if (targets1.Count < 1 || targets2.Count < 1)
+                {
+                    caster.TranslateTo(caster.Space.PreviousTile);
+                    chosenCr.TranslateTo(chosenCr.Space.PreviousTile);
+                    action.RevertRequested = true;
+                    return;
+                }
+                
+                Creature? anchored =
+                    caster.HasEffect(QEffectId.DimensionalAnchor) ? caster
+                    : chosenCr.HasEffect(QEffectId.DimensionalAnchor) ? chosenCr
+                    : null;
+                if (anchored is not null)
+                {
+                    caster.TranslateTo(caster.Space.PreviousTile);
+                    chosenCr.TranslateTo(chosenCr.Space.PreviousTile);
+                    anchored.AnimationData.ColorBlink(Color.Red);
+                    anchored.Overhead("*teleport failure*", Color.Red, anchored + " failed to teleport because it's dimensionally locked.");
+                    return;
+                }
+
+                Tile? target2 = targets2.Count == 1
+                    ? targets2[0]
+                    : await battle.AskToChooseATile(
+                        caster, targets2, action.Illustration,
+                        $"Choose where to teleport within {chosenCr.ToColoredName()}'s space, or right-click to cancel.",
+                        "Teleport to this space.",
+                        true, true,
+                        caster);
+
+                if (target2 is null)
+                {
+                    caster.TranslateTo(caster.Space.PreviousTile);
+                    chosenCr.TranslateTo(chosenCr.Space.PreviousTile);
+                    action.RevertRequested = true;
+                    return;
+                }
+
+                Tile? target1 = targets1.Count == 1
+                    ? targets1[0]
+                    : await battle.AskToChooseATile(
+                        chosenCr, targets1, action.Illustration,
+                        $"Choose where to teleport within {caster.ToColoredName()}'s space, or right-click to cancel.",
+                        "Teleport to this space.",
+                        true, true,
+                        chosenCr);
+
+                if (target1 is null)
+                {
+                    caster.TranslateTo(caster.Space.PreviousTile);
+                    chosenCr.TranslateTo(chosenCr.Space.PreviousTile);
+                    action.RevertRequested = true;
+                    return;
+                }
+                
+                Sfxs.Play(SfxName.PhaseBolt);
+                
+                caster.TranslateTo(target2.GetShuntoffTileIfNecessary(caster));
+                caster.AnimationData.ColorBlink(Color.LightBlue);
+                caster.Battle.SmartCenterCreatureAlways(caster);
+                
+                chosenCr.TranslateTo(target1.GetShuntoffTileIfNecessary(chosenCr));
+                chosenCr.AnimationData.ColorBlink(Color.LightBlue);
+                chosenCr.Battle.SmartCenterCreatureAlways(chosenCr);
+            });
+        
+        return transposition;
+    }
+
+    public static async Task<Tile?> PiteregrinTransposeWithinEmanation(Creature runesmith, DrawnRune invokedRune, Creature teleportee, List<Tile> emanationTiles)
+    {
+        if (CommonRuneRules.IsImmuneToThisInvocation(teleportee, invokedRune.Rune))
+        {
+            Tile previous = teleportee.Space.PreviousTile ?? teleportee.Space.TopLeftTile;
+            teleportee.TranslateTo(previous);
+            return null;
+        }
+                        
+        Creature? active = teleportee.Battle.ActiveCreature;
+        teleportee.Battle.ActiveCreature = teleportee;
+
+        Tile? result = await runesmith.Battle.AskToChooseATile(
+            runesmith,
+            emanationTiles
+                .SelectMany(tile =>
+                {
+                    int offset = teleportee.Space.SizeInSquares - 1;
+                    return runesmith.Battle.Map.TilesInRectangle(
+                            tile.X - offset,
+                            tile.Y - offset,
+                            tile.X/* + offset*/,
+                            tile.Y/* + offset*/);
+                })
+                .Where(tile => tile.IsTrulyGenuinelyFreeTo(teleportee))
+                .Distinct()
+                .ToList(),
+            invokedRune.Rune.Illustration,
+            $"Choose where to teleport to as part of invoking {invokedRune}, or right-click to cancel.",
+            "Teleport to this space.",
+            true, true,
+            teleportee);
+                        
+        teleportee.Battle.ActiveCreature = active;
+
+        if (result is not null)
+        {
+            teleportee.AddQEffect(CommonRuneRules.ImmunityToInvocation(invokedRune.Rune));
+        
+            Sfxs.Play(ModData.SfxNames.INVOKED_PITEREGRIN_EACH);
+                
+            teleportee.TranslateTo(result.GetShuntoffTileIfNecessary(teleportee));
+            teleportee.AnimationData.ColorBlink(Color.LightBlue);
+            teleportee.Battle.SmartCenterCreatureAlways(teleportee);
+        }
+        else
+        {
+            Tile previous = teleportee.Space.PreviousTile ?? teleportee.Space.TopLeftTile;
+            teleportee.TranslateTo(previous);
+        }
+
+        return result;
     }
     
     public static bool InthIsHoly(Creature cr)

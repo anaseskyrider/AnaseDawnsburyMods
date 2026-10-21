@@ -610,6 +610,8 @@ public static class ModData
         public const SfxName INVOKED_JURROZ = SfxName.AirSpell;
         public const SfxName INVOKED_KOJASTRI = SfxName.BoneSpray;
         public const SfxName INVOKED_ORALOQ = SfxName.Mental;
+        public const SfxName INVOKED_PITEREGRIN = SfxName.Abjuration;
+        public const SfxName INVOKED_PITEREGRIN_EACH = SfxName.PhaseBolt;
         public const SfxName INVOKED_TROLISTRI = SfxName.Fear;
 
         #endregion
