@@ -1,12 +1,14 @@
 # [Runesmith](https://steamcommunity.com/sharedfiles/filedetails/?id=3460180524)
-Adds the *Runesmith* class from the Impossible Playtest, a warrior scholar who wields a repertoire of runic magic.
+From *Impossible Magic*, the runesmith is a warrior scholar who wields a repertoire of runic magic — the most fundamental magic there is.
 
-## How Runesmith Works
-In a nutshell, the Runesmith is a martial class mixed with a **Runic Repertoire**. During combat, you temporarily **Trace** these runes onto the rune's target (e.g. a creature or a weapon), which confers passive effects like "Reduced fire resistance". As a separate action, you can **Invoke** one or more runes to activate effects like "The rune-bearer makes a Fortitude save vs fire damage", which consumes the rune in the process.
+[h3]How to Play[/h3]
+The Runesmith is a medium armor, martial-weaponry class possessing a **Runic Repertoire**. They know **Runes**, which are unique spell-like effects, similar to a kineticist's impulses.
 
-These runes can be Traced an unlimited number of times, so the Runesmith is about mixing Strikes with maximizing the passive and invocation effects of their runes. Runes are to the Runesmith what Impulses are to the Kineticist.
+During combat, you temporarily **Trace** these runes onto the rune's target (e.g. a creature or a weapon), which confers passive effects like "Reduced fire resistance". As a separate action, you can **Invoke** 1-2 runes to activate effects like "The rune-bearer makes a Fortitude save vs fire damage", which consumes the rune in the process.
 
-_Disclaimer: the Runesmith's runes are unrelated to the runes from the shop. You are not tracing a +1 Weapon Potency rune in the middle of combat._
+These runes can be Traced an unlimited number of times, so depending on how you build a Runesmith, they mix Strikes with Tracing and Invoking runes.
+
+At the start of each encounter, you can also **Etch** a number of runes depending on your level (2 to 6) onto yourself or your allies. Etched runes have no duration, but are expended when invoked, as normal.
 
 ## Class Features
 **Key Attribute** Intelligence  
