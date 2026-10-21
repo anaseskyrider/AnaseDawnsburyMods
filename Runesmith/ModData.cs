@@ -613,6 +613,8 @@ public static class ModData
         public const SfxName INVOKED_PITEREGRIN = SfxName.Abjuration;
         public const SfxName INVOKED_PITEREGRIN_EACH = SfxName.PhaseBolt;
         public const SfxName INVOKED_TROLISTRI = SfxName.Fear;
+        // SfxName.ExoskeletonExtrude
+        public const SfxName INVOKED_ULGATUS = SfxName.ElementalBlastMetal;
 
         #endregion
 

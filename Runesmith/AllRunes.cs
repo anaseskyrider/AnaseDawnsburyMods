@@ -3849,25 +3849,130 @@ public static class AllRunes
                 [Trait.Arcane, Trait.Emotion, Trait.Mental])
             .ToFeat();
         
-        // TODO: Ulgatus, Rune of Restraint
-        /*yield return new Rune(
+        // Ulgatus, Rune of Restraint
+        yield return new Rune(
                 RuneId.Ulgatus,
                 "A faction of constructed beings developed this rune to avoid the weaknesses of flesh.",
-                new RuneDrawProperties("drawn on a creature wearing armor", drawnOnCreature: true),
+                new RuneDrawProperties(
+                        "drawn on a creature wearing armor",
+                        drawnOnCreature: true)
+                    .WithAllyRequirement()
+                    .WithWearsArmorRequirement(),
                 new RunePassiveProperties(
-                        "When the creature wearing the armor would gain or increase the value of their drained, enfeebled, or sickened condition, the rune attempts to prevent the imposition. The bearer attempts a DC 15 flat check. On a success, it doesn’t gain or increase the value of that condition, but the rune goes temporarily dormant for 10 minutes. While dormant, the rune can’t protect the bearer from conditions but can be invoked.",
-                        (rune, int) =>
+                        "When the creature wearing the armor would gain or increase the value of their {r}drained{/r}, {r}enfeebled{/r}, or {r}sickened{/r} condition, the rune attempts to prevent the imposition. The bearer attempts a DC 15 flat check. On a success, it doesn’t gain or increase the value of that condition, but the rune goes temporarily dormant for 10 minutes. While dormant, the rune can't protect the bearer from conditions but can be invoked.",
+                        (rune, level) =>
                         {
-                            return $"";
-                        }),
+                            return $"When the creature wearing the armor would gain or increase the value of their {{r}}drained{{/r}}, {{r}}enfeebled{{/r}}, or {{r}}sickened{{/r}} condition, the rune attempts to prevent the imposition. The bearer attempts a DC {S.HeightenedVariable((level >= 17 ? 10 : 15), 15)} flat check. On a success, it doesn’t gain or increase the value of that condition, but the rune goes temporarily dormant for 10 minutes. While dormant, the rune can't protect the bearer from conditions but can be invoked.";
+                        })
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        int dc = drawAction.Owner.Level >= 17 ? 10 : 15;
+                        return new DrawnRune(
+                            drawAction, rune,
+                            $"When you gain or inrcease the value of your drained, enfeebled, or sickened condition, make a DC {dc} flat check. On a success, don't gain or increase its value, and then this rune goes dormant.")
+                        {
+                            Tag = new Dictionary<QEffectId, int>{
+                                [QEffectId.Drained] = 0,
+                                [QEffectId.Enfeebled] = 0,
+                                [QEffectId.Sickened] = 0,
+                            },
+                            StateCheckLayer = 1,
+                            StateCheck = qfThis =>
+                            {
+                                var conditions = (qfThis.Tag as Dictionary<QEffectId, int>)!;
+                                foreach ((QEffectId condition, int value) in conditions)
+                                    conditions[condition] = qfThis.Owner.FindQEffect(condition)?.Value ?? 0;
+                            },
+                            YouAcquireQEffect = (qfThis, qfNew) =>
+                            {
+                                DrawnRune drThis = (qfThis as DrawnRune)!;
+                                var conditions = (qfThis.Tag as Dictionary<QEffectId, int>)!;
+                                if (drThis.UsedUpPermanently
+                                    || DrawnRune.ShouldNotPerformPassiveEffect(drThis)
+                                    || !conditions.TryGetValue(qfNew.Id, out int oldValue)
+                                    || oldValue >= qfNew.Value
+                                    || qfNew.ExpiresAt is ExpirationCondition.Ephemeral
+                                        or ExpirationCondition.EphemeralAtEndOfImmediateAction
+                                        or ExpirationCondition.Immediately)
+                                    return qfNew;
+
+                                var result = Checks.RollFlatCheckWithRoll(dc);
+                                drThis.UsedUpPermanently = true;
+                                drThis.YouAcquireQEffect = null;
+                                drThis.DescriptionGenerator = _ => "{Red}{b}Used up.{/b}{/Red} You can still invoke this rune as normal.";
+                                drThis.UpdateDescription();
+                                
+                                qfThis.Owner.Battle.Log(
+                                    $"{qfThis.Owner.Name} makes a flat check to avoid {(oldValue == 0 ? "gaining the" : "increasing their")} {qfNew.Id.ToStringOrTechnical().ToLower()} condition: {result.Item2}",
+                                    drThis.Rune.FullName,
+                                    CommonRuneRules.StatBlocks.CreateRuneDescription(
+                                        drThis.Rune, drThis.Source!.Level),
+                                    new Traits(rune.Traits.ToArray()));
+
+                                // Add as normal if you fail the check.
+                                if (result.Item1 < CheckResult.Success)
+                                    return qfNew;
+                                
+                                // If you don't have the effect because it was removed just
+                                // before adding the new one, such as with CumulativeCondition(),
+                                // then add the new effect with the lower old value.
+                                if (!qfThis.Owner.HasEffect(qfNew.Id) && oldValue > 0)
+                                {
+                                    qfNew.Value = oldValue;
+                                    return qfNew;
+                                }
+                                else
+                                    return null;
+                            },
+                            // Development code
+                            /*ProvideContextualAction = qfThis =>
+                                new ActionPossibility(
+                                    new CombatAction(
+                                            qfThis.Owner,
+                                            IllustrationName.YellowWarning,
+                                            "Test Cumulative Enfeebled",
+                                            [],
+                                            "Cumulatively add {r}enfeebled 1{/r} (up to 4).",
+                                            Target.Any())
+                                        .WithActionCost(0)
+                                        .WithEffectOnEachTarget(async (_, _, creature, _) =>
+                                            CommonSpellEffects.CumulativeEnfeebled(creature, 1))),*/
+                        };
+                    }),
                 new RuneInvocationProperties(
-                        "The rune causes the armor to grow around the creature wearing it, fortifying any vulnerable spots. For 1 minute, the wearer gains resistance 10 to critical hits.",
-                        (rune, int) =>
+                        "The rune causes the armor to grow around the creature wearing it, fortifying any vulnerable spots. For the rest of the encounter, the wearer gains resistance 10 to critical hits.",
+                        (rune, level) =>
                         {
-                            return $"";
-                        }))
+                            int resist = level >= 17 ? 20 : 10;
+                            return
+                                $"The rune causes the armor to grow around the creature wearing it, fortifying any vulnerable spots. For the rest of the encounter, the wearer gains resistance {S.HeightenedVariable(resist, 10)} to critical hits.";
+                        })
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        int resist = invokedRune.Source!.Level >= 17 ? 20 : 10;
+                        
+                        effectTarget.AddQEffect(invokedRune
+                            .NewInvocationEffect(
+                                $"You have resistance {resist} to critical hits.",
+                                ExpirationCondition.Never,
+                                qf =>
+                                {
+                                    qf.StateCheck = qfThis =>
+                                    {
+                                        qfThis.Owner.WeaknessAndResistance.AddSpecialResistance(
+                                            SpecialResistance.Create(
+                                                "critical hits",
+                                                (_, _, dEvent) =>
+                                                    dEvent.CheckResult == CheckResult.CriticalSuccess,
+                                                resist));
+                                    };
+                                }));
+                        
+                        return effectTarget;
+                    })
+                    .WithSoundAfterInvocation(ModData.SfxNames.INVOKED_ULGATUS))
             .WithLevelText("17th", "The DC of the flat check decreases to 10 and the resistance to critical hits increases to 20.")
-            .ToFeat();*/
+            .ToFeat();
         
         // Yudici, Rune of Remonstrance
         yield return new Rune(
