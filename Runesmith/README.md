@@ -13,28 +13,41 @@ _Disclaimer: the Runesmith's runes are unrelated to the runes from the shop. You
 **Perception** trained  
 **Offenses** up to martial weapons  
 **Defenses** 8 HP, up to medium armor; trained Reflex, expert Fortitude & Will  
-**Skills** 2 + Crafting + 1 of Arcana/Nature/Occultism/Religion + Intelligence  
+**Skills** 2 + Crafting + 1 of Arcana/Nature/Occultism/Religion + Intelligence
 
-**Level 1:** Runic Repertoire (4 runes), Trace Rune, Invoke Rune, Etch Rune (2 runes), Runesmith feat, Shield Block  
-**Level 2:** Runesmith feat, Runic Crafter  
-**Level 3:** General feat, skill increase, additional rune known (level 1)  
-**Level 4:** Runesmith feat  
-**Level 5:** Attribute boosts, ancestry feat, skill increase, Smith's Weapon Expertise (expert in unarmed/simple/martial weapons), additional rune known (level 1), Etch Rune (3 runes)  
-**Level 6:** Runesmith feat  
-**Level 7:** General feat, Runic Optimization, additional rune known (level 1)  
-**Level 8:** Runesmith feat  
-**Level 9:** Assured Runic Crafter, additional rune known (level 9), Etch Rune (4 runes)
+(Runesmith has an additional class feat at 1st level, and the standard progression of class feats, skill feats, and skill increases)  
+**Level 1:** Runic Repertoire (4 runes, 1st-level runes), Trace Rune, Invoke Rune, Etch Rune (2 runes), Shield Block  
+**Level 2:** Runic Crafter  
+**Level 5:** Expert in unarmed/simple/martial weapons, +2 runes known (5th-level runes), 
++1 maximum etched rune (3 runes)  
+**Level 7:** Expert Runesmith DC, Expert Reflex, Runic Optimization  
+**Level 9:** Assured Runic Crafter, +2 runes known (9th-level runes), +1 maximum etched runes (4 runes)  
+**Level 11:** Forged Endurance (master in Fortitude saves, success -> crit)  
+**Level 13:** Expert in unarmored/light/medium armor, Expert in Perception, Master in unarmed/simple/martial weapons, +2 runes known (13th-level runes), +1 maximum etched runes (5 runes)  
+**Level 15:** Greater Runic Optimization, Master in Runesmith DC  
+**Level 17:** +2 runes known (17th-level runes), +1 maximum etched runes (6 runes)  
+**Level 19:** Legendary in Runesmith DC, Master in unarmored/light/medium armor  
 
 ## Class Feats
-- **(1st)** Backup Runic Enhancement, Engraving Strike, Remote Detonation, Rune-Singer
-- **(2nd)** Fortifying Knock, Invisible Ink, Runic Tattoo, Smithing Weapons Familiarity
-- **(4th)** Artist's Attendance, Ghostly Resonance, Terrifying Invocation, Transpose Etching
-- **(6th)** Runic Reprisal, Tracing Trance, Vital Composite Invocation, "Words, Fly Free"
-- **(8th)** Drawn In Red, Elemental Revision, Read the Bones, (Homebrew) Early Access
+- **(1st)** Backup Runic Enhancement, Engraving Strike, Glyph Familiar*, Remote Detonation, Rune Ward, Rune-Singer, Smithing Weapons
+- **(2nd)** Enhanced Glyph Familiar*, Fortifying Knock, Invisible Ink, Pattern Flight, Runic Tattoo
+- **(4th)** Artist's Attendance, Ghostly Resonance, Song of Glorious Invocation, Terrifying Invocation, Transpose Etching
+- **(6th)** Diacritic Fluency, Engraving Maneuver, Runic Reprisal, Tracing Trance, Vital Compound Invocation, "Words, Fly Free"
+- **(8th)** Drawn in Vital Ink, Edifying Trace**, Elemental Revision, Swiping Trace
+- **(10th)** Chain of Words, Clashing Compound Invocation, Prodigal Rune-Singer
+- **(12th)** Astral Compound Invocation, Distant Invocations, Expanded Glossary, Orbiting Runestone
+- **(14th)** Dance of Bloody Ink, Define the Canvas, Henge Gate, Unerring Runic Attraction
+- **(18th)** Unbounded Invocations
+- **(20th)** Generational Rune-Singer
+
+\* *Works better with the [Deployable Familiars](https://steamcommunity.com/sharedfiles/filedetails/?id=3508129973) mod.*  
+\*\* *Requires the [Lores and Weaknesses](https://steamcommunity.com/sharedfiles/filedetails/?id=3710730920) mod.*  
 
 ## Runesmith's Runes
-- **(1st)** Atryl, Rune of Fire; Esvadir, Rune of Whetstones; Holtrik, Rune of Dwarven Ramparts; Marssyl, Rune of Impact; Oljinex, Rune of Cowards' Bane; Pluuna, Rune of Illumination; Ranshu, Rune of Thunder; Sun-, Diacritic Rune of Preservation; Ur-, Diacritic Rune of Intensity; Zohk, Rune of Homecoming
-- **(9th)** En-, Diacritic Rune of Expansion; Feikris, Rune of Gravity; Ichelsu, Rune of Observation; Inth-, Diacritic Rune of Corruption; Jurroz, Rune of Dragon Fury; Trolistri, Rune of Forlorn Sorrow; Kojastri, Rune of Insulation
+- **(1st)** Atryl, Baruiel, Camonica, Esvadir, Holtrik, Ledria, Lyskel, Marssyl, Oljinex, Pluuna, Ranshu, Rehgog, Sertum, Thullax, Tilus, Zohk
+- **(5th)** Av-, En-, Fob-, Kit-, Per-, Sun-, Ti-, Ur-
+- **(9th)** Astillu, Cruonign, Feikris, Germantria, Ichelsu, Jurroz, Kojastri, Oraloq, Piteregrin, Trolistri, Ulgatus, Yudici
+- **(13th)** Eck-, Inth-, Sar-
 
 ## Differences from Tabletop
 In general, if a small element of a feature doesn't exist in DD, then that text is removed for simplicity and clarity.
@@ -43,15 +56,11 @@ In general, if a small element of a feature doesn't exist in DD, then that text 
 - **Etching Runes:** This is a free activity at the start of combat, targeting only yourself and your allies.
 - **Runic Crafter:** Crafting isn't a thing. So instead, you automatically gain the effects of the highest level fundamental weapon and armor runes for your level. Just the item bonuses, not the actual runes, so you still want Weapon Potency for property runes. At level 9, the Assured Runic Crafter feature allows you to choose an ally before combat begins to gain the benefits of this feature.
 - **Runic Magic - Tradition Traits:** Manually assigning traits is clunky. For ease of play, feats like Ghostly Resonance require that either the rune has the right trait, or that you simply have the right tradition-skill for generic runes (essentially, this is ephemerally and retroactively giving your drawn runes upwards of multiple tradition traits).
-- **Runic Optimization:** Functions as weapon specialization. Greater Runic Optimization provides +2 damage instead of 2x the original damage, as normal.
-- **Trace Rune:** Because Trace Rune requires a free hand, any activity which includes Trace Rune also requires a free hand unless stated otherwise (I've made it explicit throughout the other feats).
 
 ### Feats
-- **Artist's Attendance:** My interpretation: you qualify as a rune-bearer within your reach, and your reach can be determined by any source of reach. This might not be intended behavior by Paizo, but it's playtest.
+- **Artist's Attendance:** As an interpretation, you qualify as a rune-bearer within your reach.
 - **Backup Runic Enhancement:** The tradition is always arcane, for ease of implementation. Lemme know if that causes issues.
-- **Remote Detonation:** This is constructed as a meta-strike just like Engraving Strike. Doesn't affect mechanics, just improves UEX.
-- **Elemental Revision:** Too difficult (if at all possible) implement accurately -- so like Battle Medicine, the creature becomes immune to Elemental Revision for a day. Yes, you CAN waste actions to trading items around to avoid this.
-- **Engraving Strike:** The wording implies the only runes that could be traced are those targeting creatures. I intentionally allow you to also Trace onto any of its items. Due to the lack of free-hand weapons, this is also buffed to be usable with any unarmed strike.
+- **Elemental Revision:** Like the Shifting rune in Dawnsbury Days, this permanently alters the affected runestone.
 - **Invisible Ink:** Conceal an Object can't exist in the game. This is a 2-action activity to Trace a Rune and Hide/Sneak. Tracing a Rune also can no longer break stealth.
 - **Read the Bones:** Augury can't exist in the game. This is a +1 status bonus to initiative.
 
@@ -59,12 +68,17 @@ In general, if a small element of a feature doesn't exist in DD, then that text 
 - Runes which are drawn on armor are instead drawn on a creature.
 - **(Atryl, Rune of Fire):** Due to lack of mechanical utility, this rune cannot be drawn on items.
 - **(Ranshu, Rune of Thunder):** Due to lack of mechanical utility, this rune cannot be drawn on items.
-- **(Kojastri, Rune of Insulation):** In spite of the playtest wording, I've made it so you can't damage yourself by using touch abilities with yourself on this rune. Your allies still can take damage, though.
+- **(Ledria, Rune of Appeal):** The invocation only affects allies instead of all creatures for simplicity. "Ally" is determined relative to you, the runesmith using the stat block.
 - **(Oljinex, Rune of Coward's Bane):** Due to technical limitations, the invocation imposes a DC 5 flat check on move actions -- DC 11 if it's to move away from the bearer. Its +1 AC status bonus currently applies to any ranged attack, not just physical (pending update).
 - **(Pluuna, Rune of Illumination):** The game doesn't do lightning mechanics. The existence of the light (both the passive and invocation effect) makes the bearer unable to be Undetected (they can still be Hidden).
+- **(Sertum, Rune of Preparedness):** The bonus to Lore checks is altered to work with the Lores and Weaknesses mod; simply being in natural terrain grants a bonus to any Lore check you make, which is used for Recall Weakness.
+- **(Tilus, Rune of Vocabulary):** The bonus to Lore checks is altered to work with the Lores and Weaknesses mod; simply being in civilization grants a bonus to any Lore check you make, which is used for Recall Weakness. The invocation's effect is substantially improved for balancing purposes, causing any auditory spell to never provoke reactions, and protecting against a wide variety of effects which could disrupt or fizzle an auditory action of yours.
 - **(Zohk, Rune of Homecoming):** The passive effect is a bespoke Stride used during your turn, rather than a benefit to any Stride.
-- **(Inth-, Diacritic Rune of Corruption):** The invocation is interpreted as only applying to the rune-bearer, so its persistent fire cannot be spread as an AoE, and the text is modified accordingly. Currently, Esvadir's persistent bleed damage does not become unholy. For compatibility reasons, creatures with weakness to evil are considered holy, and this invocation's persistent fire damage can be persistent evil damage instead.
+- **(Kojastri, Rune of Insulation):** In spite of the playtest wording, I've made it so you can't damage yourself by using touch abilities with yourself on this rune. Your allies still can take damage, though.
+- **(Oraloq, Rune of Inarticulateness):** Rune-bearing NPCs do not modify their AI to take into account the damage the spell will self-inflict, and the invocation's damage occurs on casting any spell, since there are no Subtle spells in Dawnsbury Days.
 - **(Trolistri, Rune of Forlorn Sorrow):** Always generates difficult terrain for enemies regardless of distance or move direction. Effect radius reduced to 10 feet (invocation range unchanged). This difficult terrain cannot be ignored by creatures immune to emotion or mental effects (technical limitation).
+- **(Inth-, Diacritic Rune of Corruption):** "The target" of the invocation is interpreted to be choosing any 1 creature who was affected by the rune's invocation. Singular, but you get choices for AoE base runes such as Pluuna.
+- **(Sar-, Diacritic Rune of Righteousness):** See Inth- above for the invocation.
 
 ## Attributions:
 - [Feather icons created by Freepik - Flaticon](https://www.flaticon.com/free-icons/feather)
@@ -76,3 +90,7 @@ In general, if a small element of a feature doesn't exist in DD, then that text 
 - [Knife icons created by kerismaker - Flaticon](https://www.flaticon.com/free-icons/knife)
 - [Musical note icons created by Freepik - Flaticon](https://www.flaticon.com/free-icons/musical-note)
 - [Hammer icons created by Smashicons - Flaticon](https://www.flaticon.com/free-icons/hammer)
+- [Information icons created by Anggara - Flaticon](https://www.flaticon.com/free-icons/information)
+- [Rune stone icon by Lorc under CC BY 3.0](https://game-icons.net/1x1/lorc/rune-stone.html)
+- [Viking icons created by Magnific - Flaticon](https://www.flaticon.com/free-icons/viking)
+- [Bouncing sword icon by Lorc under CC BY 3.0](https://game-icons.net/1x1/lorc/bouncing-sword.html)
