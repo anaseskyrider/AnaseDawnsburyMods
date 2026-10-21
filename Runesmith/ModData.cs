@@ -590,8 +590,6 @@ public static class ModData
         // SfxName(ElectricBlast == ShockingGrasp)???
         public const SfxName PASSIVE_RANSHU = SfxName.ElectricBlast;
         public const SfxName INVOKED_RANSHU = SfxName.ElectricArc;
-        // Rehgog
-        // Sertum
         public const SfxName INVOKED_THULLAX = SfxName.AcidSplash;
         public const SfxName INVOKED_ZOHK = SfxName.PhaseBolt;
 
@@ -611,6 +609,7 @@ public static class ModData
         public const SfxName INVOKED_ICHELSU = SfxName.MinorAbjuration;
         public const SfxName INVOKED_JURROZ = SfxName.AirSpell;
         public const SfxName INVOKED_KOJASTRI = SfxName.BoneSpray;
+        public const SfxName INVOKED_ORALOQ = SfxName.Mental;
         public const SfxName INVOKED_TROLISTRI = SfxName.Fear;
 
         #endregion

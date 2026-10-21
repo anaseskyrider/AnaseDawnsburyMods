@@ -3495,26 +3495,123 @@ public static class AllRunes
             .WithLevelText("+2", "The resistance and damage granted by insulation both increase by 1, and the damage dealt by the invocation increases by 2d4.")
             .ToFeat();
         
-        // TODO: Oraloq, Rune of Inarticulateness
+        // Oraloq, Rune of Inarticulateness
         // DOC: The rune-bearer does not take this effect into consideration for their actions.
-        /*yield return new Rune(
+        // DOC: This affects any Cast a Spell, not just non-Subtle ones.
+        yield return new Rune(
                 RuneId.Oraloq,
                 "This hard-to-read rune makes language difficult for the unfortunate rune-bearer.",
                 new RuneDrawProperties(
                         "drawn on a creature",
-                        drawnOnCreature: true),
+                        drawnOnCreature: true)
+                    .WithEnemyRequirement()
+                    .WithCreatureRequirement((a, d) =>
+                        d.IsImmuneTo(Trait.Mental)
+                            ? Usability.NotUsableOnThisCreature("Immune to mental")
+                            : Usability.Usable),
                 new RunePassiveProperties(
-                        "When the rune-bearer attempts a skill check or ability with the linguistic trait or attempts to Cast a spell that doesn’t have the subtle trait, they must succeed a DC 5 flat check, or the action is lost.",
-                        null),
+                        "When the rune-bearer attempts an ability with the linguistic trait or attempts to Cast a spell, they must succeed on a DC 5 flat check, or the action is lost.",
+                        null)
+                    .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
+                    {
+                        return new DrawnRune(
+                            drawAction, rune,
+                            "You must succeed on a DC 5 flat check each time you attempt an ability with the linguistic trait or Cast a Spell, or the action is lost.")
+                        {
+                            FizzleOutgoingActions = async (qfThis, action, strBuild) =>
+                            {
+                                DrawnRune drThis = (qfThis as DrawnRune)!;
+                                if (DrawnRune.ShouldNotPerformPassiveEffect(drThis))
+                                    return false;
+                                
+                                bool isSpell = action.CountsAsSpell;
+                                bool isLing = action.HasTrait(Trait.Linguistic);
+                                if (!isSpell && !isLing)
+                                    return false;
+
+                                var result = Checks.RollFlatCheckWithRoll(5);
+                                strBuild.AppendLine($"{(isSpell ? "Cast a spell" : isLing ? "Use linguistic action" : "???")} under the effects of {drThis}: {result.Item2}");
+                                
+                                return result.Item1 < CheckResult.Success;
+                            }
+                        };
+                    }),
                 new RuneInvocationProperties(
-                        "The rune-bearer must attempt a Will save as the rune puts a strong mental block on the part of their mind that interprets language. If the rune-bearer fails their save, they take 20 mental damage (or double damage on a critical failure) the first time they use any language, take a linguistic action, or Cast a Spell without the subtle trait. The effect ends once the damage is taken or at the end of the rune-bearer’s next turn, whichever comes first.",
+                        "The rune-bearer must attempt a Will save as the rune puts a strong mental block on the part of their mind that interprets language. If the rune-bearer fails their save, they take 20 mental damage (or double damage on a critical failure) the first time they take a linguistic action or Cast a Spell. The effect ends once the damage is taken or at the end of the rune-bearer's next turn, whichever comes first.",
                         (rune, level) =>
                         {
-                            return $"";
-                        }),
+                            (int baseValue, _, int finalValue) = rune.CalculateHeightening(20, 2, 5, level);
+                            return
+                                $"The rune-bearer must attempt a Will save as the rune puts a strong mental block on the part of their mind that interprets language. If the rune-bearer fails their save, they take {S.HeightenedVariable(finalValue, baseValue)} mental damage (or double damage on a critical failure) the first time they take a linguistic action or Cast a Spell. The effect ends once the damage is taken or at the end of the rune-bearer's next turn, whichever comes first.";
+                        })
+                    .WithAdditionalRequirement((a, d) =>
+                        d.IsImmuneTo(Trait.Mental)
+                            ? Usability.NotUsableOnThisCreature("Immune to mental")
+                            : Usability.Usable)
+                    .WithDealsDamage((rune, level) => (
+                        rune.CalculateHeightening(
+                                20, 2, 5, level)
+                            .FinalValue.ToString(),
+                        DamageKind.Mental))
+                    .WithDefense(Defense.Will)
+                    .WithSoundBeforeInvocation(ModData.SfxNames.INVOKED_ORALOQ)
+                    .WithInvocationOnEachTarget(async (invokeAction, invokedRune, effectTarget) =>
+                    {
+                        await CommonRuneRules.SaveAgainstInvocation(
+                            invokeAction, invokedRune, effectTarget,
+                            async (innerInvoke, target, result) =>
+                            {
+                                if (result > CheckResult.Failure)
+                                    return;
+                                
+                                int damageAmount = invokedRune.Rune.CalculateHeightening(
+                                        20, 2, 5, invokedRune.Source!.Level)
+                                    .FinalValue;
+                        
+                                effectTarget.AddQEffect(invokedRune
+                                    .NewInvocationEffect(
+                                        $"The first time you use a linguistic action or Cast a Spell, you take {(result is CheckResult.CriticalFailure ? (damageAmount * 2).WithColor("Red").WithTag("b") : damageAmount)} mental damage.",
+                                        ExpirationCondition.ExpiresAtEndOfSourcesTurn,
+                                        qf =>
+                                        {
+                                            qf.Source = invokedRune.Source!;
+                                            qf.CannotExpireThisTurn = true;
+                                            qf.SourceAction = invokeAction;
+                                            qf.Supereffect = invokedRune;
+                                            qf.AfterYouTakeAction = async (qfThis, action) =>
+                                            {
+                                                if (!(action.CountsAsSpell
+                                                     || action.HasTrait(Trait.Linguistic))
+                                                    || qfThis.UsedUpPermanently)
+                                                    return;
+
+                                                Sfxs.Play(ModData.SfxNames.INVOKED_ORALOQ);
+                                                
+                                                // Deal damage
+                                                await CommonSpellEffects.DealBasicDamage(
+                                                    invokeAction, invokeAction.Owner, target,
+                                                    // DoS: Fumble/Fail/Pass
+                                                    result == CheckResult.Success
+                                                        ? CheckResult.CriticalSuccess
+                                                        : result,
+                                                    DiceFormula.FromText(
+                                                        damageAmount.ToString(),
+                                                        invokedRune.Rune.FullName),
+                                                    DamageKind.Mental);
+                                                
+                                                // Prevent it from triggering again immediately.
+                                                qfThis.ExpiresAt = ExpirationCondition.Immediately;
+                                                qfThis.UsedUpPermanently = true;
+                                            };
+                                        }));
+                            },
+                            true);
+                        
+                        return effectTarget;
+                    }),
                 [Trait.Mental])
             .WithLevelText("+2", "The damage of the invocation increases by 5.")
-            .ToFeat();*/
+            .ToFeat();
         
         // TODO: Piteregrin, Rune of Transposition
         /*yield return new Rune(
