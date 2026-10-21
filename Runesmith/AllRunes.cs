@@ -2486,9 +2486,6 @@ public static class AllRunes
                                         return;
                                     QEffect invokeBonus = new QEffect()
                                     {
-                                        // No expiration because it needs to exist longer for invocations such as Esvadir which have hidden subsidiaries going on
-                                        // Is removed on its own when the rune is invoked, and it only applies to the same type, so it should be safe to manually expire that way in this callback structure.
-                                        ExpiresAt = ExpirationCondition.ExpiresAtEndOfAnyTurn,
                                         BonusToDamage = (qfThis, action, defender) =>
                                         {
                                             if (drThis.Disabled)
@@ -2521,7 +2518,10 @@ public static class AllRunes
                                             if (action == invokeAction)
                                                 qfThis.ExpiresAt = ExpirationCondition.Immediately;
                                         },*/
-                                    };
+                                    }
+                                    // No expiration because it needs to exist longer for invocations such as Esvadir which have hidden subsidiaries going on and Oraloq which last a round.
+                                    // Is removed on its own when the rune is invoked, and it only applies to the same type, so it should be safe to manually expire that way in this callback structure.
+                                    .WithExpirationAtEndOfOwnersNextTurn();
                                     invokeAction.Owner.AddQEffect(invokeBonus);
                                 },
                             };
