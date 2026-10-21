@@ -23,7 +23,7 @@ This mod adds more Archetypes and expands existing Archetypes.
 ⚠️ Description unfinished ⚠️
 
 ### [Runesmith](Runesmith)
-Adds the *Runesmith* class from the Impossible Playtest, a warrior scholar who wields a repertoire of runic magic.
+Adds the *Runesmith* class from Impossible Magic, a warrior scholar who wields a repertoire of runic magic.
 
 ### [Slayer Class](Slayer%20Class)
 ⚠️ Description unfinished ⚠️
