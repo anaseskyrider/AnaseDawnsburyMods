@@ -1214,9 +1214,9 @@ public static class GuardianFeats
                         proudNail.Illustration, IllustrationName.StarHit);
                     ((CreatureTarget)proudNail.Target) // Strikes always make CreatureTargets
                         .WithAdditionalConditionOnTargetCreature(
-                            ModData.CommonRequirements.IsMyTauntedEnemy())
+                            ModData.CommonRequirements.OffGuardDueToMyTaunt())
                         .WithAdditionalConditionOnTargetCreature(
-                            ModData.CommonRequirements.OffGuardDueToMyTaunt());
+                            ModData.CommonRequirements.IsMyTauntedEnemy());
                     
                     return proudNail;
                 };
@@ -1869,9 +1869,9 @@ public static class GuardianFeats
                         .WithAdditionalConditionOnTargetCreature(
                             ModData.CommonRequirements.MustWearMediumOrHeavyArmor())
                         .WithAdditionalConditionOnTargetCreature(
-                            ModData.CommonRequirements.IsMyTauntedEnemy())
+                            ModData.CommonRequirements.OffGuardDueToMyTaunt())
                         .WithAdditionalConditionOnTargetCreature(
-                            ModData.CommonRequirements.OffGuardDueToMyTaunt());
+                            ModData.CommonRequirements.IsMyTauntedEnemy());
                     
                     return ringTheirBell;
                 };
@@ -3104,7 +3104,7 @@ public static class GuardianFeats
                                             tauntedReq.Satisfied(self, cr)
                                             || offGuardReq.Satisfied(self, cr)))
                                         usable = true;
-                                    return usable ? null : "No-one affected by my taunt";
+                                    return usable ? null : "No-one affected by my Taunt";
                                 }))
                         .WithActionCost(2)
                         .WithDescription(
@@ -3123,7 +3123,7 @@ public static class GuardianFeats
                                     tauntedReq.Satisfied(a, d)
                                     || offGuardReq.Satisfied(a, d)
                                         ? Usability.Usable
-                                        : Usability.NotUsableOnThisCreature("Not affected by my taunt"));
+                                        : Usability.NotUsableOnThisCreature("Not affected by my Taunt"));
                                 strike.WithEffectOnEachTarget(async (_, caster2, target, result) =>
                                 {
                                     chosen = target;
