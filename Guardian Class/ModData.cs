@@ -425,8 +425,6 @@ public static class ModData
         
         public static readonly Trait BodyguardCharge = ModManager.RegisterTrait("Bodyguard's Charge",
             new TraitProperties("Bodyguard's Charge", false));
-        public static readonly Trait NotSoFastAttack = ModManager.RegisterTrait("NotSoFastAttack",
-            new TraitProperties("NotSoFastAttack", false));
         
         #endregion
         
