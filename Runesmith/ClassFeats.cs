@@ -1058,7 +1058,7 @@ public static class ClassFeats
                                 Rune rune = (runeFeat.Tag as Rune)!;
                                 return
                                     // Cannot be a rune that draws on items or other runes
-                                    !rune.DrawProperties.IsDrawnOnlyOnCreatures
+                                    rune.DrawProperties.IsDrawnOnlyOnCreatures
                                     // Cannot be a harmful passive effect
                                     && !rune.PassiveProperties.PassiveEffectIsDebuff;
                             })
