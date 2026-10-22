@@ -508,12 +508,35 @@ public static class ModData
             This does not execute the Drop Prone action; you simply become prone. This means that Belly Flop will not draw reactions based on movement.
             """);
 
+        public static readonly string InterceptAttackEstimation = RegisterInfoTooltip(
+            ID_PREPEND + "InterceptAttackEstimation",
+            """
+            {b}Intercept Attack {icon:Reaction}{/b}
+            {i}Implementation — damage estimation{/i}
+
+            This is an estimate of how much damage you'll take after including your basic immunities, weaknesses, and resistances.
+            
+            This doesn't take into account most of the more complex features that modify weaknesses and resistances.
+            """);
+
         #endregion
         
         public static Func<string, string> RegisterTooltipInserter(string tooltipName, string tooltipDescription)
         {
             ModManager.RegisterInlineTooltip(tooltipName, tooltipDescription);
             return input => "{tooltip:" + tooltipName + "}" + input + "{/}";
+        }
+
+        /// <summary>
+        /// Registers a tooltip as <see cref="RegisterTooltipInserter"/> for use with tooltip info icons.
+        /// </summary>
+        /// <param name="tooltipName">The registered name of the tooltip.</param>
+        /// <param name="tooltipDescription">The body text of the tooltip.</param>
+        /// <returns>The tooltip string tag, with a specific arbitrary string: the <see cref="ModData.Illustrations.InfoSymbol"/> illustration.</returns>
+        public static string RegisterInfoTooltip(string tooltipName, string tooltipDescription)
+        {
+            ModManager.RegisterInlineTooltip(tooltipName, tooltipDescription);
+            return "{tooltip:" + tooltipName + "}" + ModData.Illustrations.InfoSymbol.IllustrationAsIconString + "{/}";
         }
     }
 }

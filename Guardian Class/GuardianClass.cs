@@ -413,18 +413,39 @@ public static class GuardianClass
                             Trait[] reactionTraits = [ModData.Traits.Guardian];
 
                             string? reactionToUse = guardian.Actions.DetermineReactionToUse("{b}Intercept Attack{/b} {icon:Reaction}", reactionTraits);
-                            CombatAction interceptAttack = CreateInterceptAttack(guardian, attacker, dEvent, reactionToUse);
+                            CombatAction interceptAttack = CreateInterceptAttack(guardian, attacker, dEvent, out DamageEvent iEvent, reactionToUse);
                             
                             if (!interceptAttack.CanBeginToUse(qfFeat.Owner))
                                 return null;
                             
                             bool canStride = attacker.HasEffect(ModData.QEffectIds.TauntTarget);
                             bool isCritical = dEvent.CheckResult is CheckResult.CriticalSuccess or CheckResult.CriticalFailure;
-                            int totalResolved = dEvent.KindedDamages
-                                .Sum(kd => kd.ResolvedDamage);
-                            int totalOriginal = dEvent.KindedDamages
-                                .Sum(kd => kd.OriginalResolvedDamage);
-                            string describeDamage = totalOriginal.WithTag("b").WithColor(isCritical ? "Red" : null) + (totalResolved < totalOriginal ? " of " + totalResolved.WithTag("b") : null);
+                            int allyDamage = dEvent.TotalResolvedDamage;
+                            guardian.WeaknessAndResistance.Reset();
+                            int guardianDamage = iEvent.KindedDamages
+                                .Where(kd =>
+                                    !guardian.WeaknessAndResistance.Immunities.Contains(kd.DamageKind)
+                                    && (!Alignments.IsAlignmentDamage(kd.DamageKind)
+                                        || Alignments.IsCreatureVulnerableToAlignmentDamage(guardian, kd.DamageKind)))
+                                .Sum(kd =>
+                                {
+                                    int dmg = kd.DiceFormula?.RollResult() ?? 0;
+                                    if (dmg == 0)
+                                        return dmg;
+                                    int weak = guardian.WeaknessAndResistance
+                                        .GetAndApplyWeakness(iEvent.CombatAction, kd, iEvent)
+                                        .Sum(weak => weak.Item1);
+                                    dmg += weak;
+                                    int resist = guardian.WeaknessAndResistance.GetAndApplyResistanceWithName(
+                                        iEvent.CombatAction, kd, dmg, iEvent).Item1;
+                                    dmg -= resist;
+                                    return dmg;
+                                });
+                            string describeDamage = guardianDamage.WithTag("b").WithColor(isCritical ? "Red" : null);
+                            if (allyDamage != guardianDamage)
+                                describeDamage += $" of {allyDamage.WithTag("b").WithColor(isCritical ? "Red" : null)}";
+                            describeDamage += ModData.Tooltips.InterceptAttackEstimation;
+                            guardian.WeaknessAndResistance.Reset();
 
                             ReactionOption react = ReactionOption.CreateFromCombatActionCustom(
                                     interceptAttack,
@@ -953,7 +974,7 @@ public static class GuardianClass
         InterceptAttackToggles.Add(toggleFeat.FeatName);
         return toggleFeat;
     }
-    
+
     /// <summary>
     /// Creates a CombatAction with an action cost of 0 (used as a reaction) for a given damage event.
     /// </summary>
@@ -963,12 +984,41 @@ public static class GuardianClass
     /// <param name="guardian_1">The guardian taking this reaction.</param>
     /// <param name="attacker">The creature dealing damage from a damage event.</param>
     /// <param name="dEvent">The damage event being reacted to.</param>
+    /// <param name="interceptEvent">The second damage event of the Intercepted Attack on the guardian.</param>
     /// <param name="reactionToRestore">The reaction keyword of an extra reaction to restore should the reaction need to abort and refund resources. To be used with <see cref="LibraryOfAnase.RefundReaction(Actions, string)"/>.</param>
-    public static CombatAction CreateInterceptAttack(Creature guardian_1, Creature attacker, DamageEvent dEvent, string? reactionToRestore = null)
+    public static CombatAction CreateInterceptAttack(Creature guardian_1, Creature attacker, DamageEvent dEvent, out DamageEvent interceptEvent, string? reactionToRestore = null)
     {
         const int interceptRange = 3;
         bool canStride = attacker.HasEffect(ModData.QEffectIds.TauntTarget);
         int stepSpeed = guardian_1.HasEffect(QEffectId.ElfStep) ? 2 : 1;
+        
+        List<KindedDamage> damages = [];
+        foreach (KindedDamage kd in dEvent.KindedDamages)
+        {
+            KindedDamage newKd = new KindedDamage(
+                DiceFormula.FromText(
+                    kd.OriginalResolvedDamage.ToString(),
+                    "Original " + kd.DamageKind.HumanizeLowerCase2()),
+                kd.DamageKind)
+            {
+                ApplyCriticalAndHalvingEffects = kd.ApplyCriticalAndHalvingEffects,
+            };
+            damages.Add(newKd);
+        }
+        
+        DamageEvent interceptedDamage = new DamageEvent(
+            dEvent.CombatAction,
+            guardian_1,
+            dEvent.CheckResult,
+            damages.ToArray())
+        {
+            IsSplashDamage = dEvent.IsSplashDamage,
+            //DoubleDamage = dEvent.DoubleDamage, // Doubles twice
+            //HalveDamage = dEvent.HalveDamage, // Halves twice
+            //Bonuses = @event.Bonuses, // Recalculates
+        };
+
+        interceptEvent = interceptedDamage;
         
         CombatAction interceptAttack = new CombatAction(
                 guardian_1, 
@@ -1054,30 +1104,6 @@ public static class GuardianClass
                 }
                 
                 // Take damage
-                List<KindedDamage> damages = [];
-                foreach (KindedDamage kd in dEvent.KindedDamages)
-                {
-                    KindedDamage newKd = new KindedDamage(
-                        DiceFormula.FromText(
-                            kd.OriginalResolvedDamage.ToString(),
-                            "Original " + kd.DamageKind.HumanizeLowerCase2()),
-                        kd.DamageKind)
-                    {
-                        ApplyCriticalAndHalvingEffects = kd.ApplyCriticalAndHalvingEffects,
-                    };
-                    damages.Add(newKd);
-                }
-                DamageEvent interceptedDamage = new DamageEvent(
-                    dEvent.CombatAction,
-                    guardian_1,
-                    dEvent.CheckResult,
-                    damages.ToArray() /*[..dEvent.KindedDamages]*/)
-                {
-                    IsSplashDamage = dEvent.IsSplashDamage,
-                    //DoubleDamage = dEvent.DoubleDamage, // Doubles twice
-                    //HalveDamage = dEvent.HalveDamage, // Halves twice
-                    //Bonuses = @event.Bonuses, // Recalculates
-                };
                 guardian_2.Overhead(
                     "intercept attack",
                     Color.White,
@@ -1085,7 +1111,9 @@ public static class GuardianClass
                     action.Name +" {icon:Reaction}",
                     action.Description,
                     action.Traits);
+                
                 await CommonSpellEffects.DealDirectDamage(interceptedDamage);
+                
                 dEvent.ReduceBy(dEvent.KindedDamages.Sum(kd => kd.ResolvedDamage), "Intercept attack");
                 
                 return;
