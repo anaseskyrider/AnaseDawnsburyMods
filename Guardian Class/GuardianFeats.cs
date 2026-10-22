@@ -1526,8 +1526,7 @@ public static class GuardianFeats
                     if (!item.HasTrait(Trait.Melee))
                         return null;
                     
-                    // TODO: Is there another way to get your reach with a weapon/item?
-                    int reach = item.HasTrait(Trait.Reach) ? 2 : 1;
+                    int reach = item.DetermineReach(qfFeat.Owner);
                     StrikeModifiers newMods = new StrikeModifiers(){ };
 
                     CombatAction lockDown = qfFeat.Owner
