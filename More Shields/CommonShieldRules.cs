@@ -289,7 +289,7 @@ public static class CommonShieldRules
         CombatAction shieldBlock = new CombatAction(
                 blocker,
                 ModData.Illustrations.ShieldBlock,
-                "Shield Block" + (shield is not null ? " ("  + shield.Name + ")" : ""),
+                "Shield Block" + (shield is not null ? " ("  + shield.ShortName + ")" : ""),
                 [ModData.ModTrait, Trait.General, Trait.ShieldBlock],
                 $$"""
                   {i}You snap your shield in place to ward off a blow.{/i}
