@@ -296,7 +296,7 @@ public static class CommonShieldRules
 
                   {b}Trigger{/b} While you have your shield raised, you would take damage from a physical attack.
 
-                  Your {{(shield is not null ? shield.Illustration.IllustrationAsIconString + " " + shield.Name.WithColor("Blue") : "shield")}} prevents you from taking up to {{hardness?.WithColor("Blue") ?? "the shield's hardness in"}} damage. You take any remaining damage.
+                  Your {{(shield is not null ? shield.Illustration.IllustrationAsIconString + shield.Name.WithColor("Blue") : "shield")}} prevents you from taking up to {{hardness?.WithColor("Blue") ?? "the shield's hardness in"}} damage. You take any remaining damage.
                   """,
                 Target.Self())
             .WithActionCost(-2)
