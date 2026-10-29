@@ -381,7 +381,9 @@ public static class AllRunes
                     // This requirement is ignored if you know En to be able to increase the emanation.
                     .WithCreatureRequirement((a, d) =>
                     {
-                        if (d.EnemyOf(a))
+                        if (d.EnemyOf(a)
+                            && !PlayerProfile.Instance.IsBooleanOptionEnabled(
+                                ModData.BooleanOptions.UnrestrictedInvocation))
                         {
                             if (d.Neighbours.Creatures.Any(cr => cr.EnemyOf(a))
                                 || RunicRepertoireTag.GetRepertoire(a)?.IsKnown(RuneId.En, a.Level) == true)
@@ -475,8 +477,11 @@ public static class AllRunes
                         })
                     .WithAdditionalRequirement((runesmith, runeBearer) =>
                     {
-                        return runeBearer.Space.GetNeighbours()
-                            .Any(tile => tile.PrimaryOccupant?.EnemyOf(runesmith) == true)
+                        return PlayerProfile.Instance.IsBooleanOptionEnabled(
+                                   ModData.BooleanOptions.UnrestrictedInvocation)
+                               || runeBearer.Space.GetNeighbours()
+                                   .Any(tile => tile.PrimaryOccupant?.EnemyOf(runesmith) == true)
+                               || RunicRepertoireTag.GetRepertoire(runesmith)?.IsKnown(RuneId.En, runesmith.Level) == true
                             ? Usability.Usable
                             : Usability.NotUsableOnThisCreature("No enemy adjacent to the target");
                     })
@@ -574,7 +579,9 @@ public static class AllRunes
                         "You call the shield to its rightful place. You Raise the Shield bearing the rune, as if the rune-bearer had used Raise a Shield, and the shield's status bonus to AC lasts until the beginning of the creature's next turn.",
                         null)
                     .WithAdditionalRequirement((a, d) =>
-                        d.QEffects.Any(qf =>
+                        !PlayerProfile.Instance.IsBooleanOptionEnabled(
+                            ModData.BooleanOptions.UnrestrictedInvocation)
+                        || d.QEffects.Any(qf =>
                             qf.Id == QEffectId.RaisingAShield
                             && DrawnRune.GetDrawnRunes(a, d)
                                 .Any(dr =>

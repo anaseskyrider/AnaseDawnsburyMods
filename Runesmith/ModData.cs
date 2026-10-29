@@ -52,20 +52,33 @@ public static class ModData
     {
         //public const string HideRuneDialogs = "RunesmithPlaytest.HideRuneDialogs"; // Unused, but kept just in case.
         public static string UnrestrictedTrace = null!;
+        public static string UnrestrictedInvocation = null!;
         
         public static void Initialize()
         {
             UnrestrictedTrace = RegisterBooleanOption(
                 ID_PREPEND+"UnrestrictedTrace",
-                "Runesmith: Less Restrictive Rune Tracing",
+                "Runesmith: Unrestricted Tracing",
                 """
-                Enabling this option removes protections against "bad decisions" with tracing certain runes on certain targets.
-
-                The Runesmith is a class on the more advanced end of tactics and creativity. For example, you might want to trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy. Or you might trace Atryl on yourself as a 3rd action so that you can move it with Transpose Etching (just 1 action) on your next turn, because you're a ranged build.
-
-                This option is for those players.
+                Enabling this option removes protections against "bad decisions" with tracing certain runes on certain targets, allowing for more advanced tactics.
+                
+                {b}Examples{/b}
+                • Trace Esvadir onto an enemy because you're about to invoke it onto a different, adjacent enemy.
+                • Trace Atryl on yourself with your 3rd action, because you want to {b}Transpose Etching {icon:Action}{/b} on your next turn.
                 """,
-                true);
+                false);
+
+            UnrestrictedInvocation = RegisterBooleanOption(
+                ID_PREPEND+"UnrestrictedInvoke",
+                "Runesmith: Unrestricted Invocations",
+                """
+                Enabling this option removes protections against "bad decisions" when invoking runes under certain conditions, allowing for more advanced tactics.
+                
+                {b}Examples{/b}
+                • You have {b}Vital Compound Invocation {icon:Action}{/b} and an ally needs healing, so you invoke Esvadir without an adjacent enemy.
+                • An ally has been dominated and your etched Holtrik is increasing their AC, so you invoke it while their shield is already raised to get rid of it.
+                """,
+                false);
         }
         
         /// <summary>
