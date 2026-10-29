@@ -447,7 +447,9 @@ public static class ClassFeats
                             "Trace Rune always costs {icon:Action} 1 action, loses the manipulate trait, and has a range of 60 feet.";
                         return;
                     }
-                    else if (qfFeat.Owner.HasFeat(ModData.FeatNames.ProdigalRuneSinger))
+
+                    bool isProdigal = qfFeat.Owner.HasFeat(ModData.FeatNames.ProdigalRuneSinger);
+                    if (isProdigal)
                     {
                         qfFeat.Description = qfFeat.Description!
                             .Replace("Once per combat", "Once per round");
@@ -458,8 +460,7 @@ public static class ClassFeats
                     qfFeat.ProvideSectionIntoSubmenu = (qfThis, submenu) =>
                     {
                         if (submenu.SubmenuId != ModData.SubmenuIds.TraceRune
-                            || qfThis.Owner.PersistentUsedUpResources.UsedUpActions
-                                .Contains(ModData.PersistentActions.RUNESINGER))
+                            || qfThis.UsedUpPermanently)
                             return null;
 
                         bool singerIsActive = qfThis.Owner.HasEffect(ModData.QEffectIds.RuneSinger);
@@ -474,10 +475,10 @@ public static class ClassFeats
                                     Direction.Southwest),
                                 $"Rune-Singer ({(singerIsActive ? "disable" : "enable")})",
                                 [ModData.ModTrait, Trait.Runesmith],
-                                """
+                                $$"""
                                 {i}You practice the lost art of using music to guide your rune-carving, singing the runes into existence as much as crafting them.{/i}
 
-                                {b}Frequency{/b} Once per encounter.
+                                {b}Frequency{/b} Once per {{(isProdigal ? "{Blue}round{/Blue}" : "encounter")}}.
                                 
                                 The next time you Trace a Rune will be with song alone, removing the manipulate trait from Trace Rune, and allowing you to use the {icon:TwoActions} 2-action version of Trace Rune as a single {icon:Action} action.
                                 """,

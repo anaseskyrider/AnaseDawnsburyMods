@@ -663,12 +663,12 @@ public static class CommonRuneRules
             if (!runesmith.HasFeat(ModData.FeatNames.GenerationalRuneSinger))
                 traceRune.WithEffectOnSelf(self =>
                 {
+                    QEffect? creator = self.QEffects.FirstOrDefault(qf =>
+                        qf.Id == ModData.QEffectIds.RuneSingerCreator);
                     if (self.HasFeat(ModData.FeatNames.ProdigalRuneSinger))
-                        self.QEffects.FirstOrDefault(qf =>
-                                qf.Id == ModData.QEffectIds.RuneSingerCreator)
-                            ?.UsedThisTurn = true;
+                        creator?.UsedThisTurn = true;
                     else
-                        self.PersistentUsedUpResources.UsedUpActions.Add(ModData.PersistentActions.RUNESINGER);
+                        creator?.UsedUpPermanently = true;
 
                     // Remove the temporary Rune-Singer effect
                     self.RemoveAllQEffects(qf =>
