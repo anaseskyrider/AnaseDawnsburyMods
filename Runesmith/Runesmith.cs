@@ -867,7 +867,7 @@ public static class Runesmith
             .WithTag((range, rangeDesc)) // Store the range info to make the archetype easier to adjust
             .WithActionCost(1)
             .WithCastsOrUses("begins")
-            .WithEffectOnEachTarget(async (thisAction, self, _,_) =>
+            .WithEffectOnEachTarget(async (action, self, _,_) =>
             {
                 // Number of runes on the field.
                 int numberOfRunes = NumRunesInRange(self);
@@ -877,22 +877,31 @@ public static class Runesmith
                 int invoked = 0;
                 while (numberOfRunes > 0 && whileProtection < 100 && invoked < maxInvocations)
                 {
+                    whileProtection++;
+                    
                     await self.Battle.GameLoop.StateCheck(); // Idk why but they all do this so keep it.
-                    if (!await CommonRuneRules.ChooseARuneToInvoke(
-                            self,
-                            // This is redundant, but might as well use it due to precalculation
-                            overrideRange: range,
-                            canBeCanceled: whileProtection == 0,
-                            passText: invoked == 0 ? " Revert action " : " Confirm no additional runes ",
-                            additionalTopText: maxInvocations > 1
-                                ? $" You should avoid invoking the same rune on the same creature more than once.{(maxInvocations < 99 ? $" ({invoked + 1}/{maxInvocations})" : null)}"
-                                : null))
+                    
+                    Option? chosen = await CommonRuneRules.ChooseARuneToInvoke(
+                        self,
+                        // This is redundant, but might as well use it due to precalculation
+                        overrideRange: range,
+                        canBeCanceled: whileProtection == 0,
+                        passText: invoked == 0 ? " Revert action " : " Confirm no additional runes ",
+                        additionalTopText: maxInvocations > 1
+                            ? $" You should avoid invoking the same rune on the same creature more than once.{(maxInvocations < 99 ? $" ({invoked + 1}/{maxInvocations})" : null)}"
+                            : null);
+                    
+                    if (chosen is PassViaButtonOption)
                     {
-                        if (invoked < 1)
-                            thisAction.RevertRequested = true;
+                        action.RevertRequested = invoked < 1;
                         return;
                     }
-                    whileProtection++;
+                    else if (chosen is CancelOption)
+                    {
+                        action.RevertRequested = invoked < 1;
+                        continue;
+                    }
+                    
                     invoked++;
                     numberOfRunes = NumRunesInRange(self); // Regenerate the list of runes.
                 }

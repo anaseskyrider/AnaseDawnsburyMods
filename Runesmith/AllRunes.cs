@@ -2000,14 +2000,14 @@ public static class AllRunes
 
                                         // For generosity-sake, not following through on the invocation
                                         // doesn't waste your usage of the diacritic for this encounter.
-                                        if (!await CommonRuneRules.ChooseARuneToInvoke(
+                                        if (await CommonRuneRules.ChooseARuneToInvoke(
                                                 drThis.Source!, // Whoever applied the diacritic gets the invoke.
                                                 targetFilter: cr => cr != drInvoked.Owner, // Different rune-bearer
                                                 overrideRange: 3, // 15 feet
                                                 passText: " Confirm no additional invocation ",
                                                 additionalTopText:
-                                                $" This rune-bearer must be a different bearer within 15 feet of {drInvoked.Owner.ToColoredName()}."
-                                            ))
+                                                $" This rune-bearer must be a different bearer within 15 feet of {drInvoked.Owner.ToColoredName()}.")
+                                            is null or CancelOption or PassViaButtonOption)
                                         {
                                             return;
                                         }

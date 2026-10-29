@@ -1510,7 +1510,7 @@ public static class CommonRuneRules
     /// <param name="skipInvocationAnimation">Whether to skip the standard invocation animation. Used for feats with custom animations.</param>
     /// <param name="skipConfirmation">If true, skip confirming the invocation if only one option is available.</param>
     /// <returns>(bool) False if the action was canceled or passed, otherwise true.</returns>
-    public static async Task<bool> ChooseARuneToInvoke(
+    public static async Task<Option?> ChooseARuneToInvoke(
         Creature caster,
         Func<Creature, bool>? targetFilter = null,
         Func<Rune, bool>? runeFilter = null,
@@ -1527,14 +1527,15 @@ public static class CommonRuneRules
             .GetRepertoire(caster)
             ?.GetKnownRunes(caster);
         if (knownRunes is null)
-            return false;
+            return null;
         if (runeFilter is not null)
             knownRunes = knownRunes.Where(runeFilter).ToList();
         if (knownRunes.Count == 0)
-            return false;
+            return null;
         
         // Generate options
         List<Option> options = [];
+        List<(Option, CombatAction)> actOpts = [];
         foreach (Rune rune in knownRunes)
         {
             foreach (Creature cr in caster.Battle.AllCreatures)
@@ -1572,6 +1573,7 @@ public static class CommonRuneRules
                     
                     // Add them
                     options.AddRange(newOptions);
+                    actOpts.AddRange(newOptions.Select(opt => (opt, newInvokeAction)));
                 }
             }
         }
@@ -1584,7 +1586,7 @@ public static class CommonRuneRules
         
         // Add bells and whistles to options
         if (options.Count == 0)
-            return false;
+            return null;
         // Ask to confirm
         if (options.Count > 1 || !skipConfirmation)
         {
@@ -1610,18 +1612,16 @@ public static class CommonRuneRules
                         TopBarIcon = ModData.Illustrations.InvokeRune,
                     })).ChosenOption;
         
-        // Do stuff based on specific type of choice
-        switch (chosenOption)
-        {
-            case CreatureOption:
-                break;
-            case CancelOption:
-            case PassViaButtonOption:
-                return false;
-        }
-        
         // Execute chosen option
-        return await chosenOption.Action();
+        bool result = await chosenOption.Action();
+        
+        // Canceled if subordinate was reverted
+        if (actOpts.Any(tup =>
+                tup.Item1 == chosenOption
+                && !tup.Item2.Owner.Actions.ActionHistoryThisEncounter.Contains(tup.Item2)))
+            return new CancelOption(true);
+        
+        return chosenOption;
     }
 
     /// <summary>

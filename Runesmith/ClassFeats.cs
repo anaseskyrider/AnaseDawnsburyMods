@@ -350,12 +350,12 @@ public static class ClassFeats
 
                             for (int i=0; i < 2; i++)
                             {
-                                bool invoked = await CommonRuneRules.ChooseARuneToInvoke(
+                                bool invoked = !(await CommonRuneRules.ChooseARuneToInvoke(
                                     caster,
                                     targetFilter: cr => cr == target,
                                     overrideRange: item.WeaponProperties.RangeIncrement,
                                     passText: "Don't invoke any runes",
-                                    additionalTopText: $" ({i+1}/2)");
+                                    additionalTopText: $" ({i + 1}/2)") is null or CancelOption or PassViaButtonOption);
                                 if (i > 0 || invoked)
                                     continue;
                                 caster.Battle.Log("Remote Detonation was converted to a simple Strike.");
@@ -1524,7 +1524,7 @@ public static class ClassFeats
                         })
                         .WithEffectOnEachTarget(async (action, caster, target, _) =>
                         {
-                            if (!await CommonRuneRules.ChooseARuneToInvoke(
+                            if (await CommonRuneRules.ChooseARuneToInvoke(
                                     caster,
                                     targetFilter: cr => cr == target,
                                     adjustInvocation: invokeAction =>
@@ -1553,7 +1553,8 @@ public static class ClassFeats
                                         });
                                     },
                                     canBeCanceled: true,
-                                    passText: "Cancel action"))
+                                    passText: "Cancel action")
+                                is null or CancelOption or PassViaButtonOption)
                                 action.RevertRequested = true;
                         });
 
@@ -3050,11 +3051,12 @@ public static class ClassFeats
                             // Invoke 2 runes
                             foreach (Creature target in (Creature[])[first, last])
                             {
-                                if (!await CommonRuneRules.ChooseARuneToInvoke(
+                                if (await CommonRuneRules.ChooseARuneToInvoke(
                                         caster,
                                         cr => cr == target,
                                         overrideRange: range,
-                                        skipConfirmation: true))
+                                        skipConfirmation: true)
+                                    is null or CancelOption or PassViaButtonOption)
                                 {
                                     action.SpentActions = 1;
                                     caster.Battle.Log("Chain of Words converted to a simple Invoke Rune action.");
@@ -3690,13 +3692,14 @@ public static class ClassFeats
                         .WithActionCost(3)
                         .WithEffectOnSelf(async (action, caster) =>
                         {
-                            if (!await CommonRuneRules.ChooseARuneToInvoke(
+                            if (await CommonRuneRules.ChooseARuneToInvoke(
                                     caster,
                                     cr => cr == caster,
                                     rune => runesOnWeapon.Select(dr => dr.Rune).Contains(rune),
                                     canBeCanceled: true,
                                     passText: "Abort",
-                                    additionalTopText: " This must be a rune on your weapon. (1/5)"))
+                                    additionalTopText: " This must be a rune on your weapon. (1/5)")
+                                is null or CancelOption or PassViaButtonOption)
                             {
                                 action.RevertRequested = true;
                                 return;
