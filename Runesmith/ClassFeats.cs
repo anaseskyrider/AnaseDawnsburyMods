@@ -1846,7 +1846,13 @@ public static class ClassFeats
                                                             targetFilter: cr => cr == dr.Owner,
                                                             canBeCanceled: true,
                                                             adjustAction: diacriticTrace =>
-                                                                (diacriticTrace.Tag as RuneActionTag)?.ChosenDrawnRune = dr)
+                                                            {
+                                                                (diacriticTrace.Tag as RuneActionTag)?.ChosenDrawnRune =
+                                                                    dr;
+                                                                diacriticTrace.WithAdjustTarget<CreatureTarget>(crTar =>
+                                                                    crTar.CreatureTargetingRequirements.RemoveAll(req =>
+                                                                        req is MaximumRangeCreatureTargetingRequirement));
+                                                            })
                                                         is not null or CancelOption or PassViaButtonOption)
                                                     {
                                                         qfBuff.ExpiresAt = ExpirationCondition.Immediately;
