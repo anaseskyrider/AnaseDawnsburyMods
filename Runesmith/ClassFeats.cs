@@ -951,7 +951,9 @@ public static class ClassFeats
                             [ModData.ModTrait, Trait.Flourish, Trait.Runesmith],
                             strike.Description,
                             Target.Line(item.WeaponProperties!.RangeIncrement)
-                                .WithLesserDistanceIsOkay())
+                                .WithLesserDistanceIsOkay()
+                                .WithAdditionalRequirementOnCaster(self => 
+                                    strike.CanBeginToUse(self)))
                         .WithActionCost(2)
                         .WithStrikeNameAndIllustrationChange(
                             "Pattern Flight",
