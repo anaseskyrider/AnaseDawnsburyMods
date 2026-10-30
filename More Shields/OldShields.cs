@@ -543,6 +543,12 @@ public static class OldShields
                 return ShieldModifications.CreatePlatedShield(ItemName.SteelShield, ModData.ItemNames.SturdyShieldPlatingLesser);
             case ItemName.SturdyShield13:
                 return ShieldModifications.CreatePlatedShield(ItemName.SteelShield, ModData.ItemNames.SturdyShieldPlatingModerate);
+            case ItemName.SturdyShield15:
+                return ShieldModifications.CreatePlatedShield(ItemName.SteelShield, ModData.ItemNames.SturdyShieldPlatingGreater);
+            case ItemName.SturdyShield17:
+                return ShieldModifications.CreatePlatedShield(ItemName.SteelShield, ModData.ItemNames.SturdyShieldPlatingMajor);
+            case ItemName.SturdyShield20:
+                return ShieldModifications.CreatePlatedShield(ItemName.SteelShield, ModData.ItemNames.SturdyShieldPlatingSupreme);
             default:
                 return item;
         }
