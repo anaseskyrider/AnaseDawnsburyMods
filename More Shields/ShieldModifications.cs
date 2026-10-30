@@ -90,8 +90,7 @@ public static class ShieldModifications
                 iName,
                 ModData.Illustrations.ShieldPlating,
                 "shield plating (" + tier + ")",
-                level,
-                price,
+                level, price,
                 [ModData.ModTrait, Trait.Runestone, ..traits])
             .WithRuneProperties(new RuneProperties(
                     tier + " plated",
@@ -106,7 +105,8 @@ public static class ShieldModifications
                     if (!shield.HasTrait(Trait.Shield))
                         return "Shield plating can only be applied to shields.";
                     return null;
-                }))
+                })
+                .WithUpgradesFrom(upgradesFrom))
             .WithItemGreaterGroup(ModData.ItemGreaterGroups.ShieldModifications)
             .WithItemGroup(ModData.Illustrations.ShieldPlating.IllustrationAsIconString + "Plating");
         return (ModManager.RegisterNewItemIntoTheShop(technicalName, factory), factory);
