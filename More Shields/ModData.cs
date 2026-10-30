@@ -110,7 +110,7 @@ public static class ModData
     
     public static class SfxNames
     {
-        public static readonly SfxName ShieldBlockWooodenImpact = ModManager.RegisterNewSoundEffect("MoreShieldsAssets/impactwood14 (quieter).mp3.flac");
+        public static readonly SfxName ShieldBlockWoodenImpact = ModManager.RegisterNewSoundEffect("MoreShieldsAssets/impactwood14 (quieter).mp3.flac");
     }
 
     public static class Tooltips

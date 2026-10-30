@@ -255,7 +255,7 @@ public static class CommonShieldRules
                 async () =>
                 {
                     // Adds an impact sound
-                    Sfxs.Play(ModData.SfxNames.ShieldBlockWooodenImpact);
+                    Sfxs.Play(ModData.SfxNames.ShieldBlockWoodenImpact);
 
                     foreach (QEffect qf in blockingCreature.QEffects.ToList())
                         await qf.WhenYouUseShieldBlock.InvokeIfNotNull(qf, damageEvent.Source, targetedCreature,
