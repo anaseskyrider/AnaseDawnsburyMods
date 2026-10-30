@@ -509,10 +509,14 @@ public static class OldShields
                 if (item.HasTrait(ModData.Traits.Hefty14))
                     details.Add("{b}Minimum Strength{/b} 14 {i}(if not met, Raise a Shield takes +1 action){/i}");
 
+                string shieldPropertiesBlock = string.Join("\n", details);
+
+                if (string.IsNullOrEmpty(shieldPropertiesBlock))
+                    return null;
+                
                 return new StatblockGeneratedSection(
                     "SHIELD PROPERTIES",
-                    string.Join("\n", details)
-                        /*.TrimEnd('\n')*/);
+                    shieldPropertiesBlock);
             });
     }
 

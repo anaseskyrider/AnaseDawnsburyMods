@@ -129,11 +129,11 @@ public static class ShieldModifications
     public static ItemName RegisterNewShieldAugmentation(string technicalName, string humanizedTraits, params Trait[] addedTraits)
     {
         if (addedTraits.Length == 0)
-            throw new ArgumentException("You must provide at least one Trait", nameof(addedTraits));
+            throw new ArgumentException("You must provide at least one Trait.", nameof(addedTraits));
         string traitDescription =
             humanizedTraits
             + " trait"
-            + (humanizedTraits.Contains("and") || humanizedTraits.Contains(",")
+            + (humanizedTraits.Contains("and") || humanizedTraits.Contains(',')
                 ? "s"
                 : null);
         string variantName = technicalName.Replace("ShieldAugmentation", "").ToLower();
@@ -142,9 +142,8 @@ public static class ShieldModifications
             iName => new Item(
                     iName,
                     ModData.Illustrations.ShieldAugmentation,
-                    "shield augmentation ("+variantName+")",
-                    0,
-                    1,
+                    $"shield augmentation ({variantName})",
+                    0, 1,
                     [ModData.ModTrait, Trait.Runestone])
                 .WithRuneProperties(new RuneProperties(
                         "augmented",

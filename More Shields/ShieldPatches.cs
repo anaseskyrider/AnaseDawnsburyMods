@@ -1,4 +1,3 @@
-using System.Reflection;
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.Feats;
@@ -20,8 +19,12 @@ using Dawnsbury.Core.StatBlocks.Monsters.L5;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
 using Dawnsbury.Display.Text;
+using Dawnsbury.IO;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
+
+// ReSharper disable UnusedType.Global
+// ReSharper disable UnusedMember.Global
 
 namespace Dawnsbury.Mods.MoreShields;
 
