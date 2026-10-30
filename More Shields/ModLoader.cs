@@ -1,5 +1,4 @@
-﻿using Dawnsbury.Core.Mechanics;
-using Dawnsbury.Core.Mechanics.Enumerations;
+﻿using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Modding;
 using HarmonyLib;
@@ -34,18 +33,25 @@ public class ModLoader
             {
                 ShieldModifications.AllShieldPlates.ForEach(plate =>
                 {
-                    Item platedShield = ShieldModifications.CreatePlatedShield(shield.ItemName, plate)
+                    if (Items.CreateNew(plate) is not { } plating
+                        || plating.RuneProperties?.CanBeAppliedTo is null
+                        || plating.RuneProperties.CanBeAppliedTo.Invoke(plating, shield) is not null)
+                        return;
+                    
+                    Item platedShield = ShieldModifications
+                        .CreatePlatedShield(shield.ItemName, plate)
                         .WithItemGreaterGroup(ModData.ItemGreaterGroups.PlatedShields);
                     allPlatedShields.Add(platedShield);
                 });
             });
             // Add plated variants to the shop
             Items.ShopItems.InsertRange(
-                Items.ShopItems.FindIndex(item => item.ItemName is ItemName.SturdyShield13),
+                Items.ShopItems.FindIndex(item =>
+                    item.ItemName is ItemName.SturdyShield20),
                 allPlatedShields);
             // Remove sturdy shields
-            Items.ShopItems
-                .RemoveAll(item => item.Name.Contains("sturdy shield"));
+            Items.ShopItems.RemoveAll(item =>
+                item.Name.Contains("sturdy shield"));
         };
     }
 }
