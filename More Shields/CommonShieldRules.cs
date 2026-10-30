@@ -60,14 +60,14 @@ public static class CommonShieldRules
                 if (value && !field && this._hp > 1)
                 {
                     // Add bonus HP
-                    this.HP += this._maxHP / 2;
+                    this._hp += this._maxHP / 2;
                 }
                 // Is set to false when it was not previously
                 else if (!value && field && this._hp > 0)
                 {
                     // Remove bonus HP, but not to the point of
                     // breaking it.
-                    this.HP = Math.Max(this.HP - (this._maxHP / 2), 1);
+                    this._hp = Math.Max(this.HP - (this._maxHP / 2), 1);
                 }
                 
                 // Update
