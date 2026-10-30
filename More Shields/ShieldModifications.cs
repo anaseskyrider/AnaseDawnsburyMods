@@ -114,9 +114,10 @@ public static class ShieldModifications
     
     public static Item CreatePlatedShield(ItemName item, ItemName plate)
     {
+        ItemModification modificationRune = ItemModification.Create("rune_" + plate.ToStringOrTechnical());
         return Items.CreateNew(item)
-            .WithItemGroup("Plated ("+plate.ToStringOrTechnical().Replace("SturdyShieldPlating", "").Replace("2","").ToLower()+") shields")
-            .WithModificationRune(plate);
+            .WithItemGroup($"Plated ({plate.ToStringOrTechnical().Replace("SturdyShieldPlating", "").Replace("2", "").ToLower()}) shields")
+            .WithModification(modificationRune);
     }
 
     /// <summary>
@@ -149,8 +150,30 @@ public static class ShieldModifications
                         "augmented",
                         ModData.RuneKinds.ShieldAugmentation,
                         "There are numerous methods to modify shields — snarling rods to catch weapons, bladed edges, padding for nonlethal strikes, and so on — but all share basic functionality.",
-                        $"The shield gains the {traitDescription}.",
-                        item => { item.Traits.AddRange(addedTraits); })
+                        $"The shield gains the {traitDescription}, and its damage die is reduced from a d6 to a d4.",
+                        item =>
+                        {
+                            item.Traits.AddRange(addedTraits);
+                            item.WeaponProperties?.DamageDieSize = DamageDiceUtils.DecreaseDamageDiceByOneStep(item.WeaponProperties.DamageDieSize);
+                            item.StateCheckWhenWielded += (cr, item1) =>
+                            {
+                                if (cr.HasEffect(QEffectId.AgileShieldGrip))
+                                    cr.AddQEffect(new QEffect(ExpirationCondition.Ephemeral)
+                                    {
+                                        Key = "ShieldAugmentationAgileShieldGripRemover",
+                                        AdjustStrikeAction = (qfThis, action) =>
+                                        {
+                                            if (action.Item?.Traits.Contains(Trait.Shield) != true)
+                                                return;
+                                            
+                                            // Remove the agile trait from Agile Shield Grip.
+                                            if (action.HasTrait(Trait.Agile)
+                                                && !action.Item.HasTrait(Trait.Agile))
+                                                action.Traits.Remove(Trait.Agile);
+                                        }
+                                    });
+                            };
+                        })
                     .WithCanBeAppliedTo((_, shield) =>
                         shield.HasTrait(Trait.Shield) ? null : "Shield augmentations can only be applied to shields."))
                 .WithItemGreaterGroup(ModData.ItemGreaterGroups.ShieldModifications)
