@@ -20,6 +20,7 @@ using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display;
 using Dawnsbury.Display.Controls.Statblocks;
 using Dawnsbury.Display.Illustrations;
+using Dawnsbury.IO;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
@@ -33,6 +34,7 @@ public static class OldShields
         ModifyOldFeats();
         ModifyOldShields();
         UpdateDescriptions();
+        AddHPTracking();
     }
 
     public static void ModifyBaseActions()
@@ -433,6 +435,33 @@ public static class OldShields
                 self.AddQEffect(emblazonQf);
             });
         });
+        
+        // Shield Ally
+        // The feat now mentions that it increases a shield's HP.
+        AdjustFeatByEnum(Champion.ShieldAllyFeatName, shieldAlly =>
+        {
+            shieldAlly.RulesText += " Shields in your hands have 50% additional HP.";
+            shieldAlly.OnCreature = null;
+            shieldAlly.WithPermanentQEffect(
+                "Your shields prevent 2 more damage with Shield Block and have 50% more HP.",
+                qfFeat => qfFeat.Id = QEffectId.ShieldAlly);
+        });
+        
+        AdjustFeatByEnum(Champion.AgileShieldGripFeatName, agileGrip =>
+        {
+            var cached = agileGrip.InappropriateBecauseOfBadInventory;
+            agileGrip.WithInappropriateBecauseOfBadInventory((values, inventory) =>
+            {
+                if (cached?.Invoke(values, inventory) is { } firstReason)
+                    return firstReason;
+                return FeatInventoryRequirements.RequiresOne(
+                    inventory,
+                    item => item.Runes.All(rune =>
+                        rune.RuneProperties!.RuneKind != ModData.RuneKinds.ShieldAugmentation),
+                    "a shield without a shield augmentation");
+            });
+            agileGrip.RulesText = $"{{b}}Requirements{{/b}} ({ModData.Illustrations.DdSun.IllustrationAsIconString} More Shields) You're wielding a shield that doesn't have a shield augmentation.\n\n" + agileGrip.RulesText;
+        });
 
         return;
 
@@ -495,6 +524,21 @@ public static class OldShields
                     details.Add($"{{b}}Hardness{{/b}} {item.Hardness.ToString()} {{i}}(Used for {ModData.Tooltips.ActionShieldBlock("Shield Block {icon:Reaction}")}){{/i}}");
                 else
                     return null;
+                
+                // Current and max HP
+                CommonShieldRules.ShieldProperties? shieldProps = item.GetShieldProperties();
+                string hp = "{b}HP{/b} ";
+                int maxHP = shieldProps?.MaxHP ?? GetShieldMaxHP(item);
+                int? curHP = shieldProps?.HP;
+                if (curHP is null && maxHP > 0)
+                    curHP = maxHP;
+                if (maxHP > 0
+                    && !PlayerProfile.Instance.IsBooleanOptionEnabled(
+                        ModData.BooleanOptions.ShieldsDontTakeDamage))
+                {
+                    hp += $"{curHP}/{maxHP} {{i}}(Broken at 0 HP){{/i}}";
+                    details.Add(hp);
+                }
         
                 // Speed penalty
                 int speedPenalty = item.HasTrait(ModData.Traits.FortressShield)
@@ -518,6 +562,111 @@ public static class OldShields
                     "SHIELD PROPERTIES",
                     shieldPropertiesBlock);
             });
+    }
+
+    public static void AddHPTracking()
+    {
+        // Modify items when created
+        ModManager.RegisterActionOnEachItem(item =>
+        {
+            if (!item.HasTrait(Trait.Shield))
+                return item;
+
+            // Cache the original state check so that this can be added on top.
+            var cached = item.StateCheckWhenWielded;
+            
+            // Add a new state check.
+            item.StateCheckWhenWielded = (cr, shield) =>
+            {
+                // Call the original
+                cached?.Invoke(cr, shield);
+
+                // Add the HP-tracking properties
+                // (this is a TryAdd underneath)
+                shield.AddShieldProperties(GetShieldMaxHP(shield));
+                CommonShieldRules.ShieldProperties? shieldProps = shield.GetShieldProperties();
+                
+                // If successfully created, apply Shield Ally.
+                shieldProps?.IsShieldAlly = cr.HasEffect(QEffectId.ShieldAlly);
+
+                // If successfully created, and broken,
+                if (shieldProps?.HP is <= 0
+                    // and this feature isn't disabled,
+                    && !PlayerProfile.Instance.IsBooleanOptionEnabled(
+                        ModData.BooleanOptions.ShieldsDontTakeDamage))
+                    // Apply broken effect
+                    cr.AddQEffect(CommonShieldRules.BrokenShield(shield));
+            };
+
+            return item;
+        });
+    }
+
+    public static int GetShieldMaxHP(Item shield, Creature? wielder = null)
+    {
+        // Base max.
+        // For simplicity, a shield's max HP is its BT.
+        int maxHP = 0;
+        switch (shield.MainTrait)
+        {
+            case Trait.WoodenShield:
+                maxHP = 6; // 12
+                break;
+            case Trait.SteelShield:
+                maxHP = 10; // 20
+                if (shield.ItemName == ItemName.ClockworkShield)
+                    maxHP = 45; // 90 (45)
+                else if (shield.ItemName == ItemName.ClockworkShieldGreater)
+                    maxHP = 65; // 130 (65)
+                break;
+            case Trait.TowerShield:
+                maxHP = 10; // 20
+                break;
+            default:
+                if (shield.MainTrait == ModData.Traits.Buckler)
+                    maxHP = 3; // 6
+                else if (shield.MainTrait == ModData.Traits.FortressShield)
+                    maxHP = 12; // 24
+                else if (shield.MainTrait == ModData.Traits.MeteorShield)
+                    maxHP = 8; // 16
+                else if (shield.MainTrait == ModData.Traits.HeavyRondache)
+                    maxHP = 12; // 24
+                else if (shield.MainTrait == ModData.Traits.CastersTarge)
+                    maxHP = 6; // 12
+                break;
+        }
+        
+        // Bonus max.
+        // Amount is based on how many points it takes to raise a Steel Shield
+        // up to an equivalent Sturdy Shield value. The cap is what a Fortress
+        // Shield with this plating would equal (12 + the bonus), if its base
+        // maxHP wasn't already higher (due to being a specific shield).
+        if (shield.ItemName == ItemName.SturdyShield8
+            || shield.Runes.Any(rune =>
+                rune.ItemName == ModData.ItemNames.SturdyShieldPlatingMinor)) // Lv4 (Minor)
+            maxHP = Math.Min(maxHP + 22, Math.Max(12 + 22, maxHP)); // 64 (32)
+        else if (shield.ItemName == ItemName.SturdyShield10
+                 || shield.Runes.Any(rune =>
+                     rune.ItemName == ModData.ItemNames.SturdyShieldPlatingLesser)) // Lv7 (Lesser)
+            maxHP = Math.Min(maxHP + 30, Math.Max(12 + 30, maxHP)); // 80 (40)
+        else if (shield.ItemName == ItemName.SturdyShield13
+                 || shield.Runes.Any(rune =>
+                     rune.ItemName == ModData.ItemNames.SturdyShieldPlatingModerate)) // Lv10 (Moderate)
+            maxHP = Math.Min(maxHP + 42, Math.Max(12 + 42, maxHP)); // 104 (52)
+        else if (shield.ItemName == ItemName.SturdyShield15
+                 || shield.Runes.Any(rune =>
+                     rune.ItemName == ModData.ItemNames.SturdyShieldPlatingGreater)) // Lv13 (Greater)
+            maxHP = Math.Min(maxHP + 50, Math.Max(12 + 50, maxHP)); // 120 (60)
+        else if (shield.ItemName == ItemName.SturdyShield17
+                 || shield.Runes.Any(rune =>
+                     rune.ItemName == ModData.ItemNames.SturdyShieldPlatingMajor)) // Lv16 (Major)
+            maxHP = Math.Min(maxHP + 58, Math.Max(12 + 58, maxHP)); // 136 (68)
+        else if (shield.ItemName == ItemName.SturdyShield20
+                 || shield.Runes.Any(rune =>
+                     rune.ItemName == ModData.ItemNames.SturdyShieldPlatingSupreme)) // Lv19 (Supreme)
+            maxHP = Math.Min(maxHP + 70, Math.Max(12 + 70, maxHP)); // 160 (80)
+
+        return maxHP;
     }
 
     public static Item ShieldAlterations(Item item)

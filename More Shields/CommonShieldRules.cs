@@ -1,5 +1,7 @@
+using System.Runtime.CompilerServices;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
+using Dawnsbury.Core;
 using Dawnsbury.Core.CharacterBuilder.FeatsDb.TrueFeatDb;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Coroutines.Options;
@@ -13,12 +15,91 @@ using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Display.Text;
+using Dawnsbury.IO;
 using Microsoft.Xna.Framework;
 
 namespace Dawnsbury.Mods.MoreShields;
 
 public static class CommonShieldRules
 {
+    public static readonly ConditionalWeakTable<Item, ShieldProperties> ShieldPropertyList = [];
+
+    public class ShieldProperties
+    {
+        private int _maxHP;
+        private int _hp;
+        
+        public required Item Shield { init; get; }
+        
+        public int HP
+        {
+            set => this._hp = Math.Clamp(value, 0, this.MaxHP);
+            get => this._hp;
+        }
+
+        public int MaxHP
+        {
+            set => this._maxHP = Math.Max(0, value);
+            get => this._maxHP + (this.IsShieldAlly ? this._maxHP / 2 : 0);
+        }
+        
+        //public int Hardness => Shield.Hardness;
+        //public int AC { set; get; }
+        //public bool CanTakeCoverBehind { set; get; }
+
+        /// <summary>
+        /// If true, adds 50% to the shield's max HP.
+        /// </summary>
+        public bool IsShieldAlly
+        {
+            set
+            {
+                // Is set to true when it was not previously,
+                // and isn't already broken (minimum of 2 due to
+                // the next elif block)
+                if (value && !field && this._hp > 1)
+                {
+                    // Add bonus HP
+                    this.HP += this._maxHP / 2;
+                }
+                // Is set to false when it was not previously
+                else if (!value && field && this._hp > 0)
+                {
+                    // Remove bonus HP, but not to the point of
+                    // breaking it.
+                    this.HP = Math.Max(this.HP - (this._maxHP / 2), 1);
+                }
+                
+                // Update
+                field = value;
+            }
+            get;
+        }
+    }
+
+    extension(Item shield)
+    {
+        public Item AddShieldProperties(int maxHP)
+        {
+            ShieldProperties newProps = new ShieldProperties()
+            {
+                Shield = shield,
+                MaxHP = maxHP,
+                HP = maxHP,
+            };
+            CommonShieldRules.ShieldPropertyList.TryAdd(shield, newProps);
+            return shield;
+        }
+
+        public ShieldProperties? GetShieldProperties()
+        {
+            return CommonShieldRules.ShieldPropertyList
+                .TryGetValue(shield, out ShieldProperties? value)
+                ? value
+                : null;
+        }
+    }
+
     // These functions relate to shield items and their statistics.
     #region Shield Item Functions
 
@@ -135,6 +216,53 @@ public static class CommonShieldRules
 
         return Bonus.Sum(bonuses, false).BonusTotal;
     }
+
+    /// <summary>
+    /// A broken shield cannot be raised nor used for Shield Block.
+    /// </summary>
+    /// <remarks>
+    /// This is an Ephemeral effect. Add this as part of a <see cref="QEffect.StateCheck"/>.
+    /// </remarks>
+    /// <param name="shield">The shield that's broken.</param>
+    public static QEffect BrokenShield(Item shield)
+    {
+        return new QEffect(
+            "Broken shield",
+            $"Your {shield.Illustration.IllustrationAsIconString}{shield.Name} shield is broken. You cannot Strike with it, raise it, nor Shield Block {{icon:Reaction}} with it.",
+            ExpirationCondition.Ephemeral,
+            null,
+            IllustrationName.Broken)
+        {
+            Id = ModData.QEffectIds.BrokenShield,
+            Tag = shield,
+            PreventTakingAction = action =>
+            {
+                switch (action.ActionId)
+                {
+                    // Don't prevent all the basic Interact actions.
+                    case ActionId.DrawItem or ActionId.DropItem
+                        or ActionId.HandOverItem or ActionId.PickUpItem
+                        or ActionId.ReplaceItemInHand or ActionId.StowItem
+                        or ActionId.OpenADoor:
+                    // Special rules compatibility
+                    case ActionId.RaiseShield
+                        when action.Owner.HasEffect(ModData.QEffectIds.CanRaiseBrokenShields):
+                        return null;
+                    default:
+                        return action.Item == shield
+                            ? "Broken shield"
+                            : null;
+                }
+            },
+            StateCheckLayer = 1,
+            StateCheck = qfThis =>
+            {
+                qfThis.Owner.RemoveAllQEffects(qf =>
+                    qf.Id is QEffectId.RaisingAShield
+                    && qf.Tag == shield);
+            }
+        };
+    }
     
     #endregion
 
@@ -245,6 +373,11 @@ public static class CommonShieldRules
         int preventHowMuch = Math.Min(hardness, damageStuff.Amount);
 
         CombatAction displayReaction = ShieldBlockAction(damageEvent, targetedCreature, blockingCreature, shield, hardness, preventHowMuch);
+
+        // Commented out because I'm not currently using this function anyway.
+        /*if (!displayReaction.CanBeginToUse(blockingCreature))
+            return null;*/
+        
         string whatDamage = DoesSparklingTargeShieldBlockApply(damageStuff.Power, blockingCreature)
             ? "{Blue}magical{/Blue} damage"
             : "damage";
@@ -273,6 +406,7 @@ public static class CommonShieldRules
                         displayReaction.Traits);
 
                     damageEvent.ReduceBy(preventHowMuch, "Shield block");
+                    shield.GetShieldProperties()?.HP -= damageEvent.TotalResolvedDamage;
                 })
             .WithTraits(Trait.ShieldBlock)
             .WithIsReaction();
@@ -296,12 +430,12 @@ public static class CommonShieldRules
 
                   {b}Trigger{/b} While you have your shield raised, you would take damage from a physical attack.
 
-                  Your {{(shield is not null ? shield.Illustration.IllustrationAsIconString + shield.Name.WithColor("Blue") : "shield")}} prevents you from taking up to {{hardness?.WithColor("Blue") ?? "the shield's hardness in"}} damage. You take any remaining damage.
+                  Your {{(shield is not null ? shield.Illustration.IllustrationAsIconString + shield.Name.WithColor("Blue") : "shield")}} prevents you from taking up to {{hardness?.WithColor("Blue") ?? "the shield's hardness in"}} damage. You and the shield take any remaining damage, possibly breaking the shield.
                   """,
                 Target.Self())
             .WithActionCost(-2)
             // Adds an impact sound
-            .WithSoundEffect(ModData.SfxNames.ShieldBlockWooodenImpact)
+            .WithSoundEffect(ModData.SfxNames.ShieldBlockWoodenImpact)
             // Track the triggering damage event
             .WithTag(dEvent)
             .WithItem(shield!)
@@ -322,7 +456,47 @@ public static class CommonShieldRules
                     action.Description,
                     action.Traits);*/
 
+                // Reduce damage taken
                 dEvent.ReduceBy(preventHowMuch, "Shield block");
+                
+                // Shield damage
+                if (shield is not null
+                    && !PlayerProfile.Instance.IsBooleanOptionEnabled(
+                        ModData.BooleanOptions.ShieldsDontTakeDamage))
+                {
+                    ShieldProperties? shieldProps = shield.GetShieldProperties();
+                    // Log the shield's taken damage
+                    int? beforeHP = shieldProps?.HP;
+                    if (beforeHP is not null)
+                    {
+                        blocker.Battle.Log(
+                            $"{blocker.Name}'s {shield.Illustration.IllustrationAsIconString}{shield.Name} takes {dEvent.TotalResolvedDamage.WithTag("b")} damage.",
+                            "Shield damage",
+                            $$"""
+                              {b}{{beforeHP}}{/b} Hit points {i}({{shield.Name}}){/i}
+                              {b}-{{dEvent.TotalResolvedDamage}}{/b} Unblocked damage
+                              {b}= {{Math.Max(0, (int)beforeHP - dEvent.TotalResolvedDamage)}} Remaining hit points{/b}
+                              
+                              {i}(Shield item damage can be disabled in {b}Settings / Mod settings{/b}.){/i}
+                              """,
+                            new Traits([ModData.ModTrait]));
+                    }
+                    
+                    // Apply item damage
+                    shieldProps?.HP -= dEvent.TotalResolvedDamage;
+                    
+                    // Announce broken shield event.
+                    // Do not apply effect as that's handled by the item itself
+                    // immediately after this in a StateCheck.
+                    if (shieldProps?.HP is 0
+                        && !blocker.HasEffect(ModData.QEffectIds.BrokenShield))
+                    {
+                        blocker.Overhead(
+                            "*broken shield*",
+                            Color.Red,
+                            $"{blocker.Name}'s {shield.Illustration.IllustrationAsIconString}{shield.Name} breaks.");
+                    }
+                }
             });
         if (shield is not null)
             shieldBlock.WithItem(shield);

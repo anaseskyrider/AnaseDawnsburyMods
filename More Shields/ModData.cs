@@ -22,6 +22,7 @@ public static class ModData
     {
         ModTrait = ModManager.ModBeingLoadedTrait!.Value; // Cannot be null at this time
         
+        BooleanOptions.Initialize();
         ItemGreaterGroups.Initialize();
         QEffectIds.Initialize();
         RuneKinds.Initialize();
@@ -43,7 +44,37 @@ public static class ModData
             shieldProperties.BackgroundColor,
             shieldProperties.WhiteForeground,
             shieldProperties.IsFeatOnlyTrait);
+    }
+
+    /// <summary>
+    /// Keeps the options registered with <see cref="ModManager.RegisterBooleanSettingsOption"/>. To read the registered options, use <see cref="PlayerProfile.IsBooleanOptionEnabled(string)"/>.
+    /// </summary>
+    public static class BooleanOptions
+    {
+        public static string ShieldsDontTakeDamage = null!;
         
+        internal static void Initialize()
+        {
+            ShieldsDontTakeDamage = RegisterBooleanOption(
+                ID_PREPEND+"ShieldsDontTakeDamage",
+                "More Shields: Shields Don't Take Damage",
+                "Enabling this option prevents shields from taking damage and being broken by {b}Shield Block {icon:Reaction}{/b}.",
+                false);
+        }
+        
+        /// <summary>
+        /// Functions as <see cref="ModManager.RegisterBooleanSettingsOption"/>, but also returns the technicalName.
+        /// </summary>
+        /// <returns>(string) The technical name for the option.</returns>
+        private static string RegisterBooleanOption(
+            string technicalName,
+            string caption,
+            string longDescription,
+            bool defaultValue)
+        {
+            ModManager.RegisterBooleanSettingsOption(technicalName, caption, longDescription, defaultValue);
+            return technicalName;
+        }
     }
 
     public static class Illustrations
@@ -109,11 +140,15 @@ public static class ModData
     {
         public static QEffectId BonusToHardness;
         public static QEffectId CastersTargeUsed;
+        public static QEffectId BrokenShield;
+        public static QEffectId CanRaiseBrokenShields;
         
         internal static void Initialize()
         {
             BonusToHardness = ModManager.SafelyRegisterEnumMember<QEffectId>("BonusToHardness");
             CastersTargeUsed = ModManager.SafelyRegisterEnumMember<QEffectId>("CastersTargeUsed");
+            BrokenShield = ModManager.SafelyRegisterEnumMember<QEffectId>("BrokenShield");
+            CanRaiseBrokenShields = ModManager.SafelyRegisterEnumMember<QEffectId>("CanRaiseBrokenShields");
         }
     }
 
@@ -137,12 +172,23 @@ public static class ModData
     public static class Tooltips
     {
         public static readonly Func<string, string> ActionRaiseAShield = RegisterTooltipInserter(
-            IdPrepend+"Actions.RaiseAShield",
-            "{b}Raise a Shield {icon:Action}{/b}\n(Requires you wield a shield)\nYou position your shield to protect yourself. When you have Raised a Shield, you gain its listed circumstance bonus to AC. Your shield remains raised until the start of your next turn.");
+            ID_PREPEND+"Actions.RaiseAShield",
+            """
+            {b}Raise a Shield {icon:Action}{/b}
+            (Requires you wield a shield)
+            You position your shield to protect yourself. When you have Raised a Shield, you gain its listed circumstance bonus to AC. Your shield remains raised until the start of your next turn.
+            """);
 
         public static readonly Func<string, string> ActionShieldBlock = RegisterTooltipInserter(
-            IdPrepend+"Actions.ShieldBlock",
-            "{b}Shield Block {icon:Reaction}{/b}\n{i}Level 1 General feat{/i}\n{b}Trigger{/b} While you have your shield raised, you would take damage from a physical attack.\n{b}Effect{/b} Your shield prevents you from taking an amount of damage up to the shield’s Hardness. You take any remaining damage.\n\n{icon:YellowWarning} You must learn this feat to use Shield Block. Some characters, such as fighters, start with it for free.");
+            ID_PREPEND+"Actions.ShieldBlock",
+            """
+            {b}Shield Block {icon:Reaction}{/b}
+            {i}Level 1 General feat{/i}
+            {b}Trigger{/b} While you have your shield raised, you would take damage from a physical attack.
+            {b}Effect{/b} Your shield prevents you from taking an amount of damage up to the shield’s Hardness. You and the shield take any remaining damage, possibly breaking the shield.
+
+            {icon:YellowWarning} You must learn this feat to use Shield Block. Some characters, such as fighters, start with it for free.
+            """);
         
         /// <summary>
         /// Registers a tooltip, then returns a function that can be used to insert the tooltip with any arbitrary text.

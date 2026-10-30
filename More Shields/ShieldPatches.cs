@@ -272,15 +272,32 @@ public static class ShieldPatches
                 shield.Hardness,
                 preventHowMuch);
             
+            if (!displayReaction.CanBeginToUse(blockingCreature))
+            {
+                __result = null;
+                return;
+            }
+            
             // If Targe response, then add in a note about triggering Targe's benefits.
             string whatDamage = CommonShieldRules.DoesSparklingTargeShieldBlockApply(damageEvent.CombatAction, blockingCreature)
                 ? "{Blue}magical{/Blue} damage"
                 : "damage";
 
+            int? remainingHP = shield.GetShieldProperties()?.HP;
+            int remainingDmg = Math.Max(0, damageEvent.TotalResolvedDamage - preventHowMuch);
+            bool willBreak = remainingHP - remainingDmg <= 0;
+            string? hpString =
+                remainingHP is not null
+                && !preventWhat.Contains("all")
+                && !PlayerProfile.Instance.IsBooleanOptionEnabled(
+                    ModData.BooleanOptions.ShieldsDontTakeDamage)
+                    ? $" {{i}}(Shield takes {$"{remainingDmg} damage".WithColor(willBreak ? "Red" : null).WithTag(willBreak ? "b" : null)} of {remainingHP} HP){{/i}}"
+                    : null;
+
             // Replace with a combat action display instead, for UEX.
             ReactionOption reaction = ReactionOption.WrapFullcast(
                     displayReaction,
-                    $"{shield.Illustration.IllustrationAsIconString} Prevent {preventWhat} of this {whatDamage}.");
+                    $"{shield.Illustration.IllustrationAsIconString} Prevent {preventWhat} of this {whatDamage}.{hpString}");
             
             __result = reaction;
         }

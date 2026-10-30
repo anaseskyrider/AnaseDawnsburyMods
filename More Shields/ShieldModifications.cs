@@ -1,5 +1,7 @@
 using System.Reflection;
+using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Display;
 using Dawnsbury.Modding;
@@ -20,30 +22,39 @@ public static class ShieldModifications
     public static void LoadModifications()
     {
         // Plating
+        // Bonus amounts are equivalent to the amount it takes to
+        // raise a steel shield's hardness to an equivalent level
+        // sturdy shield.
         (ModData.ItemNames.SturdyShieldPlatingMinor, var minorFactory) = RegisterNewShieldPlating(
             "SturdyShieldPlatingMinor",
             "minor",
-            4, 75, 3); // If OP: +2
+            4, 75, 3, 22, 1,
+            null);
         (ModData.ItemNames.SturdyShieldPlatingLesser, var lesserFactory) = RegisterNewShieldPlating(
             "SturdyShieldPlatingLesser",
             "lesser",
-            7, 300, 5); // If OP: +4 or +3
+            7, 300, 5, 30, 2,
+            ModData.ItemNames.SturdyShieldPlatingMinor); // If OP: +4 or +3
         (ModData.ItemNames.SturdyShieldPlatingModerate, var moderateFactory) = RegisterNewShieldPlating(
             "SturdyShieldPlatingModerate",
             "moderate",
-            10, 900, 8); // If OP: +6 or +5
+            10, 900, 8, 42, 3,
+            ModData.ItemNames.SturdyShieldPlatingLesser); // If OP: +6 or +5
         (ModData.ItemNames.SturdyShieldPlatingGreater, var greaterFactory) = RegisterNewShieldPlating(
             "SturdyShieldPlatingGreater",
             "greater",
-            13, 2500, 10); // If OP: +7 or +6
+            13, 2500, 10, 50, 4,
+            ModData.ItemNames.SturdyShieldPlatingModerate); // If OP: +7 or +6
         (ModData.ItemNames.SturdyShieldPlatingMajor, var majorFactory) = RegisterNewShieldPlating(
             "SturdyShieldPlatingMajor",
             "major",
-            16, 8000, 12); // If OP: +8 or +7
+            16, 8000, 12, 58, 5,
+            ModData.ItemNames.SturdyShieldPlatingGreater); // If OP: +8 or +7
         (ModData.ItemNames.SturdyShieldPlatingSupreme, var supremeFactory) = RegisterNewShieldPlating(
             "SturdyShieldPlatingSupreme",
             "supreme",
-            19, 32000, 15); // If OP: +10 or +9
+            19, 32000, 15, 70, 6,
+            ModData.ItemNames.SturdyShieldPlatingMajor); // If OP: +10 or +9
         
         Func<ItemName, Item>[] factories = [minorFactory, lesserFactory, moderateFactory, greaterFactory, majorFactory, supremeFactory];
 
@@ -84,7 +95,7 @@ public static class ShieldModifications
             [Trait.VersatileP, Trait.VersatileS]);
     }
     
-    public static (ItemName, Func<ItemName,Item>) RegisterNewShieldPlating(string technicalName, string tier, int level, int price, int bonusHardness, params Trait[] traits)
+    public static (ItemName, Func<ItemName,Item>) RegisterNewShieldPlating(string technicalName, string tier, int level, int price, int bonusHardness, int bonusHP, int fundamentalLevel, ItemName? upgradesFrom, params Trait[] traits)
     {
         Func<ItemName, Item> factory = iName => new Item(
                 iName,
@@ -96,14 +107,26 @@ public static class ShieldModifications
                     tier + " plated",
                     ModData.RuneKinds.ShieldPlating,
                     "Magically enchanted plating makes the shield much sturdier.",
-                    $"The enchanted shield's hardness increases by {bonusHardness}. For example, a {tier} plated steel shield has a hardness of {5 + bonusHardness} instead of 5.",
-                    item1 => item1.Hardness += bonusHardness)
+                    $"The enchanted shield's hardness increases by {bonusHardness} {{i}}(up to {bonusHardness + 6}){{/i}}, and its HP increases by {bonusHP} {{i}}(up to {bonusHP + 12}){{/i}}. For example, a {tier} plated steel shield has a hardness of {5 + bonusHardness} and {10 + bonusHardness} HP instead of 5 and 10.",
+                    item1 =>
+                    {
+                        item1.Hardness = Math.Min(
+                            // The base hardness plus the bonus,
+                            item1.Hardness + bonusHardness,
+                            // cannot exceed the highest of its base hardness
+                            // or a Fortress Shield with this bonus
+                            Math.Max(item1.Hardness, 6 + bonusHardness));
+                    },
+                    fundamentalLevel)
                 .WithCanBeAppliedTo((_, shield) =>
                 {
                     if (shield.Name.Contains("sturdy shield"))
                         return "Shield plating cannot be applied to sturdy shields";
                     if (!shield.HasTrait(Trait.Shield))
                         return "Shield plating can only be applied to shields.";
+                    if (shield.Hardness >= 5 + bonusHardness
+                        && (shield.GetShieldProperties()?.MaxHP ?? OldShields.GetShieldMaxHP(shield)) >= 12 + bonusHP)
+                        return "This item has higher hardness and HP.";
                     return null;
                 })
                 .WithUpgradesFrom(upgradesFrom))
