@@ -6,6 +6,7 @@ using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Display.Illustrations;
+using Dawnsbury.IO;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
@@ -13,13 +14,17 @@ namespace Dawnsbury.Mods.MoreShields;
 
 public static class ModData
 {
-    public const string IdPrepend = "MoreShields.";
+    public const string ID_PREPEND = "MoreShields.";
 
     public static Trait ModTrait;
     
     public static void LoadData()
     {
         ModTrait = ModManager.ModBeingLoadedTrait!.Value; // Cannot be null at this time
+        
+        ItemGreaterGroups.Initialize();
+        QEffectIds.Initialize();
+        RuneKinds.Initialize();
         
         // Trait Modification //
         TraitProperties tShieldProperties = Trait.TowerShield.GetTraitProperties();
@@ -39,32 +44,36 @@ public static class ModData
             shieldProperties.WhiteForeground,
             shieldProperties.IsFeatOnlyTrait);
         
-        // RuneKind registration //
-        RuneKinds.ShieldPlating = ModManager.TryParse("ShieldPlating", out RuneKind shieldPlating)
-            ? shieldPlating
-            : ModManager.RegisterEnumMember<RuneKind>("ShieldPlating");
     }
 
     public static class Illustrations
     {
-        public const string ModFolder = "MoreShieldsAssets/";
+        public const string MOD_FOLDER = "MoreShieldsAssets/";
         
-        public static readonly Illustration ShieldBlock = new ModdedIllustration(ModFolder+"shield_block.png");
-        public static readonly Illustration ReactiveShield = new ModdedIllustration(ModFolder+"reactive_shield.png");
+        public static readonly Illustration DdSun = new ModdedIllustration(MOD_FOLDER+"PatreonSunTransparent.png");
         
-        public static readonly Illustration Buckler = new ModdedIllustration(ModFolder+"buckler.png");
-        public static readonly Illustration MeteorShield = new ModdedIllustration(ModFolder+"frisbee2.png");
-        public static readonly Illustration FortressShield = new ModdedIllustration(ModFolder+"shield.png");
-        public static readonly Illustration HeavyRondache = new ModdedIllustration(ModFolder+"buckler 2.png");
-        public static readonly Illustration CastersTarge = new ModdedIllustration(ModFolder+"shield (2).png");
-        public static readonly Illustration ShieldPlating = new ModdedIllustration(ModFolder+"steel.png");
-        public static readonly Illustration ShieldAugmentation = new ModdedIllustration(ModFolder+"repair.png");
+        public static readonly Illustration ShieldBlock = new ModdedIllustration(MOD_FOLDER+"shield_block.png");
+        public static readonly Illustration ReactiveShield = new ModdedIllustration(MOD_FOLDER+"reactive_shield.png");
+        
+        public static readonly Illustration Buckler = new ModdedIllustration(MOD_FOLDER+"buckler.png");
+        public static readonly Illustration MeteorShield = new ModdedIllustration(MOD_FOLDER+"frisbee2.png");
+        public static readonly Illustration FortressShield = new ModdedIllustration(MOD_FOLDER+"shield.png");
+        public static readonly Illustration HeavyRondache = new ModdedIllustration(MOD_FOLDER+"buckler 2.png");
+        public static readonly Illustration CastersTarge = new ModdedIllustration(MOD_FOLDER+"shield (2).png");
+        public static readonly Illustration ShieldPlating = new ModdedIllustration(MOD_FOLDER+"steel.png");
+        public static readonly Illustration ShieldAugmentation = new ModdedIllustration(MOD_FOLDER+"repair.png");
     }
 
     public static class ItemGreaterGroups
     {
-        public static readonly ItemGreaterGroup ShieldModifications = ModManager.RegisterEnumMember<ItemGreaterGroup>("Shield modifications");
-        public static readonly ItemGreaterGroup PlatedShields = ModManager.RegisterEnumMember<ItemGreaterGroup>("Plated shields");
+        public static ItemGreaterGroup ShieldModifications;
+        public static ItemGreaterGroup PlatedShields;
+        
+        internal static void Initialize()
+        {
+            ShieldModifications = ModManager.SafelyRegisterEnumMember<ItemGreaterGroup>("Shield modifications");
+            PlatedShields = ModManager.SafelyRegisterEnumMember<ItemGreaterGroup>("Plated shields");
+        }
     }
 
     public static class ItemNames
@@ -98,14 +107,26 @@ public static class ModData
 
     public static class QEffectIds
     {
-        public static readonly QEffectId BonusToHardness = ModManager.RegisterEnumMember<QEffectId>("BonusToHardness");
-        public static readonly QEffectId CastersTargeUsed = ModManager.RegisterEnumMember<QEffectId>("CastersTargeUsed");
+        public static QEffectId BonusToHardness;
+        public static QEffectId CastersTargeUsed;
+        
+        internal static void Initialize()
+        {
+            BonusToHardness = ModManager.SafelyRegisterEnumMember<QEffectId>("BonusToHardness");
+            CastersTargeUsed = ModManager.SafelyRegisterEnumMember<QEffectId>("CastersTargeUsed");
+        }
     }
 
     public static class RuneKinds
     {
         public static RuneKind ShieldPlating;
-        public static readonly RuneKind ShieldAugmentation = ModManager.RegisterEnumMember<RuneKind>("ShieldAugmentation");
+        public static RuneKind ShieldAugmentation;
+        
+        internal static void Initialize()
+        {
+            ShieldPlating = ModManager.SafelyRegisterEnumMember<RuneKind>("ShieldPlating");
+            ShieldAugmentation = ModManager.SafelyRegisterEnumMember<RuneKind>("ShieldAugmentation");
+        }
     }
     
     public static class SfxNames
