@@ -357,14 +357,13 @@ public static class OldShields
         AdjustFeatByName("Defensive Advance", defAdv =>
         {
             Illustration defAdvIcon = new ModdedIllustration("RDAssets/Advance.png");
-            defAdv.Traits.Insert(0, ModData.ModTrait);
             defAdv.OnCreature = null;
-            defAdv.WithPermanentQEffect(
-                null,
+            (defAdv as TrueFeat)?.WithPermanentQEffect(
                 qfFeat =>
                 {
-                    qfFeat.WithDisplayActionInOffenseSection("Defensive Advance", "Raise a Shield, Stride, then make a melee Strike.", 2);
-                    // Dones as Action*S* to avoid collision with the above ^
+                    qfFeat.AddToOffenseBlock = qfThis =>
+                        qfThis.Name!.WithTag("b") + " [flourish] Raise a Shield, Stride, then make a melee Strike.";
+                    
                     qfFeat.ProvideBonusRaiseShieldPossibility += (qfThis, shield) =>
                     {
                         return new ActionPossibility(Fighter.CreateRaiseShieldCore(qfThis.Owner, shield, false)
@@ -452,7 +451,8 @@ public static class OldShields
 
         void AdjustFeat(Feat feat, Action<Feat> adjustFeat)
         {
-            feat.Traits.Insert(0, ModData.ModTrait);
+            if (!feat.Traits.Contains(ModData.ModTrait))
+                feat.Traits.Insert(0, ModData.ModTrait);
             adjustFeat(feat);
         }
     }
