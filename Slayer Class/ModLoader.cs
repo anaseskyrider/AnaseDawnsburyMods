@@ -11,8 +11,8 @@ public static class ModLoader
         ModData.LoadData();
         Trophies.Load();
         Slayer.Load();
-        ClassFeats.Load();
         HuntingTools.Load();
+        ClassFeats.Load();
     }
 
     /*public static void TestingEnumerations()
