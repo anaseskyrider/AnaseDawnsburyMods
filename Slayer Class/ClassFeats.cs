@@ -1003,7 +1003,7 @@ public static class ClassFeats
                             ModData.Traits.Slayer,
                             () => new InnateSpells(Trait.Occult))
                         .SpellsKnown
-                        .Max(spell => spell.SpellLevel) ?? 0;
+                        .MaxOrZeroInt(spell => spell.SpellLevel) ?? 0;
                     string rank = maxRank > 0
                         ? $"{maxRank.Ordinalize2()}-rank".WithColor("Blue")
                         : "the highest-rank innate slayer-feat spell you have";
