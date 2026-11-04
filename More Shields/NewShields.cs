@@ -63,7 +63,7 @@ public static class NewShields
                     ModData.Illustrations.HeavyRondache,
                     "heavy rondache",
                     1, 5,
-                    ModData.ModTrait, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield)
+                    ModData.ModTrait, Trait.Rebalanced, Trait.Shield, Trait.Martial, ModData.Traits.LightShield, Trait.Worn, ModData.Traits.WornShield)
                 .WithMainTrait(ModData.Traits.HeavyRondache)
                 .WithDescription("Similar in size to a buckler, this shield is intended to absorb blows instead of deflecting attacks. It features multiple layers of metal and is reinforced with additional wood.", "")
                 .WithWeaponProperties(new WeaponProperties("1d6", DamageKind.Bludgeoning))
@@ -88,7 +88,7 @@ public static class NewShields
                         ModData.Illustrations.CastersTarge,
                         "caster's targe",
                         level, price,
-                        ModData.ModTrait, Trait.Shield, Trait.Martial, Trait.NonMetallic,
+                        ModData.ModTrait, Trait.Rebalanced, Trait.Shield, Trait.Martial, Trait.NonMetallic,
                         ac)
                     .WithMainTrait(ModData.Traits.CastersTarge)
                     .WithDescription(
