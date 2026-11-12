@@ -2,7 +2,6 @@ using Dawnsbury.Core.Creatures;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Display.Illustrations;
-using Dawnsbury.Mods.Template;
 
 namespace Dawnsbury.Mods.WerecreatureDedication;
 

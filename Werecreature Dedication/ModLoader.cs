@@ -20,7 +20,6 @@ using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
-using Dawnsbury.Mods.Template;
 
 namespace Dawnsbury.Mods.WerecreatureDedication;
 public static class ModLoader

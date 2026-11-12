@@ -10,7 +10,7 @@ using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
 
-namespace Dawnsbury.Mods.Template;
+namespace Dawnsbury.Mods.WerecreatureDedication;
 
 public static class ModData
 {
