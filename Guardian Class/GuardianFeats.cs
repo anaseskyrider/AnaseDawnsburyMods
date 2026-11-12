@@ -1484,8 +1484,9 @@ public static class GuardianFeats
                         .WithEffectOnEachTarget(async (action, caster, target, result) =>
                         {
                             // Raise a shield
-                            //await MoreShields.CommonShieldRules.OfferToRaiseAShield(caster);
-                            CombatAction raiseShield = Fighter.CreateRaiseShieldCore(caster, shield, false);
+                            CombatAction raiseShield = Fighter
+                                .CreateRaiseShieldCore(caster, shield, false)
+                                .WithActionCost(0);
                             await caster.Battle.GameLoop.FullCast(raiseShield);
                             
                             await caster.StepAsync(
