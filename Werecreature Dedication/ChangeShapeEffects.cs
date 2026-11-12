@@ -37,13 +37,13 @@ public static class ChangeShapeEffects
         {
             if (action.Item is { } item)
                 if (item.HasTrait(Trait.Weapon) && !item.HasTrait(Trait.Unarmed))
-                    return "cannot use weapons";
+                    return "Animal shape can't use weapons";
                 else if (item.HasTrait(Trait.Shield))
-                    return "cannot use shields";
+                    return "Animal shape can't use shields";
                 else if (action.Owner.HeldItems.Contains(item))
-                    return "cannot use held items";
+                    return "Animal shape can't use held items";
             if (action.HasTrait(Trait.Manipulate))
-                return "cannot take manipulates";
+                return "Animal shape can't take manipulates";
             return null;
         };
         return animalShape;
