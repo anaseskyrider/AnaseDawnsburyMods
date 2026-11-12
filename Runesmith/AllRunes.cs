@@ -2794,7 +2794,7 @@ public static class AllRunes
                                                 return;
                                 
                                             int healingAmount = invokedRune.Rune.CalculateHeightening(12, 2, 3, invokedRune.Source!.Level).FinalValue;
-                                            await qfThis.Owner.HealAsync(
+                                            await invokedRune.Owner.HealAsync(
                                                 DiceFormula.FromText(
                                                     healingAmount.ToString(),
                                                     invokedRune.Rune.FullName),
