@@ -75,7 +75,7 @@ public static class DualWeaponWarrior
                     qfFeat.ProvideMainAction = qfThis =>
                     {
                         if (qfThis.Owner.HeldItems.Count(item =>
-                                ItemIsDualCompatible(item, true) is not null)
+                                ItemIsDualCompatible(item, true) is null)
                             < 2)
                             return null;
                         // Create strikes, use their targeting
