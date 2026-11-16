@@ -1695,13 +1695,13 @@ public static class AllRunes
                 new RuneDrawProperties(
                         "drawn on a creature",
                         drawnOnCreature: true)
-                    .WithAllyRequirement(),
+                    .WithAllyRequirement(hasEnemyUseCases: true),
                 new RunePassiveProperties(
-                        "The raw magic of language flows through the rune-bearer, negating any penalties to their actions, as well as any bonuses to saving throws they impose, due to not sharing a language with a target. In addition, they gain a +1 status bonus to Society checks. While not in natural terrain, this bonus also applies to their Lore checks.",
+                        $"The raw magic of language flows through the rune-bearer, allowing them to speak and understand language if they normally couldn't{ModData.Tooltips.InfoTilusLanguage}; and negating any penalties to their actions, as well as any bonuses to saving throws they impose, due to not sharing a language with a target. In addition, they gain a +1 status bonus to Society checks. While not in natural terrain, this bonus also applies to their Lore checks.",
                         (rune, level) =>
                         {
                             return
-                                $"The raw magic of language flows through the rune-bearer, negating penalties to their actions and any saving throws they impose due to not sharing a language with their targets. In addition, they gain a +{S.HeightenedVariable(level >= 17 ? 3 : level >= 9 ? 2 : 1, 1)} status bonus to Society checks. While not in natural terrain, this bonus also applies to their Lore checks.";
+                                $"The raw magic of language flows through the rune-bearer, allowing them to speak and understand language if they normally couldn't{ModData.Tooltips.InfoTilusLanguage}; and negating penalties to their actions, as well as any saving throws they impose, due to not sharing a language with their targets. In addition, they gain a +{S.HeightenedVariable(level >= 17 ? 3 : level >= 9 ? 2 : 1, 1)} status bonus to Society checks. While not in natural terrain, this bonus also applies to their Lore checks.";
                         })
                     .WithDrawnRuneCreator(async (drawAction, rune, target, subTarget) =>
                     {
@@ -1743,6 +1743,19 @@ public static class AllRunes
                                         && bonus.Amount < 0
                                         && bonus.BonusSource.ToLower() == "no shared language");
                                 },
+                                WhenYouAcquireThis = qfThis =>
+                                {
+                                    qfThis.Tag = qfThis.Owner.DoesNotSpeakCommon;
+                                    #pragma warning disable CS0618 // Type or member is obsolete
+                                    qfThis.Owner.DoesNotSpeakCommon = false;
+                                    #pragma warning restore CS0618 // Type or member is obsolete
+                                },
+                                WhenExpires = qfThis =>
+                                {
+                                    #pragma warning disable CS0618 // Type or member is obsolete
+                                    qfThis.Owner.DoesNotSpeakCommon = (bool)qfThis.Tag!;
+                                    #pragma warning restore CS0618 // Type or member is obsolete
+                                }
                             }
                             .AddGrantingOfTechnical(
                                 (qfThis, cr) => cr.EnemyOf(qfThis.Owner),

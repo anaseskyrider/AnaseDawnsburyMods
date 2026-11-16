@@ -798,6 +798,15 @@ public static class ModData
             In order to apply these effects, initiative must be rerolled just before combat begins. This occurs each time the rune is applied.
             """);
 
+        public static readonly string InfoTilusLanguage = RegisterInfoTooltip(
+            ID_PREPEND + "TilusLanguage",
+            """
+            {b}Tilus, Rune of Vocabulary{/b}
+            {i}Implementation{/i}
+
+            Dawnsbury Days does not have different languages. Either a creature speaks, or it doesn't. If you have the Unrestricted Trace setting enabled, drawing this rune on a non-mindless enemy that can't speak allows it to be affected by linguistic abilities, and would also remove penalties due to not sharing a language.
+            """);
+
         public static readonly string InfoInthDamage = RegisterInfoTooltip(
             ID_PREPEND + "InthDamage",
             """
