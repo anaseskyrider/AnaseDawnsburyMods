@@ -297,7 +297,7 @@ public static class CommonShieldRules
     }
     
     /// <summary>
-    /// Functions as <see cref="Magus.DoesSparklingTargeShieldBlockApply"/> but with a different overload and accepts magical Strikes (which CountsAsMagical currently excludes).
+    /// Functions as <see cref="Magus.DoesSparklingTargeShieldBlockApply"/> but with a different overload.
     /// </summary>
     public static bool DoesSparklingTargeShieldBlockApply(CombatAction? power, Creature magus)
     {
