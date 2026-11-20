@@ -196,24 +196,24 @@ public static class OldShields
             eTarge.FlavorText = "Your targe comes readily in times of danger to avoid blows and spells.";
             eTarge.OnCreature = null;
             eTarge.WithPermanentQEffect(
-                "You can Raise a Shield or cast {i}shield{/i} when you'd be hit by a melee attack or fail an enemy's spell save.",
+                "You can Raise a Shield or cast {i}shield{/i} when you'd be hit by a melee attack, or if you fail an enemy's spell save while you are in Arcane Cascade.",
                 qfFeat =>
                 {
                     qfFeat.YouAreTargetedByARoll = async (qfThis, action, breakdown) =>
                     {
                         bool isSavingThrow;
-                        // is attack
-                        if (action.HasAnyTraits([Trait.Strike, Trait.Spell])
+                        bool isSpell = action.CountsAsSpell;
+                        // is melee (spell?) attack
+                        if ((isSpell || action.HasTrait(Trait.Strike))
                             && action.HasTrait(Trait.Melee)
-                            && action.ActiveRollSpecification == null)
+                            && action.ActiveRollSpecification != null)
                         {
                             if (breakdown.CheckResult < CheckResult.Success)
                                 return false;
                             isSavingThrow = false;
                         }
                         // is saving throw
-                        else if (action.HasAnyTraits([Trait.Spell, Trait.Magical])
-                                 && action.SavingThrow is not null)
+                        else if (action.CountsAsMagical && action.SavingThrow is not null)
                         {
                             if (breakdown.CheckResult > CheckResult.Failure)
                                 return false;
@@ -296,21 +296,25 @@ public static class OldShields
                             return false;
                         
                         // Prettied text
-                        string question = "{b}Emergency Targe{/b} {icon:Reaction}\n";
-                        if (action.Owner == defender.Battle.Pseudocreature)
-                            question += "You're about to be hit by ";
-                        else
-                            question += "{Blue}" + action.Owner + "{/Blue} is about to hit you with ";
-                        question += "{Blue}" + action.Name + "{/Blue}.\nRaise a Shield";
-                        if (canBeDowngraded)
-                            question += $" and {(isSavingThrow ? "up" : "down")}grade the {breakdown.CheckResult.Greenify()} into a {(breakdown.CheckResult + (isSavingThrow ? 1 : -1)).Greenify()}?";
-                        // If you have a bonus reaction you could use
-                        else if (defender.Actions.DetermineReactionToUse(
-                                     question + "? {i}(You will still be hit but you'll be able to Shield Block.){/i}",
-                                     [Trait.ShieldBlock]) is not null)
-                            question += "? {i}(You will still be hit but you'll be able to Shield Block.){/i}";
-                        else
-                            return false;
+                        string question = 
+                            $$"""
+                              {b}Emergency Targe{/b} {icon:Reaction}
+                              {{(action.Owner == defender.Battle.Pseudocreature ? "You're about to be hit by" : $"{action.Owner.ToColoredName()} is about to hit you with")}} {{action.Name.WithColor("Blue")}}.
+                              Raise a Shield{{(canBeDowngraded ? $" and {(isSavingThrow ? "upgrade your" : "downgrade their")} {breakdown.CheckResult.Greenify()} into a {(breakdown.CheckResult + (isSavingThrow ? 1 : -1)).Greenify()}?" : null)}}
+                              """;
+                        
+                        // If it can't be downgraded, check if there's still a reason to raise it.
+                        if (!canBeDowngraded)
+                        {
+                            const string bonusString = "? {i}(You will still be hit but you'll be able to Shield Block.){/i}";
+                            if (defender.Actions.DetermineReactionToUse(
+                                    question + bonusString,
+                                    [Trait.ShieldBlock]) is not null)
+                                question += bonusString;
+                            // Otherwise, do not ask to react.
+                            else
+                                return false;
+                        }
                         
                         string[] stringOptions = shieldOptions
                             .Select(shield =>
@@ -336,9 +340,7 @@ public static class OldShields
                             new Traits([..AllFeats.GetFeatByFeatName(FeatName.EmergencyTarge).Traits.ToList(), ModData.Traits.ReactiveAction]));
 
                         if (chosenShield.Tag is SpellId.Shield)
-                            await LibraryOfAnase.OfferOptions2(
-                                defender,
-                                ap => ap.CombatAction.SpellId is SpellId.Shield);
+                            await defender.OfferOptions2(ap => ap.CombatAction.SpellId is SpellId.Shield);
                         else
                             Fighter.RaiseShield(defender, chosenShield, defender, false);
 
