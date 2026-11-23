@@ -8,6 +8,11 @@
     
         <AssetsFolder>$(ProjectName)Assets</AssetsFolder>
     </PropertyGroup>
+
+    <!-- Other Dependencies -->
+    <ItemGroup>
+        <ProjectReference Include="..\More Shields\Dawnsbury.Mods.MoreShields.csproj"/>
+    </ItemGroup>
     
     <!-- Asset Folders -->
     <ItemGroup>
