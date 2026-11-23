@@ -14,6 +14,7 @@ using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.Roller;
 using Dawnsbury.Display.Text;
 using Dawnsbury.IO;
 using Microsoft.Xna.Framework;
@@ -215,6 +216,116 @@ public static class CommonShieldRules
         }
 
         return Bonus.Sum(bonuses, false).BonusTotal;
+    }
+
+    /// <summary>
+    /// Creates a combat log entry for damage applied to a shield.
+    /// </summary>
+    /// <param name="battle">The battle to log to.</param>
+    /// <param name="blocker">The shield's owner, if any.</param>
+    /// <param name="shield">The shield taking damage.</param>
+    /// <param name="unblockedDamage">The final amount of damage taken.</param>
+    /// <param name="shieldProps">The properties found during this function's execution, if any.</param>
+    public static void LogShieldDamage(TBattle battle, Creature? blocker, Item shield, int unblockedDamage, out ShieldProperties? shieldProps)
+    {
+        shieldProps = shield.GetShieldProperties();
+        // Log the shield's taken damage
+        int? beforeHP = shieldProps?.HP;
+        if (beforeHP is not null && unblockedDamage > 0)
+        {
+            battle.Log(
+                $"{blocker?.Name.AddIfNotNull(null, "'s ")}{shield.Illustration.IllustrationAsIconString}{shield.Name} takes {unblockedDamage.WithTag("b")} damage.",
+                "Shield damage",
+                $$"""
+                  {b}{{beforeHP}}{/b} Hit points {i}({{shield.Name}}){/i}
+                  {b}-{{unblockedDamage}}{/b} Unblocked damage
+                  {b}= {{Math.Max(0, (int)beforeHP - unblockedDamage)}} Remaining hit points{/b}
+
+                  {i}(Shield item damage can be disabled in {b}Settings / Mod settings{/b}.){/i}
+                  """,
+                new Traits([ModData.ModTrait]));
+        }
+    }
+
+    /// <summary>
+    /// Creates a combat log entry for damage applied to a shield.
+    /// </summary>
+    /// <param name="battle">The battle to log to.</param>
+    /// <param name="blocker">The shield's owner, if any.</param>
+    /// <param name="shield">The shield taking damage.</param>
+    /// <param name="finalDamage">The final amount of damage taken.</param>
+    /// <param name="appendLines">The damage lines to add that describe this damage.</param>
+    /// <param name="shieldProps">The properties found during this function's execution, if any.</param>
+    public static void LogShieldDamage(TBattle battle, Creature? blocker, Item shield, int finalDamage, string appendLines, out ShieldProperties? shieldProps)
+    {
+        shieldProps = shield.GetShieldProperties();
+        // Log the shield's taken damage
+        int? beforeHP = shieldProps?.HP;
+        if (beforeHP is not null)
+        {
+            battle.Log(
+                $"{blocker?.Name.AddIfNotNull(null, "'s ")}{shield.Illustration.IllustrationAsIconString}{shield.Name} takes {finalDamage.WithTag("b")} damage.",
+                "Shield damage",
+                $$"""
+                  {b}{{beforeHP}}{/b} Hit points {i}({{shield.Name}}){/i}
+                  {{appendLines}}
+                  {b}= {{Math.Max(0, (int)beforeHP - finalDamage)}} Remaining hit points{/b}
+
+                  {i}(Shield item damage can be disabled in {b}Settings / Mod settings{/b}.){/i}
+                  """,
+                new Traits([ModData.ModTrait]));
+        }
+    }
+
+    /// <summary>
+    /// Creates a combat log entry for healing applied to a shield.
+    /// </summary>
+    /// <param name="battle">The battle to log to.</param>
+    /// <param name="blocker">The shield's owner, if any.</param>
+    /// <param name="shield">The shield taking healing.</param>
+    /// <param name="healAmount">The final amount of healing applied.</param>
+    /// <param name="source">The source of the healing.</param>
+    /// <param name="shieldProps">The properties found during this function's execution, if any.</param>
+    public static void LogShieldHealing(TBattle battle, Creature? blocker, Item shield, int healAmount, string source, out ShieldProperties? shieldProps)
+    {
+        shieldProps = shield.GetShieldProperties();
+        // Log the shield's taken healing
+        int? beforeHP = shieldProps?.HP;
+        if (beforeHP is not null && healAmount > 0 && beforeHP < shieldProps?.MaxHP)
+        {
+            battle.Log(
+                $"{blocker?.Name.AddIfNotNull(null, "'s ")}{shield.Illustration.IllustrationAsIconString}{shield.Name} regains {healAmount.WithTag("b")} Hit Points.",
+                "Shield healing",
+                $$"""
+                  {b}{{beforeHP}}{/b} Hit points {i}({{shield.Name}}){/i}
+                  {b}+{{healAmount}}{/b} {{source}}
+                  {b}= {{Math.Min(shieldProps.MaxHP, (int)beforeHP + healAmount)}} {{((int)beforeHP + healAmount >= shieldProps.MaxHP ? "To full HP" : "Remaining hit points")}}{/b}
+
+                  {i}(Shield item damage can be disabled in {b}Settings / Mod settings{/b}.){/i}
+                  """,
+                new Traits([ModData.ModTrait]));
+        }
+    }
+
+    /// <summary>
+    /// Creates a combat log entry for a shield becoming broken.
+    /// </summary>
+    /// <param name="battle">The battle to log to.</param>
+    /// <param name="blocker">The shield's owner, if any.</param>
+    /// <param name="shield">The shield becoming broken.</param>
+    public static void LogBrokenShield(TBattle battle, Creature? blocker, Item shield)
+    {
+        string shieldDesc = $"{shield.Illustration.IllustrationAsIconString}{shield.Name}";
+        if (blocker is null)
+            battle.Log($"{shieldDesc} breaks.");
+        else
+            blocker.Overhead(
+                "*broken shield*",
+                Color.Red,
+                $"{blocker.Name}'s {shieldDesc} breaks.");
+        
+        // Do not apply effect as that's handled by the item itself
+        // immediately after this in a StateCheck.
     }
 
     /// <summary>
@@ -464,23 +575,8 @@ public static class CommonShieldRules
                     && !PlayerProfile.Instance.IsBooleanOptionEnabled(
                         ModData.BooleanOptions.ShieldsDontTakeDamage))
                 {
-                    ShieldProperties? shieldProps = shield.GetShieldProperties();
                     // Log the shield's taken damage
-                    int? beforeHP = shieldProps?.HP;
-                    if (beforeHP is not null)
-                    {
-                        blocker.Battle.Log(
-                            $"{blocker.Name}'s {shield.Illustration.IllustrationAsIconString}{shield.Name} takes {dEvent.TotalResolvedDamage.WithTag("b")} damage.",
-                            "Shield damage",
-                            $$"""
-                              {b}{{beforeHP}}{/b} Hit points {i}({{shield.Name}}){/i}
-                              {b}-{{dEvent.TotalResolvedDamage}}{/b} Unblocked damage
-                              {b}= {{Math.Max(0, (int)beforeHP - dEvent.TotalResolvedDamage)}} Remaining hit points{/b}
-                              
-                              {i}(Shield item damage can be disabled in {b}Settings / Mod settings{/b}.){/i}
-                              """,
-                            new Traits([ModData.ModTrait]));
-                    }
+                    CommonShieldRules.LogShieldDamage(blocker.Battle, blocker, shield, dEvent.TotalResolvedDamage, out ShieldProperties? shieldProps);
                     
                     // Apply item damage
                     shieldProps?.HP -= dEvent.TotalResolvedDamage;
@@ -491,10 +587,7 @@ public static class CommonShieldRules
                     if (shieldProps?.HP is 0
                         && !blocker.HasEffect(ModData.QEffectIds.BrokenShield))
                     {
-                        blocker.Overhead(
-                            "*broken shield*",
-                            Color.Red,
-                            $"{blocker.Name}'s {shield.Illustration.IllustrationAsIconString}{shield.Name} breaks.");
+                        CommonShieldRules.LogBrokenShield(blocker.Battle, blocker, shield);
                     }
                 }
             });
