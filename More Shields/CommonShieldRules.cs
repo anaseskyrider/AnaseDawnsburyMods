@@ -339,7 +339,7 @@ public static class CommonShieldRules
     {
         return new QEffect(
             "Broken shield",
-            $"Your {shield.Illustration.IllustrationAsIconString}{shield.Name} shield is broken. You cannot Strike with it, raise it, nor Shield Block {{icon:Reaction}} with it.",
+            $"Your {shield.Illustration.IllustrationAsIconString}{shield.Name} is broken. You cannot Strike with it, raise it, nor Shield Block {{icon:Reaction}} with it.",
             ExpirationCondition.Ephemeral,
             null,
             IllustrationName.Broken)
