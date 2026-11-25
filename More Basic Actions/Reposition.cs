@@ -70,18 +70,18 @@ public static class Reposition
                             a == d
                                 ? Usability.NotUsableOnThisCreature("self")
                                 : Usability.Usable),
-                        // Adjacent or within reach of Grapple weapon
-                        MeleeReachCreatureTargetingRequirement.WithWeaponOfTrait(Trait.Grapple),
-                        // Can't reposition incorporeals
-                        new CombatManeuverCorporealityCreatureTargetingRequirement(),
-                        // Use the same size limitation scaling as other maneuvers
-                        new TargetMustNotBeTwoSizesAboveYouCreatureTargetingRequirement(),
                         // Creature can't be immune to forced movement
                         new LegacyCreatureTargetingRequirement((a, d) =>
                             d.WeaknessAndResistance.ImmunityToForcedMovement 
                                 ? Usability.NotUsableOnThisCreature("immune to forced movement")
                                 : Usability.Usable),
                         // Must have a free hand or be wielding a grapple weapon
+                        // Can't reposition incorporeals
+                        new CombatManeuverCorporealityCreatureTargetingRequirement(),
+                        // Use the same size limitation scaling as other maneuvers
+                        new TargetMustNotBeTwoSizesAboveYouCreatureTargetingRequirement(),
+                        // Adjacent or within reach of Grapple weapon
+                        MeleeReachCreatureTargetingRequirement.WithWeaponOfTrait(Trait.Grapple),
                         new LegacyCreatureTargetingRequirement((a, d) =>
                             !a.HasFreeHand && !a.WieldsItem(Trait.Grapple)
                                 ? Usability.CommonReasons.NoFreeHandForManeuver
