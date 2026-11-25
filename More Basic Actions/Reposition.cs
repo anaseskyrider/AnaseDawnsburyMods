@@ -163,23 +163,35 @@ public static class Reposition
             })
             .WithEffectOnEachTarget(async (action, caster, target, result) =>
             {
-                // TODO: replace .Occupies
-                await caster.FictitiousSingleTileMove(caster.Occupies);
+                if (action.RevertRequested || result == CheckResult.Failure)
+                    return;
+                
+                await caster.FictitiousSingleTileMoveBack();
+
+                int distance = 1;
+                bool randomTile = false;
+                bool resolved = false;
                 switch (result)
                 {
                     case CheckResult.CriticalSuccess:
-                        await ExecuteRepositionLogic(caster, target, 2);
-                        break;
-                    case CheckResult.Success:
-                        await ExecuteRepositionLogic(caster, target, 1);
-                        break;
+                        distance = 2;
+                        goto case CheckResult.Success;
                     case CheckResult.CriticalFailure:
                         if (!target.FriendOf(caster))
-                            await ExecuteRepositionLogic(target, caster, 1, true);
+                        {
+                            randomTile = true;
+                            goto case CheckResult.Success;
+                        }
+                        break;
+                    case CheckResult.Success:
+                        resolved = await RepositionCreature(caster, target, distance, result, randomTile);
                         break;
                 }
 
                 caster.RemoveAllQEffects(qf => qf.Name is improvName);
+
+                if (!resolved)
+                    action.RevertRequested = true;
             });
     }
 
@@ -212,9 +224,15 @@ public static class Reposition
         List<Tile> tiles = TilesYouCanBeRepositionedTo(attacker, defender, distance);
         if (tiles.Count == 0)
         {
-            attacker.Overhead("*no valid tiles*", Color.Red, "Reposition failed: No free spaces.");
-            return;
+            bool reverted = result == CheckResult.CriticalSuccess;
+            attacker.Overhead("*no valid tiles*", Color.Red, $"Reposition {(reverted ? "reverted" : "failed")}: {(reverted ? "No possible free spaces" : "No free spaces on a success")}.");
+            // If false, this action should revert or try again.
+            // This should only occur if even a critical success lacked any open spaces,
+            // as you sometimes have to gamble on wasting a success.
+            // ReSharper disable once SimplifyConditionalTernaryExpression
+            return !reverted;
         }
+        
         Tile? moveTo;
         if (randomTile)
             moveTo = tiles.GetRandomForAi();
@@ -225,16 +243,20 @@ public static class Reposition
                 "Choose where to relocate " + defender.Name + ".",
                 "",
                 false, true, defender,
-                "Don\'t reposition");
+                "Confirm no reposition");
+        
         if (moveTo is null)
-            return;
+            return true;
+        
         await defender.MoveTo(moveTo, null,
             new MovementStyle()
             {
                 ForcedMovement = true,
                 Shifting = true,
                 ShortestPath = true,
-                MaximumSquares = 100,
+                MaximumSquares = 20
             });
+
+        return true;
     }
 }
