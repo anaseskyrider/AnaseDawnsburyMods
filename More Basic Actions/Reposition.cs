@@ -75,17 +75,29 @@ public static class Reposition
                             d.WeaknessAndResistance.ImmunityToForcedMovement 
                                 ? Usability.NotUsableOnThisCreature("immune to forced movement")
                                 : Usability.Usable),
-                        // Must have a free hand or be wielding a grapple weapon
                         // Can't reposition incorporeals
                         new CombatManeuverCorporealityCreatureTargetingRequirement(),
                         // Use the same size limitation scaling as other maneuvers
                         new TargetMustNotBeTwoSizesAboveYouCreatureTargetingRequirement(),
                         // Adjacent or within reach of Grapple weapon
                         MeleeReachCreatureTargetingRequirement.WithWeaponOfTrait(Trait.Grapple),
+                        // Must have a free hand, holding the target, or be wielding a grapple weapon
                         new LegacyCreatureTargetingRequirement((a, d) =>
-                            !a.HasFreeHand && !a.WieldsItem(Trait.Grapple)
-                                ? Usability.CommonReasons.NoFreeHandForManeuver
-                                : Usability.Usable)
+                        {
+                            // If you are holding the target, it is usable.
+                            if (a.HeldItems.Any(item => item.Grapplee == d))
+                                return Usability.Usable;
+                            // For non-grappled targets, you must have a free hand
+                            // or wield a grapple weapon.
+                            // This is a NotUsableOnThisCreature instead of NotUsable
+                            // reason to prevent weird usability interactions.
+                            if (!a.HasFreeHand && !a.WieldsItem(Trait.Grapple))
+                                return Usability.NotUsableOnThisCreature(Usability.CommonReasons
+                                    // It's a good idea to reuse this text for interactability
+                                    // with removing or ignoring requirements.
+                                    .NoFreeHandForManeuver.UnusableReason);
+                            return Usability.Usable;
+                        }),
                     ],
                     (_, _, _) => int.MinValue))
             .WithActionCost(1)
