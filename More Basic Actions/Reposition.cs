@@ -53,7 +53,7 @@ public static class Reposition
                 """
                 {i}You forcefully relocate a creature.{/i}
 
-                {b}Requirements{/b} You have a free hand, are holding the target or have a grapple weapon, and the target isn't more than one size larger than you.
+                {b}Requirements{/b} You have a free hand, are holding the target, or have a grapple weapon; and the target isn't more than one size larger than you.
 
                 Make an Athletics check against the target's Fortitude DC.
                 """
