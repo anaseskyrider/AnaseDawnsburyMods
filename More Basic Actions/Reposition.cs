@@ -131,10 +131,28 @@ public static class Reposition
                     action.Owner.RemoveAllQEffects(qf => qf == improve);
                 return result.TooltipDescription;
             })
-            .WithPrologueEffectOnChosenTargetsBeforeRolls(async (action, self, targets) =>
+            .WithPrologueEffectOnChosenTargetsBeforeRolls(async (action, caster, targets) =>
             {
+                if (targets.ChosenCreature is not { } target)
+                {
+                    action.RevertRequested = true;
+                    return;
+                }
+                
+                if (TilesYouCanBeRepositionedTo(caster, target, 1).Count == 0
+                    && TilesYouCanBeRepositionedTo(caster, target, 2).Count > 0)
+                {
+                    action.RevertRequested = !await caster.AskForConfirmation(
+                        action.Illustration,
+                        $$"""
+                        {b}Reposition {icon:Action}{/b}
+                        {{target.Illustration.IllustrationAsIconString}}{{target.ToColoredName()}} cannot be moved anywhere except on a {Red}{b}Critical Success{/b}{/Red}.
+                        """,
+                        "Continue");
+                }
+                
                 if (targets.ChosenCreature?.FriendOf(action.Owner) ?? false)
-                    self.AddQEffect(new QEffect()
+                    caster.AddQEffect(new QEffect()
                     {
                         Name = improvName,
                         AdjustActiveRollCheckResult = (qfThis, action2, target2, result) =>
