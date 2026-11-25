@@ -98,6 +98,12 @@ public static class Reposition
                                     .NoFreeHandForManeuver.UnusableReason);
                             return Usability.Usable;
                         }),
+                        // Must at least have open spaces for a critical success
+                        new LegacyCreatureTargetingRequirement((a, d) =>
+                            TilesYouCanBeRepositionedTo(a, d, 2).Count < 1
+                                ? Usability.NotUsableOnThisCreature("no space to move")
+                                : Usability.Usable
+                            )
                     ],
                     (_, _, _) => int.MinValue))
             .WithActionCost(1)
@@ -158,8 +164,8 @@ public static class Reposition
                 caster.RemoveAllQEffects(qf => qf.Name is improvName);
             });
     }
-    
-    public static async Task ExecuteRepositionLogic(Creature attacker, Creature defender, int distance, bool randomTile = false)
+
+    public static List<Tile> TilesYouCanBeRepositionedTo(Creature attacker, Creature defender, int distance)
     {
         int reach = GrappleTag.GetGrappleReach(attacker);
         List<Tile> tiles = attacker.Battle.Map.AllTiles
@@ -171,6 +177,21 @@ public static class Reposition
                     .TilesToTheBottomRight(defender.Space.SizeInSquares)
                     .Any(subspace => attacker.DistanceToWith10FeetException(subspace) <= reach))
             .ToList();
+        return tiles;
+    }
+    
+    /// <summary>
+    /// The ATTACKER moves the DEFENDER a DISTANCE based on a CHECK RESULT, possibly to a random tile.
+    /// </summary>
+    /// <param name="attacker">The move-ee.</param>
+    /// <param name="defender">The mover.</param>
+    /// <param name="distance">The maximum allowed distance (such as up to 2 tiles).</param>
+    /// <param name="result">The check result of the action doing the moving. This is only used to allow a reposition to fully revert if a critical success lacked available spaces.</param>
+    /// <param name="randomTile">Whether the movement should choose a tile to move to, or be chosen at random.</param>
+    /// <returns>Whether the action resolved without errors. On a FALSE result, the action should be reverted or this function should execute again.</returns>
+    public static async Task<bool> RepositionCreature(Creature attacker, Creature defender, int distance, CheckResult result, bool randomTile = false)
+    {
+        List<Tile> tiles = TilesYouCanBeRepositionedTo(attacker, defender, distance);
         if (tiles.Count == 0)
         {
             attacker.Overhead("*no valid tiles*", Color.Red, "Reposition failed: No free spaces.");
