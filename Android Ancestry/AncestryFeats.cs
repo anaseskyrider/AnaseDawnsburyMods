@@ -593,7 +593,7 @@ public static class AncestryFeats
             .WithPermanentQEffect(qfFeat =>
             {
                 qfFeat.AddToDefenseBlock = qfThis =>
-                    qfThis.Name!.WithTag("b") + " Gain {r}fast healing{/r} for the rest of the encounter, blocking other nanite feats for the duration.";
+                    qfThis.Name!.WithTag("b") + $" Gain {{r}}fast healing{{/r}} {(qfThis.Owner.Level / 2).WithColor("Blue")} for the rest of the encounter, blocking other nanite feats for the duration.";
                 
                 qfFeat.ProvideMainAction = qfThis =>
                 {
@@ -612,7 +612,9 @@ public static class AncestryFeats
 
                               {b}Frequency{/b} Once per day.
 
-                              You gain fast healing {Blue}{{fastAmount}}{/Blue} for 1 minute. While Repair Module is active, you can't use or benefit from other nanite feats. You can Dismiss this effect.
+                              You gain {r}fast healing{/r} {Blue}{{fastAmount}}{/Blue} for 1 minute. While Repair Module is active, you can't use or benefit from other nanite feats.
+                              
+                              You can Dismiss this effect.
                               """,
                             Target.Self())
                         .WithActionCost(1)
