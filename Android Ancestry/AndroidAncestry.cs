@@ -14,6 +14,7 @@ using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Targeting;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.StatBlocks.Monsters.L15;
 using Dawnsbury.IO;
 using Dawnsbury.Modding;
 using Microsoft.Xna.Framework;
@@ -59,6 +60,8 @@ public static class AndroidAncestry
                 });
             });
         ModManager.AddFeat(androidAncestry);
+        
+        LoadMirrorEntity();
     }
 
     public static IEnumerable<Feat> CreateFeatures()
@@ -194,6 +197,55 @@ public static class AndroidAncestry
             {
                 values.SetProficiency(Trait.Simple, Proficiency.Trained);
                 values.SetProficiency(Trait.Martial, Proficiency.Trained);
+            });
+    }
+
+    public static void LoadMirrorEntity()
+    {
+        MirrorEntity.RegisterAncestryTemplate(
+            ModData.Traits.Android,
+            cr =>
+            {
+                cr.AddQEffect(MirrorEntity.AncestryDefenseBonus(Defense.Reflex));
+                cr.AddQEffect(new QEffect(
+                    "Constructed",
+                    "You have a +1 circumstance bonus to saving throws against diseases and poisons; if you roll a success on such a saving throw, you get a critical success instead.",
+                    ExpirationCondition.Never,
+                    null,
+                    IllustrationName.None)
+                {
+                    Innate = false,
+                    HideFromPortrait = true,
+                    AddToDefenseBlock = qfThis =>
+                        $"{qfThis.Name?.WithTag("b")}. You have a +1 circumstance bonus to saving throws against diseases and poisons; if you roll a success on such a saving throw, you get a critical success instead.",
+                    BonusToDefenses = (_, action, def) =>
+                        action is not null
+                        && (action.HasTrait(Trait.Disease) || action.HasTrait(Trait.Poison))
+                        && def.IsSavingThrow()
+                            ? new Bonus(1, BonusType.Circumstance, "Constructed")
+                            : null,
+                    AdjustSavingThrowCheckResult = (_, _, action, result) =>
+                        (action.HasTrait(Trait.Disease) || action.HasTrait(Trait.Poison))
+                        && result == CheckResult.Success
+                            ? CheckResult.CriticalSuccess
+                            : result
+                });
+                cr.WithFeat(ModData.FeatNames.NaniteSurge);
+                cr.WithFeat(ModData.FeatNames.ProtectiveSubroutine);
+                cr.WithFeat(ModData.FeatNames.OffensiveSubroutine);
+                cr.AddQEffect(QEffect.FastHealing(cr.Level / 2)
+                    .With(qf =>
+                    {
+                        qf.Name = "Repair Module";
+                        qf.Description = $"At the start of combat, you gain {{r}}fast healing{{/r}} {qf.Value} for 10 rounds.";
+                        qf.Innate = false;
+                        qf.HideFromPortrait = true;
+                        qf.AddToDefenseBlock = qfThis =>
+                            $"{qfThis.Name?.WithTag("b")}. {qfThis.Description}";
+                        qf.RoundsLeft = 10;
+                        qf.ExpiresAt = ExpirationCondition.CountsDownAtEndOfYourTurn;
+                        qf.CountsAsBeneficialToSource = true;
+                    }));
             });
     }
 }
