@@ -141,21 +141,22 @@ public static class AncestryFeats
                 [ModData.Traits.Android, Trait.Concentrate, ModData.Traits.Nanites])
             .WithActionCost(-2)
             .WithPermanentQEffect(
-                "(Once per encounter) Your nanites grant a +2 status bonus to a skill check you're about to attempt.",
+                "(Once per combat) Your nanites grant a +2 status bonus to a skill check you're about to attempt.",
                 qfFeat =>
                 {
                     qfFeat.Id = ModData.QEffectIds.NaniteSurge;
                     qfFeat.Value = 1; // Number of uses
                     qfFeat.HideValue = true;
+                    qfFeat.Description = BuildNaniteDescription(qfFeat.Owner, null, qfFeat.Value == 2);
                     
-                    List<string> usages = ["a skill check (+2)"];
-                    if (qfFeat.Owner.HasFeat(ModData.FeatNames.ProtectiveSubroutine))
+                    /*List<string> usages = ["a skill check (+2)"];
+                    if (qfFeat.Owner.HasEffect(ModData.QEffectIds.ProtectiveSubroutine))
                         usages.Add("a saving throw (+2)");
-                    if (qfFeat.Owner.HasFeat(ModData.FeatNames.OffensiveSubroutine))
+                    if (qfFeat.Owner.HasEffect(ModData.QEffectIds.OffensiveSubroutine))
                         usages.Add("an attack roll (+1)");
                     if (usages.Count > 1)
                         qfFeat.Description =
-                            $"(Once per encounter) Your nanites grant a status bonus to {S.ConstructOrList(usages)} you're about to attempt.";
+                            $"(Once per combat) Your nanites grant a status bonus to {S.ConstructOrList(usages)} you're about to attempt.";*/
 
                     qfFeat.YouBeginActionReaction = (qfThis, triggeringAction) =>
                     {
@@ -403,6 +404,10 @@ public static class AncestryFeats
                 [ModData.Traits.Android])
             .WithPermanentQEffect(qfFeat =>
             {
+                qfFeat.Id = ModData.QEffectIds.ProtectiveSubroutine;
+                if (qfFeat.Owner.FindQEffect(ModData.QEffectIds.NaniteSurge) is {} naniteSurge)
+                    naniteSurge.Description = BuildNaniteDescription(naniteSurge.Owner, qfFeat.Id, naniteSurge.Value == 2);
+                
                 qfFeat.AddGrantingOfTechnical(
                     _ => true,
                     qfTech =>
@@ -515,6 +520,11 @@ public static class AncestryFeats
                 [ModData.Traits.Android, ModData.Traits.Nanites])
             .WithPermanentQEffect(qfFeat =>
             {
+                qfFeat.Id = ModData.QEffectIds.OffensiveSubroutine;
+                
+                if (qfFeat.Owner.FindQEffect(ModData.QEffectIds.NaniteSurge) is {} naniteSurge)
+                    naniteSurge.Description = BuildNaniteDescription(naniteSurge.Owner, qfFeat.Id, naniteSurge.Value == 2);
+                
                 qfFeat.YouBeginActionReaction = (qfThis, triggeringAction) =>
                 {
                     // ReactionCollection methods handle broader nanite usability.
@@ -574,7 +584,9 @@ public static class AncestryFeats
                 """
                 {b}Frequency{/b} Once per day.
 
-                You gain {r}fast healing{/r} equal to half your level for 1 minute. While Repair Module is active, you can't use or benefit from other nanite feats. You can Dismiss this effect.
+                You gain {r}fast healing{/r} equal to half your level for 1 minute. While Repair Module is active, you can't use or benefit from other nanite feats.
+                
+                You can Dismiss this effect.
                 """,
                 [ModData.Traits.Android, Trait.Concentrate, ModData.Traits.Nanites])
             .WithActionCost(1)
@@ -630,12 +642,10 @@ public static class AncestryFeats
                 [ModData.Traits.Android])
             .WithPermanentQEffect(qfFeat =>
             {
-                QEffect? naniteSurge = qfFeat.Owner.FindQEffect(ModData.QEffectIds.NaniteSurge);
-                if (naniteSurge is null)
+                if (qfFeat.Owner.FindQEffect(ModData.QEffectIds.NaniteSurge) is not {} naniteSurge)
                     return;
                 naniteSurge.Value = 2;
-                naniteSurge.Description = naniteSurge.Description!.Replace(
-                    "(Once per encounter)", "(Twice per encounter)");
+                naniteSurge.Description = BuildNaniteDescription(naniteSurge.Owner, null, naniteSurge.Value == 2);
             });
 
         // Revivification Protocol
@@ -872,5 +882,17 @@ public static class AncestryFeats
         };
 
         return qfToAdjust;
+    }
+
+    public static string BuildNaniteDescription(Creature android, QEffectId? recentAddition = null, bool twice = false)
+    {
+        List<string> usages = ["a skill check (+2)"];
+        if (recentAddition == ModData.QEffectIds.ProtectiveSubroutine
+            || android.HasEffect(ModData.QEffectIds.ProtectiveSubroutine))
+            usages.Add("a saving throw (+2)");
+        if (recentAddition == ModData.QEffectIds.OffensiveSubroutine
+            || android.HasEffect(ModData.QEffectIds.OffensiveSubroutine))
+            usages.Add("an attack roll (+1)");
+        return $"({(twice ? "Twice".WithColor("Blue") : "Once")} per combat) Your nanites grant a status bonus to {S.ConstructOrList(usages)} you're about to attempt.";
     }
 }

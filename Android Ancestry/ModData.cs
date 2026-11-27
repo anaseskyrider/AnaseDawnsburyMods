@@ -169,6 +169,8 @@ public static class ModData
         public static QEffectId NaniteSurge;
         public static QEffectId NanitesDisabled;
         public static QEffectId RadiantCircuitry;
+        public static QEffectId ProtectiveSubroutine;
+        public static QEffectId OffensiveSubroutine;
         
         public static void Initialize()
         {
@@ -176,6 +178,8 @@ public static class ModData
             NaniteSurge = ModManager.SafelyRegisterEnumMember<QEffectId>("NaniteSurge");
             NanitesDisabled = ModManager.SafelyRegisterEnumMember<QEffectId>("NanitesDisabled");
             RadiantCircuitry = ModManager.SafelyRegisterEnumMember<QEffectId>("RadiantCircuitry");
+            ProtectiveSubroutine = ModManager.SafelyRegisterEnumMember<QEffectId>("ProtectiveSubroutine");
+            OffensiveSubroutine = ModManager.SafelyRegisterEnumMember<QEffectId>("OffensiveSubroutine");
         }
     }
     
