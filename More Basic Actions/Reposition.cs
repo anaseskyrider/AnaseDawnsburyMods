@@ -148,7 +148,8 @@ public static class Reposition
                         {b}Reposition {icon:Action}{/b}
                         {{target.Illustration.IllustrationAsIconString}}{{target.ToColoredName()}} cannot be moved anywhere except on a {Red}{b}Critical Success{/b}{/Red}.
                         """,
-                        "Continue");
+                        "Attempt reposition anyway",
+                        "Cancel");
                 }
                 
                 if (targets.ChosenCreature?.FriendOf(action.Owner) ?? false)
