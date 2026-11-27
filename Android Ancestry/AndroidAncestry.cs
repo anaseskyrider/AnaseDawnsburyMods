@@ -74,15 +74,11 @@ public static class AndroidAncestry
                 qfFeat.AddToDefenseBlock = qfThis =>
                     "{b}Constructed.{/b} You have a +1 circumstance bonus to saving throws against diseases and poisons." /*and radiation*/;
                 qfFeat.BonusToDefenses = (qfThis, action, def) =>
-                {
-                    if (def is not (Defense.Reflex or Defense.Fortitude or Defense.Will))
-                        return null;
-
-                    if (action == null || !action.HasTrait(Trait.Disease) && !action.HasTrait(Trait.Poison))
-                        return null;
-
-                    return new Bonus(1, BonusType.Circumstance, "constructed");
-                };
+                    def.IsSavingThrow()
+                    && action is not null
+                    && (action.HasTrait(Trait.Disease) || action.HasTrait(Trait.Poison))
+                        ? new Bonus(1, BonusType.Circumstance, "Constructed")
+                        : null;
             });
 
         // Emotionally Unaware
@@ -96,7 +92,7 @@ public static class AndroidAncestry
                 qfFeat =>
                 {
                     qfFeat.BonusToSkills = skill => skill is Skill.Diplomacy or Skill.Performance
-                        ? new Bonus(-1, BonusType.Circumstance, "Emotionally Unaware")
+                        ? new Bonus(-1, BonusType.Circumstance, "Emotionally unaware")
                         : null;
                 });
         
