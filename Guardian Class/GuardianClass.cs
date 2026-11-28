@@ -410,10 +410,9 @@ public static class GuardianClass
                             Creature guardian = qfFeat.Owner;
                             Creature ally = qfTech2.Owner;
                             Creature attacker = dEvent.Source;
-                            Trait[] reactionTraits = [ModData.Traits.Guardian];
-
-                            string? reactionToUse = guardian.Actions.DetermineReactionToUse("{b}Intercept Attack{/b} {icon:Reaction}", reactionTraits);
-                            CombatAction interceptAttack = CreateInterceptAttack(guardian, attacker, dEvent, out DamageEvent iEvent, reactionToUse);
+                            
+                            CombatAction interceptAttack = CreateInterceptAttack(
+                                guardian, attacker, dEvent, out DamageEvent iEvent);
                             
                             if (!interceptAttack.CanBeginToUse(qfFeat.Owner))
                                 return null;
@@ -983,8 +982,7 @@ public static class GuardianClass
     /// <param name="attacker">The creature dealing damage from a damage event.</param>
     /// <param name="dEvent">The damage event being reacted to.</param>
     /// <param name="interceptEvent">The second damage event of the Intercepted Attack on the guardian.</param>
-    /// <param name="reactionToRestore">The reaction keyword of an extra reaction to restore should the reaction need to abort and refund resources. To be used with <see cref="LibraryOfAnase.RefundReaction(Actions, string)"/>.</param>
-    public static CombatAction CreateInterceptAttack(Creature guardian_1, Creature attacker, DamageEvent dEvent, out DamageEvent interceptEvent, string? reactionToRestore = null)
+    public static CombatAction CreateInterceptAttack(Creature guardian_1, Creature attacker, DamageEvent dEvent, out DamageEvent interceptEvent)
     {
         const int interceptRange = 3;
         bool canStride = attacker.HasEffect(ModData.QEffectIds.TauntTarget);
@@ -1119,9 +1117,12 @@ public static class GuardianClass
                 void RefundReaction(string reason)
                 {
                     string log = "reaction";
-                    if (reactionToRestore is not null
+                    if (guardian_2.Actions.DetermineReactionToUse(
+                                "{b}Intercept Attack{/b} {icon:Reaction}",
+                                [ModData.Traits.Guardian])
+                            is {} reactionToRestore
                         && guardian_2.Actions.RefundReaction(reactionToRestore))
-                        log = "bonus " + log;
+                        log = $"{reactionToRestore} {log}";
                     else
                         guardian_2.Actions.RefundReaction();
                     guardian_2.Battle.Log(log.Capitalize() + " refunded: " + reason + ".");
