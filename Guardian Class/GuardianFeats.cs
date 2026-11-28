@@ -2366,10 +2366,9 @@ public static class GuardianFeats
             .WithActionCost(1)
             .WithPermanentQEffect(qfFeat =>
             {
-                bool hasDevastate = qfFeat.Owner.HasFeat(ModData.FeatNames.DevastatingShieldWallop);
                 
                 qfFeat.AddToOffenseBlock = qfThis =>
-                    qfThis.Name!.WithTag("b") + " [flourish] Make a shield Strike that stupefies the target." + (hasDevastate ? " {Blue}The target also makes a Fortitude saving throw against being knocked prone and stunned 1.{/Blue}" : null);
+                    qfThis.Name!.WithTag("b") + " [flourish] Make a shield Strike that stupefies the target." + (qfThis.Owner.HasEffect(ModData.QEffectIds.DevastatingShieldWallop) ? " {Blue}The target also makes a Fortitude saving throw against being knocked prone and stunned 1.{/Blue}" : null);
 
                 qfFeat.ProvideStrikeModifierIncludingForThrownStrike = (item, thrown) =>
                 {
@@ -2379,7 +2378,8 @@ public static class GuardianFeats
                     int baseValue = item.HasTrait(MoreShields.ModData.Traits.CoverShield)
                         ? 2
                         : 1;
-                    
+                    bool hasDevastate = qfFeat.Owner.HasEffect(ModData.QEffectIds.DevastatingShieldWallop);
+
                     CombatAction wallop = StrikeRules
                         .CreateStrike(
                             qfFeat.Owner,
@@ -2801,6 +2801,8 @@ public static class GuardianFeats
                 [Trait.Flourish, ModData.Traits.Guardian])
             .WithPermanentQEffect(qfFeat =>
             {
+                qfFeat.Id = ModData.QEffectIds.DevastatingShieldWallop;
+                
                 qfFeat.AfterYouDealDamage = async (self, action, target) =>
                 {
                     if (action.ActionId != ModData.ActionIds.ShieldWallop
