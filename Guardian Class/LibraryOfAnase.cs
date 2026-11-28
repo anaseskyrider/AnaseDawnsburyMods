@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Dawnsbury.Audio;
 using Dawnsbury.Auxiliary;
@@ -28,6 +29,7 @@ using Dawnsbury.Core.Mechanics.Targeting.TargetingRequirements;
 using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
+using Dawnsbury.Core.Roller;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display.Illustrations;
 using Dawnsbury.Modding;
@@ -39,6 +41,12 @@ namespace Dawnsbury.Mods.GuardianClass;
 /// Anase's library of helpful code functions. Contains a wide array of broadly useful functions rather than specialized logic.
 /// </summary>
 /// <list type="bullet">
+/// <item>v3.2: Add QEffect.ImpreciseScent(), QEffect.LowLightVision().</item>
+/// <item>v3.1: Add CombatAction.WithTemporaryEffectOnCreatures().</item>
+/// <item>v3.0: Add CombatAction.WithCastsOrUses(), CombatAction.WithContextMenuName().</item>
+/// <item>v2.9: Adjust StrikeCreature signature to include a specific MAP value.</item>
+/// <item>v2.8: Add string.AddIfNotNull().</item>
+/// <item>v2.7: Add Creature.AskForChoiceAmongItems(), CommonSpellEffects.DealAttackRollPersistentDamage(), CombatAction.WithAdjustTarget().</item>
 /// <item>v2.6: Updated functionality of both GameLoop.OfferOptions2 extensions, changed their returns to Task{bool}, and added shortcuts to them as Creature.OfferOptions2(). Remove CombatAction.CreatePass(). Added LongMovement.GetCostOfPath() as instanced and static functions.</item>
 /// <item>v2.5: Add CombatAction.Fullcast(Creature, QEffect).</item>
 /// <item>v2.4: Add Feat.WithLevelPrereq(int), TrueFeat.WithLevelPrereq(int), and TrueFeat.With()..</item>
@@ -57,7 +65,7 @@ namespace Dawnsbury.Mods.GuardianClass;
 /// <item>v1.1: Added int.WithColor(), QEffect.With(), CombatAction.With(), Item.HasAllTraits, Item.HasAnyTraits.</item>
 /// <item>v1.0: Initial.</item>
 /// </list>
-/// <value>v2.6</value>
+/// <value>v3.2</value>
 public static class LibraryOfAnase
 {
     extension(Creature cr)
@@ -92,6 +100,36 @@ public static class LibraryOfAnase
         public async Task<bool> OfferOptions2(Func<Possibility, bool> filter, bool canPass = true)
         {
             return await cr.Battle.GameLoop.OfferOptions2(cr, filter, canPass);
+        }
+
+        /// <summary>
+        /// Pick an item from among 0 to many.
+        /// </summary>
+        public async Task<Item?> AskForChoiceAmongItems(Illustration icon, string question, List<Item> items, bool canPass)
+        {
+            List<string> choices = items
+                .Select(item =>
+                    $"{item.Illustration.IllustrationAsIconString}{item.Name}")
+                .ToList();
+
+            // Return nothing, no options
+            if (choices.Count == 0)
+                return null;
+
+            if (canPass)
+                choices.Add("Pass");
+
+            // Immediately return only option
+            if (choices.Count == 1)
+                return items.First();
+
+            var choice = await cr.AskForChoiceAmongButtons(icon, question, choices.ToArray());
+
+            // Passed
+            if (choice.Caption == "Pass")
+                return null;
+
+            return items[choice.Index];
         }
     }
 
@@ -183,6 +221,75 @@ public static class LibraryOfAnase
             await caThis.Owner.Battle.GameLoop.FullCast(caThis, ChosenTargets.CreateSingleTarget(againstWhom));
             againstWhom.RemoveAllQEffects(qf => qf == qfForAction);
         }
+
+        /// <summary>
+        /// Applies a temporary effect to each of the action's <see cref="ChosenTargets.ChosenCreatures"/> and removes it after the action finishes executing.
+        /// </summary>
+        /// <param name="qfForAction">Generates a QEffect for each chosen creature. The CombatAction is this action, the Creature is the chosen creature, and the return is the effect (if any) to add.</param>
+        /// <remarks>
+        /// This wraps around any existing <see cref="CombatAction.EffectOnChosenTargetsBeforeRolls"/> and <see cref="CombatAction.EffectOnChosenTargets"/> lambdas. Call this function last to ensure consistency.
+        /// </remarks>
+        public CombatAction WithTemporaryEffectOnCreatures(Func<CombatAction, Creature, QEffect?> qfForAction)
+        {
+            List<QEffect> generatedQfs = [];
+            var cachedBefore = caThis.EffectOnChosenTargetsBeforeRolls;
+            caThis.EffectOnChosenTargetsBeforeRolls = async (action, caster, targets) =>
+            {
+                targets.ChosenCreatures.ForEach(cr =>
+                {
+                    if (qfForAction(action, cr) is not { } tempQf)
+                        return;
+                    cr.AddQEffect(tempQf);
+                    generatedQfs.Add(tempQf);
+                });
+                // Perform this last, applying QEffects as the first possible step.
+                await cachedBefore.InvokeIfNotNull(action, caster, targets);
+            };
+            var cachedAfter = caThis.EffectOnChosenTargets;
+            caThis.EffectOnChosenTargets = async (action, caster, targets) =>
+            {
+                // Perform this first, removing QEffects as the last possible step.
+                await cachedAfter.InvokeIfNotNull(action, caster, targets);
+                // Just in case the RemoveAll fails for any reason.
+                generatedQfs.ForEach(qf => qf.ExpiresAt = ExpirationCondition.Immediately);
+                targets.ChosenCreatures.ForEach(cr =>
+                    cr.RemoveAllQEffects(qf => generatedQfs.Contains(qf)));
+            };
+            return caThis;
+        }
+
+        /// <summary>
+        /// Adjust the <see cref="CombatAction.Target"/> using the given type.
+        /// </summary>
+        /// <remarks>If the type parameter does not match the instance's current Target type, the action safely returns. Multiple adjustments can be chained to account for a variety of different types of Target.</remarks>
+        /// <param name="adjustTarget">The adjustments to make to the Target if the types match.</param>
+        /// <typeparam name="T"><see cref="Target"/> or any of its subclasses.</typeparam>
+        /// <returns>The CombatAction instance being modified.</returns>
+        public CombatAction WithAdjustTarget<T>(Action<T> adjustTarget) where T : Target
+        {
+            if (caThis.Target is not T tar)
+                return caThis;
+            adjustTarget(tar);
+            return caThis;
+        }
+
+        /// <summary>
+        /// Sets <see cref="CombatAction.CastsOrUses"/>.
+        /// </summary>
+        public CombatAction WithCastsOrUses(string? castsOrUses)
+        {
+            caThis.CastsOrUses = castsOrUses;
+            return caThis;
+        }
+
+        /// <summary>
+        /// Sets <see cref="CombatAction.ContextMenuName"/>.
+        /// </summary>
+        public CombatAction WithContextMenuName(string? contextMenuName)
+        {
+            caThis.ContextMenuName = contextMenuName;
+            return caThis;
+        }
     }
     
     extension(QEffect qfThis)
@@ -200,6 +307,118 @@ public static class LibraryOfAnase
         {
             qfThis.Description = newDescription;
             return qfThis;
+        }
+
+        /// <summary>
+        /// Creates an innate QEffect for low-light vision, darkvision, and greater darkvision.
+        /// </summary>
+        /// <remarks>
+        /// This is an inspired change for Dawnsbury Days gameplay, providing a bonus to AC and saves against Light effects. +1 for low-light vision, +2 for darkvision, and success->crit save upgrades are added with greater darkvision.
+        /// </remarks>
+        /// <param name="featName">The name of the innate QEffect. If null, then this is "Low-light Vision", "Darkvision", or "Greater Darkvision" based on the vision tier.</param>
+        /// <param name="featDescription">The description of the innate QEffect. If null, then this describes the effect based on visionTier and bonus.</param>
+        /// <param name="bonus">The bonus to your defenses. If null, then this is +1 for low-light vision and +2 for both darkvision and greater darkvision.</param>
+        /// <param name="type">The type of bonus to your defenses. If null, then this is a circumstance bonus.</param>
+        /// <param name="visionTier">The tier of vision. 1 is low-light vision, 2 is darkvision, 3 is greater darkvision.</param>
+        public static QEffect LowLightVision(
+            string? featName = null,
+            string? featDescription = null,
+            int? bonus = null,
+            BonusType? type = null,
+            [Range(1,3)]
+            int visionTier = 1)
+        {
+            bonus ??= visionTier > 1 ? 2 : 1;
+            type ??= BonusType.Circumstance;
+            featName ??= visionTier switch
+            {
+                1 => "Low-light Vision",
+                2 => "Darkvision",
+                3 => "Greater Darkvision",
+                _ => "UNKNOWN VISION TIER"
+            };
+            featDescription ??= $"You have a {(bonus < 0 ? "-" : "+")}{bonus} {type.Value.ToStringOrTechnical().ToLower()} {(bonus < 0 ? "penalty" : "bonus")} to your AC and saving throws against effects with the light trait.{(visionTier == 3 ? " On a successful save against a light effect, you critically succeed." : null)}";
+            QEffect vision = new QEffect(featName, featDescription)
+            {
+                BonusToDefenses = (qfThis, action, def) =>
+                    action?.HasTrait(Trait.Light) is true
+                    && (def.IsSavingThrow() || def is Defense.AC)
+                        ? new Bonus(bonus.Value, type.Value, qfThis.Name?.ToLower().Capitalize() ?? featName)
+                        : null
+            };
+
+            if (visionTier == 3)
+                vision.AdjustSavingThrowCheckResult = (_, _, action, result) =>
+                    action.HasTrait(Trait.Light)
+                    && result == CheckResult.Success
+                        ? CheckResult.CriticalSuccess
+                        : result;
+
+            return vision;
+        }
+        
+        /// <summary>
+        /// Creates an innate QEffect for imprecise scent, including a Sewers encounter easter egg.
+        /// </summary>
+        /// <param name="featName">The name of the ability on your stat block. If null, this is "Imprecise Scent".</param>
+        /// <param name="featDescription">The short description of the ability on your stat block. If null, this describes your imprecise scent using your range value.</param>
+        /// <param name="range">The range of the imprecise scent in squares. If null, this is 30 feet (6 tiles).</param>
+        /// <param name="isFamiliar">Whether the ability comes from you or from your familiar (only affects the Sewers encounter easter egg dialog, has no mechanical impact).</param>
+        public static QEffect ImpreciseScent(
+            string? featName = null,
+            string? featDescription = null,
+            int? range = null,
+            bool isFamiliar = false)
+        {
+            featName ??= "Imprecise Scent";
+            featDescription ??= $"You detect creatures within {range * 5} feet using your imprecise scent.";
+            range ??= 6;
+            return new QEffect(featName, featDescription)
+            {
+                Tag = (int)range,
+                StateCheck = qfThis =>
+                {
+                    if (qfThis.Owner.HasEffect(QEffectId.Unconscious))
+                        return;
+                    int innerRange = (int)qfThis.Tag!;
+                    qfThis.Owner.Battle.AllCreatures
+                        .Where(cr =>
+                            cr.EnemyOf(qfThis.Owner) && cr.DistanceTo(qfThis.Owner) <= innerRange)
+                        .ForEach(cr => cr.DetectionStatus.Undetected = false);
+                },
+                StartOfCombat = async qfThis =>
+                {
+                    if (!qfThis.Owner.Battle.Encounter.Name?.ToLower().Contains("sewers") ?? true)
+                    {
+                        qfThis.StartOfCombat = null;
+                        return;
+                    }
+
+                    int innerRange = (int)qfThis.Tag!;
+                    int reducedRange = innerRange / 2;
+                    qfThis.Description = qfThis.Description!.Replace(
+                        (innerRange*5).ToString(),
+                        $"{{Red}}{reducedRange * 5}{{/Red}}"
+                    );
+                    qfThis.Tag = reducedRange;
+
+                    qfThis.Owner.AddQEffect(new QEffect()
+                    {
+                        StartOfYourPrimaryTurn = async (qfThis2, self) =>
+                        {
+                            qfThis2.ExpiresAt = ExpirationCondition.Immediately;
+                            Sfxs.Play(SfxName.Unallowed);
+                            await self.Battle.Cinematics.ShowQuickBubble(
+                                self,
+                                $$"""
+                                  {b}{{qfThis.Name}}{/b}
+                                  This foul smell is messing with my{{(isFamiliar ? " familiar's" : null)}} nose. I can only detect creatures using {{(isFamiliar ? "their" : "my")}} imprecise scent from {Red}{{(reducedRange * 5)}} feet away{/Red}.
+                                  """,
+                                5000);
+                        },
+                    });
+                },
+            };
         }
     }
 
@@ -496,9 +715,10 @@ public static class LibraryOfAnase
             Illustration? topBarIcon,
             string? topBarText,
             bool allowCancel,
-            string? allowPass)
+            string? allowPass,
+            int map = -1)
         {
-            List<Option> possibilities = CommonCombatActions.GetStrikePossibilities(self, isValidStrike, adjustStrike, isValidTarget);
+            List<Option> possibilities = CommonCombatActions.GetStrikePossibilities(self, isValidStrike, adjustStrike, isValidTarget, map);
             if (allowCancel)
                 possibilities.Add(new CancelOption(true));
             else if (allowPass != null)
@@ -523,13 +743,14 @@ public static class LibraryOfAnase
         }
         
         /// <summary>
-        /// Functions as <see cref="CommonCombatActions.GetStrikePossibilities(Creature, bool, Func{Creature,bool}?)"/> except you can modify each Strike as it's being generated, and filter Strikes.
+        /// Functions as <see cref="CommonCombatActions.GetStrikePossibilities(Creature, bool, Func{Creature,bool}?)"/> except you can modify each Strike as it's being generated, filter Strikes, and set its MAP.
         /// </summary>
         public static List<Option> GetStrikePossibilities(
             Creature self,
             Func<CombatAction, bool>? isValidStrike,
             Action<CombatAction>? adjustStrike,
-            Func<Creature, bool>? isValidTarget)
+            Func<Creature, bool>? isValidTarget,
+            int map = -1)
         {
             List<Option> options = [];
             foreach (Item item in self.Weapons)
@@ -540,7 +761,7 @@ public static class LibraryOfAnase
                         item.HasTrait(Trait.Ranged)
                             ? RangeKind.Ranged
                             : RangeKind.Melee,
-                        -1);
+                        map);
                 FilterAndAdd(strike);
                 // If this is a melee weapon that can be thrown, add another possibility
                 if (item.HasTrait(Trait.Melee) && item.WeaponProperties!.Throwable)
@@ -549,7 +770,7 @@ public static class LibraryOfAnase
                         self,
                         item,
                         RangeKind.Ranged,
-                        -1,
+                        map,
                         true);
                     FilterAndAdd(thrown);
                 }
@@ -571,6 +792,31 @@ public static class LibraryOfAnase
                             : Usability.Usable));
                 GameLoop.AddDirectUsageOnCreatureOptions(strike, options);
             }
+        }
+    }
+
+    extension(CommonSpellEffects)
+    {
+        /// <summary>
+        /// Functions as <see cref="CommonSpellEffects.DealAttackRollPersistentDamage"/> but includes source information from the affecting action on the final QEffect, and returns it as well.
+        /// </summary>
+        public static async Task<QEffect?> DealAttackRollPersistentDamage(
+            CombatAction spell,
+            Creature target,
+            CheckResult checkResult,
+            string diceExpression,
+            DamageKind damageKind)
+        {
+            DiceFormula? damageFormula = Checks.ModifyDamageFromAttackRoll(
+                DiceFormula.FromText(diceExpression, "Persistent damage"),
+                checkResult);
+            if (damageFormula == null)
+                return null;
+            QEffect persistentDamage = QEffect.PersistentDamage(damageFormula, damageKind);
+            persistentDamage.Source = spell.Owner;
+            persistentDamage.SourceAction = spell;
+            target.AddQEffect(persistentDamage);
+            return persistentDamage;
         }
     }
 
@@ -851,6 +1097,20 @@ public static class LibraryOfAnase
         public string PluralizeIf(string? addSingular, string addPlural, int count)
         {
             return text + (count == 1 ? addSingular : addPlural);
+        }
+
+        /// <summary>
+        /// Conditionally prepend or append text if the source string is not null. Otherwise, return null.
+        /// </summary>
+        public string? AddIfNotNull(string? prepend, string? append)
+        {
+            if (string.IsNullOrEmpty(text))
+                return null;
+            if (prepend is not null)
+                text = prepend + text;
+            if (append is not null)
+                text += append;
+            return text;
         }
     }
 
