@@ -2383,24 +2383,27 @@ public static class GuardianFeats
                         : 1;
                     bool hasDevastate = qfFeat.Owner.HasEffect(ModData.QEffectIds.DevastatingShieldWallop);
 
+                    StrikeModifiers strikeMods = new StrikeModifiers()
+                    {
+                        AdditionalTraits = [Trait.Flourish, ModData.Traits.Guardian]
+                    };
                     CombatAction wallop = StrikeRules
                         .CreateStrike(
-                            qfFeat.Owner,
-                            item,
+                            qfFeat.Owner, item,
                             thrown || item.HasTrait(Trait.Ranged)
                                 ? RangeKind.Ranged
                                 : RangeKind.Melee,
-                            -1,
-                            thrown,
-                            new StrikeModifiers()
-                            {
-                                AdditionalTraits = [Trait.Flourish, ModData.Traits.Guardian]
-                            })
+                            -1, thrown, strikeMods)
                         .WithStrikeNameAndIllustrationChange(
                             "Shield Wallop",
                             IllustrationName.BrainDrain,
                             thrown)
+                        .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
+                            strikeMods,
+                            additionalSuccessText: $"The target is {{r}}stupefied {baseValue}{{/r}}." + (hasDevastate ? " The target also makes a Fortitude saving throw against being knocked prone and stunned 1." : null),
+                            additionalCriticalSuccessText: $"The target is {{r}}stupefied {baseValue + 1}{{/r}}." + (hasDevastate ? " The target also makes a Fortitude saving throw against being knocked prone and stunned 1." : null)))
                         .WithActionId(ModData.ActionIds.ShieldWallop)
+                        .WithExtraTrait(0, ModData.ModTrait)
                         .WithHitAndDealDamage(async (caster, action, target) =>
                         {
                             if (action.CheckResult >= CheckResult.Success)
@@ -2408,11 +2411,25 @@ public static class GuardianFeats
                                     QEffect.Stupefied(action.CheckResult == CheckResult.CriticalSuccess ? baseValue+1 : baseValue)
                                         .WithExpirationAtStartOfSourcesTurn(caster, 1));
                         });
-                    wallop.Traits = new Traits([ModData.ModTrait, ..wallop.Traits.ToList()], wallop);
-                    wallop.Description = StrikeRules.CreateBasicStrikeDescription4(
-                        wallop.StrikeModifiers,
-                        additionalSuccessText: $"The target is {{r}}stupefied {baseValue}{{/r}}." + (hasDevastate ? " The target also makes a Fortitude saving throw against being knocked prone and stunned 1." : null),
-                        additionalCriticalSuccessText: $"The target is {{r}}stupefied {baseValue + 1}{{/r}}." + (hasDevastate ? " The target also makes a Fortitude saving throw against being knocked prone and stunned 1." : null));
+                    
+                    var oldGoodness = ((CreatureTarget)wallop.Target).CreatureGoodness;
+                    wallop.WithGoodnessAgainstEnemy((tar, a, d) =>
+                    {
+                        float goodness = oldGoodness(tar, a, d) + a.AI.Stupefy(d, baseValue);
+                        if (hasDevastate)
+                            goodness += a.AI.DealDamageWithBasicSave(
+                                CombatAction.CreateSimple(a, "Devasting Shield Wallop")
+                                    .WithActionCost(0)
+                                    .WithExtraTrait(Trait.AlwaysHits),
+                                new SavingThrow(Defense.Fortitude, a.ClassDC()),
+                                d.Defenses.GetSavingThrow(Defense.Fortitude, tar.OwnerAction).Bonus,
+                                d,
+                                // Prone goodness, and also partial goodness for
+                                // stun since it requires a fumble.
+                                a.AI.KnockProne(d) + (a.AI.Stun(d, 1) / 2)
+                            );
+                        return goodness;
+                    });
                     
                     return wallop;
                 };
