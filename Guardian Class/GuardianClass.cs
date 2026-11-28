@@ -446,17 +446,10 @@ public static class GuardianClass
                             describeDamage += ModData.Tooltips.InterceptAttackEstimation;
                             guardian.WeaknessAndResistance.Reset();
 
-                            ReactionOption react = ReactionOption.CreateFromCombatActionCustom(
-                                    interceptAttack,
-                                    $"{(canStride ? "Step " + "or Stride".WithColor("Green") : "Step")} towards {ally.ToColoredName()} and take {describeDamage} damage.",
-                                    async () =>
-                                    {
-                                        await guardian.Battle.GameLoop.FullCast(
-                                            interceptAttack, ChosenTargets.CreateSingleTarget(ally));
-                                    }
-                                )
-                                .WithTraits(reactionTraits)
-                                .WithIsReaction();
+                            ReactionOption react = ReactionOption.WrapFullcastWithChosenTargets(
+                                interceptAttack,
+                                ChosenTargets.CreateSingleTarget(ally),
+                                $"Step {(canStride ? "{Green}or Stride{/Green} " : null)}towards {ally.ToColoredName()} and take {describeDamage} damage.");
 
                             return react;
                         };
@@ -1020,11 +1013,11 @@ public static class GuardianClass
                 guardian_1, 
                 ModData.Illustrations.InterceptAttack, 
                 "Intercept Attack", 
-                [Trait.Basic, ModData.ModTrait, ModData.Traits.Guardian, Trait.UnaffectedByConcealment, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName], 
-                """
+                [ModData.ModTrait, ModData.Traits.Guardian, Trait.UnaffectedByConcealment, Trait.DoNotShowInCombatLog, Trait.DoNotShowOverheadOfActionName], 
+                $$"""
                 {i}You fling yourself in the way of oncoming harm to protect an ally.{/i}
                 
-                {b}Trigger{/b} An ally within 10 feet of you takes physical damage.
+                {b}Trigger{/b} An ally within 10 feet of you takes physical{{(guardian_1.HasFeat(ModData.FeatNames.EnergyInterceptor) ? " {Blue}or energy (but not vitality or void){/Blue}" : null)}} damage.
 
                 You can Step, but you must end your movement adjacent to the triggering ally. You take the damage instead of the triggering ally. Apply your own immunities, weaknesses, and resistances to the damage, not the ally's.
 
@@ -1045,15 +1038,21 @@ public static class GuardianClass
                             return Usability.NotUsableOnThisCreature("Nowhere to move");
                         return Usability.Usable;
                     }))
-            .WithActionCost(0)
+            .WithActionCost(-2)
             .WithActionId(ModData.ActionIds.InterceptAttack)
             .WithTag(dEvent) // Store the damage event
             .WithEffectOnEachTarget(async (action, guardian_2, ally, _) =>
             {
-                bool canLegallyMove = CombatAction.CreateSimple(guardian_2, "Stride", Trait.Move).WithActionId(ActionId.Stride).WithActionCost(0).CanBeginToUse(guardian_2) || CombatAction.CreateSimple(guardian_2, "Step", Trait.Move, Trait.DoesNotTriggerAnyReactions, Trait.DoesNotProvoke).WithActionId(ActionId.Step).WithActionCost(0).CanBeginToUse(guardian_2);
                 // Move enemy back because it's kind of annoying to react to otherwise.
                 await dEvent.Source.FictitiousSingleTileMoveBack();
                 
+                bool canLegallyMove =
+                    guardian_2.WouldBeAbleToStride()
+                    || CombatAction.CreateSimple(
+                            guardian_2, "Step", Trait.Move, Trait.DoesNotTriggerAnyReactions, Trait.DoesNotProvoke)
+                        .WithActionId(ActionId.Step)
+                        .WithActionCost(0)
+                        .CanBeginToUse(guardian_2);
                 string? refundReason = null;
                 
                 // If able to move,
@@ -1079,8 +1078,7 @@ public static class GuardianClass
                         ModData.Illustrations.InterceptAttack,
                         question,
                         "Move here",
-                        true,
-                        true,
+                        true, true,
                         guardian_2,
                         ("Don\'t step" + (canStride ? " or stride" : null)).WithColor(warningColor));
 
