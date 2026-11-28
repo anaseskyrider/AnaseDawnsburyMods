@@ -21,7 +21,7 @@ public static class Kholo
         Trait.WarFlail,
     ];
     
-    public static Lore KholoLore { set; get; }
+    public static Lore? KholoLore { set; get; }
     
     public static void LoadAncestry()
     {

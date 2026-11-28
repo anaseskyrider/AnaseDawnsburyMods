@@ -219,10 +219,13 @@ public static class AncestryFeats
             {
                 values.TrainInThisOrSubstitute(Skill.Stealth);
                 values.TrainInThisOrSubstitute(Skill.Survival);
-                values.TrainInThisOrSubstitute(Kholo.KholoLore);
-                values.IncreaseProficiency(3, Kholo.KholoLore.Trait, Proficiency.Expert);
-                values.IncreaseProficiency(7, Kholo.KholoLore.Trait, Proficiency.Master);
-                values.IncreaseProficiency(15, Kholo.KholoLore.Trait, Proficiency.Legendary);
+                if (Kholo.KholoLore is not null)
+                {
+                    values.TrainInThisOrSubstitute(Kholo.KholoLore);
+                    values.IncreaseProficiency(3, Kholo.KholoLore.Trait, Proficiency.Expert);
+                    values.IncreaseProficiency(7, Kholo.KholoLore.Trait, Proficiency.Master);
+                    values.IncreaseProficiency(15, Kholo.KholoLore.Trait, Proficiency.Legendary);
+                }
             });
 
         // Kholo Weapon Familiarity
