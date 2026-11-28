@@ -1051,6 +1051,9 @@ public static class GuardianClass
             .WithEffectOnEachTarget(async (action, guardian_2, ally, _) =>
             {
                 bool canLegallyMove = CombatAction.CreateSimple(guardian_2, "Stride", Trait.Move).WithActionId(ActionId.Stride).WithActionCost(0).CanBeginToUse(guardian_2) || CombatAction.CreateSimple(guardian_2, "Step", Trait.Move, Trait.DoesNotTriggerAnyReactions, Trait.DoesNotProvoke).WithActionId(ActionId.Step).WithActionCost(0).CanBeginToUse(guardian_2);
+                // Move enemy back because it's kind of annoying to react to otherwise.
+                await dEvent.Source.FictitiousSingleTileMoveBack();
+                
                 string? refundReason = null;
                 
                 // If able to move,
@@ -1107,8 +1110,12 @@ public static class GuardianClass
                     action.Name +" {icon:Reaction}",
                     action.Description,
                     action.Traits);
+
+                await guardian_2.FictitiousSingleTileMove(ally);
                 
                 await CommonSpellEffects.DealDirectDamage(interceptedDamage);
+                
+                await guardian_2.FictitiousSingleTileMoveBack();
                 
                 dEvent.ReduceBy(dEvent.KindedDamages.Sum(kd => kd.ResolvedDamage), "Intercept attack");
                 
