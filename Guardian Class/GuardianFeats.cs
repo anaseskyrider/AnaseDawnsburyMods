@@ -2131,13 +2131,10 @@ public static class GuardianFeats
             .WithInappropriateBecauseOfBadInventory(RequiresMediumOrHeavyArmor);
         
         // Mighty Bulwark
-        Feat mightyBulwark = (AllFeats.GetFeatByFeatName(FeatName.MightyBulwark) as TrueFeat)!
-            .WithLevel(8);
-        LevelPrerequisite levelReq = mightyBulwark.Prerequisites.OfType<LevelPrerequisite>().First();
-        mightyBulwark.Prerequisites.Remove(levelReq);
+        TrueFeat mightyBulwark = (AllFeats.GetFeatByFeatName(FeatName.MightyBulwark).WithLevel(8) as TrueFeat)!;
+        mightyBulwark.Prerequisites.RemoveAll(req => req is LevelPrerequisite);
         mightyBulwark.Prerequisites.Add(new LevelPrerequisite(8));
-        mightyBulwark.Traits.Add(ModData.Traits.Guardian);
-        mightyBulwark.Prerequisites.Add(new ClassPrerequisite([ModData.Traits.Guardian]));
+        mightyBulwark.WithAllowsForAdditionalClassTrait(ModData.Traits.Guardian);
         
         // Repositioning Block
         yield return new TrueFeat(
