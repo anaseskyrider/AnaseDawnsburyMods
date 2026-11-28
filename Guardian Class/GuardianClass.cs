@@ -19,9 +19,11 @@ using Dawnsbury.Core.Mechanics.Damage;
 using Dawnsbury.Core.Mechanics.Enumerations;
 using Dawnsbury.Core.Mechanics.Rules;
 using Dawnsbury.Core.Mechanics.Targeting;
+using Dawnsbury.Core.Mechanics.Targeting.Targets;
 using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.Possibilities;
 using Dawnsbury.Core.Roller;
+using Dawnsbury.Core.StatBlocks.Monsters.L15;
 using Dawnsbury.Core.Tiles;
 using Dawnsbury.Display;
 using Dawnsbury.Display.Illustrations;
@@ -44,6 +46,7 @@ public static class GuardianClass
         foreach (Feat feat in CreateFeatures())
             ModManager.AddFeat(feat);
         ModManager.AddFeat(CreateClassFeat());
+        LoadMirrorEntity();
     }
 
     /// <summary>Creates the Guardian class feat.</summary>
@@ -738,6 +741,120 @@ public static class GuardianClass
                     int amount = Math.Max(0, AC - finalDex);
                     return (amount, AC, finalDex);
                 }
+            });
+    }
+
+    public static void LoadMirrorEntity()
+    {
+        MirrorEntity.RegisterClassTemplate(
+            ModData.Traits.Guardian,
+            MirrorEntity.MirrorEntityBaseStatblock.Fighter,
+            cr =>
+            {
+                // The basic concept is this:
+                // - It should feel both unique and iconic to fight.
+                // - It should not have as much offense, since it's more durable.
+                // - It can also have some of its offense put into control.
+                
+                // Unique and iconic: shield build.
+                // Unique: control runes.
+                // (This also helps to reduce their damage.)
+                cr.WithFeat(FeatName.ShieldBlock);
+                cr.HeldItems.Clear();
+                cr.AddHeldItem(Items.CreateNew(ItemName.Longsword)
+                    .WithModificationRune(ItemName.WeaponPotencyRunestone2)
+                    .WithModificationRune(ItemName.GreaterStrikingRunestone)
+                    .WithModificationRune(ItemName.NightmareRunestone)
+                    .WithModificationRune(ItemName.RootingRunestoneGreater));
+                cr.AddHeldItem(Items.CreateNew(ItemName.SturdyShield15)
+                    .WithModificationRune(ItemName.WeaponPotencyRunestone2)
+                    .WithModificationRune(ItemName.GreaterStrikingRunestone)
+                    .WithModificationRune(ItemName.NightmareRunestone)
+                    .WithModificationRune(ItemName.RootingRunestoneGreater));
+                
+                // Balance:
+                // - Bonus STR (this is an offensive martial)
+                // - Lower DEX (heavy guardians are clunky)
+                // - Lower INT
+                cr.Abilities.Strength++;
+                cr.Abilities.Dexterity--;
+                cr.Abilities.Intelligence--;
+                
+                // Iconic: wears heavy armor.
+                cr.WithExtraTrait(Trait.MetalArmor);
+                
+                // Iconic: physical resistance.
+                // - This takes the place of bonus HP (Fighter), healing (Champion, Lay on Hands), or other durability (Barbarian, Rage).
+                cr.AddQEffect(QEffect.DamageResistancePhysical(5));
+                
+                // Balance: +2 AC.
+                // - Champion gets this, so Guardian does too.
+                cr.AddQEffect(new QEffect()
+                {
+                    BonusToDefenses = (_, _, def) =>
+                        def is Defense.AC ? new Bonus(2, BonusType.Untyped, "Guardian") : null,
+                });
+                
+                // Iconic: Intercept Attack.
+                cr.WithFeat(ModData.FeatNames.InterceptAttack);
+                
+                // Iconic: Taunt.
+                // To incentivize Taunting, and to simplify feat-lines like
+                // Taunting Strike or Group Taunt, this is a free action after any Strike or Raise a Shield.
+                cr.AddQEffect(new QEffect()
+                {
+                    // Up to 3 targets
+                    Id = ModData.QEffectIds.GroupTaunt,
+                    AddToOffenseBlock = qfThis =>
+                        $"{{b}}Effortless Taunts.{{/b}} ({qfThis.Owner.Battle.AllCreatures.Count(enemy => ModData.CommonRequirements.IsMyTauntedEnemy(qfThis.Owner, enemy))}/3) you Raise a Shield or make a Strike, you Taunt {{icon:FreeAction}} a creature until the start of your next turn; a taunted enemy who takes a hostile action against one of your allies that doesn't include you suffers a -1 circumstance penalty to the action's attacks and DCs, and becomes {{r:flat-footed}}off-guard{{/r}} for 1 round.",
+                    AfterYouTakeAction = async (qfThis, action) =>
+                    {
+                        // Only 3 taunted enemies
+                        if (qfThis.Owner.Battle.AllCreatures
+                                .Count(enemy =>
+                                    enemy.FindQEffect(ModData.QEffectIds.TauntTarget) is { } taunt
+                                    && taunt.Source == qfThis.Owner)
+                            > 2)
+                            return;
+
+                        // Strikes and Raise a Shield only.
+                        if (!action.HasTrait(Trait.Strike) && action.ActionId is not ActionId.RaiseShield)
+                            return;
+                        
+                        // Visual taunts, as fidelity to Taunting Strike and Shielding Taunt.
+                        // This also makes them not ignore concealment mechanics.
+                        CombatAction taunt = CreateTaunt(
+                                qfThis.Owner, true, Trait.Visual)
+                            .WithActionCost(0)
+                            .WithNewTarget(Target.Ranged(6)
+                                .WithAdditionalConditionOnTargetCreature((a, d) =>
+                                    ModData.CommonRequirements.IsMyTauntedEnemy(a, d)
+                                        ? Usability.NotUsableOnThisCreature("already taunted")
+                                        : Usability.Usable));
+                        
+                        Creature? target = null;
+                        // Use a chosen target (Strike) if there is one, and it's not already taunted.
+                        if (action.HasTrait(Trait.Strike)
+                            && action.ChosenTargets.ChosenCreature is not null
+                            && !ModData.CommonRequirements.IsMyTauntedEnemy(qfThis.Owner, action.ChosenTargets.ChosenCreature))
+                            target = action.ChosenTargets.ChosenCreature;
+
+                        if (target is null)
+                            await qfThis.Owner.Battle.GameLoop.FullCast(taunt);
+                        else
+                            await qfThis.Owner.Battle.GameLoop.FullCast(
+                            taunt, ChosenTargets.CreateSingleTarget(target));
+                    }
+                });
+                
+                // Needs feat-power (4-5).
+                // 1. Taunting Strike. (rolled into Effortless Taunts)
+                // 2. Shielding Taunt. (rolled into Effortless Taunts)
+                // 3. Group Taunt. (rolled into Effortless Taunts)
+                // 4. Shield Wallop
+                cr.WithFeat(ModData.FeatNames.ShieldWallop);
+                // 5. Devastating Shield Wallop
+                cr.WithFeat(ModData.FeatNames.DevastatingShieldWallop);
             });
     }
 
