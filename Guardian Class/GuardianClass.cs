@@ -821,9 +821,7 @@ public static class GuardianClass
                 List<Creature> newTaunts = targets.ChosenCreatures;
                 List<Creature> oldTaunts = caster.Battle.AllCreatures
                     .Except(newTaunts)
-                    .Where(cr =>
-                        cr.FindQEffect(ModData.QEffectIds.TauntTarget) is { } taunt
-                        && taunt.Source == caster)
+                    .Where(cr => ModData.CommonRequirements.IsMyTauntedEnemy(caster, cr))
                     .ToList();
                 int tauntCount = oldTaunts.Count + newTaunts.Count;
                 int overLimit = Math.Max(0, tauntCount - tauntLimit);

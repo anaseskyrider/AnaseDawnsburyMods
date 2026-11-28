@@ -90,12 +90,18 @@ public static class ModData
                     : Usability.NotUsable("Must be wearing medium or heavy armor"));
         }
 
-        public static CreatureTargetingRequirement IsMyTauntedEnemy()
+        public static bool IsMyTauntedEnemy(Creature guardian, Creature target)
+        {
+            return target.QEffects.Any(qf =>
+                qf.Id == ModData.QEffectIds.TauntTarget
+                && qf.Source == guardian
+                /*&& qf.Key == ModData.CommonQfKeys.TAUNTED_ENEMY + guardian.Name*/);
+        }
+
+        public static CreatureTargetingRequirement MustBeMyTauntedEnemy()
         {
             return new LegacyCreatureTargetingRequirement((a, d) =>
-                d.QEffects.Any(qf =>
-                    qf.Id == ModData.QEffectIds.TauntTarget
-                    && qf.Key == ModData.CommonQfKeys.TAUNTED_ENEMY + a.Name)
+                IsMyTauntedEnemy(a, d)
                     ? Usability.Usable
                     : Usability.NotUsableOnThisCreature("Not your taunted enemy"));
         }

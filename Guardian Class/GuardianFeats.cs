@@ -1217,7 +1217,7 @@ public static class GuardianFeats
                         .WithAdditionalConditionOnTargetCreature(
                             ModData.CommonRequirements.OffGuardDueToMyTaunt())
                         .WithAdditionalConditionOnTargetCreature(
-                            ModData.CommonRequirements.IsMyTauntedEnemy());
+                            ModData.CommonRequirements.MustBeMyTauntedEnemy());
                     
                     return proudNail;
                 };
@@ -1872,7 +1872,7 @@ public static class GuardianFeats
                         .WithAdditionalConditionOnTargetCreature(
                             ModData.CommonRequirements.OffGuardDueToMyTaunt())
                         .WithAdditionalConditionOnTargetCreature(
-                            ModData.CommonRequirements.IsMyTauntedEnemy());
+                            ModData.CommonRequirements.MustBeMyTauntedEnemy());
                     
                     return ringTheirBell;
                 };
@@ -3099,7 +3099,7 @@ public static class GuardianFeats
                                 .WithAdditionalRestriction(self =>
                                 {
                                     bool usable = false;
-                                    var tauntedReq = ModData.CommonRequirements.IsMyTauntedEnemy();
+                                    var tauntedReq = ModData.CommonRequirements.MustBeMyTauntedEnemy();
                                     var offGuardReq = ModData.CommonRequirements.OffGuardDueToMyTaunt();
                                     if (self.Battle.AllCreatures.Any(cr =>
                                             tauntedReq.Satisfied(self, cr)
@@ -3118,7 +3118,7 @@ public static class GuardianFeats
                             Creature? chosen = null;
                             Action<CombatAction> adjustStrike = strike =>
                             {
-                                CreatureTargetingRequirement tauntedReq = ModData.CommonRequirements.IsMyTauntedEnemy();
+                                CreatureTargetingRequirement tauntedReq = ModData.CommonRequirements.MustBeMyTauntedEnemy();
                                 CreatureTargetingRequirement offGuardReq = ModData.CommonRequirements.OffGuardDueToMyTaunt();
                                 ((CreatureTarget)strike.Target).WithAdditionalConditionOnTargetCreature((a, d) =>
                                     tauntedReq.Satisfied(a, d)
