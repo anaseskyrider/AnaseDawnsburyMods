@@ -18,6 +18,7 @@ public static class Kholo
     public static readonly List<Trait> KholoWeapons = [
         ModData.Traits.Kholo,
         ModData.Traits.FlailItself,
+        Trait.WarFlail,
     ];
     
     public static Lore KholoLore { set; get; }
@@ -29,8 +30,6 @@ public static class Kholo
                 KholoWeapons.Add(khopesh);
             if (ModManager.TryParse("Mambele", out Trait mambele))
                 KholoWeapons.Add(mambele);
-            if (ModManager.TryParse("WarFlail", out Trait warFlail))
-                KholoWeapons.Add(warFlail);
         };
 
         KholoLore = Lores.RegisterNewLore(
