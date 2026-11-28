@@ -418,7 +418,7 @@ public static class GuardianClass
                             if (!interceptAttack.CanBeginToUse(qfFeat.Owner))
                                 return null;
                             
-                            bool canStride = attacker.HasEffect(ModData.QEffectIds.TauntTarget);
+                            bool canStride = ModData.CommonRequirements.IsMyTauntedEnemy(guardian, attacker);
                             bool isCritical = dEvent.CheckResult is CheckResult.CriticalSuccess or CheckResult.CriticalFailure;
                             int allyDamage = dEvent.TotalResolvedDamage;
                             guardian.WeaknessAndResistance.Reset();
