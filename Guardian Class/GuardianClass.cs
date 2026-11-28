@@ -770,16 +770,13 @@ public static class GuardianClass
                 [Trait.Basic, ModData.ModTrait, ModData.Traits.Guardian, Trait.Concentrate, Trait.DoNotShowOverheadOfActionName, ..extraTraits],
                 $$"""
                   {i}With an attention-grabbing gesture, noise, cutting remark, or threatening shout, you attempt to draw an enemy to you instead of your allies. Even mindless creatures are drawn to your taunts.{/i}
-                  
-                  {b}Range{b} {{distance*5}} feet
-                  
+
+                  {b}Range{b} {{distance * 5}} feet
+
                   The target becomes your taunted enemy. If they take a hostile action that includes at least one of your allies but doesn't include you, they take a –1 circumstance penalty to their attack rolls and DCs for that action, and they also become off-guard until the start of their next turn.
-                  
-                  Your enemy remains taunted until the start of your next turn, and you can have only one Taunt in effect at a time. Taunting a new enemy ends this effect on any current target.
-                  """
-                    + (extraTraits.Length == 0
-                    ? "\n\nTaunt gains the auditory trait, visual trait, or both, depending on how you draw the target's attention."
-                    : null),
+
+                  Your enemy remains taunted until the start of your next turn, and you can have only one Taunt in effect at a time. Taunting a new enemy ends this effect on any current target.{{(extraTraits.Length == 0 ? "\n\nTaunt gains the auditory trait, visual trait, or both, depending on how you draw the target's attention." : null)}}
+                  """,
                 tauntTargeting)
             .WithActionCost(1)
             .WithActionId(ModData.ActionIds.Taunt)
@@ -847,6 +844,7 @@ public static class GuardianClass
                     tauntee.RemoveAllQEffects(qf =>
                         qf.Id == ModData.QEffectIds.TauntTarget
                         && qf.Source == taunter);
+                    tauntee.Battle.Log($"{tauntee.Name} is no longer taunted by {taunter.Name}.");
                     return tauntee;
                 }
             });
@@ -896,6 +894,8 @@ public static class GuardianClass
                 offguard.ExpiresAt = ExpirationCondition.ExpiresAtStartOfYourTurn;
                 offguard.Source = taunter;
                 offguard.Key = ModData.CommonQfKeys.OFF_GUARD_DUE_TO_TAUNT+taunter;
+                offguard.WhenYouAcquireThis += qfGuard =>
+                    qfGuard.Owner.Battle.Log($"{{b}}Taunt:{{/b}} Inflict {{r:flat-footed}}off-guard{{/r}} on {qfGuard.Owner.Name} until the start of their next turn.");
                 qfThis.Owner.AddQEffect(offguard);
                 
                 // PETR: Temporary fix until all CombatActions which have a SavingThrow will let you apply DC penalties.
@@ -908,6 +908,10 @@ public static class GuardianClass
                             "Untyped (Taunt, temporary solution)",
                             true));
                 }
+            },
+            WhenYouAcquireThis = qfThis =>
+            {
+                qfThis.Owner.Battle.Log($"{qfThis.Owner.Name} becomes {qfThis.Source?.Name ?? "???"}'s taunted enemy.");
             }
         };
 
@@ -945,7 +949,7 @@ public static class GuardianClass
     public static Feat CreateInterceptAttackToggle(FeatName featName, string interceptForWhat, string tacticsText,
         Func<CombatAction, DamageEvent, string?> preventAction, Illustration toggleIcon)
     {
-        string description = "Don't ask to Intercept " + interceptForWhat.ToLower() + "\n\n" + "{b}Tactics{/b} " + tacticsText;
+        string description = $"Don't ask to Intercept {interceptForWhat.ToLower()}\n\n{{b}}Tactics{{/b}} {tacticsText}";
         Feat toggleFeat = new Feat(
                 featName,
                 null,
@@ -1002,6 +1006,7 @@ public static class GuardianClass
             damages.ToArray())
         {
             IsSplashDamage = dEvent.IsSplashDamage,
+            ContainsPrecisionDamage = dEvent.ContainsPrecisionDamage,
             //DoubleDamage = dEvent.DoubleDamage, // Doubles twice
             //HalveDamage = dEvent.HalveDamage, // Halves twice
             //Bonuses = @event.Bonuses, // Recalculates
