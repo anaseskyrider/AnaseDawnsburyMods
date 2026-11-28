@@ -1,13 +1,16 @@
 using Dawnsbury.Auxiliary;
 using Dawnsbury.Core.CharacterBuilder.AbilityScores;
 using Dawnsbury.Core.CharacterBuilder.Feats;
+using Dawnsbury.Core.CharacterBuilder.FeatsDb.Common;
 using Dawnsbury.Core.CharacterBuilder.Selections.Options;
 using Dawnsbury.Core.CharacterBuilder.Spellcasting;
 using Dawnsbury.Core.CombatActions;
 using Dawnsbury.Core.Mechanics;
 using Dawnsbury.Core.Mechanics.Core;
 using Dawnsbury.Core.Mechanics.Enumerations;
+using Dawnsbury.Core.Mechanics.Treasure;
 using Dawnsbury.Core.StatBlocks;
+using Dawnsbury.Core.StatBlocks.Monsters.L15;
 using Dawnsbury.Modding;
 using Dawnsbury.Mods.LoresAndWeaknesses;
 
@@ -62,6 +65,8 @@ public static class Kholo
                 values.GrantFeat(ModData.FeatNames.Bite);
             });
         ModManager.AddFeat(kholoAncestry);
+        
+        LoadMirrorEntity();
     }
 
     public static void LoadFeatures()
@@ -231,5 +236,56 @@ public static class Kholo
                             ? new Bonus(1, BonusType.Circumstance, "Witch kholo")
                             : null;
                 });
+    }
+
+    public static void LoadMirrorEntity()
+    {
+        MirrorEntity.RegisterAncestryTemplate(
+            ModData.Traits.Kholo,
+            cr =>
+            {
+                cr.AddQEffect(MirrorEntity.AncestryDefenseBonus(Defense.Fortitude, 2));
+                cr.AddQEffect(MirrorEntity.AncestryDefenseBonus(Defense.Will, -1));
+                cr.WithFeat(ModData.FeatNames.SensitiveNose);
+                
+                // Martial options
+                cr.AddQEffect(new QEffect()
+                {
+                    // Delayed so that handwraps will apply, if any
+                    StartOfCombat = async qfThis =>
+                    {
+                        /*bool isMartial = 
+                            qfThis.Owner.WieldsItem(Trait.Martial)
+                            || qfThis.Owner.WieldsItem(Trait.Advanced)
+                            || qfThis.Owner.Abilities.Strength > 5 || qfThis.Owner.Abilities.Dexterity > 5;*/
+                        qfThis.Owner.WithAdditionalUnarmedStrike(NaturalWeapons.Create(
+                                NaturalWeaponKind.Jaws,
+                                $"{cr.CarriedItems.FirstOrDefault(item =>
+                                    item.ItemName is ItemName.HandwrapsOfMightyBlows && item.IsWorn)?.WeaponProperties?.DamageDieCount ?? 1}d8",
+                                DamageKind.Piercing,
+                                // Built-in Crunch feat
+                                Trait.Razing, Trait.VersatileB)
+                            /*.WithAdditionalWeaponProperties(wp =>
+                                wp.FixedDamageBonus = isMartial ? 12 : 4)*/);
+                    },
+                });
+                cr.AddQEffect(new QEffect(
+                    "Left-hand Blood",
+                    "Your Strikes deal 1d4 persistent poison damage.")
+                {
+                    AfterYouDealDamageAgainstPrimaryTargetQ = async (qfThis, action, attacker, target, result, dEvent) =>
+                    {
+                        if (!action.HasTrait(Trait.Strike)
+                            || result < CheckResult.Success)
+                            return;
+                        await CommonSpellEffects.DealAttackRollPersistentDamage(
+                            target, result, "1d4", DamageKind.Poison);
+                    }
+                });
+                
+                // Caster options
+                cr.WithFeat(ModData.FeatNames.DistantCackle); // 1x innate 1st-rank Fear
+                cr.WithFeat(ModData.FeatNames.BreathLikeHoney); // 1x innate 3rd-rank Soothe
+            });
     }
 }
