@@ -1202,22 +1202,25 @@ public static class GuardianFeats
                         AdditionalWeaponDamageDice = lvl >= 18 ? 3 : lvl >= 10 ? 2 : 1,
                     };
                     CombatAction proudNail = qfFeat.Owner.CreateStrike(item, -1, newMods)
-                        .WithName("Proud Nail")
+                        .WithStrikeNameAndIllustrationChange(
+                            $"Proud Nail ({item.Name})",
+                            IllustrationName.StarHit,
+                            false)
                         .WithDescription(StrikeRules.CreateBasicStrikeDescription4(
                             newMods,
                             prologueText: "{b}Requirements{/b} Your taunted enemy is off-guard because it didn't target you or include you in an area effect.\n"))
-                        //.WithExtraTrait(Trait.Basic)
                         .WithExtraTrait(Trait.Flourish)
-                        .WithExtraTrait(ModData.Traits.Guardian);
-                    proudNail.Traits = new Traits([ModData.ModTrait, ..proudNail.Traits.ToList()],
-                        proudNail);
-                    proudNail.Illustration = new SideBySideIllustration(
-                        proudNail.Illustration, IllustrationName.StarHit);
-                    ((CreatureTarget)proudNail.Target) // Strikes always make CreatureTargets
-                        .WithAdditionalConditionOnTargetCreature(
-                            ModData.CommonRequirements.OffGuardDueToMyTaunt())
-                        .WithAdditionalConditionOnTargetCreature(
-                            ModData.CommonRequirements.MustBeMyTauntedEnemy());
+                        .WithExtraTrait(ModData.Traits.Guardian)
+                        .WithExtraTrait(0, ModData.ModTrait)
+                        .WithAdjustTarget<CreatureTarget>(crTar => crTar
+                            .WithAdditionalConditionOnTargetCreature(
+                                ModData.CommonRequirements.OffGuardDueToMyTaunt())
+                            .WithAdditionalConditionOnTargetCreature(
+                                ModData.CommonRequirements.MustBeMyTauntedEnemy()))
+                        /*.WithGoodnessAgainstEnemy((tar, a, d) =>
+                        {
+                            
+                        })*/;
                     
                     return proudNail;
                 };
