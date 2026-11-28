@@ -760,7 +760,7 @@ public static class GuardianClass
     {
         if (extraTraits.Contains(Trait.Auditory) && !extraTraits.Contains(Trait.UnaffectedByConcealment))
             extraTraits = extraTraits.Append(Trait.UnaffectedByConcealment).ToArray();
-        bool hasGroupTaunt = owner.HasFeat(ModData.FeatNames.GroupTaunt);
+        bool hasGroupTaunt = owner.HasEffect(ModData.QEffectIds.GroupTaunt);
         int tauntLimit = hasGroupTaunt ? 3 : 1;
         int distance = (owner.HasFeat(ModData.FeatNames.LongDistanceTaunt) ? 120 : 30) / 5;
         Illustration tauntIcon = !oneCreatureOnly && hasGroupTaunt

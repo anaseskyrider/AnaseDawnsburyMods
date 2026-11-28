@@ -389,6 +389,7 @@ public static class ModData
         public static QEffectId CoveringStance;
         public static QEffectId HamperingStance;
         public static QEffectId ParagonsGuard;
+        public static QEffectId GroupTaunt;
         
         public static void Initialize()
         {
@@ -398,6 +399,7 @@ public static class ModData
             CoveringStance = ModManager.SafelyRegisterEnumMember<QEffectId>("CoveringStance");
             HamperingStance = ModManager.SafelyRegisterEnumMember<QEffectId>("HamperingStance");
             ParagonsGuard = ModManager.SafelyRegisterEnumMember<QEffectId>("ParagonsGuard");
+            GroupTaunt = ModManager.SafelyRegisterEnumMember<QEffectId>("GroupTaunt");
         }
     }
     
